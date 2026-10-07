@@ -120,6 +120,13 @@ async function main() {
     // ------------------------------------------------ desktop
     const d = await openPage(browser, { width: 1440, height: 900 }, 'desktop');
     const { page } = d;
+    const camera = () =>
+      page.evaluate(() => {
+        const m = window.__demo.map;
+        const c = m.getCenter();
+        return { lng: c.lng, lat: c.lat, zoom: m.getZoom(), bearing: m.getBearing(), pitch: m.getPitch() };
+      });
+    const initialCam = await camera();
     const ctxCount = await renderedCount(page, 'context-buildings');
     const listingCount = await renderedCount(page, 'listing-buildings');
     check('desktop: context building layer rendered', ctxCount > 0, `${ctxCount} features`);
@@ -384,6 +391,18 @@ async function main() {
     await page.click('button:has-text("Limpar")');
     await sleep(300);
     await waitIdle(page);
+
+    // "Visão geral" button restores the initial framing
+    await page.evaluate(() => window.__demo.map.jumpTo({ zoom: 18, bearing: 120, pitch: 30, center: [-48.85, -26.285] }));
+    await waitIdle(page);
+    await page.click('.overview-btn');
+    await sleep(300);
+    await waitIdle(page);
+    const backCam = await camera();
+    check('"Visão geral" button returns to the initial overview',
+      Math.abs(backCam.zoom - initialCam.zoom) < 0.05 && Math.abs(backCam.bearing - initialCam.bearing) < 0.5 &&
+        Math.abs(backCam.pitch - initialCam.pitch) < 0.5 && Math.abs(backCam.lng - initialCam.lng) < 5e-4 && Math.abs(backCam.lat - initialCam.lat) < 5e-4,
+      `${JSON.stringify(initialCam)} → ${JSON.stringify(backCam)}`);
 
     // ------------------------------------------------ lighting
     await page.evaluate(() => window.__demo.map.jumpTo({ zoom: window.__demo.map.getZoom() })); // no-op, keep camera

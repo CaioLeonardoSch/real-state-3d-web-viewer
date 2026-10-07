@@ -4,6 +4,7 @@ import type { Feature, FeatureCollection, Point, Polygon, MultiPolygon } from 'g
 import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
+import { OverviewControl } from './overviewControl';
 import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
 
@@ -72,10 +73,10 @@ export class Scene {
     });
     this.map.addControl(new AttributionControl({ compact: false, customAttribution: MAPLIBRE_ATTRIBUTION }), 'bottom-left');
     this.map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
+    // added after the navigation control: bottom corners stack upwards, so it sits above zoom +/−
+    this.map.addControl(new OverviewControl(() => this.showOverview(true)), 'bottom-right');
 
-    // Initial view frames every listing (with the pitched camera), so none starts off-screen.
-    const all = this.unionBounds(this.data.listings.listings);
-    if (all) this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: 58, bearing: -20, animate: false });
+    this.showOverview(false);
 
     this.ready = new Promise((resolve) => this.map.once('load', () => resolve()));
     this.bindInteractions();
@@ -345,6 +346,13 @@ export class Scene {
   listingBounds(listing: Listing): [number, number, number, number] | null {
     const f = this.listingFeatures.find((x) => x.properties.listingId === listing.id);
     return f ? (turfBbox(f) as [number, number, number, number]) : null;
+  }
+
+  /** Initial framing: every listing (pitched camera), so none starts off-screen. Also the "Visão geral" button. */
+  showOverview(animate: boolean): void {
+    const all = this.unionBounds(this.data.listings.listings);
+    if (!all) return;
+    this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: 58, bearing: -20, animate, duration: 1200 });
   }
 
   private unionBounds(listings: Listing[]): LngLatBounds | null {
