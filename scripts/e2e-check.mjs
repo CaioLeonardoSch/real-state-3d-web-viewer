@@ -244,6 +244,28 @@ async function main() {
       header?.startsWith(`${landCount} `) && dimAfterApply > 0, `${header}; ${dimAfterApply} dimmed source features`);
     await page.screenshot({ path: path.join(SHOTS, 'desktop-search-results.png') });
 
+    // hover sync: list -> map and map -> list
+    const firstRow = await page.$('#results li button >> nth=0');
+    const firstId = await firstRow.getAttribute('data-id');
+    await firstRow.hover();
+    await sleep(200);
+    const mapLit = await page.evaluate((id) => window.__demo.isHighlighted(id), firstId);
+    await page.mouse.move(700, 880); // leave the list
+    await sleep(200);
+    const mapCleared = !(await page.evaluate((id) => window.__demo.isHighlighted(id), firstId));
+    check('hovering a result row highlights that listing on the map', mapLit && mapCleared, firstId);
+    const onMap = await findListingTarget(page, ['listing-pins', 'listing-land', 'listing-approx-fill']);
+    if (onMap) {
+      await page.mouse.move(onMap.x, onMap.y, { steps: 4 });
+      await sleep(250);
+      const rowLit = await page.evaluate(
+        (id) => document.querySelector(`#results button[data-id="${id}"]`)?.classList.contains('is-hover') ?? false,
+        onMap.id,
+      );
+      check('hovering a listing on the map highlights its result row', rowLit, onMap.id);
+      await page.mouse.move(700, 880);
+    } else check('hovering a listing on the map highlights its result row', false, 'no listing on screen');
+
     // result list click flies + opens drawer
     await page.click('#results li button >> nth=0');
     await sleep(300);

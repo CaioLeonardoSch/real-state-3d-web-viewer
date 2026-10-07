@@ -433,12 +433,23 @@ export class Scene {
     for (const source of LISTING_SOURCES) this.map.setFeatureState({ source, id }, state);
   }
 
-  private setHover(id: number | null): void {
+  /** Highlights a listing from outside the map (e.g. hovering the results list). */
+  highlight(listingId: string | null): void {
+    this.setHover(listingId ? (this.featureIdByListing.get(listingId) ?? null) : null, false);
+  }
+
+  /** Current hover state of a listing (used by automated checks). */
+  isHighlighted(listingId: string): boolean {
+    const id = this.featureIdByListing.get(listingId);
+    return id !== undefined && this.hoveredId === id;
+  }
+
+  private setHover(id: number | null, fromMap = true): void {
     if (this.hoveredId === id) return;
     if (this.hoveredId !== null) this.setListingState(this.hoveredId, { hover: false });
     this.hoveredId = id;
     if (id !== null) this.setListingState(id, { hover: true });
-    this.map.getCanvas().style.cursor = id !== null ? 'pointer' : '';
+    if (fromMap) this.map.getCanvas().style.cursor = id !== null ? 'pointer' : '';
   }
 
   private bindInteractions(): void {

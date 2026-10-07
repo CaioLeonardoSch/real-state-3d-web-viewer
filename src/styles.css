@@ -279,7 +279,8 @@ body[data-tod='night'] .f-pending {
   flex-direction: column;
   gap: 2px;
 }
-.results li button:hover {
+.results li button:hover,
+.results li button.is-hover {
   background: var(--accent-soft);
 }
 .r-title {

@@ -9,7 +9,7 @@ import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import { FilterStore, filterListings, isEmptyCriteria } from './state/filters';
 import { mountFilters } from './ui/filters';
-import { renderResults } from './ui/results';
+import { highlightResult, renderResults } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
 import { HoverTooltip } from './ui/tooltip';
@@ -38,6 +38,7 @@ async function main() {
       const l = id ? listings.find((x) => x.id === id) : undefined;
       if (l && point) tooltip.show(l, point);
       else tooltip.hide();
+      highlightResult(resultsEl, l ? l.id : null);
     },
   });
 
@@ -57,7 +58,14 @@ async function main() {
     if (isEmptyCriteria(criteria)) {
       resultsEl.hidden = true;
     } else {
-      renderResults(resultsEl, results, listings.length, (id) => openListing(id, true), () => (resultsEl.hidden = true));
+      renderResults(
+        resultsEl,
+        results,
+        listings.length,
+        (id) => openListing(id, true),
+        () => (resultsEl.hidden = true),
+        (id) => scene.highlight(id),
+      );
     }
     if (results.length > 0) scene.fitToListings(results);
     document.body.classList.remove('filters-open');
@@ -87,6 +95,7 @@ async function main() {
     map: scene.map,
     listingIds: listings.map((l) => l.id),
     project: (id: string) => scene.projectListing(id),
+    isHighlighted: (id: string) => scene.isHighlighted(id),
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
   };
 }

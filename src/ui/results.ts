@@ -8,6 +8,7 @@ export function renderResults(
   total: number,
   onPick: (id: string) => void,
   onClose: () => void,
+  onHover: (id: string | null) => void = () => {},
 ): void {
   el.hidden = false;
   el.innerHTML = `
@@ -28,6 +29,22 @@ export function renderResults(
             )
             .join('')}</ul>`
     }`;
-  el.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => b.addEventListener('click', () => onPick(b.dataset.id!)));
+  el.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => {
+    b.addEventListener('click', () => onPick(b.dataset.id!));
+    // hovering or focusing a row highlights the listing on the map
+    b.addEventListener('mouseenter', () => onHover(b.dataset.id!));
+    b.addEventListener('mouseleave', () => onHover(null));
+    b.addEventListener('focus', () => onHover(b.dataset.id!));
+    b.addEventListener('blur', () => onHover(null));
+  });
   el.querySelector('[data-action="close-results"]')!.addEventListener('click', onClose);
+}
+
+/** Marks the row of the listing hovered on the map (null clears) and keeps it in view. */
+export function highlightResult(el: HTMLElement, id: string | null): void {
+  el.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => {
+    const on = b.dataset.id === id;
+    b.classList.toggle('is-hover', on);
+    if (on && !el.hidden) b.scrollIntoView({ block: 'nearest' });
+  });
 }
