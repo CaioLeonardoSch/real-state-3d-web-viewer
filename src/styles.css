@@ -301,6 +301,46 @@ body[data-tod='night'] .f-pending {
   color: var(--muted);
 }
 
+/* ---------------- hover tooltip ---------------- */
+.hover-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 240px;
+  padding: 7px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.hover-tooltip[hidden] {
+  display: none;
+}
+.tt-price {
+  font-size: 15px;
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .tt-price {
+  color: #ffb35c;
+}
+.tt-note {
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .tt-note {
+  color: #ffc37a;
+}
+.tt-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 /* ---------------- drawer ---------------- */
 .drawer {
   position: absolute;

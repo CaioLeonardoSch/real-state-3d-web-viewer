@@ -70,9 +70,9 @@ async function openPage(browser, viewport, label) {
 const renderedCount = (page, layer) =>
   page.evaluate((l) => window.__demo.map.queryRenderedFeatures({ layers: [l] }).length, layer);
 
-/** Finds a matched, non-approximate building listing that is visible on screen and clicks it. */
-async function clickSomeListing(page, kindFilter = ['listing-buildings']) {
-  const target = await page.evaluate((layers) => {
+/** Finds a matched listing on the given layers that is visible on screen (page coordinates). */
+async function findListingTarget(page, kindFilter = ['listing-buildings']) {
+  return page.evaluate((layers) => {
     const map = window.__demo.map;
     const fs = map.queryRenderedFeatures({ layers });
     const canvas = map.getCanvas().getBoundingClientRect();
@@ -84,6 +84,11 @@ async function clickSomeListing(page, kindFilter = ['listing-buildings']) {
     }
     return null;
   }, kindFilter);
+}
+
+/** Finds a matched, non-approximate building listing that is visible on screen and clicks it. */
+async function clickSomeListing(page, kindFilter = ['listing-buildings']) {
+  const target = await findListingTarget(page, kindFilter);
   if (!target) return null;
   await page.mouse.click(target.x, target.y);
   await sleep(500);
@@ -122,7 +127,33 @@ async function main() {
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
     check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
-    const morningShot = await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
+
+    // hover tooltip
+    const hoverTarget = await findListingTarget(page);
+    if (hoverTarget) {
+      await page.mouse.move(hoverTarget.x, hoverTarget.y, { steps: 4 });
+      await sleep(300);
+      const expectedPrice = await page.evaluate(async (id) => {
+        const d = await (await fetch('data/listings.json')).json();
+        const l = d.listings.find((x) => x.id === id);
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(l.price).replace(/\s+/g, ' ');
+      }, hoverTarget.id);
+      const tt = await page.evaluate(() => {
+        const el = document.querySelector('#hover-tooltip');
+        return { hidden: el.hidden, text: el.textContent.replace(/\s+/g, ' ').trim() };
+      });
+      const cursor = await page.evaluate(() => window.__demo.map.getCanvas().style.cursor);
+      check('hover shows tooltip with the listing price and pointer cursor',
+        !tt.hidden && tt.text.includes(expectedPrice) && tt.text.includes('Clique para ver detalhes') && cursor === 'pointer',
+        `${hoverTarget.id}: "${tt.text}" (expected ${expectedPrice}), cursor=${cursor}`);
+      await page.screenshot({ path: path.join(SHOTS, 'desktop-hover-tooltip.png') });
+      const emptyForHover = await emptyPoint(page);
+      if (emptyForHover) await page.mouse.move(emptyForHover.x, emptyForHover.y, { steps: 4 });
+      await sleep(300);
+      check('tooltip hides when the mouse leaves the listing',
+        !!emptyForHover && (await page.evaluate(() => document.querySelector('#hover-tooltip').hidden)));
+    } else check('hover shows tooltip', false, 'no visible listing to hover');
 
     // click opens drawer
     const clicked = await clickSomeListing(page);

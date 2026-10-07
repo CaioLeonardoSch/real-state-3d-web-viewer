@@ -28,6 +28,8 @@ const INTERACTIVE_LAYERS = ['listing-buildings', 'listing-land', 'listing-approx
 export interface SceneEvents {
   onListingClick: (listingId: string) => void;
   onEmptyClick: () => void;
+  /** Mouse is over a clickable listing (point in map-container pixels), or left it (null). */
+  onListingHover?: (listingId: string | null, point?: { x: number; y: number }) => void;
 }
 
 export class Scene {
@@ -369,12 +371,21 @@ export class Scene {
   }
 
   private bindInteractions(): void {
+    const hoverOff = () => {
+      this.setHover(null);
+      this.events.onListingHover?.(null);
+    };
     this.map.on('mousemove', (e) => {
+      // no tooltip while the user is dragging/rotating the map
+      if (this.map.isMoving()) return hoverOff();
       const f = this.queryListing(e.point);
       this.setHover(f ? (f.id as number) : null);
+      this.events.onListingHover?.(f ? String(f.properties.listingId) : null, { x: e.point.x, y: e.point.y });
     });
-    this.map.on('mouseout', () => this.setHover(null));
+    this.map.on('mouseout', hoverOff);
+    this.map.on('movestart', hoverOff);
     this.map.on('click', (e) => {
+      this.events.onListingHover?.(null);
       const f = this.queryListing(e.point);
       if (f) this.events.onListingClick(String(f.properties.listingId));
       else this.events.onEmptyClick();

@@ -129,6 +129,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Filtros**: o formulário altera só o estado *pendente* (`FilterStore.setPending`), e o mapa só muda com **Buscar**
   (`apply()`). **Limpar** zera o formulário e também a busca aplicada, por ser um clique explícito. Um aviso
   "Alterações não aplicadas" aparece quando o formulário difere do que está aplicado.
+- **Etiqueta ao passar o mouse**: elemento HTML próprio (não o `Popup` do MapLibre) que segue o cursor e mostra
+  preço, tipo, área, quartos, aviso de localização aproximada e "Clique para ver detalhes". Some ao sair do imóvel,
+  ao clicar e enquanto o mapa é arrastado ou girado. Imóveis esmaecidos pela busca não mostram etiqueta. Em tela de
+  toque não há hover, e o toque abre o painel direto.
 - **Imóveis esmaecidos**: cinza semitransparente (opacidade 0,4) e não clicáveis. Quando o filtro inclui algum imóvel,
   a câmera enquadra todos os resultados (`fitBounds`).
 - **Contorno**: as extrusões do MapLibre não têm contorno próprio, então o destaque usa uma camada `line` na base
@@ -216,9 +220,10 @@ Imóveis fictícios (`listings.json`): 15 no total.
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 25 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 27 checagens:
   - camadas renderizadas;
   - atribuição e banner visíveis;
+  - passar o mouse mostra a etiqueta com o preço certo e cursor de mão, e sair a esconde;
   - clique abre o drawer, e Esc, o botão × e o clique no mapa vazio fecham;
   - localização aproximada;
   - editar filtros **não** altera o mapa nem a câmera, e só "Buscar" aplica;

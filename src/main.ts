@@ -12,6 +12,7 @@ import { mountFilters } from './ui/filters';
 import { renderResults } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
+import { HoverTooltip } from './ui/tooltip';
 
 setWorkerUrl(workerUrl);
 
@@ -28,10 +29,16 @@ async function main() {
   const store = new FilterStore();
   const resultsEl = $('#results');
 
+  const tooltip = new HoverTooltip($('#hover-tooltip'), $('#map'));
   const drawer = new Drawer($('#drawer'), data.listings.agencies, () => scene.select(null));
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
     onListingClick: (id) => openListing(id, false),
     onEmptyClick: () => drawer.close(),
+    onListingHover: (id, point) => {
+      const l = id ? listings.find((x) => x.id === id) : undefined;
+      if (l && point) tooltip.show(l, point);
+      else tooltip.hide();
+    },
   });
 
   function openListing(id: string, fly: boolean) {
