@@ -50,7 +50,7 @@ async function waitIdle(page) {
   await sleep(400);
 }
 
-async function openPage(browser, viewport, label) {
+async function openPage(browser, viewport, label, query = '') {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errors = [];
@@ -61,7 +61,7 @@ async function openPage(browser, viewport, label) {
   page.on('response', (r) => {
     if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`);
   });
-  await page.goto(URL_);
+  await page.goto(URL_ + query);
   await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
   await waitIdle(page);
   return { ctx, page, errors, label };
@@ -210,6 +210,19 @@ async function main() {
     await sleep(400);
     check('click on empty map closes the drawer', !!empty && !(await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'))));
 
+    // URL + browser back
+    const opened = await clickSomeListing(page);
+    const urlOpen = await page.evaluate(() => location.search);
+    await page.goBack();
+    await sleep(500);
+    const afterBack = await page.evaluate(() => ({
+      search: location.search,
+      open: document.querySelector('#drawer').classList.contains('open'),
+    }));
+    check('opening a listing writes ?imovel= and browser back closes the drawer',
+      !!opened && urlOpen === `?imovel=${opened.id}` && !afterBack.open && afterBack.search === '',
+      `${urlOpen} → back → "${afterBack.search}", drawer open=${afterBack.open}`);
+
     // approximate listing opens drawer with notice
     const approxClicked = await clickSomeListing(page, ['listing-approx-fill']);
     if (approxClicked) {
@@ -240,6 +253,8 @@ async function main() {
     const dimAfterApply = await page.evaluate(() =>
       window.__demo.map.querySourceFeatures('listings').filter((f) => f.properties.matched === false).length,
     );
+    const searchUrl = await page.evaluate(() => location.search);
+    check('search writes the applied filters to the URL', searchUrl === '?tipo=terreno&precoMax=2000000', searchUrl);
     check('"Buscar" applies filters (results list + dimmed listings)',
       header?.startsWith(`${landCount} `) && dimAfterApply > 0, `${header}; ${dimAfterApply} dimmed source features`);
     await page.screenshot({ path: path.join(SHOTS, 'desktop-search-results.png') });
@@ -341,6 +356,30 @@ async function main() {
       `morning az ${sun.m.azimuth.toFixed(0)}°, afternoon az ${sun.a.azimuth.toFixed(0)}°`);
     check('no console errors (desktop)', d.errors.length === 0, d.errors.join(' | '));
     await d.ctx.close();
+
+    // ------------------------------------------------ shared links
+    const shared = await openPage(browser, { width: 1440, height: 900 }, 'shared', '?tipo=terreno&imovel=land-14');
+    const sharedState = await shared.page.evaluate(() => ({
+      title: document.querySelector('#drawer.open h2')?.textContent ?? null,
+      pos: document.querySelector('#drawer .nav-pos')?.textContent ?? null,
+      header: document.querySelector('#results .results-head strong')?.textContent ?? null,
+      chip: document.querySelector('input[name="type"][value="land"]').checked,
+      search: location.search,
+    }));
+    check('shared link restores filters, results and the open listing',
+      sharedState.title !== null && sharedState.header?.startsWith('3 ') && sharedState.chip && sharedState.search === '?imovel=land-14&tipo=terreno',
+      JSON.stringify(sharedState));
+    await shared.page.screenshot({ path: path.join(SHOTS, 'desktop-shared-link.png') });
+    check('no console errors (shared link)', shared.errors.length === 0, shared.errors.join(' | '));
+    await shared.ctx.close();
+    const bad = await openPage(browser, { width: 1440, height: 900 }, 'bad-link', '?imovel=nao-existe&tipo=castelo&precoMax=abc');
+    const badState = await bad.page.evaluate(() => ({
+      open: document.querySelector('#drawer').classList.contains('open'),
+      search: location.search,
+    }));
+    check('invalid link is ignored and the URL normalised', !badState.open && badState.search === '' && bad.errors.length === 0,
+      JSON.stringify(badState) + bad.errors.join(' | '));
+    await bad.ctx.close();
 
     // ------------------------------------------------ mobile
     const m = await openPage(browser, { width: 390, height: 844 }, 'mobile');

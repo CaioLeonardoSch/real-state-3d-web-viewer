@@ -7,7 +7,11 @@ import { escapeHtml, parseNumberInput } from '../utils/format';
  * Renders the filter form. Editing a field only updates the store's *pending* criteria;
  * the map changes exclusively when the user presses "Buscar" (form submit) or "Limpar".
  */
-export function mountFilters(form: HTMLFormElement, store: FilterStore, agencies: Agency[]): void {
+export function mountFilters(
+  form: HTMLFormElement,
+  store: FilterStore,
+  agencies: Agency[],
+): { setForm: (c: FilterCriteria) => void } {
   form.innerHTML = `
     <fieldset class="f-types">
       <legend>Tipo</legend>
@@ -82,4 +86,12 @@ export function mountFilters(form: HTMLFormElement, store: FilterStore, agencies
     store.clear();
     refreshHint();
   });
+
+  /** Shows criteria that were applied from outside the form (e.g. a shared link). */
+  return {
+    setForm: (c: FilterCriteria) => {
+      writeForm(c);
+      refreshHint();
+    },
+  };
 }

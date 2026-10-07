@@ -9,6 +9,7 @@ import type { Listing } from './data/types';
 import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import { FilterStore, filterListings, isEmptyCriteria } from './state/filters';
+import { sameCriteria, searchToState, stateToSearch } from './state/url';
 import { mountFilters } from './ui/filters';
 import { highlightResult, renderResults } from './ui/results';
 import { Drawer } from './ui/drawer';
@@ -20,23 +21,54 @@ setWorkerUrl(workerUrl);
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const status = $('#status');
 
+/** history.state written by this app. `pristine`: entry pushed by opening the drawer, untouched since. */
+interface HistoryState {
+  drawer?: boolean;
+  pristine?: boolean;
+}
+
 async function main() {
   status.textContent = 'Carregando dados do bairro…';
   const data = await loadData();
   const [lon, lat] = data.meta.center; // from Nominatim, see scripts/fetch-osm.mjs
   const listings = data.listings.listings;
+  const known = {
+    agencyIds: new Set(data.listings.agencies.map((a) => a.id)),
+    listingIds: new Set(listings.map((l) => l.id)),
+  };
 
   let tod: TimeOfDay = 'morning';
   const store = new FilterStore();
   const resultsEl = $('#results');
-
-  const tooltip = new HoverTooltip($('#hover-tooltip'), $('#map'));
   // The list the drawer browses with previous/next: applied search results, in display order.
   let currentList: Listing[] = listings;
+  // True while the UI is being updated from the URL (back/forward, initial load): don't write history.
+  let syncingFromUrl = false;
+  // True while a search closes the drawer because its listing is no longer in the results.
+  let closingForSearch = false;
+
+  // ------------------------------------------------------------ URL / history
+  const urlFor = (listingId: string | null) =>
+    `${location.pathname}${stateToSearch({ criteria: store.getApplied(), listingId })}${location.hash}`;
+  const historyState = () => (history.state ?? {}) as HistoryState;
+
+  /** Updates the current entry (filters changed, or browsing between listings). */
+  function replaceUrl(state: HistoryState = historyState()) {
+    history.replaceState(state, '', urlFor(drawer.currentId));
+  }
+
+  const tooltip = new HoverTooltip($('#hover-tooltip'), $('#map'));
   const drawer = new Drawer(
     $('#drawer'),
     data.listings.agencies,
-    () => scene.select(null),
+    () => {
+      scene.select(null);
+      if (syncingFromUrl) return;
+      const st = historyState();
+      // Closing from the UI right after opening: step back, so "back" and "close" stay equivalent.
+      if (!closingForSearch && st.drawer && st.pristine) history.back();
+      else replaceUrl({});
+    },
     (id) => openListing(id, true),
   );
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
@@ -53,6 +85,7 @@ async function main() {
   function openListing(id: string, fly: boolean) {
     const l = listings.find((x) => x.id === id);
     if (!l) return;
+    const wasOpen = drawer.currentId !== null;
     if (fly) scene.flyToListing(l);
     scene.select(id);
     const index = currentList.findIndex((x) => x.id === id);
@@ -67,14 +100,22 @@ async function main() {
             nextId: currentList[index + 1]?.id ?? null,
           },
     );
+    if (syncingFromUrl) return;
+    // A new entry when the drawer opens, so the browser's back button closes it.
+    if (wasOpen) replaceUrl();
+    else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
   }
 
-  mountFilters($<HTMLFormElement>('#filters'), store, data.listings.agencies);
+  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, data.listings.agencies);
   store.onApply((criteria) => {
     const results = filterListings(listings, criteria);
     currentList = results;
     scene.setMatched(new Set(results.map((l) => l.id)));
-    if (drawer.currentId && !results.some((l) => l.id === drawer.currentId)) drawer.close();
+    if (drawer.currentId && !results.some((l) => l.id === drawer.currentId)) {
+      closingForSearch = true;
+      drawer.close();
+      closingForSearch = false;
+    }
     if (isEmptyCriteria(criteria)) {
       resultsEl.hidden = true;
     } else {
@@ -90,7 +131,27 @@ async function main() {
     if (results.length > 0) scene.fitToListings(results);
     document.body.classList.remove('filters-open');
     $('.filters-toggle').setAttribute('aria-expanded', 'false');
+    if (!syncingFromUrl) replaceUrl({ ...historyState(), pristine: false });
   });
+
+  /** Brings filters and the drawer in line with the address bar. */
+  function applyUrl() {
+    const state = searchToState(location.search, known);
+    syncingFromUrl = true;
+    try {
+      if (!sameCriteria(state.criteria, store.getApplied())) {
+        filtersUi.setForm(state.criteria);
+        store.setPending(state.criteria);
+        store.apply();
+      }
+      if (state.listingId) {
+        if (state.listingId !== drawer.currentId) openListing(state.listingId, true);
+      } else drawer.close();
+    } finally {
+      syncingFromUrl = false;
+    }
+  }
+  window.addEventListener('popstate', applyUrl);
 
   mountTimeOfDay($('.time-of-day'), tod, (next) => {
     tod = next;
@@ -107,6 +168,9 @@ async function main() {
   });
 
   await scene.ready;
+  // Shared link: restore filters and the open listing, then normalise the URL (drops invalid params).
+  applyUrl();
+  history.replaceState(historyState(), '', urlFor(drawer.currentId));
   status.textContent = '';
   document.body.dataset.ready = 'true';
 
