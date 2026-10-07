@@ -364,6 +364,10 @@ body[data-tod='night'] .tt-note {
 .drawer-handle {
   display: none;
 }
+.drawer-summary {
+  /* groups navigation, badge, title and price: the strip shown by the collapsed mobile sheet */
+  display: block;
+}
 .drawer-head {
   display: flex;
   align-items: center;
@@ -496,6 +500,9 @@ body[data-tod='night'] .price {
 
 /* ---------------- mobile ---------------- */
 @media (max-width: 720px) {
+  :root {
+    --peek: 166px;
+  }
   .topbar {
     padding: 8px 12px;
   }
@@ -541,17 +548,41 @@ body[data-tod='night'] .price {
   .drawer.open {
     transform: none;
   }
+  /* collapsed sheet: only the summary strip is visible, the map stays usable above it */
+  .drawer.open:not(.expanded) {
+    transform: translateY(calc(100% - var(--peek)));
+    overflow: hidden;
+  }
+  /* lift the map controls (and attribution) above the collapsed sheet */
+  body.drawer-open .maplibregl-ctrl-bottom-left,
+  body.drawer-open .maplibregl-ctrl-bottom-right {
+    bottom: var(--peek);
+  }
   /* the bottom sheet covers the map's attribution control, so repeat it inside the sheet */
   .drawer-attrib {
     display: block;
   }
   .drawer-handle {
     display: block;
+    width: 100%;
+    height: 22px;
+    margin: -4px 0 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .drawer-handle span {
+    display: block;
     width: 40px;
     height: 4px;
     border-radius: 2px;
     background: var(--line);
-    margin: 0 auto 8px;
+    margin: 0 auto;
+  }
+  .drawer.open:not(.expanded) .drawer-summary {
+    touch-action: none;
   }
   .time-of-day {
     top: 8px;

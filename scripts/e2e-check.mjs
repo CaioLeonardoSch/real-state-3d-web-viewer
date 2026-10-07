@@ -396,14 +396,42 @@ async function main() {
     await sleep(300);
     await waitIdle(mp);
     const mClicked = await clickSomeListing(mp);
-    const sheet = await mp.evaluate(() => {
-      const r = document.querySelector('#drawer').getBoundingClientRect();
-      return { open: document.querySelector('#drawer').classList.contains('open'), top: r.top, bottom: r.bottom, width: r.width };
-    });
-    check('mobile: drawer opens as bottom sheet', !!mClicked && sheet.open && sheet.width === 390 && Math.abs(sheet.bottom - 844) < 2 && sheet.top > 100,
-      JSON.stringify(sheet));
+    const sheetInfo = () =>
+      mp.evaluate(() => {
+        const d = document.querySelector('#drawer');
+        const r = d.getBoundingClientRect();
+        const attrib = document.querySelector('.maplibregl-ctrl-attrib').getBoundingClientRect();
+        return { open: d.classList.contains('open'), expanded: d.classList.contains('expanded'), top: Math.round(r.top), width: r.width, attribBottom: Math.round(attrib.bottom) };
+      });
     await sleep(400);
+    const peek = await sheetInfo();
+    check('mobile: drawer opens collapsed (summary strip, map visible)',
+      !!mClicked && peek.open && !peek.expanded && peek.width === 390 && Math.abs(peek.top - (844 - 166)) <= 4 && peek.attribBottom <= peek.top,
+      JSON.stringify(peek));
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-drawer.png') });
+    await mp.click('#drawer .drawer-handle');
+    await sleep(400);
+    const expanded = await sheetInfo();
+    check('mobile: tapping the handle expands the sheet', expanded.expanded && expanded.top < 300, JSON.stringify(expanded));
+    await mp.screenshot({ path: path.join(SHOTS, 'mobile-drawer-expanded.png') });
+    const swipe = async (dy) => {
+      const h = await mp.$eval('#drawer .drawer-handle', (el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+      await mp.mouse.move(h.x, h.y);
+      await mp.mouse.down();
+      await mp.mouse.move(h.x, h.y + dy, { steps: 5 });
+      await mp.mouse.up();
+      await sleep(400);
+    };
+    await swipe(120);
+    const collapsed = await sheetInfo();
+    await swipe(-120);
+    const reExpanded = await sheetInfo();
+    await swipe(120);
+    await swipe(120);
+    const closedBySwipe = await sheetInfo();
+    check('mobile: swipe down collapses, swipe up expands, swipe down when collapsed closes',
+      collapsed.open && !collapsed.expanded && reExpanded.expanded && !closedBySwipe.open,
+      `${JSON.stringify(collapsed)} / ${reExpanded.expanded} / open=${closedBySwipe.open}`);
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
   } finally {
