@@ -40,6 +40,8 @@ export interface Theme {
   boundary: string;
   accent: string;
   accentHover: string;
+  /** Ring around listing pins. */
+  pinStroke: string;
   /** Outline colour of highlighted listings. */
   accentStrong: string;
   land: string;
@@ -63,6 +65,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         accent: '#ffad42',
         accentHover: '#ffd08a',
         accentStrong: '#ffcf8a',
+        pinStroke: '#141b2d',
         land: '#f0a050',
         dimmed: '#4a5060',
         // Sun is below the horizon: a dim, cool, top-down "moonlight" so volumes stay legible.
@@ -84,6 +87,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
       accent: '#f28c18',
       accentHover: '#ffb35c',
       accentStrong: '#b85a00',
+      pinStroke: '#ffffff',
       land: '#f6a94f',
       dimmed: '#b5b5b5',
       light: {

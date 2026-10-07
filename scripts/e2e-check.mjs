@@ -129,6 +129,36 @@ async function main() {
     check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
 
+    // pins in the overview
+    const pinIds = await page.evaluate(() =>
+      [...new Set(window.__demo.map.queryRenderedFeatures({ layers: ['listing-pins'] }).map((f) => f.properties.listingId))],
+    );
+    const totalListings = await page.evaluate(() => window.__demo.listingIds.length);
+    check('overview: a pin is rendered for every listing', pinIds.length === totalListings, `${pinIds.length}/${totalListings}`);
+    const pinTarget = await findListingTarget(page, ['listing-pins']);
+    if (pinTarget) {
+      await page.mouse.move(pinTarget.x, pinTarget.y, { steps: 4 });
+      await sleep(300);
+      const pinTip = await page.evaluate(() => !document.querySelector('#hover-tooltip').hidden);
+      await page.mouse.click(pinTarget.x, pinTarget.y);
+      await sleep(400);
+      const pinDrawer = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
+      check('pin: hover shows tooltip and click opens the drawer', pinTip && pinDrawer, pinTarget.id);
+      await page.keyboard.press('Escape');
+      await sleep(300);
+    } else check('pin: hover shows tooltip and click opens the drawer', false, 'no pin on screen');
+    const pinsZoomedIn = await page.evaluate(async () => {
+      const m = window.__demo.map;
+      const cam = { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
+      m.jumpTo({ zoom: 17.5 });
+      await new Promise((r) => m.once('idle', r));
+      const n = m.queryRenderedFeatures({ layers: ['listing-pins'] }).length;
+      m.jumpTo(cam);
+      await new Promise((r) => m.once('idle', r));
+      return n;
+    });
+    check('pins are hidden when zoomed in (zoom 17.5)', pinsZoomedIn === 0, `${pinsZoomedIn} pins`);
+
     // hover tooltip
     const hoverTarget = await findListingTarget(page);
     if (hoverTarget) {

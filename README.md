@@ -129,6 +129,12 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Filtros**: o formulário altera só o estado *pendente* (`FilterStore.setPending`), e o mapa só muda com **Buscar**
   (`apply()`). **Limpar** zera o formulário e também a busca aplicada, por ser um clique explícito. Um aviso
   "Alterações não aplicadas" aparece quando o formulário difere do que está aplicado.
+- **Pinos**: um círculo laranja com borda (camada `circle` do MapLibre, sem ícones nem fontes externas) no centro de
+  cada imóvel. Ficam visíveis na visão geral e somem gradualmente entre os zooms 15,5 e 16,5, quando o prédio ou
+  terreno destacado já é legível. Clicar ou passar o mouse no pino equivale a fazê-lo no imóvel. Imóveis fora da
+  busca têm pino cinza menor e não clicável.
+- **Câmera inicial**: enquadra todos os imóveis (com a inclinação de 58°), para nenhum começar fora da tela. O limite
+  de navegação continua sendo o do bairro.
 - **Etiqueta ao passar o mouse**: elemento HTML próprio (não o `Popup` do MapLibre) que segue o cursor e mostra
   preço, tipo, área, quartos, aviso de localização aproximada e "Clique para ver detalhes". Some ao sair do imóvel,
   ao clicar e enquanto o mapa é arrastado ou girado. Imóveis esmaecidos pela busca não mostram etiqueta. Em tela de
@@ -162,8 +168,6 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - O contorno dos imóveis é desenhado só na base do volume.
 - Muitos prédios do OSM têm só `building=yes`. Um prédio "residencial" escolhido pode, na realidade, ser comercial ou
   galpão, porque o filtro depende das tags existentes.
-- Na visão geral do bairro, imóveis pequenos (casas, terrenos) aparecem como poucos pixels. A busca e a lista de
-  resultados aproximam a câmera.
 - `npm audit` aponta vulnerabilidades em `@xmldom/xmldom`, que vem pelo `osmtogeojson` 3.0.0-beta.5. É uma
   dependência só de desenvolvimento, usada no script de dados com entrada **JSON** do Overpass (o parser XML não é
   usado), e não entra no bundle do navegador. A "correção" sugerida rebaixaria para `osmtogeojson` 2.x, o que foi
@@ -177,7 +181,6 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   customizada do MapLibre (o `fill-extrusion` não suporta isso).
 - Sombras reais (shadow mapping) via camada customizada.
 - Rótulos de ruas, que exigem fontes/glyphs locais.
-- Marcadores (pinos) para os imóveis em zoom baixo, para que fiquem visíveis na visão geral do bairro.
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 
@@ -220,9 +223,10 @@ Imóveis fictícios (`listings.json`): 15 no total.
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 27 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 30 checagens:
   - camadas renderizadas;
   - atribuição e banner visíveis;
+  - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
   - passar o mouse mostra a etiqueta com o preço certo e cursor de mão, e sair a esconde;
   - clique abre o drawer, e Esc, o botão × e o clique no mapa vazio fecham;
   - localização aproximada;

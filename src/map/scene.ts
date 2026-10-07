@@ -1,6 +1,6 @@
 import { AttributionControl, LngLatBounds, Map as MlMap, NavigationControl } from 'maplibre-gl';
 import type { ExpressionSpecification, GeoJSONSource, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl';
-import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, FeatureCollection, Point, Polygon, MultiPolygon } from 'geojson';
 import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
@@ -23,7 +23,12 @@ interface ListingFeatureProps {
 }
 
 /** Layers whose features are clickable listings (filters keep only matched ones). */
-const INTERACTIVE_LAYERS = ['listing-buildings', 'listing-land', 'listing-approx-fill'];
+const INTERACTIVE_LAYERS = ['listing-pins', 'listing-buildings', 'listing-land', 'listing-approx-fill'];
+/** Both listing sources share feature ids, so hover/selected state is mirrored on them. */
+const LISTING_SOURCES = ['listings', 'listing-pins'] as const;
+/** Pins help find listings in the overview and fade out once the 3D highlight is readable. */
+const PIN_FADE_START_ZOOM = 15.5;
+const PIN_MAX_ZOOM = 16.5;
 
 export interface SceneEvents {
   onListingClick: (listingId: string) => void;
@@ -68,8 +73,9 @@ export class Scene {
     this.map.addControl(new AttributionControl({ compact: false, customAttribution: MAPLIBRE_ATTRIBUTION }), 'bottom-left');
     this.map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
 
-    // fitBounds leaves a lot of empty margin with a pitched camera; start slightly closer
-    if (!window.matchMedia('(max-width: 720px)').matches) this.map.setZoom(this.map.getZoom() + 0.5);
+    // Initial view frames every listing (with the pitched camera), so none starts off-screen.
+    const all = this.unionBounds(this.data.listings.listings);
+    if (all) this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: 58, bearing: -20, animate: false });
 
     this.ready = new Promise((resolve) => this.map.once('load', () => resolve()));
     this.bindInteractions();
@@ -101,6 +107,7 @@ export class Scene {
         water: { type: 'geojson', data: this.data.water },
         green: { type: 'geojson', data: this.data.green },
         listings: { type: 'geojson', data: this.listingCollection() },
+        'listing-pins': { type: 'geojson', data: this.pinCollection() },
       },
       light: { anchor: 'map', ...t.light },
       sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon },
@@ -234,6 +241,36 @@ export class Scene {
             'line-dasharray': [2, 2],
           },
         },
+        {
+          id: 'listing-pins-dimmed',
+          type: 'circle',
+          source: 'listing-pins',
+          maxzoom: PIN_MAX_ZOOM,
+          filter: dimFilter,
+          paint: {
+            'circle-color': t.dimmed,
+            'circle-radius': 4,
+            'circle-stroke-color': t.pinStroke,
+            'circle-stroke-width': 1,
+            'circle-opacity': this.pinFade(0.6),
+            'circle-stroke-opacity': this.pinFade(0.6),
+          },
+        },
+        {
+          id: 'listing-pins',
+          type: 'circle',
+          source: 'listing-pins',
+          maxzoom: PIN_MAX_ZOOM,
+          filter: matchedFilter,
+          paint: {
+            'circle-color': hoverColor(t.accent),
+            'circle-radius': ['case', ['boolean', ['feature-state', 'hover'], false], 9, 7],
+            'circle-stroke-color': t.pinStroke,
+            'circle-stroke-width': 2,
+            'circle-opacity': this.pinFade(1),
+            'circle-stroke-opacity': this.pinFade(1),
+          },
+        },
       ],
     };
   }
@@ -273,6 +310,26 @@ export class Scene {
     });
   }
 
+  private pinFade(max: number): ExpressionSpecification {
+    return ['interpolate', ['linear'], ['zoom'], PIN_FADE_START_ZOOM, max, PIN_MAX_ZOOM, 0];
+  }
+
+  /** One point per listing at the centre of its highlighted shape (same feature ids as `listings`). */
+  private pinCollection(): FeatureCollection<Point, ListingFeatureProps> {
+    return {
+      type: 'FeatureCollection',
+      features: this.listingFeatures.map((f) => {
+        const [w, s, e, n] = turfBbox(f);
+        return {
+          type: 'Feature',
+          id: f.id,
+          properties: f.properties,
+          geometry: { type: 'Point', coordinates: [(w + e) / 2, (s + n) / 2] },
+        };
+      }),
+    };
+  }
+
   private listingCollection(): FeatureCollection<Polygon | MultiPolygon, ListingFeatureProps> {
     return { type: 'FeatureCollection', features: this.listingFeatures };
   }
@@ -281,6 +338,7 @@ export class Scene {
   setMatched(matchedIds: Set<string>): void {
     for (const f of this.listingFeatures) f.properties.matched = matchedIds.has(f.properties.listingId);
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
+    (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
     this.setHover(null);
   }
 
@@ -289,13 +347,18 @@ export class Scene {
     return f ? (turfBbox(f) as [number, number, number, number]) : null;
   }
 
-  fitToListings(listings: Listing[]): void {
+  private unionBounds(listings: Listing[]): LngLatBounds | null {
     const b = new LngLatBounds();
     for (const l of listings) {
       const bb = this.listingBounds(l);
       if (bb) b.extend([bb[0], bb[1]]).extend([bb[2], bb[3]]);
     }
-    if (b.isEmpty()) return;
+    return b.isEmpty() ? null : b;
+  }
+
+  fitToListings(listings: Listing[]): void {
+    const b = this.unionBounds(listings);
+    if (!b) return;
     this.map.fitBounds(b, { padding: this.cameraPadding(), maxZoom: 17.5, pitch: 55, duration: 1200 });
   }
 
@@ -311,9 +374,9 @@ export class Scene {
   }
 
   select(listingId: string | null): void {
-    if (this.selectedId !== null) this.map.setFeatureState({ source: 'listings', id: this.selectedId }, { selected: false });
+    if (this.selectedId !== null) this.setListingState(this.selectedId, { selected: false });
     this.selectedId = listingId ? (this.featureIdByListing.get(listingId) ?? null) : null;
-    if (this.selectedId !== null) this.map.setFeatureState({ source: 'listings', id: this.selectedId }, { selected: true });
+    if (this.selectedId !== null) this.setListingState(this.selectedId, { selected: true });
   }
 
   // ---------------------------------------------------------------- theme
@@ -349,6 +412,10 @@ export class Scene {
       t.accent,
     ]);
     m.setPaintProperty('listing-approx-line', 'line-color', ['case', ['==', ['get', 'matched'], false], t.dimmed, t.accent]);
+    m.setPaintProperty('listing-pins', 'circle-color', listingBuildingHover);
+    m.setPaintProperty('listing-pins', 'circle-stroke-color', t.pinStroke);
+    m.setPaintProperty('listing-pins-dimmed', 'circle-color', t.dimmed);
+    m.setPaintProperty('listing-pins-dimmed', 'circle-stroke-color', t.pinStroke);
     m.setLight({ anchor: 'map', ...t.light });
     m.setSky({ 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon });
   }
@@ -362,11 +429,15 @@ export class Scene {
       .find((f) => f.properties?.matched === true);
   }
 
+  private setListingState(id: number, state: Record<string, boolean>): void {
+    for (const source of LISTING_SOURCES) this.map.setFeatureState({ source, id }, state);
+  }
+
   private setHover(id: number | null): void {
     if (this.hoveredId === id) return;
-    if (this.hoveredId !== null) this.map.setFeatureState({ source: 'listings', id: this.hoveredId }, { hover: false });
+    if (this.hoveredId !== null) this.setListingState(this.hoveredId, { hover: false });
     this.hoveredId = id;
-    if (id !== null) this.map.setFeatureState({ source: 'listings', id }, { hover: true });
+    if (id !== null) this.setListingState(id, { hover: true });
     this.map.getCanvas().style.cursor = id !== null ? 'pointer' : '';
   }
 
