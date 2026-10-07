@@ -369,7 +369,34 @@ body[data-tod='night'] .tt-note {
   align-items: center;
   justify-content: space-between;
 }
+.drawer-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nav-pos {
+  min-width: 58px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
 .badge-fictional {
+  display: inline-block;
+  margin-top: 6px;
   font-size: 12px;
   font-weight: 600;
   color: #fff;

@@ -272,6 +272,28 @@ async function main() {
     await waitIdle(page);
     check('clicking a result opens the drawer', await page.evaluate(() => document.querySelector('#drawer').classList.contains('open')));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-result-land-closeup.png') });
+
+    // previous / next inside the drawer
+    const navInfo = async () =>
+      page.evaluate(() => ({
+        pos: document.querySelector('#drawer .nav-pos')?.textContent,
+        title: document.querySelector('#drawer h2')?.textContent,
+        prevDisabled: document.querySelector('#drawer [data-action="prev"]')?.disabled,
+        nextDisabled: document.querySelector('#drawer [data-action="next"]')?.disabled,
+      }));
+    const n0 = await navInfo();
+    await page.click('#drawer [data-action="next"]');
+    await sleep(300);
+    const n1 = await navInfo();
+    await page.focus('#drawer');
+    await page.keyboard.press('ArrowLeft');
+    await sleep(300);
+    const n2 = await navInfo();
+    check('drawer previous/next browses the results (buttons and arrow keys)',
+      n0.pos === `1 de ${landCount}` && n0.prevDisabled === true && n1.pos === `2 de ${landCount}` && n1.title !== n0.title &&
+        n2.pos === n0.pos && n2.title === n0.title,
+      `${n0.pos} → ${n1.pos} → ${n2.pos}`);
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer-nav.png') });
     await page.keyboard.press('Escape');
 
     // close-up of a highlighted apartment

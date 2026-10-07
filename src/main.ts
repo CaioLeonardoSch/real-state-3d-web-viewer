@@ -5,6 +5,7 @@ import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './styles.css';
 import { loadData } from './data/load';
+import type { Listing } from './data/types';
 import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import { FilterStore, filterListings, isEmptyCriteria } from './state/filters';
@@ -30,7 +31,14 @@ async function main() {
   const resultsEl = $('#results');
 
   const tooltip = new HoverTooltip($('#hover-tooltip'), $('#map'));
-  const drawer = new Drawer($('#drawer'), data.listings.agencies, () => scene.select(null));
+  // The list the drawer browses with previous/next: applied search results, in display order.
+  let currentList: Listing[] = listings;
+  const drawer = new Drawer(
+    $('#drawer'),
+    data.listings.agencies,
+    () => scene.select(null),
+    (id) => openListing(id, true),
+  );
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
     onListingClick: (id) => openListing(id, false),
     onEmptyClick: () => drawer.close(),
@@ -47,12 +55,24 @@ async function main() {
     if (!l) return;
     if (fly) scene.flyToListing(l);
     scene.select(id);
-    drawer.open(l);
+    const index = currentList.findIndex((x) => x.id === id);
+    drawer.open(
+      l,
+      index < 0
+        ? null
+        : {
+            index,
+            total: currentList.length,
+            prevId: currentList[index - 1]?.id ?? null,
+            nextId: currentList[index + 1]?.id ?? null,
+          },
+    );
   }
 
   mountFilters($<HTMLFormElement>('#filters'), store, data.listings.agencies);
   store.onApply((criteria) => {
     const results = filterListings(listings, criteria);
+    currentList = results;
     scene.setMatched(new Set(results.map((l) => l.id)));
     if (drawer.currentId && !results.some((l) => l.id === drawer.currentId)) drawer.close();
     if (isEmptyCriteria(criteria)) {

@@ -4,15 +4,31 @@ import { escapeHtml, formatArea, formatBRL, formatBRLCents } from '../utils/form
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
 
+/** Position of the open listing inside the current list, for previous/next navigation. */
+export interface DrawerNav {
+  index: number;
+  total: number;
+  prevId: string | null;
+  nextId: string | null;
+}
+
 export class Drawer {
   private openId: string | null = null;
+  private nav: DrawerNav | null = null;
   constructor(
     private el: HTMLElement,
     private agencies: Agency[],
     private onClose: () => void,
+    private onNavigate: (id: string) => void = () => {},
   ) {
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.openId) this.close();
+      if (!this.openId) return;
+      if (e.key === 'Escape') return this.close();
+      // ← / → browse the list while focus is in the drawer (not in a form field)
+      const inDrawer = this.el.contains(document.activeElement);
+      if (!inDrawer || (e.target as HTMLElement).closest('input, select, textarea')) return;
+      if (e.key === 'ArrowLeft' && this.nav?.prevId) this.onNavigate(this.nav.prevId);
+      if (e.key === 'ArrowRight' && this.nav?.nextId) this.onNavigate(this.nav.nextId);
     });
   }
 
@@ -20,8 +36,9 @@ export class Drawer {
     return this.openId;
   }
 
-  open(l: Listing): void {
+  open(l: Listing, nav: DrawerNav | null = null): void {
     this.openId = l.id;
+    this.nav = nav;
     const agency = this.agencies.find((a) => a.id === l.agency)?.name ?? l.agency;
     const sim = simulatePayment(l.price, l.status);
     const rows: [string, string][] = [
@@ -43,9 +60,18 @@ export class Drawer {
     this.el.innerHTML = `
       <div class="drawer-handle" aria-hidden="true"></div>
       <div class="drawer-head">
-        <span class="badge-fictional">Imóvel fictício para demonstração</span>
+        ${
+          nav
+            ? `<div class="drawer-nav" role="group" aria-label="Navegar entre imóveis">
+                <button type="button" class="nav-btn" data-action="prev" aria-label="Imóvel anterior" ${nav.prevId ? '' : 'disabled'}>‹</button>
+                <span class="nav-pos">${nav.index + 1} de ${nav.total}</span>
+                <button type="button" class="nav-btn" data-action="next" aria-label="Próximo imóvel" ${nav.nextId ? '' : 'disabled'}>›</button>
+              </div>`
+            : '<span></span>'
+        }
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar detalhes">×</button>
       </div>
+      <span class="badge-fictional">Imóvel fictício para demonstração</span>
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>
       <p class="price">${formatBRL(l.price)}</p>
       ${
@@ -75,6 +101,8 @@ export class Drawer {
       <p class="drawer-attrib">Mapa: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL) · <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a></p>
     `;
     this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
+    this.el.querySelector('[data-action="prev"]')?.addEventListener('click', () => nav?.prevId && this.onNavigate(nav.prevId));
+    this.el.querySelector('[data-action="next"]')?.addEventListener('click', () => nav?.nextId && this.onNavigate(nav.nextId));
     this.el.classList.add('open');
     this.el.setAttribute('aria-hidden', 'false');
     this.el.scrollTop = 0;
@@ -84,6 +112,7 @@ export class Drawer {
   close(): void {
     if (!this.openId) return;
     this.openId = null;
+    this.nav = null;
     this.el.classList.remove('open');
     this.el.setAttribute('aria-hidden', 'true');
     this.onClose();
