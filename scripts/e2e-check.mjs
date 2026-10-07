@@ -355,6 +355,36 @@ async function main() {
     );
     check('"Limpar" restores all listings', dimAfterClear === 0);
 
+    // empty search with a useful suggestion
+    await page.click('label.chip:has-text("Terreno")');
+    await page.fill('input[name="priceMax"]', '500000');
+    await page.click('button:has-text("Buscar")');
+    await sleep(400);
+    const emptyState = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-head strong')?.textContent,
+      relax: [...document.querySelectorAll('#results [data-relax]')].map((b) => b.textContent.replace(/\s+/g, ' ').trim()),
+    }));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-empty-search.png') });
+    const dimmedPins = await page.evaluate(() => new Set(window.__demo.map.queryRenderedFeatures({ layers: ['listing-pins-dimmed'] }).map((f) => f.properties.listingId)).size);
+    check('empty search keeps every listing visible as a grey pin', dimmedPins === 15, `${dimmedPins} dimmed pins`);
+    check('empty search suggests the blocking filter with the closest value',
+      emptyState.header?.startsWith('0 ') && emptyState.relax[0]?.includes('Remover o preço máximo') &&
+        emptyState.relax[0]?.replace(/\s/g, ' ').includes('o mais barato custa R$ 790.000'),
+      JSON.stringify(emptyState));
+    await page.click('#results [data-relax="priceMax"]');
+    await sleep(400);
+    await waitIdle(page);
+    const relaxed = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-head strong')?.textContent,
+      priceMax: document.querySelector('input[name="priceMax"]').value,
+      search: location.search,
+    }));
+    check('clicking the suggestion removes that filter and searches again',
+      relaxed.header?.startsWith('3 ') && relaxed.priceMax === '' && relaxed.search === '?tipo=terreno', JSON.stringify(relaxed));
+    await page.click('button:has-text("Limpar")');
+    await sleep(300);
+    await waitIdle(page);
+
     // ------------------------------------------------ lighting
     await page.evaluate(() => window.__demo.map.jumpTo({ zoom: window.__demo.map.getZoom() })); // no-op, keep camera
     const shots = { morning: null, afternoon: null, night: null };

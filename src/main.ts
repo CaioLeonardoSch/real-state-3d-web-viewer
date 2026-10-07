@@ -8,7 +8,14 @@ import { loadData } from './data/load';
 import type { Listing } from './data/types';
 import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
-import { FilterStore, filterListings, isEmptyCriteria } from './state/filters';
+import {
+  EMPTY_CRITERIA,
+  FilterStore,
+  filterListings,
+  isEmptyCriteria,
+  suggestRelaxations,
+  withoutCriterion,
+} from './state/filters';
 import { sameCriteria, searchToState, stateToSearch } from './state/url';
 import { DEFAULT_SORT, sortListings, type SortKey } from './state/sort';
 import { mountFilters } from './ui/filters';
@@ -50,6 +57,17 @@ async function main() {
       // keep previous/next in the drawer consistent with the new order
       if (drawer.currentId) openListing(drawer.currentId, false);
       else replaceUrl();
+    },
+    // These are explicit clicks, like "Buscar": they change the form and search again.
+    onRelax: (field) => {
+      const next = withoutCriterion(store.getApplied(), field);
+      filtersUi.setForm(next);
+      store.setPending(next);
+      store.apply();
+    },
+    onClearAll: () => {
+      filtersUi.setForm(EMPTY_CRITERIA);
+      store.clear();
     },
   });
   // The list the drawer browses with previous/next: applied search results, in display order.
@@ -123,7 +141,13 @@ async function main() {
   function showResults() {
     currentList = sortListings(filterListings(listings, store.getApplied()), sort);
     if (isEmptyCriteria(store.getApplied())) results.hide();
-    else results.render({ results: currentList, total: listings.length, sort });
+    else
+      results.render({
+        results: currentList,
+        total: listings.length,
+        sort,
+        suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
+      });
   }
 
   store.onApply(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Listing } from '../src/data/types';
-import { EMPTY_CRITERIA, FilterStore, filterListings } from '../src/state/filters';
+import { EMPTY_CRITERIA, FilterStore, filterListings, suggestRelaxations } from '../src/state/filters';
 
 const base: Omit<Listing, 'id' | 'type' | 'price' | 'bedrooms' | 'areaM2' | 'agency'> = {
   title: 't',
@@ -68,5 +68,29 @@ describe('FilterStore', () => {
     const s = new FilterStore();
     s.getPending().types.push('land');
     expect(s.getPending().types).toEqual([]);
+  });
+});
+
+describe('suggestRelaxations', () => {
+  // fixture: a apt 600k 2q 70m² A · b apt 900k 3q 110m² B · c house 1.2M 4q 220m² A · d semi 550k 3q 120m² B · e land 400k 0q 360m² A
+  it('returns nothing when no criterion is active', () => {
+    expect(suggestRelaxations(data, EMPTY_CRITERIA)).toEqual([]);
+  });
+  it('points to the blocking criterion with the closest available value', () => {
+    // no land at or under 300k; dropping the type finds nothing either, dropping priceMax finds the 400k lot
+    const c = { ...EMPTY_CRITERIA, types: ['land' as const], priceMax: 300_000 };
+    expect(suggestRelaxations(data, c)).toEqual([{ field: 'priceMax', count: 1, closest: 400_000 }]);
+  });
+  it('orders by number of recovered listings', () => {
+    // 4+ bedrooms up to 700k: without the bedroom filter a, d, e (max 3 bedrooms); without the price filter c (1.2M)
+    const c = { ...EMPTY_CRITERIA, bedroomsMin: 4, priceMax: 700_000 };
+    expect(suggestRelaxations(data, c)).toEqual([
+      { field: 'bedroomsMin', count: 3, closest: 3 },
+      { field: 'priceMax', count: 1, closest: 1_200_000 },
+    ]);
+  });
+  it('omits criteria whose removal does not help', () => {
+    const c = { ...EMPTY_CRITERIA, types: ['land' as const], agency: 'B', priceMax: 1 };
+    expect(suggestRelaxations(data, c)).toEqual([]);
   });
 });

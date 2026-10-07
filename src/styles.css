@@ -289,6 +289,19 @@ body[data-tod='night'] .f-pending {
 .results-sort select option {
   color: #1f2328;
 }
+.results-empty p {
+  margin: 8px 0 4px;
+}
+.results-empty .relax li button .r-title {
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .results-empty .relax li button .r-title {
+  color: #ffc37a;
+}
+.results-empty .btn-secondary {
+  margin-top: 8px;
+  width: 100%;
+}
 .results ul {
   list-style: none;
   margin: 8px 0 0;

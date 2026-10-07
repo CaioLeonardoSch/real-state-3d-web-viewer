@@ -89,7 +89,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
       accentStrong: '#b85a00',
       pinStroke: '#ffffff',
       land: '#f6a94f',
-      dimmed: '#b5b5b5',
+      dimmed: '#9a9a9a',
       light: {
         color: warm ? '#fff1dc' : '#f4f8ff',
         intensity: 0.4,

@@ -1,12 +1,63 @@
 import type { Listing } from '../data/types';
 import { TYPE_LABELS } from '../data/types';
 import { SORT_KEYS, SORT_LABELS, priceRangeLabel, type SortKey } from '../state/sort';
+import type { RelaxSuggestion, RelaxableField } from '../state/filters';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 
 export interface ResultsHandlers {
   onPick: (id: string) => void;
   onHover: (id: string | null) => void;
   onSortChange: (sort: SortKey) => void;
+  /** Remove one criterion and search again (from the empty-results hint). */
+  onRelax: (field: RelaxableField) => void;
+  onClearAll: () => void;
+}
+
+const FIELD_LABELS: Record<RelaxableField, string> = {
+  types: 'o filtro de tipo',
+  priceMin: 'o preço mínimo',
+  priceMax: 'o preço máximo',
+  bedroomsMin: 'o mínimo de quartos',
+  areaMin: 'a área mínima',
+  agency: 'o filtro de imobiliária',
+};
+
+function closestHint(s: RelaxSuggestion): string | null {
+  if (s.closest === null) return null;
+  switch (s.field) {
+    case 'priceMax':
+      return `o mais barato custa ${formatBRL(s.closest)}`;
+    case 'priceMin':
+      return `o mais caro custa ${formatBRL(s.closest)}`;
+    case 'areaMin':
+      return `o maior tem ${formatArea(s.closest)}`;
+    case 'bedroomsMin':
+      return s.closest > 0 ? `o máximo é ${s.closest} ${s.closest === 1 ? 'quarto' : 'quartos'}` : null;
+    default:
+      return null;
+  }
+}
+
+function emptyHtml(suggestions: RelaxSuggestion[]): string {
+  const top = suggestions.slice(0, 2);
+  return `<div class="results-empty">
+    <p>Nenhum imóvel atende a todos os filtros.</p>
+    ${
+      top.length
+        ? `<ul class="relax">${top
+            .map((s) => {
+              const hint = closestHint(s);
+              const found = s.count === 1 ? '1 imóvel' : `${s.count} imóveis`;
+              return `<li><button type="button" data-relax="${s.field}">
+                <span class="r-title">Remover ${FIELD_LABELS[s.field]}</span>
+                <span class="r-meta">${found}${hint ? ` · ${hint}` : ''}</span>
+              </button></li>`;
+            })
+            .join('')}</ul>`
+        : '<p class="muted">Nenhum filtro sozinho resolve.</p>'
+    }
+    <button type="button" class="btn-secondary" data-action="clear-all">Limpar todos os filtros</button>
+  </div>`;
 }
 
 export interface ResultsView {
@@ -14,6 +65,8 @@ export interface ResultsView {
   results: Listing[];
   total: number;
   sort: SortKey;
+  /** Shown when there are no results. */
+  suggestions?: RelaxSuggestion[];
 }
 
 /** Results list: count, price range, sort selector and clickable rows synced with the map. */
@@ -27,7 +80,7 @@ export class ResultsPanel {
     this.el.hidden = true;
   }
 
-  render({ results, total, sort }: ResultsView): void {
+  render({ results, total, sort, suggestions = [] }: ResultsView): void {
     const range = priceRangeLabel(results);
     this.el.hidden = false;
     this.el.innerHTML = `
@@ -38,7 +91,7 @@ export class ResultsPanel {
       </div>
       ${
         results.length === 0
-          ? '<p class="muted">Nenhum imóvel atende aos filtros. Ajuste e clique em Buscar.</p>'
+          ? emptyHtml(suggestions)
           : `<div class="results-tools">
               <span class="results-range" title="Faixa de preço dos resultados">${range}</span>
               <label class="results-sort">Ordenar
@@ -56,7 +109,11 @@ export class ResultsPanel {
               )
               .join('')}</ul>`
       }`;
-    const { onPick, onHover, onSortChange } = this.handlers;
+    const { onPick, onHover, onSortChange, onRelax, onClearAll } = this.handlers;
+    this.el
+      .querySelectorAll<HTMLButtonElement>('button[data-relax]')
+      .forEach((b) => b.addEventListener('click', () => onRelax(b.dataset.relax as RelaxableField)));
+    this.el.querySelector('[data-action="clear-all"]')?.addEventListener('click', onClearAll);
     this.el.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => {
       b.addEventListener('click', () => onPick(b.dataset.id!));
       // hovering or focusing a row highlights the listing on the map

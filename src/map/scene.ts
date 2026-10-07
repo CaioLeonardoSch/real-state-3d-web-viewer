@@ -249,11 +249,11 @@ export class Scene {
           filter: dimFilter,
           paint: {
             'circle-color': t.dimmed,
-            'circle-radius': 4,
+            'circle-radius': 4.5,
             'circle-stroke-color': t.pinStroke,
-            'circle-stroke-width': 1,
-            'circle-opacity': this.pinFade(0.6),
-            'circle-stroke-opacity': this.pinFade(0.6),
+            'circle-stroke-width': 1.5,
+            'circle-opacity': this.pinFade(0.9),
+            'circle-stroke-opacity': this.pinFade(0.9),
           },
         },
         {

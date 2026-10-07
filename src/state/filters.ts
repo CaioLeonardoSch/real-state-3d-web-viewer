@@ -83,3 +83,46 @@ export class FilterStore {
 function cloneCriteria(c: FilterCriteria): FilterCriteria {
   return { ...c, types: [...c.types] };
 }
+
+export type RelaxableField = 'types' | 'priceMin' | 'priceMax' | 'bedroomsMin' | 'areaMin' | 'agency';
+
+export interface RelaxSuggestion {
+  field: RelaxableField;
+  /** How many listings would match without this criterion. */
+  count: number;
+  /** Closest available value among those listings, e.g. the cheapest price when priceMax is too low. */
+  closest: number | null;
+}
+
+const isActive = (c: FilterCriteria, f: RelaxableField) => (f === 'types' ? c.types.length > 0 : c[f] !== null);
+
+export function withoutCriterion(c: FilterCriteria, f: RelaxableField): FilterCriteria {
+  return { ...c, types: [...c.types], ...(f === 'types' ? { types: [] } : { [f]: null }) };
+}
+
+/**
+ * For an empty search: which single criterion, if removed, brings results back — most results first.
+ * Only criteria that actually help are returned.
+ */
+export function suggestRelaxations(listings: readonly Listing[], c: FilterCriteria): RelaxSuggestion[] {
+  const fields: RelaxableField[] = ['types', 'priceMin', 'priceMax', 'bedroomsMin', 'areaMin', 'agency'];
+  const out: RelaxSuggestion[] = [];
+  for (const field of fields) {
+    if (!isActive(c, field)) continue;
+    const found = filterListings(listings, withoutCriterion(c, field));
+    if (found.length === 0) continue;
+    const values = (pick: (l: Listing) => number) => found.map(pick);
+    const closest =
+      field === 'priceMax'
+        ? Math.min(...values((l) => l.price))
+        : field === 'priceMin'
+          ? Math.max(...values((l) => l.price))
+          : field === 'areaMin'
+            ? Math.max(...values((l) => l.areaM2))
+            : field === 'bedroomsMin'
+              ? Math.max(...values((l) => l.bedrooms))
+              : null;
+    out.push({ field, count: found.length, closest });
+  }
+  return out.sort((a, b) => b.count - a.count);
+}
