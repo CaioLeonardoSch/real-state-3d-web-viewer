@@ -13,6 +13,17 @@ export interface ResultsHandlers {
   onClearAll: () => void;
 }
 
+export interface ResultsView {
+  /** Listings to show, already sorted. */
+  results: Listing[];
+  total: number;
+  sort: SortKey;
+  /** Whether a search is applied (changes the heading). */
+  filtered: boolean;
+  /** Shown when there are no results. */
+  suggestions?: RelaxSuggestion[];
+}
+
 const FIELD_LABELS: Record<RelaxableField, string> = {
   types: 'o filtro de tipo',
   priceMin: 'o preço mínimo',
@@ -60,47 +71,84 @@ function emptyHtml(suggestions: RelaxSuggestion[]): string {
   </div>`;
 }
 
-export interface ResultsView {
-  /** Listings to show, already sorted. */
-  results: Listing[];
-  total: number;
-  sort: SortKey;
-  /** Shown when there are no results. */
-  suggestions?: RelaxSuggestion[];
-}
+export const resultsHeading = (count: number, filtered: boolean) =>
+  filtered
+    ? count === 1
+      ? '1 imóvel encontrado'
+      : `${count} imóveis encontrados`
+    : count === 1
+      ? '1 imóvel à venda'
+      : `${count} imóveis à venda`;
 
-/** Results list: count, price range, sort selector and clickable rows synced with the map. */
+/**
+ * Always-available list of listings (all of them, or the applied search results): count, price range,
+ * sort selector and rows synced with the map. It is the keyboard / screen-reader way to reach every
+ * listing, and can be collapsed to free the map.
+ */
 export class ResultsPanel {
+  private collapsed: boolean;
+
   constructor(
     private el: HTMLElement,
     private handlers: ResultsHandlers,
-  ) {}
-
-  hide(): void {
-    this.el.hidden = true;
+    startCollapsed: boolean,
+  ) {
+    this.collapsed = startCollapsed;
   }
 
-  render({ results, total, sort, suggestions = [] }: ResultsView): void {
+  get isCollapsed() {
+    return this.collapsed;
+  }
+
+  setCollapsed(on: boolean): void {
+    this.collapsed = on;
+    this.el.classList.toggle('collapsed', on);
+    const body = this.el.querySelector<HTMLElement>('.results-body');
+    if (body) body.hidden = on;
+    const t = this.el.querySelector<HTMLButtonElement>('[data-action="toggle-results"]');
+    if (t) {
+      t.setAttribute('aria-expanded', String(!on));
+      t.setAttribute('aria-label', on ? 'Mostrar lista de imóveis' : 'Ocultar lista de imóveis');
+      t.textContent = on ? 'Mostrar' : 'Ocultar';
+    }
+  }
+
+  /** Expands the list and moves keyboard focus to its first row (skip link). */
+  focusFirst(): void {
+    this.setCollapsed(false);
+    (this.el.querySelector<HTMLElement>('button[data-id], button[data-relax]') ?? this.el).focus();
+  }
+
+  /** Puts focus back on a row (after the drawer closes). Returns false if the row is not in the list. */
+  focusRow(id: string): boolean {
+    const b = this.el.querySelector<HTMLButtonElement>(`button[data-id="${CSS.escape(id)}"]`);
+    if (!b || this.collapsed) return false;
+    b.focus();
+    return true;
+  }
+
+  render({ results, total, sort, filtered, suggestions = [] }: ResultsView): void {
     const range = priceRangeLabel(results);
     this.el.hidden = false;
     this.el.innerHTML = `
       <div class="results-head">
-        <strong>${results.length === 1 ? '1 imóvel encontrado' : `${results.length} imóveis encontrados`}</strong>
-        <span class="muted">de ${total}</span>
-        <button type="button" class="icon-btn" data-action="close-results" aria-label="Ocultar lista">×</button>
+        <h2 class="results-title" id="results-title">${resultsHeading(results.length, filtered)}</h2>
+        ${filtered ? `<span class="muted">de ${total}</span>` : ''}
+        <button type="button" class="link-btn" data-action="toggle-results" aria-controls="results-body"></button>
       </div>
+      <div class="results-body" id="results-body">
       ${
         results.length === 0
           ? emptyHtml(suggestions)
           : `<div class="results-tools">
-              <span class="results-range" title="Faixa de preço dos resultados">${range}</span>
-              <label class="results-sort">Ordenar
+              <span class="results-range" title="Faixa de preço">${range}</span>
+              <label class="results-sort"><span class="sr-only">Ordenar por</span>
                 <select name="sort">${SORT_KEYS.map(
                   (k) => `<option value="${k}" ${k === sort ? 'selected' : ''}>${SORT_LABELS[k]}</option>`,
                 ).join('')}</select>
               </label>
             </div>
-            <ul>${results
+            <ul aria-labelledby="results-title">${results
               .map(
                 (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}">
                   <span class="r-title">${escapeHtml(l.title)}</span>
@@ -108,7 +156,8 @@ export class ResultsPanel {
                 </button></li>`,
               )
               .join('')}</ul>`
-      }`;
+      }
+      </div>`;
     const { onPick, onHover, onSortChange, onRelax, onClearAll } = this.handlers;
     this.el
       .querySelectorAll<HTMLButtonElement>('button[data-relax]')
@@ -126,7 +175,10 @@ export class ResultsPanel {
     this.el
       .querySelector<HTMLSelectElement>('select[name="sort"]')
       ?.addEventListener('change', (e) => onSortChange((e.target as HTMLSelectElement).value as SortKey));
-    this.el.querySelector('[data-action="close-results"]')!.addEventListener('click', () => this.hide());
+    this.el
+      .querySelector('[data-action="toggle-results"]')!
+      .addEventListener('click', () => this.setCollapsed(!this.collapsed));
+    this.setCollapsed(this.collapsed);
   }
 
   /** Marks the row of the listing hovered on the map (null clears) and keeps it in view. */
@@ -134,7 +186,7 @@ export class ResultsPanel {
     this.el.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => {
       const on = b.dataset.id === id;
       b.classList.toggle('is-hover', on);
-      if (on && !this.el.hidden) b.scrollIntoView({ block: 'nearest' });
+      if (on && !this.collapsed) b.scrollIntoView({ block: 'nearest' });
     });
   }
 }

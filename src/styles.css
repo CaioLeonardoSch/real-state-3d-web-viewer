@@ -259,8 +259,54 @@ body[data-tod='night'] .f-pending {
   align-items: baseline;
   gap: 6px;
 }
-.results-head .icon-btn {
+.results-title {
+  margin: 0;
+  font-size: 15px;
+}
+.link-btn {
   margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+body[data-tod='night'] .link-btn {
+  color: #ffc37a;
+}
+.results.collapsed {
+  padding: 6px 12px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 10;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 8px;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
 }
 .results-tools {
   display: flex;
@@ -272,6 +318,7 @@ body[data-tod='night'] .f-pending {
 }
 .results-range {
   font-weight: 600;
+  white-space: nowrap;
 }
 .results-sort {
   display: flex;
@@ -581,7 +628,19 @@ body[data-tod='night'] .price {
     right: 8px;
     width: auto;
     top: 54px;
-    max-height: 40%;
+    max-height: 45%;
+  }
+  /* collapsed on mobile: a compact pill at the top right, leaving the map free */
+  .results.collapsed {
+    right: auto;
+    top: 54px;
+    border-radius: 999px;
+  }
+  .results.collapsed .muted {
+    display: none;
+  }
+  .results.collapsed .results-title {
+    font-size: 13px;
   }
   .drawer {
     top: auto;

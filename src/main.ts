@@ -19,7 +19,7 @@ import {
 import { sameCriteria, searchToState, stateToSearch } from './state/url';
 import { DEFAULT_SORT, sortListings, type SortKey } from './state/sort';
 import { mountFilters } from './ui/filters';
-import { ResultsPanel } from './ui/results';
+import { ResultsPanel, resultsHeading } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
 import { HoverTooltip } from './ui/tooltip';
@@ -28,6 +28,15 @@ setWorkerUrl(workerUrl);
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const status = $('#status');
+const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
+
+/** Screen-reader announcement (visually hidden live region). */
+function announce(text: string) {
+  const el = $('#announcer');
+  el.textContent = '';
+  // a tick later, so repeated identical messages are announced again
+  setTimeout(() => (el.textContent = text), 50);
+}
 
 /** history.state written by this app. `pristine`: entry pushed by opening the drawer, untouched since. */
 interface HistoryState {
@@ -49,7 +58,12 @@ async function main() {
   const store = new FilterStore();
   let sort: SortKey = DEFAULT_SORT;
   const results = new ResultsPanel($('#results'), {
-    onPick: (id) => openListing(id, true),
+    onPick: (id) => {
+      openListing(id, true);
+      openedFromRow = id;
+      // on small screens the list would cover the map and the sheet
+      if (isMobile()) results.setCollapsed(true);
+    },
     onHover: (id) => scene.highlight(id),
     onSortChange: (next) => {
       sort = next;
@@ -69,7 +83,9 @@ async function main() {
       filtersUi.setForm(EMPTY_CRITERIA);
       store.clear();
     },
-  });
+  }, isMobile());
+  // Row that opened the drawer, to give focus back to it when the drawer closes.
+  let openedFromRow: string | null = null;
   // The list the drawer browses with previous/next: applied search results, in display order.
   let currentList: Listing[] = sortListings(listings, sort);
   // True while the UI is being updated from the URL (back/forward, initial load): don't write history.
@@ -93,6 +109,8 @@ async function main() {
     data.listings.agencies,
     () => {
       scene.select(null);
+      if (openedFromRow && !isMobile()) results.focusRow(openedFromRow);
+      openedFromRow = null;
       if (syncingFromUrl) return;
       const st = historyState();
       // Closing from the UI right after opening: step back, so "back" and "close" stay equivalent.
@@ -140,18 +158,21 @@ async function main() {
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
     currentList = sortListings(filterListings(listings, store.getApplied()), sort);
-    if (isEmptyCriteria(store.getApplied())) results.hide();
-    else
-      results.render({
-        results: currentList,
-        total: listings.length,
-        sort,
-        suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
-      });
+    const filtered = !isEmptyCriteria(store.getApplied());
+    results.render({
+      results: currentList,
+      total: listings.length,
+      sort,
+      filtered,
+      suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
+    });
   }
 
-  store.onApply(() => {
+  store.onApply((criteria) => {
     showResults();
+    // desktop: show the results; mobile: the collapsed pill already shows the count and the map is fitted
+    if (!isMobile()) results.setCollapsed(false);
+    announce(resultsHeading(currentList.length, !isEmptyCriteria(criteria)));
     const matched = currentList;
     scene.setMatched(new Set(matched.map((l) => l.id)));
     if (drawer.currentId && !matched.some((l) => l.id === drawer.currentId)) {
@@ -202,6 +223,13 @@ async function main() {
     toggle.setAttribute('aria-expanded', String(open));
   });
 
+  // Skip link: jump straight to the list of listings (keyboard / screen readers)
+  $('.skip-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    results.focusFirst();
+  });
+
+  showResults();
   await scene.ready;
   // Shared link: restore filters and the open listing, then normalise the URL (drops invalid params).
   applyUrl();

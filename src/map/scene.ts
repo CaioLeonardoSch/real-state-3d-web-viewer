@@ -378,7 +378,8 @@ export class Scene {
 
   private cameraPadding() {
     const mobile = window.matchMedia('(max-width: 720px)').matches;
-    return mobile ? { top: 80, bottom: 120, left: 30, right: 30 } : { top: 120, bottom: 60, left: 60, right: 60 };
+    // desktop: the results list occupies ~320 px on the left
+    return mobile ? { top: 80, bottom: 120, left: 30, right: 30 } : { top: 120, bottom: 60, left: 340, right: 60 };
   }
 
   select(listingId: string | null): void {

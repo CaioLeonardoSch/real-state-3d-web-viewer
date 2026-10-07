@@ -79,6 +79,8 @@ async function findListingTarget(page, kindFilter = ['listing-buildings']) {
     for (const f of fs) {
       const p = window.__demo.project(f.properties.listingId);
       if (!p || p.x < 20 || p.y < 20 || p.x > canvas.width - 20 || p.y > canvas.height - 20) continue;
+      // skip points covered by UI (results list, drawer, controls)
+      if (document.elementFromPoint(p.x + canvas.left, p.y + canvas.top) !== map.getCanvas()) continue;
       const hit = map.queryRenderedFeatures([p.x, p.y], { layers }).find((h) => h.properties.listingId === f.properties.listingId);
       if (hit) return { id: f.properties.listingId, x: p.x + canvas.left, y: p.y + canvas.top };
     }
@@ -101,8 +103,9 @@ async function emptyPoint(page) {
     const r = map.getCanvas().getBoundingClientRect();
     const layers = ['listing-buildings', 'listing-land', 'listing-approx-fill'];
     for (let y = r.height * 0.3; y < r.height * 0.9; y += 23) {
-      for (let x = r.width * 0.15; x < r.width * 0.6; x += 29) {
-        if (map.queryRenderedFeatures([x, y], { layers }).length === 0) return { x: x + r.left, y: y + r.top };
+      for (let x = r.width * 0.3; x < r.width * 0.65; x += 29) {
+        if (map.queryRenderedFeatures([x, y], { layers }).length === 0 && document.elementFromPoint(x + r.left, y + r.top) === map.getCanvas())
+          return { x: x + r.left, y: y + r.top };
       }
     }
     return null;
@@ -134,6 +137,13 @@ async function main() {
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
     check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
+    const initialList = await page.evaluate(() => ({
+      heading: document.querySelector('#results .results-title')?.textContent,
+      rows: document.querySelectorAll('#results button[data-id]').length,
+      visible: !document.querySelector('#results .results-body').hidden,
+    }));
+    check('desktop: list of all listings is available without searching',
+      initialList.heading === '15 imóveis à venda' && initialList.rows === 15 && initialList.visible, JSON.stringify(initialList));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
 
     // pins in the overview
@@ -246,20 +256,24 @@ async function main() {
     await sleep(800);
     const dimAfterEdit = await renderedCount(page, 'listing-dimmed');
     const stateAfterEdit = await page.evaluate(() => JSON.stringify(window.__demo.map.getCenter()) + window.__demo.map.getZoom());
-    const resultsHidden = await page.evaluate(() => document.querySelector('#results').hidden);
+    const headingAfterEdit = await page.textContent('#results .results-title');
+    const resultsHidden = headingAfterEdit === '15 imóveis à venda';
     check('editing filters does NOT change the map', dimBefore === dimAfterEdit && stateBefore === stateAfterEdit && resultsHidden,
-      `dimmed ${dimBefore}→${dimAfterEdit}, camera unchanged=${stateBefore === stateAfterEdit}, results hidden=${resultsHidden}`);
+      `dimmed ${dimBefore}→${dimAfterEdit}, camera unchanged=${stateBefore === stateAfterEdit}, list unchanged=${resultsHidden}`);
     check('"Alterações não aplicadas" hint shown', await page.isVisible('text=Alterações não aplicadas'));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-filters-pending.png') });
 
     await page.click('button:has-text("Buscar")');
     await sleep(300);
     await waitIdle(page);
-    const header = await page.textContent('#results .results-head strong');
+    const header = await page.textContent('#results .results-title');
     const landCount = await page.evaluate(() => window.__demo.listingIds.filter((id) => id.startsWith('land')).length);
     const dimAfterApply = await page.evaluate(() =>
       window.__demo.map.querySourceFeatures('listings').filter((f) => f.properties.matched === false).length,
     );
+    await sleep(200);
+    const announced = await page.textContent('#announcer');
+    check('search result count is announced to screen readers', announced === `${landCount} imóveis encontrados`, `"${announced}"`);
     const searchUrl = await page.evaluate(() => location.search);
     check('search writes the applied filters to the URL', searchUrl === '?tipo=terreno&precoMax=2000000', searchUrl);
     check('"Buscar" applies filters (results list + dimmed listings)',
@@ -368,7 +382,7 @@ async function main() {
     await page.click('button:has-text("Buscar")');
     await sleep(400);
     const emptyState = await page.evaluate(() => ({
-      header: document.querySelector('#results .results-head strong')?.textContent,
+      header: document.querySelector('#results .results-title')?.textContent,
       relax: [...document.querySelectorAll('#results [data-relax]')].map((b) => b.textContent.replace(/\s+/g, ' ').trim()),
     }));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-empty-search.png') });
@@ -382,7 +396,7 @@ async function main() {
     await sleep(400);
     await waitIdle(page);
     const relaxed = await page.evaluate(() => ({
-      header: document.querySelector('#results .results-head strong')?.textContent,
+      header: document.querySelector('#results .results-title')?.textContent,
       priceMax: document.querySelector('input[name="priceMax"]').value,
       search: location.search,
     }));
@@ -391,6 +405,40 @@ async function main() {
     await page.click('button:has-text("Limpar")');
     await sleep(300);
     await waitIdle(page);
+
+    // keyboard-only path: Tab → skip link → first row → Enter opens → Esc closes and focus returns
+    // start sequential focus from the top of the document, as on a freshly loaded page
+    await page.evaluate(() => {
+      document.body.setAttribute('tabindex', '-1');
+      document.body.focus();
+      document.body.removeAttribute('tabindex');
+    });
+    await page.keyboard.press('Tab');
+    const firstFocus = await page.evaluate(() => document.activeElement?.className);
+    await page.keyboard.press('Enter');
+    await sleep(200);
+    const rowFocus = await page.evaluate(() => document.activeElement?.dataset?.id ?? null);
+    await page.keyboard.press('Enter');
+    await sleep(500);
+    const kbOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
+    await page.keyboard.press('Escape');
+    await sleep(500);
+    const kbAfter = await page.evaluate(() => ({
+      open: document.querySelector('#drawer').classList.contains('open'),
+      focus: document.activeElement?.dataset?.id ?? null,
+    }));
+    check('keyboard: skip link → list row → Enter opens drawer → Esc closes and returns focus to the row',
+      firstFocus === 'skip-link' && !!rowFocus && kbOpen && !kbAfter.open && kbAfter.focus === rowFocus,
+      `first=${firstFocus} row=${rowFocus} open=${kbOpen} after=${JSON.stringify(kbAfter)}`);
+    await page.click('[data-action="toggle-results"]');
+    const collapsedState = await page.evaluate(() => ({
+      hidden: document.querySelector('#results .results-body').hidden,
+      expanded: document.querySelector('[data-action="toggle-results"]').getAttribute('aria-expanded'),
+    }));
+    await page.click('[data-action="toggle-results"]');
+    const reopenedState = await page.evaluate(() => !document.querySelector('#results .results-body').hidden);
+    check('list can be collapsed and expanded', collapsedState.hidden && collapsedState.expanded === 'false' && reopenedState,
+      JSON.stringify(collapsedState));
 
     // "Visão geral" button restores the initial framing
     await page.evaluate(() => window.__demo.map.jumpTo({ zoom: 18, bearing: 120, pitch: 30, center: [-48.85, -26.285] }));
@@ -434,7 +482,7 @@ async function main() {
     const sharedState = await shared.page.evaluate(() => ({
       title: document.querySelector('#drawer.open h2')?.textContent ?? null,
       pos: document.querySelector('#drawer .nav-pos')?.textContent ?? null,
-      header: document.querySelector('#results .results-head strong')?.textContent ?? null,
+      header: document.querySelector('#results .results-title')?.textContent ?? null,
       chip: document.querySelector('input[name="type"][value="land"]').checked,
       search: location.search,
     }));
@@ -504,6 +552,23 @@ async function main() {
     check('mobile: swipe down collapses, swipe up expands, swipe down when collapsed closes',
       collapsed.open && !collapsed.expanded && reExpanded.expanded && !closedBySwipe.open,
       `${JSON.stringify(collapsed)} / ${reExpanded.expanded} / open=${closedBySwipe.open}`);
+    const mList0 = await mp.evaluate(() => ({
+      collapsed: document.querySelector('#results').classList.contains('collapsed'),
+      heading: document.querySelector('#results .results-title')?.textContent,
+    }));
+    await mp.click('[data-action="toggle-results"]');
+    await sleep(300);
+    const mRows = await mp.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
+    await mp.screenshot({ path: path.join(SHOTS, 'mobile-list.png') });
+    await mp.click('#results button[data-id] >> nth=1');
+    await sleep(600);
+    const mList1 = await mp.evaluate(() => ({
+      drawer: document.querySelector('#drawer').classList.contains('open'),
+      collapsed: document.querySelector('#results').classList.contains('collapsed'),
+    }));
+    check('mobile: list starts collapsed, expands on tap and collapses when a listing is opened',
+      mList0.collapsed && mList0.heading === '15 imóveis à venda' && mRows === 15 && mList1.drawer && mList1.collapsed,
+      `${JSON.stringify(mList0)} rows=${mRows} ${JSON.stringify(mList1)}`);
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
   } finally {

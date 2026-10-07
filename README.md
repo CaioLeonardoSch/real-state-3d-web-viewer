@@ -57,11 +57,11 @@ Se o Nominatim ou o Overpass falharem, o script termina com erro e **não gera d
 scripts/        fetch-osm, generate-listings, validate-listings, e2e-check, lib/height (regra de renderHeight)
 public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json
 src/data/       tipos, validação em tempo de carga, carregamento
-src/state/      filtros: lógica pura + FilterStore (estado pendente × aplicado)
+src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL
 src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação (suncalc)
 src/ui/         filtros, lista de resultados, drawer, seletor manhã/tarde/noite
 src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação
-tests/          Vitest: renderHeight, filtros, simulação de pagamento
+tests/          Vitest: renderHeight, filtros e sugestões, ordenação/resumo de preço, URL, simulação de pagamento
 docs/screenshots/  capturas geradas pelo verify:e2e
 ```
 
@@ -139,7 +139,35 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   preço, tipo, área, quartos, aviso de localização aproximada e "Clique para ver detalhes". Some ao sair do imóvel,
   ao clicar e enquanto o mapa é arrastado ou girado. Imóveis esmaecidos pela busca não mostram etiqueta. Em tela de
   toque não há hover, e o toque abre o painel direto.
-- **Imóveis esmaecidos**: cinza semitransparente (opacidade 0,4) e não clicáveis. Quando o filtro inclui algum imóvel,
+- **Lista sempre disponível** (`ResultsPanel`): sem filtro mostra "15 imóveis à venda"; com filtro, "N imóveis
+  encontrados de 15". Tem faixa de preço, ordenação e linhas clicáveis, e pode ser recolhida. No desktop começa
+  aberta, e a câmera desconta ~340 px à esquerda para nenhum imóvel ficar sob ela. No celular começa recolhida num
+  botão compacto e continua recolhida após "Buscar" (o botão já mostra a contagem); ela também se recolhe ao abrir um
+  imóvel por ela. É o caminho de teclado e leitor de tela para todos os imóveis.
+- **Hover sincronizado**: passar o mouse (ou o foco do teclado) numa linha acende o imóvel e o pino no mapa; passar o
+  mouse no imóvel no mapa marca a linha.
+- **Anterior/próximo no painel**: percorre a lista atual na ordem exibida; botões desativados nas pontas; setas ← →
+  funcionam com o foco no painel.
+- **Ordenação**: menor preço (padrão), maior preço, maior área. Como só reordena a lista e não filtra, aplica na hora,
+  sem "Buscar". A faixa de preço usa um formatador compacto próprio ("R$ 505 mil – R$ 2,8 mi"), porque o
+  `Intl` com `notation: 'compact'` gerava "R$ 505,0 mil" e varia entre versões de ICU.
+- **Busca sem resultados**: para cada filtro ativo, calcula quantos imóveis apareceriam sem ele e o valor mais próximo
+  disponível (o mais barato, o maior etc.), e mostra as duas melhores sugestões como botões "Remover …". Clicar é uma
+  ação explícita, como "Buscar": atualiza o formulário e refaz a busca.
+- **URL compartilhável**: `?imovel=&tipo=&precoMin=&precoMax=&quartos=&area=&imob=&ordem=`, com slugs em português
+  (`tipo=casa,terreno`, `ordem=maior-preco`). Valores inválidos são ignorados e removidos da URL ao carregar.
+  - Abrir um imóvel cria uma entrada no histórico, então o "voltar" do navegador fecha o painel.
+  - Buscar, ordenar e anterior/próximo só substituem a entrada atual.
+  - Fechar pelo ×/Esc/mapa usa `history.back()` quando a entrada foi criada pela abertura do painel e nada mudou
+    desde então; senão, só remove `imovel` da URL. Isso evita que "fechar" desfaça uma busca feita com o painel aberto.
+- **Painel no celular em dois estágios**: abre recolhido (faixa de 166 px com navegação, selo, título e preço). Tocar
+  na alça ou na faixa, ou arrastar para cima, expande; arrastar para baixo recolhe e, já recolhido, fecha. Os controles
+  do mapa e a atribuição sobem junto. Ao navegar com anterior/próximo, o estado (recolhido/expandido) é mantido.
+- **Botão "Visão geral"**: controle do MapLibre acima do zoom que volta, com animação, ao enquadramento inicial.
+- **Acessibilidade**: atalho "Pular para a lista de imóveis" (primeiro item do Tab), anúncio da contagem da busca numa
+  região `aria-live` separada (a lista em si não é `aria-live`, para não ser relida inteira), foco devolvido à linha da
+  lista quando o painel fecha, e contorno de foco visível.
+- **Imóveis esmaecidos**: cinza semitransparente (opacidade 0,4) e não clicáveis; o pino fica cinza e menor. Quando o filtro inclui algum imóvel,
   a câmera enquadra todos os resultados (`fitBounds`).
 - **Contorno**: as extrusões do MapLibre não têm contorno próprio, então o destaque usa uma camada `line` na base
   do polígono.
@@ -172,6 +200,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   dependência só de desenvolvimento, usada no script de dados com entrada **JSON** do Overpass (o parser XML não é
   usado), e não entra no bundle do navegador. A "correção" sugerida rebaixaria para `osmtogeojson` 2.x, o que foi
   evitado.
+- Os gestos do painel no celular (arrastar para cima/baixo) usam Pointer Events e foram testados com o mouse
+  emulando o arrasto num viewport de celular, não com toque real num aparelho.
+- A acessibilidade foi verificada por automação (ordem do Tab, foco, `aria-live`, rótulos). Não testei com leitores
+  de tela reais (NVDA, VoiceOver, TalkBack). O mapa 3D em si continua sendo só visual; a lista é a alternativa.
 - A renderização foi verificada só em Chromium headless com WebGL por software (SwiftShader). Não testei Safari,
   Firefox nem GPUs reais.
 
@@ -217,13 +249,14 @@ Imóveis fictícios (`listings.json`): 15 no total.
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 16 testes (renderHeight, filtros + FilterStore, simulação de pagamento).
+- `npm test`: 29 testes (renderHeight, filtros + FilterStore, sugestões para busca vazia, ordenação e resumo de
+  preço, leitura/escrita da URL, simulação de pagamento).
 - `npm run validate:data`:
   - ids únicos e `fictional: true` em todos;
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 30 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 50 checagens:
   - camadas renderizadas;
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -234,7 +267,15 @@ Imóveis fictícios (`listings.json`): 15 no total.
   - lista de resultados abre o imóvel e "Limpar" restaura;
   - manhã, tarde e noite geram renderizações diferentes, com o sol a leste de manhã, a oeste à tarde e abaixo do horizonte à noite;
   - sem erros no console nem respostas HTTP ≥ 400;
-  - em 390×844: sem rolagem horizontal, filtros recolhíveis e drawer como bottom sheet.
+  - lista de todos os imóveis disponível sem buscar; recolher/expandir; hover sincronizado nos dois sentidos;
+  - anterior/próximo por botões e setas; ordenação por preço sem mexer no mapa, com faixa de preço;
+  - busca vazia sugere o filtro a remover (com o valor mais próximo), e a sugestão refaz a busca; pinos cinza visíveis;
+  - URL: abrir grava `?imovel=`, "voltar" fecha o painel, a busca grava os filtros, link compartilhado restaura
+    filtros/lista/imóvel, link inválido é ignorado;
+  - botão "Visão geral" restaura o enquadramento inicial;
+  - teclado: Tab → atalho → linha → Enter abre → Esc fecha e devolve o foco; anúncio da contagem para leitor de tela;
+  - em 390×844: sem rolagem horizontal, filtros recolhíveis, lista recolhida que expande e se recolhe ao abrir um
+    imóvel, painel abre recolhido, expande pela alça e responde a arrastar para cima/baixo.
 - Screenshots em `docs/screenshots/`.
 
 ## Licenças e atribuição
