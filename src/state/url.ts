@@ -1,11 +1,20 @@
 import { LISTING_TYPES, type ListingType } from '../data/types';
 import { EMPTY_CRITERIA, type FilterCriteria } from './filters';
+import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort';
 
 /** What the address bar stores: applied filters and the open listing. */
 export interface UrlState {
   criteria: FilterCriteria;
   listingId: string | null;
+  sort: SortKey;
 }
+
+const SORT_SLUGS: Record<SortKey, string> = {
+  'price-asc': 'menor-preco',
+  'price-desc': 'maior-preco',
+  'area-desc': 'maior-area',
+};
+const SLUG_TO_SORT = new Map(SORT_KEYS.map((k) => [SORT_SLUGS[k], k]));
 
 /** Readable Portuguese slugs for listing types in the URL. */
 const TYPE_SLUGS: Record<ListingType, string> = {
@@ -26,6 +35,7 @@ export function stateToSearch(state: UrlState): string {
   if (c.bedroomsMin !== null) p.set('quartos', String(c.bedroomsMin));
   if (c.areaMin !== null) p.set('area', String(c.areaMin));
   if (c.agency !== null) p.set('imob', c.agency);
+  if (state.sort !== DEFAULT_SORT) p.set('ordem', SORT_SLUGS[state.sort]);
   const s = p.toString();
   return s ? `?${s}` : '';
 }
@@ -60,6 +70,7 @@ export function searchToState(search: string, known: { agencyIds: Set<string>; l
       agency: agency && known.agencyIds.has(agency) ? agency : null,
     },
     listingId: listingId && known.listingIds.has(listingId) ? listingId : null,
+    sort: SLUG_TO_SORT.get(p.get('ordem') ?? '') ?? DEFAULT_SORT,
   };
 }
 

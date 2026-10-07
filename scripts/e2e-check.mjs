@@ -281,6 +281,29 @@ async function main() {
       await page.mouse.move(700, 880);
     } else check('hovering a listing on the map highlights its result row', false, 'no listing on screen');
 
+    // sorting + price summary
+    const rowPrices = () =>
+      page.$$eval('#results li .r-meta b', (bs) => bs.map((b) => Number(b.textContent.replace(/\D/g, ''))));
+    const ascPrices = await rowPrices();
+    const range = await page.textContent('#results .results-range');
+    const dimBeforeSort = await page.evaluate(() =>
+      window.__demo.map.querySourceFeatures('listings').filter((f) => f.properties.matched === false).length,
+    );
+    await page.selectOption('#results select[name="sort"]', 'price-desc');
+    await sleep(300);
+    const descPrices = await rowPrices();
+    const sortUrl = await page.evaluate(() => location.search);
+    const dimAfterSort = await page.evaluate(() =>
+      window.__demo.map.querySourceFeatures('listings').filter((f) => f.properties.matched === false).length,
+    );
+    const isSorted = (a, dir) => a.every((v, i) => i === 0 || (dir > 0 ? a[i - 1] <= v : a[i - 1] >= v));
+    check('results show a price range and sort by price (asc/desc) without changing the map',
+      /^R\$ .+ – R\$ .+$/.test(range ?? '') && isSorted(ascPrices, 1) && isSorted(descPrices, -1) &&
+        descPrices[0] === Math.max(...ascPrices) && sortUrl.includes('ordem=maior-preco') && dimBeforeSort === dimAfterSort,
+      `"${range}" asc=${ascPrices} desc=${descPrices} url=${sortUrl}`);
+    await page.selectOption('#results select[name="sort"]', 'price-asc');
+    await sleep(300);
+
     // result list click flies + opens drawer
     await page.click('#results li button >> nth=0');
     await sleep(300);

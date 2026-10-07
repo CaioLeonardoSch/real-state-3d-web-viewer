@@ -10,8 +10,9 @@ import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import { FilterStore, filterListings, isEmptyCriteria } from './state/filters';
 import { sameCriteria, searchToState, stateToSearch } from './state/url';
+import { DEFAULT_SORT, sortListings, type SortKey } from './state/sort';
 import { mountFilters } from './ui/filters';
-import { highlightResult, renderResults } from './ui/results';
+import { ResultsPanel } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
 import { HoverTooltip } from './ui/tooltip';
@@ -39,9 +40,20 @@ async function main() {
 
   let tod: TimeOfDay = 'morning';
   const store = new FilterStore();
-  const resultsEl = $('#results');
+  let sort: SortKey = DEFAULT_SORT;
+  const results = new ResultsPanel($('#results'), {
+    onPick: (id) => openListing(id, true),
+    onHover: (id) => scene.highlight(id),
+    onSortChange: (next) => {
+      sort = next;
+      showResults();
+      // keep previous/next in the drawer consistent with the new order
+      if (drawer.currentId) openListing(drawer.currentId, false);
+      else replaceUrl();
+    },
+  });
   // The list the drawer browses with previous/next: applied search results, in display order.
-  let currentList: Listing[] = listings;
+  let currentList: Listing[] = sortListings(listings, sort);
   // True while the UI is being updated from the URL (back/forward, initial load): don't write history.
   let syncingFromUrl = false;
   // True while a search closes the drawer because its listing is no longer in the results.
@@ -49,7 +61,7 @@ async function main() {
 
   // ------------------------------------------------------------ URL / history
   const urlFor = (listingId: string | null) =>
-    `${location.pathname}${stateToSearch({ criteria: store.getApplied(), listingId })}${location.hash}`;
+    `${location.pathname}${stateToSearch({ criteria: store.getApplied(), listingId, sort })}${location.hash}`;
   const historyState = () => (history.state ?? {}) as HistoryState;
 
   /** Updates the current entry (filters changed, or browsing between listings). */
@@ -78,7 +90,7 @@ async function main() {
       const l = id ? listings.find((x) => x.id === id) : undefined;
       if (l && point) tooltip.show(l, point);
       else tooltip.hide();
-      highlightResult(resultsEl, l ? l.id : null);
+      results.highlight(l ? l.id : null);
     },
   });
 
@@ -107,28 +119,23 @@ async function main() {
   }
 
   const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, data.listings.agencies);
-  store.onApply((criteria) => {
-    const results = filterListings(listings, criteria);
-    currentList = results;
-    scene.setMatched(new Set(results.map((l) => l.id)));
-    if (drawer.currentId && !results.some((l) => l.id === drawer.currentId)) {
+  /** Re-sorts the applied results and refreshes the list. */
+  function showResults() {
+    currentList = sortListings(filterListings(listings, store.getApplied()), sort);
+    if (isEmptyCriteria(store.getApplied())) results.hide();
+    else results.render({ results: currentList, total: listings.length, sort });
+  }
+
+  store.onApply(() => {
+    showResults();
+    const matched = currentList;
+    scene.setMatched(new Set(matched.map((l) => l.id)));
+    if (drawer.currentId && !matched.some((l) => l.id === drawer.currentId)) {
       closingForSearch = true;
       drawer.close();
       closingForSearch = false;
     }
-    if (isEmptyCriteria(criteria)) {
-      resultsEl.hidden = true;
-    } else {
-      renderResults(
-        resultsEl,
-        results,
-        listings.length,
-        (id) => openListing(id, true),
-        () => (resultsEl.hidden = true),
-        (id) => scene.highlight(id),
-      );
-    }
-    if (results.length > 0) scene.fitToListings(results);
+    if (matched.length > 0) scene.fitToListings(matched);
     document.body.classList.remove('filters-open');
     $('.filters-toggle').setAttribute('aria-expanded', 'false');
     if (!syncingFromUrl) replaceUrl({ ...historyState(), pristine: false });
@@ -139,6 +146,10 @@ async function main() {
     const state = searchToState(location.search, known);
     syncingFromUrl = true;
     try {
+      if (state.sort !== sort) {
+        sort = state.sort;
+        showResults();
+      }
       if (!sameCriteria(state.criteria, store.getApplied())) {
         filtersUi.setForm(state.criteria);
         store.setPending(state.criteria);

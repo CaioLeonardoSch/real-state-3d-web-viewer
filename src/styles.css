@@ -262,6 +262,33 @@ body[data-tod='night'] .f-pending {
 .results-head .icon-btn {
   margin-left: auto;
 }
+.results-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.results-range {
+  font-weight: 600;
+}
+.results-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.results-sort select {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+}
+.results-sort select option {
+  color: #1f2328;
+}
 .results ul {
   list-style: none;
   margin: 8px 0 0;

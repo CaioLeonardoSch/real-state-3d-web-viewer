@@ -17,3 +17,10 @@ export function parseNumberInput(v: string): number | null {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
+
+/** Compact BRL for summaries: "R$ 505 mil", "R$ 1,8 mi", "R$ 2 mi". Deterministic across ICU versions. */
+export function formatBRLCompact(v: number): string {
+  if (v >= 1_000_000) return `R$ ${(Math.round(v / 100_000) / 10).toString().replace('.', ',')} mi`;
+  if (v >= 1_000) return `R$ ${Math.round(v / 1_000)} mil`;
+  return `R$ ${Math.round(v)}`;
+}
