@@ -1,0 +1,6729 @@
+{
+ "notice": "Endereço, metragens, tipologias, número de unidades e prazos vêm da divulgação pública das incorporadoras (ver sources). Posição da torre, distribuição por andar, preços e disponibilidade são estimativas ou FICTÍCIOS, só para demonstração. Sem vínculo com Halsten ou Plaenge.",
+ "seed": 20261008,
+ "developments": [
+  {
+   "id": "cora",
+   "name": "Cora",
+   "developer": "Halsten",
+   "address": "Rua Benjamin Constant, 975 – América",
+   "location": [
+    -48.8588289,
+    -26.2849758
+   ],
+   "locationNote": "Nominatim, nº 975",
+   "stage": "construction",
+   "delivery": "08/2028",
+   "floorHeightM": 3,
+   "facts": [
+    "Rua Benjamin Constant, 975, América",
+    "Em obras: 38% em agosto/2026; entrega prevista 08/2028 (Halsten)",
+    "Plantas de 65 a 146 m², do 5º ao 19º pavimento",
+    "Apto A 65,94 m² · Apto D (final 2) 146,12 m²",
+    "1 a 3 suítes · 1 a 2 vagas · 3 elevadores sociais"
+   ],
+   "estimates": [
+    "6 unidades por andar",
+    "distribuição das plantas por final",
+    "térreo, 3 garagens e lazer no 4º",
+    "formato e posição da torre"
+   ],
+   "sources": [
+    {
+     "label": "Halsten – Cora",
+     "url": "https://halsten.com.br/en/empreendimentos/cora/"
+    },
+    {
+     "label": "Apto.vc – Cora",
+     "url": "https://apto.vc/br/sc/joinville/america/cora"
+    }
+   ],
+   "footprint": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -48.8590106,
+       -26.2847251
+      ],
+      [
+       -48.8586763,
+       -26.2847099
+      ],
+      [
+       -48.8586661,
+       -26.2848916
+      ],
+      [
+       -48.8590004,
+       -26.2849067
+      ],
+      [
+       -48.8590106,
+       -26.2847251
+      ]
+     ]
+    ]
+   },
+   "center": [
+    -48.8588384,
+    -26.2848083
+   ],
+   "grid": {
+    "cols": 3,
+    "rows": 2
+   },
+   "shapes": [
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8590064,
+         -26.2847285
+        ],
+        [
+         -48.858903,
+         -26.2847238
+        ],
+        [
+         -48.8588983,
+         -26.2848074
+        ],
+        [
+         -48.8590017,
+         -26.2848121
+        ],
+        [
+         -48.8590064,
+         -26.2847285
+        ]
+       ]
+      ]
+     },
+     "facing": 292
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.858895,
+         -26.2847234
+        ],
+        [
+         -48.8587916,
+         -26.2847187
+        ],
+        [
+         -48.8587868,
+         -26.2848024
+        ],
+        [
+         -48.8588903,
+         -26.2848071
+        ],
+        [
+         -48.858895,
+         -26.2847234
+        ]
+       ]
+      ]
+     },
+     "facing": 357
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8587836,
+         -26.2847184
+        ],
+        [
+         -48.8586801,
+         -26.2847137
+        ],
+        [
+         -48.8586754,
+         -26.2847973
+        ],
+        [
+         -48.8587788,
+         -26.284802
+        ],
+        [
+         -48.8587836,
+         -26.2847184
+        ]
+       ]
+      ]
+     },
+     "facing": 63
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8590013,
+         -26.2848193
+        ],
+        [
+         -48.8588979,
+         -26.2848146
+        ],
+        [
+         -48.8588932,
+         -26.2848983
+        ],
+        [
+         -48.8589966,
+         -26.284903
+        ],
+        [
+         -48.8590013,
+         -26.2848193
+        ]
+       ]
+      ]
+     },
+     "facing": 243
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8588899,
+         -26.2848142
+        ],
+        [
+         -48.8587864,
+         -26.2848096
+        ],
+        [
+         -48.8587817,
+         -26.2848932
+        ],
+        [
+         -48.8588851,
+         -26.2848979
+        ],
+        [
+         -48.8588899,
+         -26.2848142
+        ]
+       ]
+      ]
+     },
+     "facing": 177
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8587784,
+         -26.2848092
+        ],
+        [
+         -48.858675,
+         -26.2848045
+        ],
+        [
+         -48.8586703,
+         -26.2848881
+        ],
+        [
+         -48.8587737,
+         -26.2848928
+        ],
+        [
+         -48.8587784,
+         -26.2848092
+        ]
+       ]
+      ]
+     },
+     "facing": 112
+    }
+   ],
+   "hiddenBuildingIds": [
+    "way/1035509760"
+   ],
+   "levels": [
+    {
+     "level": 0,
+     "use": "lobby",
+     "base": 0,
+     "top": 3,
+     "units": []
+    },
+    {
+     "level": 1,
+     "use": "garage",
+     "base": 3,
+     "top": 6,
+     "units": []
+    },
+    {
+     "level": 2,
+     "use": "garage",
+     "base": 6,
+     "top": 9,
+     "units": []
+    },
+    {
+     "level": 3,
+     "use": "garage",
+     "base": 9,
+     "top": 12,
+     "units": []
+    },
+    {
+     "level": 4,
+     "use": "leisure",
+     "base": 12,
+     "top": 15,
+     "units": []
+    },
+    {
+     "level": 5,
+     "use": "residential",
+     "base": 15,
+     "top": 18,
+     "units": [
+      {
+       "id": "cora-501",
+       "number": "501",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 969000,
+       "status": "available"
+      },
+      {
+       "id": "cora-502",
+       "number": "502",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1560000,
+       "status": "available"
+      },
+      {
+       "id": "cora-503",
+       "number": "503",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 738000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-504",
+       "number": "504",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 779000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-505",
+       "number": "505",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 959000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-506",
+       "number": "506",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 725000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 6,
+     "use": "residential",
+     "base": 18,
+     "top": 21,
+     "units": [
+      {
+       "id": "cora-601",
+       "number": "601",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 958000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-602",
+       "number": "602",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1668000,
+       "status": "available"
+      },
+      {
+       "id": "cora-603",
+       "number": "603",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 723000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-604",
+       "number": "604",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 761000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-605",
+       "number": "605",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 948000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-606",
+       "number": "606",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 751000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "use": "residential",
+     "base": 21,
+     "top": 24,
+     "units": [
+      {
+       "id": "cora-701",
+       "number": "701",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 949000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-702",
+       "number": "702",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1608000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-703",
+       "number": "703",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 744000,
+       "status": "available"
+      },
+      {
+       "id": "cora-704",
+       "number": "704",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 759000,
+       "status": "available"
+      },
+      {
+       "id": "cora-705",
+       "number": "705",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 958000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-706",
+       "number": "706",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 744000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "use": "residential",
+     "base": 24,
+     "top": 27,
+     "units": [
+      {
+       "id": "cora-801",
+       "number": "801",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 998000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-802",
+       "number": "802",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1620000,
+       "status": "available"
+      },
+      {
+       "id": "cora-803",
+       "number": "803",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 728000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-804",
+       "number": "804",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 780000,
+       "status": "available"
+      },
+      {
+       "id": "cora-805",
+       "number": "805",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 989000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-806",
+       "number": "806",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 727000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "use": "residential",
+     "base": 27,
+     "top": 30,
+     "units": [
+      {
+       "id": "cora-901",
+       "number": "901",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 988000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-902",
+       "number": "902",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1640000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-903",
+       "number": "903",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 755000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-904",
+       "number": "904",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 808000,
+       "status": "available"
+      },
+      {
+       "id": "cora-905",
+       "number": "905",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 990000,
+       "status": "available"
+      },
+      {
+       "id": "cora-906",
+       "number": "906",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 764000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "use": "residential",
+     "base": 30,
+     "top": 33,
+     "units": [
+      {
+       "id": "cora-1001",
+       "number": "1001",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 992000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1002",
+       "number": "1002",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1679000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1003",
+       "number": "1003",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 740000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1004",
+       "number": "1004",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 806000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1005",
+       "number": "1005",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 990000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1006",
+       "number": "1006",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 769000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "use": "residential",
+     "base": 33,
+     "top": 36,
+     "units": [
+      {
+       "id": "cora-1101",
+       "number": "1101",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1027000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1102",
+       "number": "1102",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1695000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1103",
+       "number": "1103",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 784000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1104",
+       "number": "1104",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 825000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1105",
+       "number": "1105",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1002000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1106",
+       "number": "1106",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 756000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "use": "residential",
+     "base": 36,
+     "top": 39,
+     "units": [
+      {
+       "id": "cora-1201",
+       "number": "1201",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 992000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1202",
+       "number": "1202",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1715000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1203",
+       "number": "1203",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 786000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1204",
+       "number": "1204",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 801000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1205",
+       "number": "1205",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1025000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1206",
+       "number": "1206",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 754000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "use": "residential",
+     "base": 39,
+     "top": 42,
+     "units": [
+      {
+       "id": "cora-1301",
+       "number": "1301",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1011000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1302",
+       "number": "1302",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1787000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1303",
+       "number": "1303",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 785000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1304",
+       "number": "1304",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 816000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1305",
+       "number": "1305",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1011000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1306",
+       "number": "1306",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 799000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "use": "residential",
+     "base": 42,
+     "top": 45,
+     "units": [
+      {
+       "id": "cora-1401",
+       "number": "1401",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1019000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1402",
+       "number": "1402",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1795000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1403",
+       "number": "1403",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 793000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1404",
+       "number": "1404",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 823000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1405",
+       "number": "1405",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1028000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1406",
+       "number": "1406",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 778000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "use": "residential",
+     "base": 45,
+     "top": 48,
+     "units": [
+      {
+       "id": "cora-1501",
+       "number": "1501",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1031000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1502",
+       "number": "1502",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1725000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1503",
+       "number": "1503",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 789000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1504",
+       "number": "1504",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 823000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1505",
+       "number": "1505",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1064000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1506",
+       "number": "1506",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 814000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "use": "residential",
+     "base": 48,
+     "top": 51,
+     "units": [
+      {
+       "id": "cora-1601",
+       "number": "1601",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1056000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1602",
+       "number": "1602",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1761000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1603",
+       "number": "1603",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 787000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1604",
+       "number": "1604",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 864000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1605",
+       "number": "1605",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1021000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1606",
+       "number": "1606",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 785000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "use": "residential",
+     "base": 51,
+     "top": 54,
+     "units": [
+      {
+       "id": "cora-1701",
+       "number": "1701",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1090000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1702",
+       "number": "1702",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1834000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1703",
+       "number": "1703",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 819000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1704",
+       "number": "1704",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 859000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1705",
+       "number": "1705",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1080000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1706",
+       "number": "1706",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 802000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "use": "residential",
+     "base": 54,
+     "top": 57,
+     "units": [
+      {
+       "id": "cora-1801",
+       "number": "1801",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1098000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1802",
+       "number": "1802",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1774000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1803",
+       "number": "1803",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 833000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1804",
+       "number": "1804",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 870000,
+       "status": "available"
+      },
+      {
+       "id": "cora-1805",
+       "number": "1805",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1063000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1806",
+       "number": "1806",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 837000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 19,
+     "use": "residential",
+     "base": 57,
+     "top": 60,
+     "units": [
+      {
+       "id": "cora-1901",
+       "number": "1901",
+       "final": 1,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1077000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1902",
+       "number": "1902",
+       "final": 2,
+       "plan": "Apto D",
+       "areaM2": 146.12,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1849000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1903",
+       "number": "1903",
+       "final": 3,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 815000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1904",
+       "number": "1904",
+       "final": 4,
+       "plan": "Apto B",
+       "areaM2": 69,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 858000,
+       "status": "sold"
+      },
+      {
+       "id": "cora-1905",
+       "number": "1905",
+       "final": 5,
+       "plan": "Apto C",
+       "areaM2": 86.11,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 2,
+       "shape": 4,
+       "cells": 1,
+       "price": 1058000,
+       "status": "reserved"
+      },
+      {
+       "id": "cora-1906",
+       "number": "1906",
+       "final": 6,
+       "plan": "Apto A",
+       "areaM2": 65.94,
+       "bedrooms": 2,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 5,
+       "cells": 1,
+       "price": 842000,
+       "status": "sold"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "morada-de-gaia",
+   "name": "Morada de Gaia",
+   "developer": "Halsten",
+   "address": "Rua XV de Novembro, 1208 – América",
+   "location": [
+    -48.8538518,
+    -26.2983854
+   ],
+   "locationNote": "Nominatim, nº 1208",
+   "stage": "ready",
+   "delivery": "entregue em 2025",
+   "floorHeightM": 3,
+   "facts": [
+    "Rua XV de Novembro, 1208, América",
+    "Obra concluída (100% em setembro/2025)",
+    "Plantas de 78,90 a 140,72 m², mais de 15 variações",
+    "1 suíte + 2 dormitórios a 3 suítes · 1 a 2 vagas"
+   ],
+   "estimates": [
+    "número de andares (14 residenciais)",
+    "4 unidades por andar",
+    "distribuição das plantas",
+    "formato e posição da torre"
+   ],
+   "sources": [
+    {
+     "label": "Halsten – Morada de Gaia",
+     "url": "https://halsten.com.br/en/empreendimentos/morada-de-gaia/"
+    },
+    {
+     "label": "Apto.vc – Morada de Gaia",
+     "url": "https://apto.vc/br/sc/joinville/america/morada-de-gaia"
+    }
+   ],
+   "footprint": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -48.8540015,
+       -26.2987159
+      ],
+      [
+       -48.8537573,
+       -26.298732
+      ],
+      [
+       -48.8537411,
+       -26.2985329
+      ],
+      [
+       -48.8539853,
+       -26.2985169
+      ],
+      [
+       -48.8540015,
+       -26.2987159
+      ]
+     ]
+    ]
+   },
+   "center": [
+    -48.8538713,
+    -26.2986244
+   ],
+   "grid": {
+    "cols": 2,
+    "rows": 2
+   },
+   "shapes": [
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8539972,
+         -26.2987126
+        ],
+        [
+         -48.8538831,
+         -26.2987201
+        ],
+        [
+         -48.8538756,
+         -26.2986278
+        ],
+        [
+         -48.8539897,
+         -26.2986203
+        ],
+        [
+         -48.8539972,
+         -26.2987126
+        ]
+       ]
+      ]
+     },
+     "facing": 232
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8538751,
+         -26.2987206
+        ],
+        [
+         -48.853761,
+         -26.2987281
+        ],
+        [
+         -48.8537535,
+         -26.2986358
+        ],
+        [
+         -48.8538676,
+         -26.2986283
+        ],
+        [
+         -48.8538751,
+         -26.2987206
+        ]
+       ]
+      ]
+     },
+     "facing": 136
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8539891,
+         -26.2986131
+        ],
+        [
+         -48.853875,
+         -26.2986206
+        ],
+        [
+         -48.8538675,
+         -26.2985282
+        ],
+        [
+         -48.8539816,
+         -26.2985208
+        ],
+        [
+         -48.8539891,
+         -26.2986131
+        ]
+       ]
+      ]
+     },
+     "facing": 316
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.853867,
+         -26.2986211
+        ],
+        [
+         -48.8537529,
+         -26.2986286
+        ],
+        [
+         -48.8537454,
+         -26.2985363
+        ],
+        [
+         -48.8538595,
+         -26.2985288
+        ],
+        [
+         -48.853867,
+         -26.2986211
+        ]
+       ]
+      ]
+     },
+     "facing": 52
+    }
+   ],
+   "hiddenBuildingIds": [],
+   "levels": [
+    {
+     "level": 0,
+     "use": "lobby",
+     "base": 0,
+     "top": 3,
+     "units": []
+    },
+    {
+     "level": 1,
+     "use": "garage",
+     "base": 3,
+     "top": 6,
+     "units": []
+    },
+    {
+     "level": 2,
+     "use": "garage",
+     "base": 6,
+     "top": 9,
+     "units": []
+    },
+    {
+     "level": 3,
+     "use": "leisure",
+     "base": 9,
+     "top": 12,
+     "units": []
+    },
+    {
+     "level": 4,
+     "use": "residential",
+     "base": 12,
+     "top": 15,
+     "units": [
+      {
+       "id": "morada-de-gaia-401",
+       "number": "401",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1667000,
+       "status": "available"
+      },
+      {
+       "id": "morada-de-gaia-402",
+       "number": "402",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1343000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-403",
+       "number": "403",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 930000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-404",
+       "number": "404",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 986000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "use": "residential",
+     "base": 15,
+     "top": 18,
+     "units": [
+      {
+       "id": "morada-de-gaia-501",
+       "number": "501",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1655000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-502",
+       "number": "502",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1329000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-503",
+       "number": "503",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 966000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-504",
+       "number": "504",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1002000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 6,
+     "use": "residential",
+     "base": 18,
+     "top": 21,
+     "units": [
+      {
+       "id": "morada-de-gaia-601",
+       "number": "601",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1686000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-602",
+       "number": "602",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1320000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-603",
+       "number": "603",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 948000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-604",
+       "number": "604",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1017000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "use": "residential",
+     "base": 21,
+     "top": 24,
+     "units": [
+      {
+       "id": "morada-de-gaia-701",
+       "number": "701",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1704000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-702",
+       "number": "702",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1372000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-703",
+       "number": "703",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 975000,
+       "status": "available"
+      },
+      {
+       "id": "morada-de-gaia-704",
+       "number": "704",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1018000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "use": "residential",
+     "base": 24,
+     "top": 27,
+     "units": [
+      {
+       "id": "morada-de-gaia-801",
+       "number": "801",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1775000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-802",
+       "number": "802",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1396000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-803",
+       "number": "803",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 953000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-804",
+       "number": "804",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1035000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "use": "residential",
+     "base": 27,
+     "top": 30,
+     "units": [
+      {
+       "id": "morada-de-gaia-901",
+       "number": "901",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1705000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-902",
+       "number": "902",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1411000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-903",
+       "number": "903",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 976000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-904",
+       "number": "904",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1048000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "use": "residential",
+     "base": 30,
+     "top": 33,
+     "units": [
+      {
+       "id": "morada-de-gaia-1001",
+       "number": "1001",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1746000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1002",
+       "number": "1002",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1427000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1003",
+       "number": "1003",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1007000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-1004",
+       "number": "1004",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1067000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "use": "residential",
+     "base": 33,
+     "top": 36,
+     "units": [
+      {
+       "id": "morada-de-gaia-1101",
+       "number": "1101",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1755000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1102",
+       "number": "1102",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1438000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1103",
+       "number": "1103",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1013000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1104",
+       "number": "1104",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1090000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "use": "residential",
+     "base": 36,
+     "top": 39,
+     "units": [
+      {
+       "id": "morada-de-gaia-1201",
+       "number": "1201",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1808000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1202",
+       "number": "1202",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1414000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1203",
+       "number": "1203",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1025000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1204",
+       "number": "1204",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1085000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "use": "residential",
+     "base": 39,
+     "top": 42,
+     "units": [
+      {
+       "id": "morada-de-gaia-1301",
+       "number": "1301",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1783000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1302",
+       "number": "1302",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1432000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1303",
+       "number": "1303",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1023000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-1304",
+       "number": "1304",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1112000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "use": "residential",
+     "base": 42,
+     "top": 45,
+     "units": [
+      {
+       "id": "morada-de-gaia-1401",
+       "number": "1401",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1792000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1402",
+       "number": "1402",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1426000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1403",
+       "number": "1403",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1005000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1404",
+       "number": "1404",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1122000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "use": "residential",
+     "base": 45,
+     "top": 48,
+     "units": [
+      {
+       "id": "morada-de-gaia-1501",
+       "number": "1501",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1839000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-1502",
+       "number": "1502",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1511000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1503",
+       "number": "1503",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1040000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-1504",
+       "number": "1504",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1117000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "use": "residential",
+     "base": 48,
+     "top": 51,
+     "units": [
+      {
+       "id": "morada-de-gaia-1601",
+       "number": "1601",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1882000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1602",
+       "number": "1602",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1498000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1603",
+       "number": "1603",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1064000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1604",
+       "number": "1604",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1099000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "use": "residential",
+     "base": 51,
+     "top": 54,
+     "units": [
+      {
+       "id": "morada-de-gaia-1701",
+       "number": "1701",
+       "final": 1,
+       "plan": "3 suítes",
+       "areaM2": 140.72,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 1849000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1702",
+       "number": "1702",
+       "final": 2,
+       "plan": "2 suítes + 1",
+       "areaM2": 112.4,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1542000,
+       "status": "reserved"
+      },
+      {
+       "id": "morada-de-gaia-1703",
+       "number": "1703",
+       "final": 3,
+       "plan": "1 suíte + 2",
+       "areaM2": 78.9,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 2,
+       "cells": 1,
+       "price": 1050000,
+       "status": "sold"
+      },
+      {
+       "id": "morada-de-gaia-1704",
+       "number": "1704",
+       "final": 4,
+       "plan": "1 suíte + 2",
+       "areaM2": 84.6,
+       "bedrooms": 3,
+       "suites": 1,
+       "parkingSpots": 1,
+       "shape": 3,
+       "cells": 1,
+       "price": 1126000,
+       "status": "sold"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "landhaus",
+   "name": "Landhaus",
+   "developer": "Plaenge",
+   "address": "Rua Visconde de Mauá, 1297 (esquina com a Gen. Andrade Neves) – América",
+   "location": [
+    -48.8551368,
+    -26.2807276
+   ],
+   "locationNote": "Nominatim, nº 1297",
+   "stage": "construction",
+   "delivery": "04/2027",
+   "floorHeightM": 3.15,
+   "facts": [
+    "Rua Visconde de Mauá, 1297, esquina com a Rua General Andrade Neves, América",
+    "Em obras; conclusão prevista para abril/2027 (Plaenge)",
+    "59 apartamentos",
+    "Finais 01 (169,8 m²), 02 (174,9 m²), 03 (147,74 m²) e 04 (159,98 m²), 3 suítes; cobertura de 385,2 m² com 4 suítes",
+    "Pé-direito de piso a piso 3,15 m · 2 a 4 vagas · 3 elevadores"
+   ],
+   "estimates": [
+    "14 andares-tipo com 4 unidades e cobertura no 17º",
+    "térreo e 2 garagens",
+    "formato e posição da torre"
+   ],
+   "sources": [
+    {
+     "label": "Plaenge – Landhaus Joinville",
+     "url": "https://www.plaenge.com.br/joinville/landhaus-joinville"
+    },
+    {
+     "label": "Anagê – Landhaus",
+     "url": "https://lancamentos.anageimoveis.com.br/lancamento/landhaus/"
+    },
+    {
+     "label": "Plaenge: 59 apartamentos (Acontecendo Aqui)",
+     "url": "https://acontecendoaqui.com.br/?p=253488"
+    }
+   ],
+   "footprint": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -48.8549332,
+       -26.2808782
+      ],
+      [
+       -48.8549179,
+       -26.2805954
+      ],
+      [
+       -48.8552046,
+       -26.2805829
+      ],
+      [
+       -48.8552199,
+       -26.2808657
+      ],
+      [
+       -48.8549332,
+       -26.2808782
+      ]
+     ]
+    ]
+   },
+   "center": [
+    -48.8550689,
+    -26.2807305
+   ],
+   "grid": {
+    "cols": 2,
+    "rows": 2
+   },
+   "shapes": [
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.854937,
+         -26.2808744
+        ],
+        [
+         -48.8549298,
+         -26.2807402
+        ],
+        [
+         -48.8550651,
+         -26.2807343
+        ],
+        [
+         -48.8550723,
+         -26.2808685
+        ],
+        [
+         -48.854937,
+         -26.2808744
+        ]
+       ]
+      ]
+     },
+     "facing": 141
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8549294,
+         -26.280733
+        ],
+        [
+         -48.8549221,
+         -26.2805988
+        ],
+        [
+         -48.8550574,
+         -26.2805929
+        ],
+        [
+         -48.8550647,
+         -26.2807271
+        ],
+        [
+         -48.8549294,
+         -26.280733
+        ]
+       ]
+      ]
+     },
+     "facing": 45
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8550804,
+         -26.2808682
+        ],
+        [
+         -48.8550731,
+         -26.280734
+        ],
+        [
+         -48.8552084,
+         -26.2807281
+        ],
+        [
+         -48.8552157,
+         -26.2808623
+        ],
+        [
+         -48.8550804,
+         -26.2808682
+        ]
+       ]
+      ]
+     },
+     "facing": 225
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8550727,
+         -26.2807268
+        ],
+        [
+         -48.8550655,
+         -26.2805926
+        ],
+        [
+         -48.8552008,
+         -26.2805867
+        ],
+        [
+         -48.855208,
+         -26.2807209
+        ],
+        [
+         -48.8550727,
+         -26.2807268
+        ]
+       ]
+      ]
+     },
+     "facing": 321
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.854937,
+         -26.2808744
+        ],
+        [
+         -48.8549221,
+         -26.2805988
+        ],
+        [
+         -48.8550574,
+         -26.2805929
+        ],
+        [
+         -48.8550723,
+         -26.2808685
+        ],
+        [
+         -48.854937,
+         -26.2808744
+        ]
+       ]
+      ]
+     },
+     "facing": 93
+    }
+   ],
+   "hiddenBuildingIds": [
+    "way/1035503483",
+    "way/1035503489",
+    "way/1035503491"
+   ],
+   "levels": [
+    {
+     "level": 0,
+     "use": "lobby",
+     "base": 0,
+     "top": 3.15,
+     "units": []
+    },
+    {
+     "level": 1,
+     "use": "garage",
+     "base": 3.15,
+     "top": 6.3,
+     "units": []
+    },
+    {
+     "level": 2,
+     "use": "garage",
+     "base": 6.3,
+     "top": 9.45,
+     "units": []
+    },
+    {
+     "level": 3,
+     "use": "residential",
+     "base": 9.45,
+     "top": 12.6,
+     "units": [
+      {
+       "id": "landhaus-301",
+       "number": "301",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2272000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-302",
+       "number": "302",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2375000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-303",
+       "number": "303",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1917000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-304",
+       "number": "304",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2163000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "use": "residential",
+     "base": 12.6,
+     "top": 15.75,
+     "units": [
+      {
+       "id": "landhaus-401",
+       "number": "401",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2203000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-402",
+       "number": "402",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2264000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-403",
+       "number": "403",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1970000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-404",
+       "number": "404",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2077000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "use": "residential",
+     "base": 15.75,
+     "top": 18.9,
+     "units": [
+      {
+       "id": "landhaus-501",
+       "number": "501",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2320000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-502",
+       "number": "502",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2293000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-503",
+       "number": "503",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2009000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-504",
+       "number": "504",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2213000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 6,
+     "use": "residential",
+     "base": 18.9,
+     "top": 22.05,
+     "units": [
+      {
+       "id": "landhaus-601",
+       "number": "601",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2246000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-602",
+       "number": "602",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2377000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-603",
+       "number": "603",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2028000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-604",
+       "number": "604",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2171000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "use": "residential",
+     "base": 22.05,
+     "top": 25.2,
+     "units": [
+      {
+       "id": "landhaus-701",
+       "number": "701",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2396000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-702",
+       "number": "702",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2432000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-703",
+       "number": "703",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2034000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-704",
+       "number": "704",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2165000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "use": "residential",
+     "base": 25.2,
+     "top": 28.35,
+     "units": [
+      {
+       "id": "landhaus-801",
+       "number": "801",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2286000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-802",
+       "number": "802",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2354000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-803",
+       "number": "803",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2103000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-804",
+       "number": "804",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2198000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "use": "residential",
+     "base": 28.35,
+     "top": 31.5,
+     "units": [
+      {
+       "id": "landhaus-901",
+       "number": "901",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2340000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-902",
+       "number": "902",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2505000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-903",
+       "number": "903",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2114000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-904",
+       "number": "904",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2245000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "use": "residential",
+     "base": 31.5,
+     "top": 34.65,
+     "units": [
+      {
+       "id": "landhaus-1001",
+       "number": "1001",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2395000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1002",
+       "number": "1002",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2481000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1003",
+       "number": "1003",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2061000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-1004",
+       "number": "1004",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2214000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "use": "residential",
+     "base": 34.65,
+     "top": 37.8,
+     "units": [
+      {
+       "id": "landhaus-1101",
+       "number": "1101",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2491000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1102",
+       "number": "1102",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2540000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1103",
+       "number": "1103",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2106000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1104",
+       "number": "1104",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2254000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "use": "residential",
+     "base": 37.8,
+     "top": 40.95,
+     "units": [
+      {
+       "id": "landhaus-1201",
+       "number": "1201",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2499000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1202",
+       "number": "1202",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2578000,
+       "status": "reserved"
+      },
+      {
+       "id": "landhaus-1203",
+       "number": "1203",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2137000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1204",
+       "number": "1204",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2366000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "use": "residential",
+     "base": 40.95,
+     "top": 44.1,
+     "units": [
+      {
+       "id": "landhaus-1301",
+       "number": "1301",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2530000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1302",
+       "number": "1302",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2582000,
+       "status": "reserved"
+      },
+      {
+       "id": "landhaus-1303",
+       "number": "1303",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2090000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1304",
+       "number": "1304",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2286000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "use": "residential",
+     "base": 44.1,
+     "top": 47.25,
+     "units": [
+      {
+       "id": "landhaus-1401",
+       "number": "1401",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2480000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-1402",
+       "number": "1402",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2510000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-1403",
+       "number": "1403",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2180000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1404",
+       "number": "1404",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2323000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "use": "residential",
+     "base": 47.25,
+     "top": 50.4,
+     "units": [
+      {
+       "id": "landhaus-1501",
+       "number": "1501",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2446000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1502",
+       "number": "1502",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2633000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1503",
+       "number": "1503",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2244000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1504",
+       "number": "1504",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2418000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "use": "residential",
+     "base": 50.4,
+     "top": 53.55,
+     "units": [
+      {
+       "id": "landhaus-1601",
+       "number": "1601",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 169.8,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2553000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1602",
+       "number": "1602",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 174.9,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2646000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-1603",
+       "number": "1603",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2185000,
+       "status": "sold"
+      },
+      {
+       "id": "landhaus-1604",
+       "number": "1604",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2396000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "use": "residential",
+     "base": 53.55,
+     "top": 56.7,
+     "units": [
+      {
+       "id": "landhaus-1701",
+       "number": "1701",
+       "final": 1,
+       "plan": "Cobertura",
+       "areaM2": 385.2,
+       "bedrooms": 4,
+       "suites": 4,
+       "parkingSpots": 4,
+       "shape": 4,
+       "cells": 2,
+       "price": 5937000,
+       "status": "reserved"
+      },
+      {
+       "id": "landhaus-1703",
+       "number": "1703",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 147.74,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2165000,
+       "status": "available"
+      },
+      {
+       "id": "landhaus-1704",
+       "number": "1704",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 159.98,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2441000,
+       "status": "sold"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "aman",
+   "name": "Aman",
+   "developer": "Plaenge",
+   "address": "Rua Benjamin Constant, 915 – América",
+   "location": [
+    -48.8572772,
+    -26.2843169
+   ],
+   "locationNote": "interpolado entre os nºs 900 e 975 (Nominatim)",
+   "stage": "launch",
+   "delivery": "03/2029",
+   "floorHeightM": 3.15,
+   "facts": [
+    "Rua Benjamin Constant, 915 (a Plaenge situa no América; o site cita Glória)",
+    "Lançamento; conclusão prevista para março/2029 (Plaenge)",
+    "Torre única de 20 andares, 67 apartamentos, 3 pavimentos de garagem",
+    "Plantas de 135 a 320 m², 2 a 4 suítes; Final 01 com 157 m² e 3 suítes",
+    "Tipologias: Finais 01–04, Garden 02 e 03, Duplex, Penthouse 01 e 02"
+   ],
+   "estimates": [
+    "posição de cada tipologia por andar",
+    "áreas das plantas além da Final 01",
+    "formato e posição da torre"
+   ],
+   "sources": [
+    {
+     "label": "Plaenge – Aman",
+     "url": "https://www.plaenge.com.br/joinville/aman"
+    },
+    {
+     "label": "Grupo Amanhã – lançamento do Aman",
+     "url": "https://amanha.com.br/categoria/negocios-do-sul1/plaenge-anuncia-quarto-lancamento-da-marca-em-joinville"
+    },
+    {
+     "label": "Plaenge: 67 apartamentos (Acontecendo Aqui)",
+     "url": "https://acontecendoaqui.com.br/?p=253488"
+    }
+   ],
+   "footprint": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -48.8574492,
+       -26.2844921
+      ],
+      [
+       -48.8570869,
+       -26.2844762
+      ],
+      [
+       -48.857103,
+       -26.2841808
+      ],
+      [
+       -48.8574654,
+       -26.2841968
+      ],
+      [
+       -48.8574492,
+       -26.2844921
+      ]
+     ]
+    ]
+   },
+   "center": [
+    -48.8572761,
+    -26.2843365
+   ],
+   "grid": {
+    "cols": 2,
+    "rows": 2
+   },
+   "shapes": [
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8574454,
+         -26.2844884
+        ],
+        [
+         -48.8572722,
+         -26.2844808
+        ],
+        [
+         -48.8572799,
+         -26.2843403
+        ],
+        [
+         -48.8574531,
+         -26.2843479
+        ],
+        [
+         -48.8574454,
+         -26.2844884
+        ]
+       ]
+      ]
+     },
+     "facing": 225
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8572642,
+         -26.2844804
+        ],
+        [
+         -48.8570911,
+         -26.2844728
+        ],
+        [
+         -48.8570987,
+         -26.2843323
+        ],
+        [
+         -48.8572719,
+         -26.2843399
+        ],
+        [
+         -48.8572642,
+         -26.2844804
+        ]
+       ]
+      ]
+     },
+     "facing": 129
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8574535,
+         -26.2843407
+        ],
+        [
+         -48.8572803,
+         -26.2843331
+        ],
+        [
+         -48.857288,
+         -26.2841926
+        ],
+        [
+         -48.8574612,
+         -26.2842002
+        ],
+        [
+         -48.8574535,
+         -26.2843407
+        ]
+       ]
+      ]
+     },
+     "facing": 309
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8572723,
+         -26.2843327
+        ],
+        [
+         -48.8570991,
+         -26.2843251
+        ],
+        [
+         -48.8571068,
+         -26.2841846
+        ],
+        [
+         -48.85728,
+         -26.2841922
+        ],
+        [
+         -48.8572723,
+         -26.2843327
+        ]
+       ]
+      ]
+     },
+     "facing": 45
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8574535,
+         -26.2843407
+        ],
+        [
+         -48.8570991,
+         -26.2843251
+        ],
+        [
+         -48.8571068,
+         -26.2841846
+        ],
+        [
+         -48.8574612,
+         -26.2842002
+        ],
+        [
+         -48.8574535,
+         -26.2843407
+        ]
+       ]
+      ]
+     },
+     "facing": 357
+    }
+   ],
+   "hiddenBuildingIds": [],
+   "levels": [
+    {
+     "level": 0,
+     "use": "garage",
+     "base": 0,
+     "top": 3.15,
+     "units": []
+    },
+    {
+     "level": 1,
+     "use": "garage",
+     "base": 3.15,
+     "top": 6.3,
+     "units": []
+    },
+    {
+     "level": 2,
+     "use": "garage",
+     "base": 6.3,
+     "top": 9.45,
+     "units": []
+    },
+    {
+     "level": 3,
+     "use": "residential",
+     "base": 9.45,
+     "top": 12.6,
+     "units": [
+      {
+       "id": "aman-301",
+       "number": "301",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2176000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-302",
+       "number": "302",
+       "final": 2,
+       "plan": "Garden 02",
+       "areaM2": 248,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 3404000,
+       "status": "available"
+      },
+      {
+       "id": "aman-303",
+       "number": "303",
+       "final": 3,
+       "plan": "Garden 03",
+       "areaM2": 236,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 2,
+       "cells": 1,
+       "price": 3303000,
+       "status": "available"
+      },
+      {
+       "id": "aman-304",
+       "number": "304",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2231000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "use": "residential",
+     "base": 12.6,
+     "top": 15.75,
+     "units": [
+      {
+       "id": "aman-401",
+       "number": "401",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2140000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-402",
+       "number": "402",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1925000,
+       "status": "available"
+      },
+      {
+       "id": "aman-403",
+       "number": "403",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1894000,
+       "status": "available"
+      },
+      {
+       "id": "aman-404",
+       "number": "404",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2197000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "use": "residential",
+     "base": 15.75,
+     "top": 18.9,
+     "units": [
+      {
+       "id": "aman-501",
+       "number": "501",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2250000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-502",
+       "number": "502",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1954000,
+       "status": "reserved"
+      },
+      {
+       "id": "aman-503",
+       "number": "503",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1947000,
+       "status": "available"
+      },
+      {
+       "id": "aman-504",
+       "number": "504",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2237000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 6,
+     "use": "residential",
+     "base": 18.9,
+     "top": 22.05,
+     "units": [
+      {
+       "id": "aman-601",
+       "number": "601",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2291000,
+       "status": "available"
+      },
+      {
+       "id": "aman-602",
+       "number": "602",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1919000,
+       "status": "available"
+      },
+      {
+       "id": "aman-603",
+       "number": "603",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1987000,
+       "status": "available"
+      },
+      {
+       "id": "aman-604",
+       "number": "604",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2270000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "use": "residential",
+     "base": 22.05,
+     "top": 25.2,
+     "units": [
+      {
+       "id": "aman-701",
+       "number": "701",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2243000,
+       "status": "available"
+      },
+      {
+       "id": "aman-702",
+       "number": "702",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1910000,
+       "status": "available"
+      },
+      {
+       "id": "aman-703",
+       "number": "703",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 1934000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-704",
+       "number": "704",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2320000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "use": "residential",
+     "base": 25.2,
+     "top": 28.35,
+     "units": [
+      {
+       "id": "aman-801",
+       "number": "801",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2209000,
+       "status": "available"
+      },
+      {
+       "id": "aman-802",
+       "number": "802",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1994000,
+       "status": "reserved"
+      },
+      {
+       "id": "aman-803",
+       "number": "803",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2028000,
+       "status": "available"
+      },
+      {
+       "id": "aman-804",
+       "number": "804",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2382000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "use": "residential",
+     "base": 28.35,
+     "top": 31.5,
+     "units": [
+      {
+       "id": "aman-901",
+       "number": "901",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2234000,
+       "status": "reserved"
+      },
+      {
+       "id": "aman-902",
+       "number": "902",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2027000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-903",
+       "number": "903",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2039000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-904",
+       "number": "904",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2387000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "use": "residential",
+     "base": 31.5,
+     "top": 34.65,
+     "units": [
+      {
+       "id": "aman-1001",
+       "number": "1001",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2311000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1002",
+       "number": "1002",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2016000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1003",
+       "number": "1003",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2080000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1004",
+       "number": "1004",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2454000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "use": "residential",
+     "base": 34.65,
+     "top": 37.8,
+     "units": [
+      {
+       "id": "aman-1101",
+       "number": "1101",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2320000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1102",
+       "number": "1102",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 1991000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1103",
+       "number": "1103",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2096000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1104",
+       "number": "1104",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2481000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "use": "residential",
+     "base": 37.8,
+     "top": 40.95,
+     "units": [
+      {
+       "id": "aman-1201",
+       "number": "1201",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2315000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1202",
+       "number": "1202",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2018000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1203",
+       "number": "1203",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2021000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1204",
+       "number": "1204",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2493000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "use": "residential",
+     "base": 40.95,
+     "top": 44.1,
+     "units": [
+      {
+       "id": "aman-1301",
+       "number": "1301",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2442000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1302",
+       "number": "1302",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2008000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1303",
+       "number": "1303",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2078000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1304",
+       "number": "1304",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2386000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "use": "residential",
+     "base": 44.1,
+     "top": 47.25,
+     "units": [
+      {
+       "id": "aman-1401",
+       "number": "1401",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2358000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1402",
+       "number": "1402",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2113000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1403",
+       "number": "1403",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2055000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1404",
+       "number": "1404",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2465000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "use": "residential",
+     "base": 47.25,
+     "top": 50.4,
+     "units": [
+      {
+       "id": "aman-1501",
+       "number": "1501",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2479000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1502",
+       "number": "1502",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2111000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1503",
+       "number": "1503",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2115000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1504",
+       "number": "1504",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2556000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "use": "residential",
+     "base": 50.4,
+     "top": 53.55,
+     "units": [
+      {
+       "id": "aman-1601",
+       "number": "1601",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2488000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1602",
+       "number": "1602",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2078000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1603",
+       "number": "1603",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2195000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1604",
+       "number": "1604",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2516000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "use": "residential",
+     "base": 53.55,
+     "top": 56.7,
+     "units": [
+      {
+       "id": "aman-1701",
+       "number": "1701",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2399000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1702",
+       "number": "1702",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2144000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1703",
+       "number": "1703",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2152000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1704",
+       "number": "1704",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2519000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "use": "residential",
+     "base": 56.7,
+     "top": 59.85,
+     "units": [
+      {
+       "id": "aman-1801",
+       "number": "1801",
+       "final": 1,
+       "plan": "Final 01",
+       "areaM2": 157,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2438000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1802",
+       "number": "1802",
+       "final": 2,
+       "plan": "Final 02",
+       "areaM2": 135,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2181000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1803",
+       "number": "1803",
+       "final": 3,
+       "plan": "Final 03",
+       "areaM2": 138,
+       "bedrooms": 3,
+       "suites": 2,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2133000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1804",
+       "number": "1804",
+       "final": 4,
+       "plan": "Final 04",
+       "areaM2": 162,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2581000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 19,
+     "use": "residential",
+     "base": 59.85,
+     "top": 63,
+     "units": [
+      {
+       "id": "aman-1901",
+       "number": "1901",
+       "final": 1,
+       "plan": "Penthouse 01",
+       "areaM2": 320,
+       "bedrooms": 4,
+       "suites": 4,
+       "parkingSpots": 4,
+       "shape": 0,
+       "cells": 1,
+       "price": 5011000,
+       "status": "available"
+      },
+      {
+       "id": "aman-1902",
+       "number": "1902",
+       "final": 2,
+       "plan": "Penthouse 02",
+       "areaM2": 305,
+       "bedrooms": 4,
+       "suites": 4,
+       "parkingSpots": 4,
+       "shape": 1,
+       "cells": 1,
+       "price": 4805000,
+       "status": "sold"
+      },
+      {
+       "id": "aman-1903",
+       "number": "1903",
+       "final": 3,
+       "plan": "Duplex",
+       "areaM2": 290,
+       "bedrooms": 4,
+       "suites": 4,
+       "parkingSpots": 4,
+       "shape": 4,
+       "cells": 2,
+       "price": 4749000,
+       "status": "sold"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hausgarten",
+   "name": "Hausgarten",
+   "developer": "Plaenge",
+   "address": "Rua Jaraguá, 798 – América",
+   "location": [
+    -48.8531827,
+    -26.2915343
+   ],
+   "locationNote": "Nominatim, nº 798",
+   "stage": "launch",
+   "delivery": "a definir",
+   "floorHeightM": 3.15,
+   "facts": [
+    "Rua Jaraguá, 798, América",
+    "Lançamento (Plaenge); VGV de R$ 160 milhões",
+    "70 apartamentos de 154 a 197 m², 3 suítes",
+    "Tipologias: Finais 1–4, Garden 1 e 2, Penthouse 1 e 2; Final 1 com 154 m²"
+   ],
+   "estimates": [
+    "18 andares residenciais",
+    "posição de cada tipologia por andar",
+    "áreas além da Final 1",
+    "formato e posição da torre"
+   ],
+   "sources": [
+    {
+     "label": "Plaenge – Hausgarten",
+     "url": "https://www.plaenge.com.br/joinville/hausgarten"
+    },
+    {
+     "label": "SC Real – Hausgarten",
+     "url": "https://www.screal.tv.br/noticia/27814/sc-real-construcao-amp-mercado/novo-projeto-da-plaenge-tem-forte-presenca-do-verde-e-inspiracao-no-bem-estar.html"
+    }
+   ],
+   "footprint": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -48.8536698,
+       -26.2913553
+      ],
+      [
+       -48.8536944,
+       -26.2916449
+      ],
+      [
+       -48.8534009,
+       -26.291665
+      ],
+      [
+       -48.8533762,
+       -26.2913754
+      ],
+      [
+       -48.8536698,
+       -26.2913553
+      ]
+     ]
+    ]
+   },
+   "center": [
+    -48.8535353,
+    -26.2915102
+   ],
+   "grid": {
+    "cols": 2,
+    "rows": 2
+   },
+   "shapes": [
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8536661,
+         -26.2913592
+        ],
+        [
+         -48.8536778,
+         -26.2914968
+        ],
+        [
+         -48.853539,
+         -26.2915063
+        ],
+        [
+         -48.8535273,
+         -26.2913687
+        ],
+        [
+         -48.8536661,
+         -26.2913592
+        ]
+       ]
+      ]
+     },
+     "facing": 322
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8536784,
+         -26.291504
+        ],
+        [
+         -48.8536901,
+         -26.2916416
+        ],
+        [
+         -48.8535513,
+         -26.2916511
+        ],
+        [
+         -48.8535396,
+         -26.2915135
+        ],
+        [
+         -48.8536784,
+         -26.291504
+        ]
+       ]
+      ]
+     },
+     "facing": 227
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8535193,
+         -26.2913693
+        ],
+        [
+         -48.853531,
+         -26.2915068
+        ],
+        [
+         -48.8533922,
+         -26.2915163
+        ],
+        [
+         -48.8533805,
+         -26.2913788
+        ],
+        [
+         -48.8535193,
+         -26.2913693
+        ]
+       ]
+      ]
+     },
+     "facing": 47
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8535316,
+         -26.291514
+        ],
+        [
+         -48.8535433,
+         -26.2916516
+        ],
+        [
+         -48.8534045,
+         -26.2916611
+        ],
+        [
+         -48.8533928,
+         -26.2915235
+        ],
+        [
+         -48.8535316,
+         -26.291514
+        ]
+       ]
+      ]
+     },
+     "facing": 142
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8536661,
+         -26.2913592
+        ],
+        [
+         -48.8536901,
+         -26.2916416
+        ],
+        [
+         -48.8535513,
+         -26.2916511
+        ],
+        [
+         -48.8535273,
+         -26.2913687
+        ],
+        [
+         -48.8536661,
+         -26.2913592
+        ]
+       ]
+      ]
+     },
+     "facing": 274
+    },
+    {
+     "polygon": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -48.8535193,
+         -26.2913693
+        ],
+        [
+         -48.8535433,
+         -26.2916516
+        ],
+        [
+         -48.8534045,
+         -26.2916611
+        ],
+        [
+         -48.8533805,
+         -26.2913788
+        ],
+        [
+         -48.8535193,
+         -26.2913693
+        ]
+       ]
+      ]
+     },
+     "facing": 94
+    }
+   ],
+   "hiddenBuildingIds": [
+    "way/1035897714"
+   ],
+   "levels": [
+    {
+     "level": 0,
+     "use": "lobby",
+     "base": 0,
+     "top": 3.15,
+     "units": []
+    },
+    {
+     "level": 1,
+     "use": "garage",
+     "base": 3.15,
+     "top": 6.3,
+     "units": []
+    },
+    {
+     "level": 2,
+     "use": "garage",
+     "base": 6.3,
+     "top": 9.45,
+     "units": []
+    },
+    {
+     "level": 3,
+     "use": "residential",
+     "base": 9.45,
+     "top": 12.6,
+     "units": [
+      {
+       "id": "hausgarten-301",
+       "number": "301",
+       "final": 1,
+       "plan": "Garden 1",
+       "areaM2": 197,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 0,
+       "cells": 1,
+       "price": 2728000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-302",
+       "number": "302",
+       "final": 2,
+       "plan": "Garden 2",
+       "areaM2": 197,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 1,
+       "cells": 1,
+       "price": 2678000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-303",
+       "number": "303",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2164000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-304",
+       "number": "304",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2284000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "use": "residential",
+     "base": 12.6,
+     "top": 15.75,
+     "units": [
+      {
+       "id": "hausgarten-401",
+       "number": "401",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2041000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-402",
+       "number": "402",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2106000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-403",
+       "number": "403",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2222000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-404",
+       "number": "404",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2364000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "use": "residential",
+     "base": 15.75,
+     "top": 18.9,
+     "units": [
+      {
+       "id": "hausgarten-501",
+       "number": "501",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2110000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-502",
+       "number": "502",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2238000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-503",
+       "number": "503",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2249000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-504",
+       "number": "504",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2305000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 6,
+     "use": "residential",
+     "base": 18.9,
+     "top": 22.05,
+     "units": [
+      {
+       "id": "hausgarten-601",
+       "number": "601",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2092000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-602",
+       "number": "602",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2163000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-603",
+       "number": "603",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2319000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-604",
+       "number": "604",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2335000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "use": "residential",
+     "base": 22.05,
+     "top": 25.2,
+     "units": [
+      {
+       "id": "hausgarten-701",
+       "number": "701",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2129000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-702",
+       "number": "702",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2212000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-703",
+       "number": "703",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2376000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-704",
+       "number": "704",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2342000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "use": "residential",
+     "base": 25.2,
+     "top": 28.35,
+     "units": [
+      {
+       "id": "hausgarten-801",
+       "number": "801",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2190000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-802",
+       "number": "802",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2232000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-803",
+       "number": "803",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2328000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-804",
+       "number": "804",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2478000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "use": "residential",
+     "base": 28.35,
+     "top": 31.5,
+     "units": [
+      {
+       "id": "hausgarten-901",
+       "number": "901",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2192000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-902",
+       "number": "902",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2277000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-903",
+       "number": "903",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2341000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-904",
+       "number": "904",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2447000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "use": "residential",
+     "base": 31.5,
+     "top": 34.65,
+     "units": [
+      {
+       "id": "hausgarten-1001",
+       "number": "1001",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2251000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1002",
+       "number": "1002",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2224000,
+       "status": "reserved"
+      },
+      {
+       "id": "hausgarten-1003",
+       "number": "1003",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2439000,
+       "status": "reserved"
+      },
+      {
+       "id": "hausgarten-1004",
+       "number": "1004",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2497000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "use": "residential",
+     "base": 34.65,
+     "top": 37.8,
+     "units": [
+      {
+       "id": "hausgarten-1101",
+       "number": "1101",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2213000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1102",
+       "number": "1102",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2293000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1103",
+       "number": "1103",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2383000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1104",
+       "number": "1104",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2461000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "use": "residential",
+     "base": 37.8,
+     "top": 40.95,
+     "units": [
+      {
+       "id": "hausgarten-1201",
+       "number": "1201",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2271000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1202",
+       "number": "1202",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2263000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1203",
+       "number": "1203",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2415000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1204",
+       "number": "1204",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2562000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "use": "residential",
+     "base": 40.95,
+     "top": 44.1,
+     "units": [
+      {
+       "id": "hausgarten-1301",
+       "number": "1301",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2328000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1302",
+       "number": "1302",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2345000,
+       "status": "reserved"
+      },
+      {
+       "id": "hausgarten-1303",
+       "number": "1303",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2502000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1304",
+       "number": "1304",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2504000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "use": "residential",
+     "base": 44.1,
+     "top": 47.25,
+     "units": [
+      {
+       "id": "hausgarten-1401",
+       "number": "1401",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2257000,
+       "status": "reserved"
+      },
+      {
+       "id": "hausgarten-1402",
+       "number": "1402",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2329000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1403",
+       "number": "1403",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2424000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1404",
+       "number": "1404",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2561000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "use": "residential",
+     "base": 47.25,
+     "top": 50.4,
+     "units": [
+      {
+       "id": "hausgarten-1501",
+       "number": "1501",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2380000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1502",
+       "number": "1502",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2435000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1503",
+       "number": "1503",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2527000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1504",
+       "number": "1504",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2521000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "use": "residential",
+     "base": 50.4,
+     "top": 53.55,
+     "units": [
+      {
+       "id": "hausgarten-1601",
+       "number": "1601",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2387000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1602",
+       "number": "1602",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2362000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1603",
+       "number": "1603",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2468000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1604",
+       "number": "1604",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2609000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "use": "residential",
+     "base": 53.55,
+     "top": 56.7,
+     "units": [
+      {
+       "id": "hausgarten-1701",
+       "number": "1701",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2386000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1702",
+       "number": "1702",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2394000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1703",
+       "number": "1703",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2500000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1704",
+       "number": "1704",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2596000,
+       "status": "sold"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "use": "residential",
+     "base": 56.7,
+     "top": 59.85,
+     "units": [
+      {
+       "id": "hausgarten-1801",
+       "number": "1801",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2443000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-1802",
+       "number": "1802",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2414000,
+       "status": "reserved"
+      },
+      {
+       "id": "hausgarten-1803",
+       "number": "1803",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2511000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1804",
+       "number": "1804",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2592000,
+       "status": "available"
+      }
+     ]
+    },
+    {
+     "level": 19,
+     "use": "residential",
+     "base": 59.85,
+     "top": 63,
+     "units": [
+      {
+       "id": "hausgarten-1901",
+       "number": "1901",
+       "final": 1,
+       "plan": "Final 1",
+       "areaM2": 154,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 0,
+       "cells": 1,
+       "price": 2424000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1902",
+       "number": "1902",
+       "final": 2,
+       "plan": "Final 2",
+       "areaM2": 158,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 1,
+       "cells": 1,
+       "price": 2414000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1903",
+       "number": "1903",
+       "final": 3,
+       "plan": "Final 3",
+       "areaM2": 165,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 2,
+       "shape": 2,
+       "cells": 1,
+       "price": 2524000,
+       "status": "sold"
+      },
+      {
+       "id": "hausgarten-1904",
+       "number": "1904",
+       "final": 4,
+       "plan": "Final 4",
+       "areaM2": 170,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 3,
+       "cells": 1,
+       "price": 2721000,
+       "status": "reserved"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "use": "residential",
+     "base": 63,
+     "top": 66.15,
+     "units": [
+      {
+       "id": "hausgarten-2001",
+       "number": "2001",
+       "final": 1,
+       "plan": "Penthouse 1",
+       "areaM2": 197,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 4,
+       "cells": 2,
+       "price": 3156000,
+       "status": "available"
+      },
+      {
+       "id": "hausgarten-2003",
+       "number": "2003",
+       "final": 3,
+       "plan": "Penthouse 2",
+       "areaM2": 197,
+       "bedrooms": 3,
+       "suites": 3,
+       "parkingSpots": 3,
+       "shape": 5,
+       "cells": 2,
+       "price": 3023000,
+       "status": "available"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

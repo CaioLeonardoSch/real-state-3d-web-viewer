@@ -75,6 +75,7 @@ export class PlacementChecker {
         ...roads.features.map((g) => ({ kind: 'uma via', g })),
         ...water.features.map((g) => ({ kind: 'água', g })),
         ...green.features.map((g) => ({ kind: 'uma área verde', g })),
+        ...this.data.developments.map((d) => ({ kind: `o terreno do ${d.name}`, g: d.footprint })),
       ].map((o) => ({ ...o, bbox: turfBbox(o.g) as BBox }));
     }
     return this.obstacles;

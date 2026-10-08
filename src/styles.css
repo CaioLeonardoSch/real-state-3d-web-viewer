@@ -215,6 +215,8 @@ body[data-tod='night'] .f-pending {
   position: relative;
   flex: 1;
   min-height: 0;
+  /* closed panels wait off-screen; they must not widen the page */
+  overflow: hidden;
 }
 #map {
   position: absolute;
@@ -769,6 +771,229 @@ body[data-tod='night'] .a-error {
   font-size: 14px;
 }
 
+/* ---------------- developments ("espelho de vendas 3D") ---------------- */
+:root {
+  --st-available: #2e9d5b;
+  --st-reserved: #e0a526;
+  --st-sold: #c3c7ce;
+  --st-selected: #2f7de1;
+  --dev: #7a5af8;
+}
+.dev-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 0;
+  border-left: 3px solid var(--dev);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dev-marker strong {
+  font-size: 13px;
+}
+.dev-marker span {
+  color: var(--muted);
+}
+.dev-marker.is-open {
+  border-left-color: var(--st-selected);
+}
+body.dev-viewing .dev-marker,
+body.dev-viewing .results {
+  display: none;
+}
+.dev-list h3 {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dev);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+body[data-tod='night'] .dev-list h3 {
+  color: #b8a6ff;
+}
+.r-dev {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dev-panel {
+  z-index: 5;
+  width: min(440px, 100%);
+}
+.badge-dev {
+  background: var(--dev);
+}
+.dev-panel h2 {
+  margin: 8px 0 2px;
+}
+.dev-sub {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.dev-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.st {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+.st::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--st-sold);
+}
+.st-available::before {
+  background: var(--st-available);
+}
+.st-reserved::before {
+  background: var(--st-reserved);
+}
+.st-selected::before {
+  background: var(--st-selected);
+}
+.dev-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+.dev-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+}
+.dev-row.is-floor {
+  background: var(--accent-soft);
+}
+.dev-row-label {
+  width: 44px;
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+}
+button.dev-row-label {
+  cursor: pointer;
+}
+.dev-row-use {
+  flex: 1;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.dev-row-units {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+}
+.dev-row-units .unit {
+  flex-basis: 0;
+  min-width: 0;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: var(--st-sold);
+}
+.unit.st-available {
+  background: var(--st-available);
+}
+.unit.st-reserved {
+  background: var(--st-reserved);
+}
+.unit.st-sold {
+  color: #4b5058;
+}
+.unit.is-selected {
+  background: var(--st-selected);
+  color: #fff;
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.unit.is-out {
+  opacity: 0.25;
+}
+.dev-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0;
+}
+.dev-card {
+  border: 1px solid var(--st-selected);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.dev-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dev-card h3 {
+  margin: 2px 0;
+  font-size: 17px;
+}
+.dev-card .facts {
+  margin: 8px 0;
+}
+.dev-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dev-about {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.dev-about summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.dev-about h3 {
+  font-size: 13px;
+  margin: 10px 0 4px;
+}
+.dev-about ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.dev-about a {
+  color: inherit;
+}
+
 /* ---------------- attribution ---------------- */
 .maplibregl-ctrl-attrib {
   font-size: 11px;
@@ -803,6 +1028,12 @@ body[data-tod='night'] .a-error {
   }
   .add-panel {
     top: 0;
+  }
+  /* the sales chart is a tall sheet: always fully open (no peek state) */
+  #dev-panel.open {
+    transform: none;
+    overflow-y: auto;
+    max-height: 58%;
   }
   .add-panel.picking {
     left: 8px;

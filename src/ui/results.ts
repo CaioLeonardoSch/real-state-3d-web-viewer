@@ -11,6 +11,15 @@ export interface ResultsHandlers {
   /** Remove one criterion and search again (from the empty-results hint). */
   onRelax: (field: RelaxableField) => void;
   onClearAll: () => void;
+  onOpenDevelopment: (id: string) => void;
+}
+
+/** Developments with a 3D sales chart, listed above the listings. */
+export interface DevelopmentSummary {
+  id: string;
+  name: string;
+  developer: string;
+  available: number;
 }
 
 export interface ResultsView {
@@ -22,6 +31,7 @@ export interface ResultsView {
   filtered: boolean;
   /** Shown when there are no results. */
   suggestions?: RelaxSuggestion[];
+  developments?: DevelopmentSummary[];
 }
 
 const FIELD_LABELS: Record<RelaxableField, string> = {
@@ -143,7 +153,7 @@ export class ResultsPanel {
     return true;
   }
 
-  render({ results, total, sort, filtered, suggestions = [] }: ResultsView): void {
+  render({ results, total, sort, filtered, suggestions = [], developments = [] }: ResultsView): void {
     const range = priceRangeLabel(results);
     this.el.hidden = false;
     this.el.innerHTML = `
@@ -153,6 +163,18 @@ export class ResultsPanel {
         <button type="button" class="link-btn" data-action="toggle-results" aria-controls="results-body"></button>
       </div>
       <div class="results-body" id="results-body">
+      ${
+        developments.length
+          ? `<div class="dev-list"><h3>Empreendimentos · espelho de vendas 3D</h3><ul>${developments
+              .map(
+                (d) => `<li><button type="button" data-dev="${escapeHtml(d.id)}">
+                  <span class="r-title">${escapeHtml(d.name)} <span class="r-dev">${escapeHtml(d.developer)}</span></span>
+                  <span class="r-meta">${d.available === 1 ? '1 unidade disponível' : `${d.available} unidades disponíveis`}</span>
+                </button></li>`,
+              )
+              .join('')}</ul></div>`
+          : ''
+      }
       ${
         results.length === 0
           ? emptyHtml(suggestions)
@@ -174,7 +196,10 @@ export class ResultsPanel {
               .join('')}</ul>`
       }
       </div>`;
-    const { onPick, onHover, onSortChange, onRelax, onClearAll } = this.handlers;
+    const { onPick, onHover, onSortChange, onRelax, onClearAll, onOpenDevelopment } = this.handlers;
+    this.el
+      .querySelectorAll<HTMLButtonElement>('button[data-dev]')
+      .forEach((b) => b.addEventListener('click', () => onOpenDevelopment(b.dataset.dev!)));
     this.el
       .querySelectorAll<HTMLButtonElement>('button[data-relax]')
       .forEach((b) => b.addEventListener('click', () => onRelax(b.dataset.relax as RelaxableField)));

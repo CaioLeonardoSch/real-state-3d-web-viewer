@@ -7,6 +7,17 @@ export interface UrlState {
   criteria: FilterCriteria;
   listingId: string | null;
   sort: SortKey;
+  /** Open development ("espelho de vendas") and its selected unit. */
+  developmentId?: string | null;
+  unitId?: string | null;
+}
+
+/** Ids the URL may refer to; anything else is dropped. */
+export interface KnownIds {
+  agencyIds: Set<string>;
+  listingIds: Set<string>;
+  /** Development id → its unit ids. */
+  developments?: Map<string, Set<string>>;
 }
 
 const SORT_SLUGS: Record<SortKey, string> = {
@@ -72,6 +83,10 @@ export function stateToSearch(state: UrlState): string {
   const p = new URLSearchParams();
   const c = state.criteria;
   if (state.listingId) p.set('imovel', state.listingId);
+  if (state.developmentId) {
+    p.set('empreendimento', state.developmentId);
+    if (state.unitId) p.set('unidade', state.unitId.slice(state.developmentId.length + 1));
+  }
   if (c.types.length) p.set('tipo', c.types.map((t) => TYPE_SLUGS[t]).join(','));
   for (const [field, param] of NUMBER_PARAMS) if (c[field] !== null) p.set(param, String(c[field]));
   if (c.statuses.length) p.set('situacao', c.statuses.map((s) => STATUS_SLUGS[s]).join(','));
@@ -92,7 +107,7 @@ const nonNegative = (v: string | null): number | null => {
  * Parses the query string defensively: unknown types, agencies or listing ids and invalid
  * numbers are ignored rather than breaking the page.
  */
-export function searchToState(search: string, known: { agencyIds: Set<string>; listingIds: Set<string> }): UrlState {
+export function searchToState(search: string, known: KnownIds): UrlState {
   const p = new URLSearchParams(search);
   const agency = p.get('imob');
   const listingId = p.get('imovel');
@@ -107,10 +122,16 @@ export function searchToState(search: string, known: { agencyIds: Set<string>; l
     const n = nonNegative(p.get(param));
     criteria[field] = n !== null && INTEGER_FIELDS.has(field) ? Math.floor(n) : n;
   }
+  const dev = p.get('empreendimento');
+  const units = dev ? known.developments?.get(dev) : undefined;
+  // units appear in the URL by number ("1502"); ids are "<development>-<number>"
+  const unitId = units && p.get('unidade') ? `${dev}-${p.get('unidade')}` : null;
   return {
     criteria,
     listingId: listingId && known.listingIds.has(listingId) ? listingId : null,
     sort: SLUG_TO_SORT.get(p.get('ordem') ?? '') ?? DEFAULT_SORT,
+    developmentId: units ? dev : null,
+    unitId: unitId && units!.has(unitId) ? unitId : null,
   };
 }
 

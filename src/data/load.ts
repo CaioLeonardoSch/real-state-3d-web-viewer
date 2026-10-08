@@ -1,5 +1,6 @@
 import type { FeatureCollection, Polygon, MultiPolygon, Geometry } from 'geojson';
 import { validateListingsFile, type ListingsFile } from './types';
+import { validateDevelopmentsFile, type Development } from './developments';
 
 export interface BuildingProps {
   osmId: string;
@@ -24,6 +25,8 @@ export interface AppData {
   water: FeatureCollection<Geometry>;
   green: FeatureCollection<Geometry>;
   listings: ListingsFile;
+  /** Developments with units (empty when the file is missing). */
+  developments: Development[];
 }
 
 async function getJson<T>(name: string): Promise<T> {
@@ -44,5 +47,12 @@ export async function loadData(): Promise<AppData> {
   ]);
   const buildingIds = new Set(buildings.features.map((f) => f.properties.osmId));
   const listings = validateListingsFile(rawListings, buildingIds);
-  return { meta, boundary, buildings, roads, water, green, listings };
+  // optional layer: the map works without it
+  const developments = await getJson<unknown>('developments.json')
+    .then((raw) => validateDevelopmentsFile(raw).developments)
+    .catch((err: Error) => {
+      console.warn(`Empreendimentos indisponíveis: ${err.message}`);
+      return [];
+    });
+  return { meta, boundary, buildings, roads, water, green, listings, developments };
 }

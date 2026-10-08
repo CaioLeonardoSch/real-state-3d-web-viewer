@@ -21,6 +21,8 @@ describe('URL state', () => {
       },
       listingId: 'land-13',
       sort: 'area-desc' as const,
+      developmentId: null,
+      unitId: null,
     };
     const search = stateToSearch(state);
     expect(search).toBe('?imovel=land-13&tipo=casa%2Cterreno&precoMin=300000&precoMax=900000&quartos=2&area=80&imob=agency-b&ordem=maior-area');
@@ -39,6 +41,8 @@ describe('URL state', () => {
       },
       listingId: null,
       sort: 'ppm2-asc' as const,
+      developmentId: null,
+      unitId: null,
     };
     const search = stateToSearch(state);
     expect(search).toBe(
@@ -46,9 +50,24 @@ describe('URL state', () => {
     );
     expect(searchToState(search, known)).toEqual(state);
   });
+  it('round-trips the open development and unit (unit by number)', () => {
+    const k = { ...known, developments: new Map([['cora', new Set(['cora-1502', 'cora-501'])]]) };
+    const state = { criteria: EMPTY_CRITERIA, listingId: null, sort: 'price-asc' as const, developmentId: 'cora', unitId: 'cora-1502' };
+    const search = stateToSearch(state);
+    expect(search).toBe('?empreendimento=cora&unidade=1502');
+    expect(searchToState(search, k)).toEqual(state);
+    expect(searchToState('?empreendimento=cora&unidade=9999', k)).toMatchObject({ developmentId: 'cora', unitId: null });
+    expect(searchToState('?empreendimento=nada&unidade=1502', k)).toMatchObject({ developmentId: null, unitId: null });
+  });
   it('ignores unknown or invalid values', () => {
     const s = searchToState('?tipo=castelo,casa,casa&precoMin=-5&precoMax=abc&quartos=2.7&imob=agency-x&imovel=nope&ordem=xyz&comodidades=heliponto&situacao=x', known);
-    expect(s).toEqual({ criteria: { ...EMPTY_CRITERIA, types: ['house'], bedroomsMin: 2 }, listingId: null, sort: 'price-asc' });
+    expect(s).toEqual({
+      criteria: { ...EMPTY_CRITERIA, types: ['house'], bedroomsMin: 2 },
+      listingId: null,
+      sort: 'price-asc',
+      developmentId: null,
+      unitId: null,
+    });
   });
   it('sameCriteria ignores type order', () => {
     expect(sameCriteria({ ...EMPTY_CRITERIA, types: ['land', 'house'] }, { ...EMPTY_CRITERIA, types: ['house', 'land'] })).toBe(true);

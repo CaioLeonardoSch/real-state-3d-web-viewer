@@ -45,6 +45,8 @@ const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] };
 export interface SceneEvents {
   onListingClick: (listingId: string) => void;
   onEmptyClick: () => void;
+  /** Clicks on these points belong to another layer (developments): no listing click, no empty click. */
+  ignoreClickAt?: (point: { x: number; y: number }) => boolean;
   /** Mouse is over a clickable listing (point in map-container pixels), or left it (null). */
   onListingHover?: (listingId: string | null, point?: { x: number; y: number }) => void;
 }
@@ -99,9 +101,15 @@ export class Scene {
 
   // ---------------------------------------------------------------- style
 
-  /** Listing buildings are drawn by the listing layers, not as grey context. */
+  /**
+   * Listing buildings are drawn by the listing layers, not as grey context; buildings on the plot of a
+   * development are hidden (replaced by its tower).
+   */
   private contextFilter(): ExpressionSpecification {
-    const ids = this.listings.filter((l) => l.buildingOsmId && !l.approximateLocation).map((l) => l.buildingOsmId!);
+    const ids = [
+      ...this.listings.filter((l) => l.buildingOsmId && !l.approximateLocation).map((l) => l.buildingOsmId!),
+      ...this.data.developments.flatMap((d) => d.hiddenBuildingIds),
+    ];
     return ['!', ['in', ['get', 'osmId'], ['literal', ids]]];
   }
 
@@ -451,7 +459,12 @@ export class Scene {
     this.map.fitBounds(bb, { padding: this.cameraPadding(), maxZoom: 17.5, pitch: 58, duration: 1200 });
   }
 
+  /**
+   * Padding for framing. Clears the map's own padding first: a padding passed to flyTo elsewhere
+   * (development close-ups) stays on the map and would add up with this one.
+   */
   private cameraPadding() {
+    this.map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
     const mobile = window.matchMedia('(max-width: 720px)').matches;
     // desktop: the results list occupies ~320 px on the left
     return mobile ? { top: 80, bottom: 120, left: 30, right: 30 } : { top: 120, bottom: 60, left: 340, right: 60 };
@@ -561,6 +574,7 @@ export class Scene {
         return;
       }
       this.events.onListingHover?.(null);
+      if (this.events.ignoreClickAt?.(e.point)) return;
       const f = this.queryListing(e.point);
       if (f) this.events.onListingClick(String(f.properties.listingId));
       else this.events.onEmptyClick();

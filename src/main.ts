@@ -26,6 +26,9 @@ import { HoverTooltip } from './ui/tooltip';
 import { AddListingPanel } from './ui/addListing';
 import { exportUserListings, loadUserListings, newListingId, saveUserListings } from './state/userListings';
 import { PlacementChecker } from './utils/placement';
+import { DevelopmentLayer } from './map/developmentLayer';
+import { DevelopmentPanel } from './ui/developmentPanel';
+import { countByStatus } from './data/developments';
 
 setWorkerUrl(workerUrl);
 
@@ -57,9 +60,11 @@ async function main() {
   // listings added through "Anunciar imóvel", kept in this browser
   let userListings = loadUserListings(agencies, buildingIds, new Set(baseListings.map((l) => l.id)));
   let listings = [...baseListings, ...userListings];
+  const developments = data.developments;
   const known = {
     agencyIds: new Set(agencies.map((a) => a.id)),
     listingIds: new Set(listings.map((l) => l.id)),
+    developments: new Map(developments.map((d) => [d.id, new Set(d.levels.flatMap((l) => l.units.map((u) => u.id)))])),
   };
 
   let tod: TimeOfDay = 'morning';
@@ -91,6 +96,7 @@ async function main() {
       filtersUi.setForm(EMPTY_CRITERIA);
       store.clear();
     },
+    onOpenDevelopment: (id) => openDevelopment(id),
   }, isMobile());
   // Row that opened the drawer, to give focus back to it when the drawer closes.
   let openedFromRow: string | null = null;
@@ -103,7 +109,13 @@ async function main() {
 
   // ------------------------------------------------------------ URL / history
   const urlFor = (listingId: string | null) =>
-    `${location.pathname}${stateToSearch({ criteria: store.getApplied(), listingId, sort })}${location.hash}`;
+    `${location.pathname}${stateToSearch({
+      criteria: store.getApplied(),
+      listingId,
+      sort,
+      developmentId: devPanel.currentId,
+      unitId: devPanel.selectedUnitId,
+    })}${location.hash}`;
   const historyState = () => (history.state ?? {}) as HistoryState;
 
   /** Updates the current entry (filters changed, or browsing between listings). */
@@ -132,6 +144,8 @@ async function main() {
     // while the "Anunciar imóvel" form is open, the map is used to choose its place
     onListingClick: (id) => !addPanel.opened && openListing(id, false),
     onEmptyClick: () => drawer.close(),
+    // towers and units of developments are handled by DevelopmentLayer
+    ignoreClickAt: (p) => devLayer?.isDevelopmentAt(p) ?? false,
     onListingHover: (id, point) => {
       const l = id ? listings.find((x) => x.id === id) : undefined;
       if (l && point) tooltip.show(l, point);
@@ -143,6 +157,10 @@ async function main() {
   function openListing(id: string, fly: boolean) {
     const l = listings.find((x) => x.id === id);
     if (!l) return;
+    // the listing takes over the camera and the URL
+    leavingDevelopment = true;
+    devPanel.close();
+    leavingDevelopment = false;
     const wasOpen = drawer.currentId !== null;
     if (fly) scene.flyToListing(l);
     scene.select(id);
@@ -175,6 +193,12 @@ async function main() {
       sort,
       filtered,
       suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
+      developments: developments.map((d) => ({
+        id: d.id,
+        name: d.name,
+        developer: d.developer,
+        available: countByStatus(d).available,
+      })),
     });
   }
 
@@ -257,6 +281,46 @@ async function main() {
     addToggle.setAttribute('aria-expanded', 'true');
   });
 
+  // ------------------------------------------------------------ developments ("espelho de vendas 3D")
+  let devLayer: DevelopmentLayer | null = null;
+  // True while another view (a listing) closes the development panel.
+  let leavingDevelopment = false;
+  const devPanel = new DevelopmentPanel($('#dev-panel'), {
+    onClose: () => {
+      devLayer?.close();
+      if (syncingFromUrl || leavingDevelopment) return;
+      // "Voltar ao bairro"
+      scene.showOverview(true);
+      replaceUrl();
+    },
+    onSelectUnit: (unitId) => {
+      devLayer?.selectUnit(unitId);
+      if (!syncingFromUrl) replaceUrl();
+    },
+    onFloor: (level) => devLayer?.setFloor(level),
+    onFilter: (fn) => devLayer?.setUnitFilter(fn),
+    onHoverUnit: (unitId) => devLayer?.hoverUnit(unitId),
+    onView: (unitId) => devLayer?.viewFrom(unitId),
+    onExitView: () => devLayer?.exitView(true),
+  });
+
+  function openDevelopment(id: string, unitId: string | null = null) {
+    const d = developments.find((x) => x.id === id);
+    if (!d || !devLayer) return;
+    // like a search: replace the URL instead of stepping back in history
+    closingForSearch = true;
+    drawer.close();
+    closingForSearch = false;
+    if (addPanel.opened) addPanel.close();
+    if (isMobile()) results.setCollapsed(true);
+    if (devPanel.currentId !== id) {
+      devPanel.open(d);
+      devLayer.open(id);
+    }
+    devPanel.select(unitId);
+    if (!syncingFromUrl) replaceUrl();
+  }
+
   /** Brings filters and the drawer in line with the address bar. */
   function applyUrl() {
     const state = searchToState(location.search, known);
@@ -274,6 +338,10 @@ async function main() {
       if (state.listingId) {
         if (state.listingId !== drawer.currentId) openListing(state.listingId, true);
       } else drawer.close();
+      if (state.developmentId) {
+        if (state.developmentId !== devPanel.currentId || state.unitId !== devPanel.selectedUnitId)
+          openDevelopment(state.developmentId, state.unitId ?? null);
+      } else if (!state.listingId) devPanel.close();
     } finally {
       syncingFromUrl = false;
     }
@@ -302,6 +370,16 @@ async function main() {
 
   showResults();
   await scene.ready;
+  devLayer = new DevelopmentLayer(
+    scene.map,
+    developments,
+    {
+      onOpen: (id) => openDevelopment(id),
+      onUnitClick: (devId, unitId) => openDevelopment(devId, devPanel.selectedUnitId === unitId ? null : unitId),
+      isBlocked: () => scene.isPicking || addPanel.opened,
+    },
+    'listing-pins-dimmed',
+  );
   // Shared link: restore filters and the open listing, then normalise the URL (drops invalid params).
   applyUrl();
   history.replaceState(historyState(), '', urlFor(drawer.currentId));
@@ -317,6 +395,7 @@ async function main() {
     project: (id: string) => scene.projectListing(id),
     isHighlighted: (id: string) => scene.isHighlighted(id),
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
+    developmentIds: developments.map((d) => d.id),
   };
 }
 

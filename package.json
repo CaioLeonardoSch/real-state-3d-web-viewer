@@ -12,6 +12,7 @@
     "data": "node scripts/fetch-osm.mjs && node scripts/generate-listings.mjs",
     "data:fetch": "node scripts/fetch-osm.mjs",
     "data:listings": "node scripts/generate-listings.mjs",
+    "data:developments": "node scripts/generate-developments.mjs",
     "validate:data": "node scripts/validate-listings.mjs",
     "listings:add": "node scripts/add-listings.mjs",
     "verify:e2e": "node scripts/e2e-check.mjs"

@@ -20,6 +20,8 @@ const EXEC =
 
 // Expected values come from the data, so the checks keep working when listings.json is regenerated.
 const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
+const DEVS = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'developments.json'), 'utf8')).developments;
+const devUnits = (id) => DEVS.find((d) => d.id === id).levels.flatMap((l) => l.units);
 const TOTAL = DATA.length;
 const ALL_HEADING = `${TOTAL} imóveis à venda`;
 const LANDS = DATA.filter((l) => l.type === 'land');
@@ -109,7 +111,7 @@ async function emptyPoint(page) {
   return page.evaluate(() => {
     const map = window.__demo.map;
     const r = map.getCanvas().getBoundingClientRect();
-    const layers = ['listing-buildings', 'listing-land', 'listing-approx-fill'];
+    const layers = ['listing-buildings', 'listing-land', 'listing-approx-fill', 'dev-towers', 'dev-blocks'];
     for (let y = r.height * 0.3; y < r.height * 0.9; y += 23) {
       for (let x = r.width * 0.3; x < r.width * 0.65; x += 29) {
         if (map.queryRenderedFeatures([x, y], { layers }).length === 0 && document.elementFromPoint(x + r.left, y + r.top) === map.getCanvas())
@@ -289,7 +291,7 @@ async function main() {
     await page.screenshot({ path: path.join(SHOTS, 'desktop-search-results.png') });
 
     // hover sync: list -> map and map -> list
-    const firstRow = await page.$('#results li button >> nth=0');
+    const firstRow = await page.$('#results button[data-id] >> nth=0');
     const firstId = await firstRow.getAttribute('data-id');
     await firstRow.hover();
     await sleep(200);
@@ -334,7 +336,7 @@ async function main() {
     await sleep(300);
 
     // result list click flies + opens drawer
-    await page.click('#results li button >> nth=0');
+    await page.click('#results button[data-id] >> nth=0');
     await sleep(300);
     await waitIdle(page);
     check('clicking a result opens the drawer', await page.evaluate(() => document.querySelector('#drawer').classList.contains('open')));
@@ -369,7 +371,7 @@ async function main() {
     await page.click('button:has-text("Buscar")');
     await sleep(300);
     await waitIdle(page);
-    await page.click('#results li button >> nth=0');
+    await page.click('#results button[data-id] >> nth=0');
     await sleep(300);
     await waitIdle(page);
     await page.keyboard.press('Escape');
@@ -548,6 +550,73 @@ async function main() {
     await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(page);
 
+    // ------------------------------------------------ developments: 3D sales chart
+    const towers = await page.evaluate(() =>
+      new Set(window.__demo.map.queryRenderedFeatures({ layers: ['dev-towers'] }).map((f) => f.properties.devId)).size,
+    );
+    check('developments are drawn as violet towers with a label each',
+      towers > 0 && (await page.locator('.dev-marker').count()) === DEVS.length, `${towers} towers on screen, ${DEVS.length} labels`);
+    await page.click('#results button[data-dev="landhaus"]');
+    await sleep(500);
+    await waitIdle(page);
+    const lh = devUnits('landhaus');
+    const devOpen = await page.evaluate(() => ({
+      title: document.querySelector('#dev-panel.open h2')?.textContent ?? null,
+      units: document.querySelectorAll('#dev-panel button[data-unit]').length,
+      blocks: window.__demo.map.queryRenderedFeatures({ layers: ['dev-blocks'] }).filter((f) => f.properties.kind === 'unit').length,
+      search: location.search,
+    }));
+    check('opening a development splits the tower into units and lists every unit by floor',
+      devOpen.title === 'Landhaus' && devOpen.units === lh.length && devOpen.blocks > 0 && devOpen.search === '?empreendimento=landhaus',
+      JSON.stringify(devOpen));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-development.png') });
+
+    const pick = lh.find((u) => u.status === 'available' && Number(u.number) < 1500) ?? lh[0];
+    await page.click(`#dev-panel button[data-unit="${pick.id}"]`);
+    await sleep(500);
+    await waitIdle(page);
+    const unitState = await page.evaluate(() => ({
+      card: document.querySelector('#dev-panel .dev-card h3')?.textContent ?? null,
+      ghosts: window.__demo.map.queryRenderedFeatures({ layers: ['dev-blocks-ghost'] }).length,
+      search: location.search,
+      pageScroll: document.scrollingElement.scrollLeft + document.scrollingElement.scrollTop,
+    }));
+    check('choosing a unit shows its card, makes the floors above translucent and goes into the URL',
+      unitState.card === `Apto ${pick.number}` && unitState.ghosts > 0 &&
+        unitState.search === `?empreendimento=landhaus&unidade=${pick.number}` && unitState.pageScroll === 0,
+      JSON.stringify(unitState));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-development-unit.png') });
+
+    await page.check('#dev-panel input[name="onlyAvailable"]');
+    await sleep(300);
+    const outCount = await page.locator('#dev-panel button[data-unit].is-out').count();
+    check('"Só disponíveis" fades the other units in the grid',
+      outCount === lh.filter((u) => u.status !== 'available').length, `${outCount} faded`);
+    await page.uncheck('#dev-panel input[name="onlyAvailable"]');
+
+    await page.click('#dev-panel [data-action="view"]');
+    await sleep(500);
+    await waitIdle(page);
+    const view = await page.evaluate(() => ({ pitch: window.__demo.map.getPitch(), zoom: window.__demo.map.getZoom() }));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-unit-window-view.png') });
+    await page.keyboard.press('Escape');
+    await sleep(500);
+    await waitIdle(page);
+    const afterView = await page.evaluate(() => ({ pitch: window.__demo.map.getPitch(), max: window.__demo.map.getMaxPitch() }));
+    check('"Ver a vista da janela" puts the camera at the window and Esc brings it back',
+      view.pitch >= 75 && afterView.pitch <= 75 && afterView.max === 75, `${JSON.stringify(view)} → ${JSON.stringify(afterView)}`);
+
+    await page.click('#dev-panel .dev-back');
+    await sleep(400);
+    await waitIdle(page);
+    const devClosed = await page.evaluate(() => ({
+      open: document.querySelector('#dev-panel').classList.contains('open'),
+      blocks: window.__demo.map.queryRenderedFeatures({ layers: ['dev-blocks'] }).length,
+      search: location.search,
+    }));
+    check('"Voltar ao bairro" closes the development', !devClosed.open && devClosed.blocks === 0 && devClosed.search === '',
+      JSON.stringify(devClosed));
+
     // keyboard-only path: Tab → skip link → first row → Enter opens → Esc closes and focus returns
     // start sequential focus from the top of the document, as on a freshly loaded page
     await page.evaluate(() => {
@@ -643,6 +712,17 @@ async function main() {
     check('invalid link is ignored and the URL normalised', !badState.open && badState.search === '' && bad.errors.length === 0,
       JSON.stringify(badState) + bad.errors.join(' | '));
     await bad.ctx.close();
+    const amanTop = devUnits('aman').at(-3);
+    const devLink = await openPage(browser, { width: 1440, height: 900 }, 'dev-link', `?empreendimento=aman&unidade=${amanTop.number}`);
+    const devLinkState = await devLink.page.evaluate(() => ({
+      title: document.querySelector('#dev-panel.open h2')?.textContent ?? null,
+      card: document.querySelector('#dev-panel .dev-card h3')?.textContent ?? null,
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    }));
+    check('shared link opens the development with the unit selected',
+      devLinkState.title === 'Aman' && devLinkState.card === `Apto ${amanTop.number}` && devLinkState.overflow <= 0 && devLink.errors.length === 0,
+      JSON.stringify(devLinkState) + devLink.errors.join(' | '));
+    await devLink.ctx.close();
 
     // ------------------------------------------------ mobile
     const m = await openPage(browser, { width: 390, height: 844 }, 'mobile');
@@ -712,6 +792,16 @@ async function main() {
     check('mobile: list starts collapsed, expands on tap and collapses when a listing is opened',
       mList0.collapsed && mList0.heading === ALL_HEADING && mRows === TOTAL && mList1.drawer && mList1.collapsed,
       `${JSON.stringify(mList0)} rows=${mRows} ${JSON.stringify(mList1)}`);
+    await mp.goto(URL_ + '?empreendimento=cora');
+    await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await waitIdle(mp);
+    const mDev = await mp.evaluate(() => {
+      const r = document.querySelector('#dev-panel').getBoundingClientRect();
+      return { open: document.querySelector('#dev-panel').classList.contains('open'), top: Math.round(r.top), overflow: document.documentElement.scrollWidth - window.innerWidth };
+    });
+    check('mobile: the development sheet is half open and leaves the tower visible above it',
+      mDev.open && mDev.top > 300 && mDev.top < 600 && mDev.overflow <= 0, JSON.stringify(mDev));
+    await mp.screenshot({ path: path.join(SHOTS, 'mobile-development.png') });
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
   } finally {

@@ -54,6 +54,51 @@ npm run build && npm run verify:e2e   # Playwright: abre o app, testa interaçõ
 O `verify:e2e` usa o Chromium indicado em `CHROMIUM_PATH` ou, se existir, `/opt/pw-browsers/chromium`. Caso
 contrário, usa o navegador baixado pelo Playwright (`npx playwright install chromium`).
 
+## Empreendimentos: espelho de vendas 3D
+
+Cinco empreendimentos reais do bairro aparecem como torres violeta com um rótulo, e também no topo da lista:
+
+| Empreendimento | Incorporadora | Situação | Unidades no mapa |
+|---|---|---|---|
+| Cora | Halsten | Em obras, entrega 08/2028 | 90 (6 por andar, 5º ao 19º) |
+| Morada de Gaia | Halsten | Pronto (2025) | 56 |
+| Landhaus | Plaenge | Em obras, entrega 04/2027 | 59 (número divulgado) |
+| Aman | Plaenge | Lançamento, entrega 03/2029 | 67 (número divulgado), 20 andares |
+| Hausgarten | Plaenge | Lançamento | 70 (número divulgado) |
+
+- **Abrir** (clique na torre, no rótulo ou na lista): a torre se divide em pavimentos (térreo, garagem e lazer em
+  cinza) e os andares de apartamentos em unidades coloridas pela situação: **verde** disponível, **amarelo**
+  reservado, **cinza** vendido. O painel mostra o espelho de vendas (andares × finais), os totais e filtros
+  ("Só disponíveis" e suítes mínimas). As unidades que não passam no filtro ficam translúcidas no mapa e na grade.
+- **Unidade** (clique na grade ou no prédio): fica azul, os andares de cima ficam translúcidos para o andar aparecer,
+  e a ficha mostra planta, área, suítes, vagas, andar, **face e sol** (hemisfério sul: norte = sol a maior parte do
+  dia, leste = manhã, oeste = tarde, sul = pouco sol direto), preço ilustrativo e R$/m².
+- **"Ver a vista da janela"**: a câmera vai para fora da fachada da unidade, na altura do andar + 1,6 m, olhando na
+  direção da face (`calculateCameraOptionsFromCameraLngLatAltRotation`, com zoom e inclinação máximos liberados só
+  nessa vista). Esc volta.
+- **Link**: `?empreendimento=landhaus&unidade=1402`. Clicar num andar na grade mostra só aquele andar.
+- **De onde vêm os dados** (seção recolhível no painel): o que é público (endereço, metragens, tipologias, número de
+  unidades, prazos, com os links das fontes) e o que é estimado.
+
+**Público × estimado.** Endereço, metragens, tipologias, número total de unidades e prazos vêm dos sites da Halsten e
+da Plaenge e da imprensa (consulta em 08/10/2026). **São estimativas**: a distribuição das plantas por andar, o número
+de andares quando não divulgado, o formato e a posição exata da torre (retângulo de frente para a rua do endereço,
+área ≈ soma das unidades do andar × 1,3). **São fictícios**: preços (área × R$/m² de referência, +1% por andar) e
+disponibilidade (sorteio com seed fixa, mais vendido nos andares altos e nos prontos). Os prédios do OSM que caem no
+terreno da torre são ocultados (supostamente demolidos para a obra). Nada disso tem vínculo com as incorporadoras.
+
+**Localização.** Endereços geocodificados no Nominatim pelo número. O nº 915 da Rua Benjamin Constant (Aman) não
+existe no Nominatim e foi interpolado entre os nºs 900 e 975. O site da Plaenge cita "Glória" no endereço do Aman, mas
+apresenta o empreendimento como do América.
+
+**Para editar ou incluir um empreendimento**: altere `scripts/data/developments.mjs` (andares, plantas por final,
+células que cada unidade ocupa na grade do andar, `expectedUnits` para conferir o total divulgado) e rode
+`npm run data:developments`. O script falha se o total de unidades não bater ou se a torre não couber sem encostar
+em ruas e outras torres.
+
+Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Opera (Halsten, Atiradores), ONE e Vitra
+(Plaenge, Atiradores) e Nola (Halsten, Cidade das Águas).
+
 ## Como regenerar os dados
 
 ```bash
@@ -264,6 +309,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Fotos, contato por WhatsApp, favoritos e as demais melhorias priorizadas em
   [`docs/analise-concorrencia.md`](docs/analise-concorrencia.md).
+- Espelho de vendas com dados reais da incorporadora (planta do pavimento-tipo, tabela de unidades e de preços),
+  integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 
 ## Dados (contagens da última execução)
@@ -300,16 +347,18 @@ Imóveis fictícios (`listings.json`): 30 no total (`--count 30`).
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 39 testes (renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
+- `npm test`: 46 testes (renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
-  geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial).
+  geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
+  totais de unidades divulgados, andares sem sobreposição, unidades de um andar sem sobreposição, torres sem
+  sobreposição, face → sol, link com empreendimento e unidade).
 - `npm run validate:data`:
   - ids únicos e `fictional: true` em todos; comodidades válidas e sem repetição;
   - terrenos não se sobrepõem;
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 55 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 63 checagens:
   - camadas renderizadas;
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -331,6 +380,10 @@ Imóveis fictícios (`listings.json`): 30 no total (`--count 30`).
     `?banheiros=2&comodidades=piscina`;
   - "Anunciar": casa num prédio cinza e terreno num espaço livre são salvos, abertos e aparecem na lista; continuam
     após recarregar a página e podem ser excluídos;
+  - empreendimentos: torres e rótulos no mapa; abrir divide a torre em unidades e lista todas por andar; escolher
+    uma unidade mostra a ficha, deixa os andares de cima translúcidos e grava `?empreendimento=&unidade=`; "Só
+    disponíveis" esmaece as demais; "Ver a vista da janela" leva a câmera à janela e Esc volta; "Voltar ao bairro"
+    fecha; link compartilhado abre o empreendimento com a unidade; no celular, o painel abre pela metade;
   - em 390×844: sem rolagem horizontal, filtros recolhíveis, lista recolhida que expande e se recolhe ao abrir um
     imóvel, painel abre recolhido, expande pela alça e responde a arrastar para cima/baixo.
 - Screenshots em `docs/screenshots/`.
