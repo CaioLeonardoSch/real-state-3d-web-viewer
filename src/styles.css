@@ -186,6 +186,30 @@ body[data-tod='night'] .f-pending {
   color: #ffc37a;
 }
 
+/* "Mais filtros": a full-width row under the main filters */
+.f-more-toggle {
+  white-space: nowrap;
+}
+.f-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  flex-basis: 100%;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.f-more[hidden] {
+  display: none;
+}
+.f-chips {
+  max-width: 100%;
+}
+.add-toggle {
+  order: 2;
+  white-space: nowrap;
+}
+
 /* ---------------- map stage ---------------- */
 .stage {
   position: relative;
@@ -578,6 +602,173 @@ body[data-tod='night'] .price {
   color: #333;
 }
 
+/* ---------------- drawer extras ---------------- */
+.badge-user {
+  background: #2f7de1;
+}
+.amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.amenities li {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+.btn-danger {
+  margin-top: 12px;
+  width: 100%;
+  color: #b42318;
+  border-color: #e5a29b;
+}
+body[data-tod='night'] .btn-danger {
+  color: #ff9b8f;
+}
+.r-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: #2f7de1;
+  border-radius: 4px;
+  padding: 0 5px;
+  vertical-align: 1px;
+}
+
+/* ---------------- "Anunciar imóvel" ---------------- */
+.add-panel {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100%);
+  overflow-y: auto;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 14px 18px 24px;
+}
+.add-panel[hidden] {
+  display: none;
+}
+.add-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.add-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.add-panel code {
+  font-size: 11px;
+}
+.add-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+.add-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.add-form legend,
+.a-field,
+.a-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.add-form legend {
+  margin-bottom: 4px;
+}
+.a-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.a-field[hidden] {
+  display: none;
+}
+.a-field input,
+.a-field select,
+.a-field textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.a-field select option {
+  color: #1f2328;
+}
+.a-wide,
+.a-place {
+  grid-column: 1 / -1;
+}
+.a-place {
+  border: 1px dashed #2f7de1;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.a-place-status {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+.a-place-status.is-error,
+.a-error {
+  color: #b42318;
+}
+body[data-tod='night'] .a-place-status.is-error,
+body[data-tod='night'] .a-error {
+  color: #ff9b8f;
+}
+.a-check {
+  font-size: 13px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.a-error {
+  margin: 0;
+  font-size: 13px;
+}
+.a-actions {
+  display: flex;
+  gap: 8px;
+}
+.a-mine {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.a-mine:empty {
+  display: none;
+}
+/* while choosing the place, the panel shrinks to a hint so the map can be clicked */
+.add-panel.picking {
+  top: auto;
+  bottom: 12px;
+  right: 12px;
+  border-radius: var(--radius);
+  overflow: visible;
+}
+.add-panel.picking > :not(.a-picking) {
+  display: none;
+}
+.a-picking p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
 /* ---------------- attribution ---------------- */
 .maplibregl-ctrl-attrib {
   font-size: 11px;
@@ -605,6 +796,19 @@ body[data-tod='night'] .price {
   }
   .filters-toggle {
     display: inline-block;
+  }
+  .add-toggle {
+    order: 0;
+    padding: 8px 10px;
+  }
+  .add-panel {
+    top: 0;
+  }
+  .add-panel.picking {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: 8px;
   }
   .filters {
     display: none;

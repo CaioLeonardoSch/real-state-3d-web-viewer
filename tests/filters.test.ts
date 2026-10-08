@@ -1,12 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Listing } from '../src/data/types';
-import { EMPTY_CRITERIA, FilterStore, filterListings, suggestRelaxations } from '../src/state/filters';
+import {
+  ADVANCED_FIELDS,
+  EMPTY_CRITERIA,
+  FilterStore,
+  countActive,
+  filterListings,
+  isEmptyCriteria,
+  suggestRelaxations,
+} from '../src/state/filters';
 
 const base: Omit<Listing, 'id' | 'type' | 'price' | 'bedrooms' | 'areaM2' | 'agency'> = {
   title: 't',
   bathrooms: 1,
   parkingSpots: 1,
   status: 'ready',
+  features: [],
   approximateLocation: false,
   fictional: true,
   description: 'd',
@@ -41,6 +50,38 @@ describe('filterListings', () => {
   });
   it('filters by bedrooms, area and agency combined', () => {
     expect(ids(filterListings(data, { ...EMPTY_CRITERIA, bedroomsMin: 3, areaMin: 115, agency: 'B' }))).toEqual(['d']);
+  });
+});
+
+describe('advanced criteria', () => {
+  const rich: Listing[] = [
+    { ...L('p', 'apartment', 800_000, 3, 100, 'A'), bathrooms: 2, parkingSpots: 2, features: ['pool', 'gym'] },
+    { ...L('q', 'house', 900_000, 3, 150, 'B'), bathrooms: 3, parkingSpots: 1, status: 'under_construction', features: ['pool'] },
+    { ...L('r', 'semi_detached', 500_000, 2, 90, 'A'), features: [] },
+  ];
+  it('bathrooms and parking minimums', () => {
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, bathroomsMin: 2, parkingMin: 2 }))).toEqual(['p']);
+  });
+  it('maximum area and price per m²', () => {
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, areaMax: 100 }))).toEqual(['p', 'r']);
+    // 8.000, 6.000 and 5.556 R$/m²
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, pricePerM2Max: 6_000 }))).toEqual(['q', 'r']);
+  });
+  it('status and amenities (all selected amenities are required)', () => {
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, statuses: ['under_construction'] }))).toEqual(['q']);
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, features: ['pool'] }))).toEqual(['p', 'q']);
+    expect(ids(filterListings(rich, { ...EMPTY_CRITERIA, features: ['pool', 'gym'] }))).toEqual(['p']);
+  });
+  it('isEmptyCriteria and countActive see the new fields', () => {
+    expect(isEmptyCriteria({ ...EMPTY_CRITERIA, features: ['pets'] })).toBe(false);
+    expect(countActive({ ...EMPTY_CRITERIA, statuses: ['ready'], parkingMin: 1, priceMax: 1 }, ADVANCED_FIELDS)).toBe(2);
+  });
+  it('suggests removing an amenity or the price per m² limit', () => {
+    const c = { ...EMPTY_CRITERIA, features: ['gym' as const], pricePerM2Max: 7_000 };
+    expect(suggestRelaxations(rich, c)).toEqual([
+      { field: 'pricePerM2Max', count: 1, closest: 8_000 },
+      { field: 'features', count: 2, closest: null },
+    ].sort((a, b) => b.count - a.count));
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Agency, Listing } from '../data/types';
-import { STATUS_LABELS, TYPE_LABELS } from '../data/types';
+import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS } from '../data/types';
 import { escapeHtml, formatArea, formatBRL, formatBRLCents } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
@@ -25,6 +25,8 @@ export class Drawer {
     private agencies: Agency[],
     private onClose: () => void,
     private onNavigate: (id: string) => void = () => {},
+    /** Deletes a listing added in this browser. */
+    private onDelete: (id: string) => void = () => {},
   ) {
     document.addEventListener('keydown', (e) => {
       if (!this.openId) return;
@@ -101,6 +103,7 @@ export class Drawer {
         : []),
       ...(l.floors ? ([['Pavimentos do edifício', `${l.floors} (fictício)`]] as [string, string][]) : []),
       ['Situação', STATUS_LABELS[l.status]],
+      ['Preço por m²', `${formatBRL(Math.round(l.price / l.areaM2))}/m²`],
     ];
 
     this.el.innerHTML = `
@@ -118,7 +121,11 @@ export class Drawer {
         }
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar detalhes">×</button>
       </div>
-      <span class="badge-fictional">Imóvel fictício para demonstração</span>
+      ${
+        l.userAdded
+          ? '<span class="badge-fictional badge-user">Seu anúncio · salvo só neste navegador</span>'
+          : '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
+      }
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>
       <p class="price">${formatBRL(l.price)}</p>
       </div>
@@ -128,6 +135,11 @@ export class Drawer {
           : ''
       }
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+      ${
+        l.features.length
+          ? `<ul class="amenities" aria-label="Comodidades">${l.features.map((f) => `<li>${AMENITY_LABELS[f]}</li>`).join('')}</ul>`
+          : ''
+      }
       <p class="description">${escapeHtml(l.description)}</p>
       <figure class="floorplan">
         ${floorPlanSvg(l)}
@@ -146,9 +158,17 @@ export class Drawer {
         </dl>
         <p class="muted small">Sem juros nem correção. Valores apenas para demonstração; não é proposta de financiamento.</p>
       </section>
+      ${
+        l.userAdded
+          ? '<button type="button" class="btn-secondary btn-danger" data-action="delete">Excluir este anúncio</button>'
+          : ''
+      }
       <p class="drawer-attrib">Mapa: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL) · <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a></p>
     `;
     this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
+    this.el.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
+      if (window.confirm(`Excluir o anúncio "${l.title}"? Ele só existe neste navegador.`)) this.onDelete(l.id);
+    });
     this.el.querySelector('[data-action="prev"]')?.addEventListener('click', () => nav?.prevId && this.onNavigate(nav.prevId));
     this.el.querySelector('[data-action="next"]')?.addEventListener('click', () => nav?.nextId && this.onNavigate(nav.nextId));
     this.el.classList.add('open');

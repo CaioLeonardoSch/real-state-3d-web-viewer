@@ -10,7 +10,15 @@ describe('URL state', () => {
   });
   it('round-trips criteria and the open listing', () => {
     const state = {
-      criteria: { types: ['house' as const, 'land' as const], priceMin: 300000, priceMax: 900000, bedroomsMin: 2, areaMin: 80, agency: 'agency-b' },
+      criteria: {
+        ...EMPTY_CRITERIA,
+        types: ['house' as const, 'land' as const],
+        priceMin: 300000,
+        priceMax: 900000,
+        bedroomsMin: 2,
+        areaMin: 80,
+        agency: 'agency-b',
+      },
       listingId: 'land-13',
       sort: 'area-desc' as const,
     };
@@ -18,12 +26,34 @@ describe('URL state', () => {
     expect(search).toBe('?imovel=land-13&tipo=casa%2Cterreno&precoMin=300000&precoMax=900000&quartos=2&area=80&imob=agency-b&ordem=maior-area');
     expect(searchToState(search, known)).toEqual(state);
   });
+  it('round-trips the advanced filters', () => {
+    const state = {
+      criteria: {
+        ...EMPTY_CRITERIA,
+        bathroomsMin: 2,
+        parkingMin: 1,
+        areaMax: 200,
+        pricePerM2Max: 9000,
+        statuses: ['under_construction' as const],
+        features: ['pool' as const, 'pets' as const],
+      },
+      listingId: null,
+      sort: 'ppm2-asc' as const,
+    };
+    const search = stateToSearch(state);
+    expect(search).toBe(
+      '?banheiros=2&vagas=1&areaMax=200&m2Max=9000&situacao=em-construcao&comodidades=piscina%2Cpets&ordem=menor-preco-m2',
+    );
+    expect(searchToState(search, known)).toEqual(state);
+  });
   it('ignores unknown or invalid values', () => {
-    const s = searchToState('?tipo=castelo,casa,casa&precoMin=-5&precoMax=abc&quartos=2.7&imob=agency-x&imovel=nope&ordem=xyz', known);
+    const s = searchToState('?tipo=castelo,casa,casa&precoMin=-5&precoMax=abc&quartos=2.7&imob=agency-x&imovel=nope&ordem=xyz&comodidades=heliponto&situacao=x', known);
     expect(s).toEqual({ criteria: { ...EMPTY_CRITERIA, types: ['house'], bedroomsMin: 2 }, listingId: null, sort: 'price-asc' });
   });
   it('sameCriteria ignores type order', () => {
     expect(sameCriteria({ ...EMPTY_CRITERIA, types: ['land', 'house'] }, { ...EMPTY_CRITERIA, types: ['house', 'land'] })).toBe(true);
     expect(sameCriteria({ ...EMPTY_CRITERIA, priceMax: 1 }, EMPTY_CRITERIA)).toBe(false);
+    expect(sameCriteria({ ...EMPTY_CRITERIA, features: ['pool', 'gym'] }, { ...EMPTY_CRITERIA, features: ['gym', 'pool'] })).toBe(true);
+    expect(sameCriteria({ ...EMPTY_CRITERIA, statuses: ['ready'] }, EMPTY_CRITERIA)).toBe(false);
   });
 });

@@ -29,9 +29,17 @@ const FIELD_LABELS: Record<RelaxableField, string> = {
   priceMin: 'o preço mínimo',
   priceMax: 'o preço máximo',
   bedroomsMin: 'o mínimo de quartos',
+  bathroomsMin: 'o mínimo de banheiros',
+  parkingMin: 'o mínimo de vagas',
   areaMin: 'a área mínima',
+  areaMax: 'a área máxima',
+  pricePerM2Max: 'o limite de R$/m²',
+  statuses: 'o filtro de situação',
+  features: 'as comodidades',
   agency: 'o filtro de imobiliária',
 };
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function closestHint(s: RelaxSuggestion): string | null {
   if (s.closest === null) return null;
@@ -42,8 +50,16 @@ function closestHint(s: RelaxSuggestion): string | null {
       return `o mais caro custa ${formatBRL(s.closest)}`;
     case 'areaMin':
       return `o maior tem ${formatArea(s.closest)}`;
+    case 'areaMax':
+      return `o menor tem ${formatArea(s.closest)}`;
+    case 'pricePerM2Max':
+      return `o menor é ${formatBRL(s.closest)}/m²`;
     case 'bedroomsMin':
-      return s.closest > 0 ? `o máximo é ${s.closest} ${s.closest === 1 ? 'quarto' : 'quartos'}` : null;
+      return s.closest > 0 ? `o máximo é ${plural(s.closest, 'quarto', 'quartos')}` : null;
+    case 'bathroomsMin':
+      return s.closest > 0 ? `o máximo é ${plural(s.closest, 'banheiro', 'banheiros')}` : null;
+    case 'parkingMin':
+      return s.closest > 0 ? `o máximo é ${plural(s.closest, 'vaga', 'vagas')}` : null;
     default:
       return null;
   }
@@ -151,7 +167,7 @@ export class ResultsPanel {
             <ul aria-labelledby="results-title">${results
               .map(
                 (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}">
-                  <span class="r-title">${escapeHtml(l.title)}</span>
+                  <span class="r-title">${escapeHtml(l.title)}${l.userAdded ? ' <span class="r-tag">Seu anúncio</span>' : ''}</span>
                   <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · <b>${formatBRL(l.price)}</b></span>
                 </button></li>`,
               )

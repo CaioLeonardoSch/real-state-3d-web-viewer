@@ -15,6 +15,7 @@
           <strong>América · Joinville</strong>
           <span class="demo-banner" role="note">Demonstração. Imóveis e valores fictícios.</span>
         </div>
+        <button type="button" class="add-toggle btn-primary" aria-expanded="false" aria-controls="add-panel">+ Anunciar</button>
         <button type="button" class="filters-toggle" aria-expanded="false" aria-controls="filters">Filtros</button>
         <form id="filters" class="filters" autocomplete="off" novalidate></form>
       </header>
@@ -24,6 +25,7 @@
         <div class="time-of-day" role="radiogroup" aria-label="Iluminação"></div>
         <section id="results" class="results" hidden aria-labelledby="results-title" tabindex="-1"></section>
         <div id="announcer" class="sr-only" aria-live="polite"></div>
+        <aside id="add-panel" class="add-panel" aria-labelledby="add-title" hidden></aside>
         <aside id="drawer" class="drawer" aria-hidden="true" aria-labelledby="drawer-title" tabindex="-1"></aside>
         <div id="status" class="status" role="status"></div>
       </main>

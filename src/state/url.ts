@@ -1,5 +1,5 @@
-import { LISTING_TYPES, type ListingType } from '../data/types';
-import { EMPTY_CRITERIA, type FilterCriteria } from './filters';
+import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types';
+import { EMPTY_CRITERIA, RELAXABLE_FIELDS, type FilterCriteria } from './filters';
 import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort';
 
 /** What the address bar stores: applied filters and the open listing. */
@@ -13,6 +13,7 @@ const SORT_SLUGS: Record<SortKey, string> = {
   'price-asc': 'menor-preco',
   'price-desc': 'maior-preco',
   'area-desc': 'maior-area',
+  'ppm2-asc': 'menor-preco-m2',
 };
 const SLUG_TO_SORT = new Map(SORT_KEYS.map((k) => [SORT_SLUGS[k], k]));
 
@@ -25,15 +26,56 @@ const TYPE_SLUGS: Record<ListingType, string> = {
 };
 const SLUG_TO_TYPE = new Map(LISTING_TYPES.map((t) => [TYPE_SLUGS[t], t]));
 
+const STATUS_SLUGS: Record<ListingStatus, string> = {
+  ready: 'pronto',
+  under_construction: 'em-construcao',
+};
+const SLUG_TO_STATUS = new Map(LISTING_STATUSES.map((s) => [STATUS_SLUGS[s], s]));
+
+const AMENITY_SLUGS: Record<Amenity, string> = {
+  pool: 'piscina',
+  barbecue: 'churrasqueira',
+  balcony: 'sacada',
+  elevator: 'elevador',
+  gym: 'academia',
+  pets: 'pets',
+  furnished: 'mobiliado',
+  financing: 'financiamento',
+  exchange: 'permuta',
+};
+const SLUG_TO_AMENITY = new Map(AMENITIES.map((a) => [AMENITY_SLUGS[a], a]));
+
+/** Numeric criteria and their query-string names. */
+const NUMBER_PARAMS = [
+  ['priceMin', 'precoMin'],
+  ['priceMax', 'precoMax'],
+  ['bedroomsMin', 'quartos'],
+  ['bathroomsMin', 'banheiros'],
+  ['parkingMin', 'vagas'],
+  ['areaMin', 'area'],
+  ['areaMax', 'areaMax'],
+  ['pricePerM2Max', 'm2Max'],
+] as const;
+/** Counts are whole numbers. */
+const INTEGER_FIELDS = new Set(['bedroomsMin', 'bathroomsMin', 'parkingMin']);
+
+/** "a,b,b,x" → known values, without duplicates. */
+function parseList<T>(raw: string | null, map: Map<string, T>): T[] {
+  const out = (raw ?? '')
+    .split(',')
+    .map((s) => map.get(s.trim().toLowerCase()))
+    .filter((v): v is T => v !== undefined);
+  return [...new Set(out)];
+}
+
 export function stateToSearch(state: UrlState): string {
   const p = new URLSearchParams();
   const c = state.criteria;
   if (state.listingId) p.set('imovel', state.listingId);
   if (c.types.length) p.set('tipo', c.types.map((t) => TYPE_SLUGS[t]).join(','));
-  if (c.priceMin !== null) p.set('precoMin', String(c.priceMin));
-  if (c.priceMax !== null) p.set('precoMax', String(c.priceMax));
-  if (c.bedroomsMin !== null) p.set('quartos', String(c.bedroomsMin));
-  if (c.areaMin !== null) p.set('area', String(c.areaMin));
+  for (const [field, param] of NUMBER_PARAMS) if (c[field] !== null) p.set(param, String(c[field]));
+  if (c.statuses.length) p.set('situacao', c.statuses.map((s) => STATUS_SLUGS[s]).join(','));
+  if (c.features.length) p.set('comodidades', c.features.map((f) => AMENITY_SLUGS[f]).join(','));
   if (c.agency !== null) p.set('imob', c.agency);
   if (state.sort !== DEFAULT_SORT) p.set('ordem', SORT_SLUGS[state.sort]);
   const s = p.toString();
@@ -52,35 +94,31 @@ const nonNegative = (v: string | null): number | null => {
  */
 export function searchToState(search: string, known: { agencyIds: Set<string>; listingIds: Set<string> }): UrlState {
   const p = new URLSearchParams(search);
-  const types = (p.get('tipo') ?? '')
-    .split(',')
-    .map((s) => SLUG_TO_TYPE.get(s.trim().toLowerCase()))
-    .filter((t): t is ListingType => t !== undefined);
-  const bedrooms = nonNegative(p.get('quartos'));
   const agency = p.get('imob');
   const listingId = p.get('imovel');
+  const criteria: FilterCriteria = {
+    ...EMPTY_CRITERIA,
+    types: parseList(p.get('tipo'), SLUG_TO_TYPE),
+    statuses: parseList(p.get('situacao'), SLUG_TO_STATUS),
+    features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),
+    agency: agency && known.agencyIds.has(agency) ? agency : null,
+  };
+  for (const [field, param] of NUMBER_PARAMS) {
+    const n = nonNegative(p.get(param));
+    criteria[field] = n !== null && INTEGER_FIELDS.has(field) ? Math.floor(n) : n;
+  }
   return {
-    criteria: {
-      ...EMPTY_CRITERIA,
-      types: [...new Set(types)],
-      priceMin: nonNegative(p.get('precoMin')),
-      priceMax: nonNegative(p.get('precoMax')),
-      bedroomsMin: bedrooms === null ? null : Math.floor(bedrooms),
-      areaMin: nonNegative(p.get('area')),
-      agency: agency && known.agencyIds.has(agency) ? agency : null,
-    },
+    criteria,
     listingId: listingId && known.listingIds.has(listingId) ? listingId : null,
     sort: SLUG_TO_SORT.get(p.get('ordem') ?? '') ?? DEFAULT_SORT,
   };
 }
 
+/** Equal criteria, ignoring the order of list values. */
 export function sameCriteria(a: FilterCriteria, b: FilterCriteria): boolean {
-  return (
-    [...a.types].sort().join() === [...b.types].sort().join() &&
-    a.priceMin === b.priceMin &&
-    a.priceMax === b.priceMax &&
-    a.bedroomsMin === b.bedroomsMin &&
-    a.areaMin === b.areaMin &&
-    a.agency === b.agency
-  );
+  return RELAXABLE_FIELDS.every((f) => {
+    const x = a[f];
+    const y = b[f];
+    return Array.isArray(x) && Array.isArray(y) ? [...x].sort().join() === [...y].sort().join() : x === y;
+  });
 }

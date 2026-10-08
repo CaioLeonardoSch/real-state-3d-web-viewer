@@ -11,12 +11,17 @@ import turfDistance from '@turf/distance';
 import turfBooleanIntersects from '@turf/boolean-intersects';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
+import { isResidentialBuilding } from './lib/residential.mjs';
+
+// Optional path: validate another file in the listings.json format (e.g. an export to be merged).
+const file = process.argv[2] ? path.resolve(process.argv[2]) : null;
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
 const read = async (f) => JSON.parse(await readFile(path.join(DATA, f), 'utf8'));
-const [listingsFile, buildings, roads, water, green, boundaryFc] = await Promise.all(
-  ['listings.json', 'buildings.geojson', 'roads.geojson', 'water.geojson', 'green.geojson', 'boundary.geojson'].map(read),
-);
+const [listingsFile, buildings, roads, water, green, boundaryFc] = await Promise.all([
+  file ? readFile(file, 'utf8').then(JSON.parse) : read('listings.json'),
+  ...['buildings.geojson', 'roads.geojson', 'water.geojson', 'green.geojson', 'boundary.geojson'].map(read),
+]);
 const boundary = boundaryFc.features[0];
 const errors = [];
 const ok = (msg) => console.log(`  ✔ ${msg}`);
@@ -28,7 +33,15 @@ if (listingsFile.fictional !== true) errors.push('root.fictional !== true');
 // counts
 const count = (t) => listings.filter((l) => l.type === t).length;
 console.log(`Listings: ${listings.length} (apt ${count('apartment')}, house ${count('house')}, semi ${count('semi_detached')}, land ${count('land')}); agencies: ${agencies.length}`);
-if (listings.length < 14 || listings.length > 16) errors.push(`expected 14–16 listings, got ${listings.length}`);
+if (listings.length < 1) errors.push('no listings');
+
+// amenities
+const AMENITIES = new Set(['pool', 'barbecue', 'balcony', 'elevator', 'gym', 'pets', 'furnished', 'financing', 'exchange']);
+const badFeatures = listings.filter(
+  (l) => !Array.isArray(l.features) || l.features.some((f) => !AMENITIES.has(f)) || new Set(l.features).size !== l.features.length,
+);
+if (badFeatures.length) errors.push(`invalid features: ${badFeatures.map((l) => l.id).join(', ')}`);
+else ok('every listing has a valid list of amenities');
 
 // unique ids
 const ids = listings.map((l) => l.id);
@@ -49,12 +62,7 @@ const bIds = withBuilding.map((l) => l.buildingOsmId);
 if (new Set(bIds).size !== bIds.length) errors.push('two listings share the same building');
 
 // residential & untagged building check
-const BAD = ['amenity', 'shop', 'office', 'healthcare', 'craft', 'tourism', 'leisure', 'religion'];
-const RES = new Set(['yes', 'house', 'residential', 'apartments', 'detached', 'semidetached_house', 'terrace']);
-const bad = withBuilding.filter((l) => {
-  const p = byId.get(l.buildingOsmId)?.properties ?? {};
-  return !RES.has(p.building) || BAD.some((k) => p[k] !== undefined);
-});
+const bad = withBuilding.filter((l) => !isResidentialBuilding(byId.get(l.buildingOsmId)?.properties));
 if (bad.length) errors.push(`non-residential building chosen: ${bad.map((l) => l.id).join(', ')}`);
 else ok('all chosen buildings are residential without amenity/shop/office/healthcare tags');
 
@@ -65,7 +73,10 @@ const obstacles = [
   ...water.features.map((g) => ['water', g]),
   ...green.features.map((g) => ['green', g]),
 ].map(([k, g]) => ({ k, g, bbox: turfBbox(g) }));
-for (const l of listings.filter((x) => x.type === 'land')) {
+const lotListings = listings.filter((x) => x.type === 'land');
+for (const [i, l] of lotListings.entries()) {
+  const overlaps = lotListings.slice(i + 1).filter((o) => turfBooleanIntersects(l.lotPolygon, o.lotPolygon));
+  if (overlaps.length) errors.push(`${l.id} lot overlaps ${overlaps.map((o) => o.id).join(', ')}`);
   const lot = { type: 'Feature', properties: {}, geometry: l.lotPolygon };
   const lb = turfBbox(lot);
   const hits = obstacles.filter((o) => bboxOverlap(lb, o.bbox) && turfBooleanIntersects(lot, o.g));
@@ -89,10 +100,9 @@ for (const l of approx) {
   if (d > l.approxRadiusM) errors.push(`${l.id}: true location ${d.toFixed(0)} m from circle center > radius`);
   else ok(`${l.id} approximate: offset ${d.toFixed(0)} m, circle radius ${l.approxRadiusM} m`);
 }
-if (approx.length !== 3) errors.push(`expected 3 approximate listings, got ${approx.length}`);
 
 if (errors.length) {
   console.error('\nVALIDATION FAILED:\n - ' + errors.join('\n - '));
   process.exit(1);
 }
-console.log('\nlistings.json OK');
+console.log(`\n${file ? path.basename(file) : 'listings.json'} OK`);

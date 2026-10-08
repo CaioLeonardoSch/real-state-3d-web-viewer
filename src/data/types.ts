@@ -6,6 +6,32 @@ export type ListingType = (typeof LISTING_TYPES)[number];
 export const LISTING_STATUSES = ['ready', 'under_construction'] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
+/** Amenities ("comodidades") a listing may offer; filterable. */
+export const AMENITIES = [
+  'pool',
+  'barbecue',
+  'balcony',
+  'elevator',
+  'gym',
+  'pets',
+  'furnished',
+  'financing',
+  'exchange',
+] as const;
+export type Amenity = (typeof AMENITIES)[number];
+
+export const AMENITY_LABELS: Record<Amenity, string> = {
+  pool: 'Piscina',
+  barbecue: 'Churrasqueira',
+  balcony: 'Sacada',
+  elevator: 'Elevador',
+  gym: 'Academia',
+  pets: 'Aceita pets',
+  furnished: 'Mobiliado',
+  financing: 'Aceita financiamento',
+  exchange: 'Aceita permuta',
+};
+
 export interface Agency {
   id: string;
   name: string;
@@ -27,6 +53,8 @@ export interface Listing {
   bathrooms: number;
   parkingSpots: number;
   status: ListingStatus;
+  /** Amenities, without duplicates. */
+  features: Amenity[];
   /** OSM id of a real building in buildings.geojson, e.g. "way/123". Absent for land. */
   buildingOsmId?: string;
   /** Generated lot polygon (land only). */
@@ -40,6 +68,8 @@ export interface Listing {
   approxRadiusM?: number;
   fictional: true;
   description: string;
+  /** Added in this browser through "Anunciar imóvel" (kept in localStorage, never in listings.json). */
+  userAdded?: true;
 }
 
 export interface ListingsFile {
@@ -106,6 +136,12 @@ export function validateListingsFile(raw: unknown, buildingIds?: Set<string>): L
       if (!isInt(l[k]) || (l[k] as number) < 0) errors.push(`${at}.${k} invalid`);
     }
     if (!LISTING_STATUSES.includes(l.status as ListingStatus)) errors.push(`${at}.status invalid`);
+    if (
+      !Array.isArray(l.features) ||
+      l.features.some((f) => !AMENITIES.includes(f as Amenity)) ||
+      new Set(l.features).size !== l.features.length
+    )
+      errors.push(`${at}.features invalid`);
     if (typeof l.approximateLocation !== 'boolean') errors.push(`${at}.approximateLocation invalid`);
     if (l.fictional !== true) errors.push(`${at}.fictional must be true`);
     if (!isStr(l.description)) errors.push(`${at}.description missing`);

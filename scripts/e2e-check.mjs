@@ -3,7 +3,7 @@
 // runs the checks listed in the README and saves screenshots to docs/screenshots/.
 // Usage: npm run build && npm run verify:e2e
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,14 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 // Use a pre-installed Chromium when the Playwright-bundled one is not downloaded
 const EXEC =
   process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+
+// Expected values come from the data, so the checks keep working when listings.json is regenerated.
+const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
+const TOTAL = DATA.length;
+const ALL_HEADING = `${TOTAL} imóveis à venda`;
+const LANDS = DATA.filter((l) => l.type === 'land');
+const brl = (n) => `R$ ${n.toLocaleString('pt-BR')}`;
+const RESIDENTIAL = ['yes', 'house', 'residential', 'apartments', 'detached', 'semidetached_house', 'terrace'];
 
 const results = [];
 const check = (name, pass, detail = '') => {
@@ -143,7 +151,7 @@ async function main() {
       visible: !document.querySelector('#results .results-body').hidden,
     }));
     check('desktop: list of all listings is available without searching',
-      initialList.heading === '15 imóveis à venda' && initialList.rows === 15 && initialList.visible, JSON.stringify(initialList));
+      initialList.heading === ALL_HEADING && initialList.rows === TOTAL && initialList.visible, JSON.stringify(initialList));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
 
     // pins in the overview
@@ -257,7 +265,7 @@ async function main() {
     const dimAfterEdit = await renderedCount(page, 'listing-dimmed');
     const stateAfterEdit = await page.evaluate(() => JSON.stringify(window.__demo.map.getCenter()) + window.__demo.map.getZoom());
     const headingAfterEdit = await page.textContent('#results .results-title');
-    const resultsHidden = headingAfterEdit === '15 imóveis à venda';
+    const resultsHidden = headingAfterEdit === ALL_HEADING;
     check('editing filters does NOT change the map', dimBefore === dimAfterEdit && stateBefore === stateAfterEdit && resultsHidden,
       `dimmed ${dimBefore}→${dimAfterEdit}, camera unchanged=${stateBefore === stateAfterEdit}, list unchanged=${resultsHidden}`);
     check('"Alterações não aplicadas" hint shown', await page.isVisible('text=Alterações não aplicadas'));
@@ -387,10 +395,10 @@ async function main() {
     }));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-empty-search.png') });
     const dimmedPins = await page.evaluate(() => new Set(window.__demo.map.queryRenderedFeatures({ layers: ['listing-pins-dimmed'] }).map((f) => f.properties.listingId)).size);
-    check('empty search keeps every listing visible as a grey pin', dimmedPins === 15, `${dimmedPins} dimmed pins`);
+    check('empty search keeps every listing visible as a grey pin', dimmedPins === TOTAL, `${dimmedPins} dimmed pins`);
     check('empty search suggests the blocking filter with the closest value',
       emptyState.header?.startsWith('0 ') && emptyState.relax[0]?.includes('Remover o preço máximo') &&
-        emptyState.relax[0]?.replace(/\s/g, ' ').includes('o mais barato custa R$ 790.000'),
+        emptyState.relax[0]?.replace(/\s/g, ' ').includes(`o mais barato custa ${brl(Math.min(...LANDS.map((l) => l.price)))}`),
       JSON.stringify(emptyState));
     await page.click('#results [data-relax="priceMax"]');
     await sleep(400);
@@ -401,9 +409,143 @@ async function main() {
       search: location.search,
     }));
     check('clicking the suggestion removes that filter and searches again',
-      relaxed.header?.startsWith('3 ') && relaxed.priceMax === '' && relaxed.search === '?tipo=terreno', JSON.stringify(relaxed));
+      relaxed.header?.startsWith(`${LANDS.length} `) && relaxed.priceMax === '' && relaxed.search === '?tipo=terreno', JSON.stringify(relaxed));
     await page.click('button:has-text("Limpar")');
     await sleep(300);
+    await waitIdle(page);
+
+    // ------------------------------------------------ "Mais filtros"
+    await page.click('.f-more-toggle');
+    await sleep(200);
+    const moreVisible = await page.isVisible('#filters-more');
+    await page.click('#filters-more label.chip:has-text("Piscina")');
+    await page.selectOption('select[name="bathroomsMin"]', '2');
+    await sleep(200);
+    const moreLabel = (await page.textContent('.f-more-toggle'))?.trim();
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-more-filters.png') });
+    await page.click('button:has-text("Buscar")');
+    await sleep(400);
+    await waitIdle(page);
+    const poolCount = DATA.filter((l) => l.features.includes('pool') && l.bathrooms >= 2).length;
+    const more = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-title')?.textContent,
+      search: location.search,
+      panelHidden: document.querySelector('#filters-more').hidden,
+    }));
+    check('"Mais filtros" opens, counts active criteria and filters by amenity and bathrooms',
+      moreVisible && moreLabel === 'Mais filtros (2)' && more.header?.startsWith(`${poolCount} `) &&
+        more.search === '?banheiros=2&comodidades=piscina' && more.panelHidden,
+      `${moreLabel}; ${JSON.stringify(more)}; expected ${poolCount}`);
+    await page.click('button:has-text("Limpar")');
+    await sleep(300);
+    await waitIdle(page);
+
+    // ------------------------------------------------ "Anunciar imóvel"
+    const rowCount = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
+    const placeStatus = () => page.textContent('#add-panel .a-place-status');
+    /** Clicks map points (grid scan) accepted by `accept` until the form reports a chosen place. */
+    async function pickOnMap(accept, maxTries = 40) {
+      const candidates = await page.evaluate(({ accept, residential }) => {
+        const map = window.__demo.map;
+        const r = map.getCanvas().getBoundingClientRect();
+        const out = [];
+        for (let y = r.height * 0.2; y < r.height * 0.85; y += 24) {
+          for (let x = r.width * 0.3; x < r.width * 0.7; x += 24) {
+            if (document.elementFromPoint(x + r.left, y + r.top) !== map.getCanvas()) continue;
+            const hits = map.queryRenderedFeatures([x, y]);
+            const ok =
+              accept === 'building'
+                ? hits[0]?.layer.id === 'context-buildings' && residential.includes(hits[0].properties.building) &&
+                  !['name', 'amenity', 'shop', 'office'].some((k) => k in hits[0].properties)
+                : // free ground: nothing but background around the point
+                  [[0, 0], [-8, 0], [8, 0], [0, -8], [0, 8]].every(
+                    ([dx, dy]) => map.queryRenderedFeatures([x + dx, y + dy]).every((h) => h.layer.id === 'boundary-line'),
+                  );
+            if (ok) out.push({ x: x + r.left, y: y + r.top, d: Math.hypot(x - r.width / 2, y - r.height / 2) });
+          }
+        }
+        // the middle of the view is inside the neighbourhood; the top rows may be beyond its limit
+        return out.sort((a, b) => a.d - b.d);
+      }, { accept, residential: RESIDENTIAL });
+      for (const c of candidates.slice(0, maxTries)) {
+        await page.mouse.click(c.x, c.y);
+        await sleep(250);
+        if ((await placeStatus())?.startsWith('✓')) return true;
+      }
+      return false;
+    }
+
+    await page.click('.add-toggle');
+    await sleep(200);
+    check('"Anunciar" opens the form', await page.isVisible('#add-panel .add-form'));
+    await page.selectOption('#add-panel select[name="type"]', 'house');
+    await page.fill('#add-panel input[name="price"]', '987000');
+    await page.fill('#add-panel input[name="areaM2"]', '180');
+    await page.fill('#add-panel input[name="title"]', 'Casa de teste automatizado');
+    await page.click('#add-panel label.chip:has-text("Churrasqueira")');
+    await page.click('#add-panel [data-action="pick"]');
+    await sleep(200);
+    const pickingUi = await page.evaluate(() => document.querySelector('#add-panel').classList.contains('picking'));
+    const pickedBuilding = await pickOnMap('building');
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-add-listing.png') });
+    await page.click('#add-panel button:has-text("Salvar anúncio")');
+    await sleep(700);
+    await waitIdle(page);
+    const added = await page.evaluate(() => ({
+      title: document.querySelector('#drawer.open h2')?.textContent ?? null,
+      badge: document.querySelector('#drawer .badge-user')?.textContent ?? null,
+      panelHidden: document.querySelector('#add-panel').hidden,
+      stored: JSON.parse(localStorage.getItem('mapa3d-america:user-listings:v1') ?? '[]').length,
+    }));
+    check('a new house is placed on a grey building, saved and opened',
+      pickingUi && pickedBuilding && added.title === 'Casa de teste automatizado' && !!added.badge && added.panelHidden &&
+        added.stored === 1 && (await rowCount()) === TOTAL + 1,
+      JSON.stringify(added));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-added-listing.png') });
+    await page.keyboard.press('Escape');
+    await sleep(300);
+
+    // back to the overview: the whole neighbourhood is visible, with more free ground than the close-up
+    await page.click('.overview-btn');
+    await sleep(300);
+    await waitIdle(page);
+    await page.click('.add-toggle');
+    await page.selectOption('#add-panel select[name="type"]', 'land');
+    await page.fill('#add-panel input[name="price"]', '450000');
+    await page.fill('#add-panel input[name="areaM2"]', '300');
+    await page.click('#add-panel [data-action="pick"]');
+    await sleep(200);
+    const pickedLot = await pickOnMap('land');
+    await page.click('#add-panel button:has-text("Salvar anúncio")');
+    await sleep(700);
+    await waitIdle(page);
+    const lotAdded = await page.evaluate(() => document.querySelector('#drawer.open h2')?.textContent ?? null);
+    check('a new lot is placed on free ground (no building, road, water or green) and saved',
+      pickedLot && lotAdded === 'Terreno de 300 m²' && (await rowCount()) === TOTAL + 2, `${pickedLot} ${lotAdded}`);
+    await page.keyboard.press('Escape');
+    await sleep(300);
+
+    // persisted across reloads, then deleted from the drawer
+    await page.reload();
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await waitIdle(page);
+    const afterReload = await rowCount();
+    page.once('dialog', (dlg) => dlg.accept());
+    await page.click('#results button:has-text("Casa de teste automatizado")');
+    await sleep(600);
+    await page.click('#drawer [data-action="delete"]');
+    await sleep(500);
+    const afterDelete = await page.evaluate(() => ({
+      rows: document.querySelectorAll('#results button[data-id]').length,
+      open: document.querySelector('#drawer').classList.contains('open'),
+      stored: JSON.parse(localStorage.getItem('mapa3d-america:user-listings:v1') ?? '[]').length,
+    }));
+    check('added listings survive a reload and can be deleted',
+      afterReload === TOTAL + 2 && afterDelete.rows === TOTAL + 1 && !afterDelete.open && afterDelete.stored === 1,
+      `after reload ${afterReload}; ${JSON.stringify(afterDelete)}`);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(page);
 
     // keyboard-only path: Tab → skip link → first row → Enter opens → Esc closes and focus returns
@@ -478,7 +620,8 @@ async function main() {
     await d.ctx.close();
 
     // ------------------------------------------------ shared links
-    const shared = await openPage(browser, { width: 1440, height: 900 }, 'shared', '?tipo=terreno&imovel=land-14');
+    const sharedId = LANDS[LANDS.length - 1].id;
+    const shared = await openPage(browser, { width: 1440, height: 900 }, 'shared', `?tipo=terreno&imovel=${sharedId}`);
     const sharedState = await shared.page.evaluate(() => ({
       title: document.querySelector('#drawer.open h2')?.textContent ?? null,
       pos: document.querySelector('#drawer .nav-pos')?.textContent ?? null,
@@ -487,7 +630,7 @@ async function main() {
       search: location.search,
     }));
     check('shared link restores filters, results and the open listing',
-      sharedState.title !== null && sharedState.header?.startsWith('3 ') && sharedState.chip && sharedState.search === '?imovel=land-14&tipo=terreno',
+      sharedState.title !== null && sharedState.header?.startsWith(`${LANDS.length} `) && sharedState.chip && sharedState.search === `?imovel=${sharedId}&tipo=terreno`,
       JSON.stringify(sharedState));
     await shared.page.screenshot({ path: path.join(SHOTS, 'desktop-shared-link.png') });
     check('no console errors (shared link)', shared.errors.length === 0, shared.errors.join(' | '));
@@ -567,7 +710,7 @@ async function main() {
       collapsed: document.querySelector('#results').classList.contains('collapsed'),
     }));
     check('mobile: list starts collapsed, expands on tap and collapses when a listing is opened',
-      mList0.collapsed && mList0.heading === '15 imóveis à venda' && mRows === 15 && mList1.drawer && mList1.collapsed,
+      mList0.collapsed && mList0.heading === ALL_HEADING && mRows === TOTAL && mList1.drawer && mList1.collapsed,
       `${JSON.stringify(mList0)} rows=${mRows} ${JSON.stringify(mList1)}`);
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();

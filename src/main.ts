@@ -23,6 +23,9 @@ import { ResultsPanel, resultsHeading } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
 import { HoverTooltip } from './ui/tooltip';
+import { AddListingPanel } from './ui/addListing';
+import { exportUserListings, loadUserListings, newListingId, saveUserListings } from './state/userListings';
+import { PlacementChecker } from './utils/placement';
 
 setWorkerUrl(workerUrl);
 
@@ -48,9 +51,14 @@ async function main() {
   status.textContent = 'Carregando dados do bairro…';
   const data = await loadData();
   const [lon, lat] = data.meta.center; // from Nominatim, see scripts/fetch-osm.mjs
-  const listings = data.listings.listings;
+  const agencies = data.listings.agencies;
+  const baseListings = data.listings.listings;
+  const buildingIds = new Set(data.buildings.features.map((f) => f.properties.osmId));
+  // listings added through "Anunciar imóvel", kept in this browser
+  let userListings = loadUserListings(agencies, buildingIds, new Set(baseListings.map((l) => l.id)));
+  let listings = [...baseListings, ...userListings];
   const known = {
-    agencyIds: new Set(data.listings.agencies.map((a) => a.id)),
+    agencyIds: new Set(agencies.map((a) => a.id)),
     listingIds: new Set(listings.map((l) => l.id)),
   };
 
@@ -106,7 +114,7 @@ async function main() {
   const tooltip = new HoverTooltip($('#hover-tooltip'), $('#map'));
   const drawer = new Drawer(
     $('#drawer'),
-    data.listings.agencies,
+    agencies,
     () => {
       scene.select(null);
       if (openedFromRow && !isMobile()) results.focusRow(openedFromRow);
@@ -118,9 +126,11 @@ async function main() {
       else replaceUrl({});
     },
     (id) => openListing(id, true),
+    (id) => deleteUserListing(id),
   );
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
-    onListingClick: (id) => openListing(id, false),
+    // while the "Anunciar imóvel" form is open, the map is used to choose its place
+    onListingClick: (id) => !addPanel.opened && openListing(id, false),
     onEmptyClick: () => drawer.close(),
     onListingHover: (id, point) => {
       const l = id ? listings.find((x) => x.id === id) : undefined;
@@ -128,7 +138,7 @@ async function main() {
       else tooltip.hide();
       results.highlight(l ? l.id : null);
     },
-  });
+  }, listings);
 
   function openListing(id: string, fly: boolean) {
     const l = listings.find((x) => x.id === id);
@@ -154,7 +164,7 @@ async function main() {
     else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
   }
 
-  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, data.listings.agencies);
+  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies);
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
     currentList = sortListings(filterListings(listings, store.getApplied()), sort);
@@ -184,6 +194,67 @@ async function main() {
     document.body.classList.remove('filters-open');
     $('.filters-toggle').setAttribute('aria-expanded', 'false');
     if (!syncingFromUrl) replaceUrl({ ...historyState(), pristine: false });
+  });
+
+  // ------------------------------------------------------------ listings added in this browser
+  /** Refreshes map, list and known ids after a listing is added or removed. */
+  function listingsChanged() {
+    listings = [...baseListings, ...userListings];
+    known.listingIds = new Set(listings.map((l) => l.id));
+    scene.setListings(listings);
+    showResults();
+    scene.setMatched(new Set(filterListings(listings, store.getApplied()).map((l) => l.id)));
+  }
+
+  function deleteUserListing(id: string) {
+    const next = userListings.filter((l) => l.id !== id);
+    if (!saveUserListings(next)) return void window.alert('O navegador não permitiu salvar a alteração.');
+    userListings = next;
+    drawer.close();
+    listingsChanged();
+    announce('Anúncio excluído.');
+  }
+
+  function downloadUserListings() {
+    const json = JSON.stringify(exportUserListings(userListings, agencies), null, 2) + '\n';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    a.download = 'meus-anuncios.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  const addToggle = $<HTMLButtonElement>('.add-toggle');
+  const addPanel = new AddListingPanel($('#add-panel'), {
+    agencies,
+    scene,
+    checker: new PlacementChecker(data),
+    listingOnBuilding: (osmId) => listings.find((l) => l.buildingOsmId === osmId),
+    otherLots: () => listings.flatMap((l) => (l.lotPolygon ? [l.lotPolygon] : [])),
+    newId: (slug) => newListingId(slug, known.listingIds),
+    onSave: (l) => {
+      const next = [...userListings, l];
+      if (!saveUserListings(next))
+        return 'O navegador não permitiu salvar (modo privado ou armazenamento bloqueado). O anúncio não foi criado.';
+      userListings = next;
+      listingsChanged();
+      announce(`Anúncio "${l.title}" salvo.`);
+      // shown right away, even if the applied filters would hide it
+      setTimeout(() => openListing(l.id, true), 0);
+      return null;
+    },
+    onExport: downloadUserListings,
+    userCount: () => userListings.length,
+    onClose: () => {
+      addToggle.setAttribute('aria-expanded', 'false');
+      addToggle.focus();
+    },
+  });
+  addToggle.addEventListener('click', () => {
+    if (addPanel.opened) return addPanel.close();
+    drawer.close();
+    addPanel.open();
+    addToggle.setAttribute('aria-expanded', 'true');
   });
 
   /** Brings filters and the drawer in line with the address bar. */
@@ -240,7 +311,9 @@ async function main() {
   // Hook for automated browser checks (scripts/e2e-check.mjs). Read-only helpers.
   (window as unknown as { __demo: unknown }).__demo = {
     map: scene.map,
-    listingIds: listings.map((l) => l.id),
+    get listingIds() {
+      return listings.map((l) => l.id);
+    },
     project: (id: string) => scene.projectListing(id),
     isHighlighted: (id: string) => scene.isHighlighted(id),
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,

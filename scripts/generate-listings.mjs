@@ -2,6 +2,8 @@
 // Generates FICTIONAL demo listings (public/data/listings.json) on top of real OSM buildings.
 // Deterministic: fixed seed, no Date/Math.random. Re-running produces the same file
 // as long as public/data/*.geojson do not change.
+//
+// Usage: node scripts/generate-listings.mjs [--count N]   (default 30, between 4 and 80)
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -16,11 +18,21 @@ import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import turfNearestPointOnLine from '@turf/nearest-point-on-line';
 import turfBearing from '@turf/bearing';
 import { point, lineString, polygon } from '@turf/helpers';
+import { isResidentialBuilding } from './lib/residential.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'public', 'data');
 const SEED = 20261007;
 const APPROX_RADIUS_M = 150;
+
+// ---------- how many listings ----------
+const argv = process.argv.slice(2);
+const countArg = argv.find((a) => a.startsWith('--count='))?.split('=')[1] ?? (argv.includes('--count') ? argv[argv.indexOf('--count') + 1] : undefined);
+const COUNT = countArg === undefined ? 30 : Number(countArg);
+if (!Number.isInteger(COUNT) || COUNT < 4 || COUNT > 80) {
+  console.error(`--count must be an integer between 4 and 80 (got ${countArg})`);
+  process.exit(1);
+}
 
 // ---------- deterministic helpers ----------
 function mulberry32(a) {
@@ -52,10 +64,6 @@ const waterFc = await readJson('water.geojson');
 const greenFc = await readJson('green.geojson');
 const boundary = boundaryFc.features[0];
 
-const RESIDENTIAL = new Set(['yes', 'house', 'residential', 'apartments', 'detached', 'semidetached_house', 'terrace']);
-const NON_RESIDENTIAL_TAGS = [
-  'amenity', 'shop', 'office', 'healthcare', 'craft', 'tourism', 'leisure', 'religion', 'denomination', 'industrial', 'name',
-];
 
 const buildings = buildingsFc.features.map((f) => ({
   f,
@@ -66,10 +74,7 @@ const buildings = buildingsFc.features.map((f) => ({
 }));
 
 const candidates = buildings.filter(
-  (b) =>
-    RESIDENTIAL.has(b.f.properties.building) &&
-    NON_RESIDENTIAL_TAGS.every((k) => b.f.properties[k] === undefined) &&
-    turfBooleanPointInPolygon(point(b.center), boundary),
+  (b) => isResidentialBuilding(b.f.properties) && turfBooleanPointInPolygon(point(b.center), boundary),
 );
 
 // Flatten roads to LineStrings with bbox for quick filtering
@@ -143,12 +148,16 @@ function rectangle(center, bearingDeg, frontM, depthM) {
   return polygon([[...pts, pts[0]]]);
 }
 
+// Minimum distance between a lot and the other listings: shrinks with the number of listings,
+// so larger runs still find room (250 m for the original 15 listings).
+const LOT_SPACING_M = Math.round(Math.min(250, 250 * Math.sqrt(15 / COUNT)));
+
 function tryLot(frontM, depthM, attempts) {
   for (let i = 0; i < attempts; i++) {
     const c = [between(bW, bE), between(bS, bN)];
     if (!turfBooleanPointInPolygon(point(c), boundary)) continue;
     // keep away from other picks for spread
-    if (selectedPoints.some((p) => turfDistance(point(p), point(c), { units: 'meters' }) < 250)) continue;
+    if (selectedPoints.some((p) => turfDistance(point(p), point(c), { units: 'meters' }) < LOT_SPACING_M)) continue;
     // nearest drivable road
     let nearest = null;
     for (const r of drivableRoads) {
@@ -226,12 +235,18 @@ const housePool = candidates.filter(
 const semiTagged = candidates.filter((b) => ['semidetached_house', 'terrace'].includes(b.f.properties.building));
 const semiPool = semiTagged.length >= 3 ? semiTagged : candidates.filter((b) => b.area >= 50 && b.area <= 220);
 
-const plan = [
-  ...Array(5).fill('apartment'),
-  ...Array(4).fill('house'),
-  ...Array(3).fill('semi_detached'),
-  ...Array(3).fill('land'),
+// Mix of types (5 : 4 : 3 : 3, as in the original 15-listing demo), scaled to COUNT.
+const MIX = [
+  ['apartment', 5],
+  ['house', 4],
+  ['semi_detached', 3],
+  ['land', 3],
 ];
+const perType = MIX.map(([t, w]) => [t, Math.max(1, Math.floor((COUNT * w) / 15))]);
+for (let i = 0; perType.reduce((n, [, c]) => n + c, 0) < COUNT; i++) perType[i % MIX.length][1]++;
+for (let i = MIX.length - 1; perType.reduce((n, [, c]) => n + c, 0) > COUNT; i = (i + MIX.length - 1) % MIX.length)
+  if (perType[i][1] > 1) perType[i][1]--;
+const plan = perType.flatMap(([t, c]) => Array(c).fill(t));
 // Which listings get an approximate location (one house, one semi-detached, one land)
 const approxTypes = new Set(['house', 'semi_detached', 'land']);
 const approxDone = new Set();
@@ -240,6 +255,24 @@ const APT_TITLES = ['Apartamento com sacada', 'Apartamento amplo', 'Apartamento 
 const HOUSE_TITLES = ['Casa térrea com quintal', 'Casa com piscina', 'Sobrado familiar', 'Casa com edícula'];
 const SEMI_TITLES = ['Geminado com pátio', 'Geminado novo', 'Geminado com quintal'];
 const LAND_TITLES = ['Terreno plano', 'Terreno residencial', 'Lote para construir'];
+
+// Amenities come from their own random stream, so they do not shift the other draws.
+const featureRand = mulberry32(SEED + 1);
+const AMENITY_ODDS = {
+  apartment: { pool: 0.4, barbecue: 0.6, balcony: 0.7, elevator: 1, gym: 0.4, pets: 0.6, furnished: 0.2, financing: 0.85, exchange: 0.2 },
+  house: { pool: 0.35, barbecue: 0.8, balcony: 0.3, pets: 0.9, furnished: 0.15, financing: 0.8, exchange: 0.35 },
+  semi_detached: { barbecue: 0.6, balcony: 0.3, pets: 0.8, furnished: 0.1, financing: 0.9, exchange: 0.25 },
+  land: { financing: 0.5, exchange: 0.4 },
+};
+/** Amenities for a listing; the title's promise ("com piscina", "com sacada") is always kept. */
+function amenitiesFor(type, title) {
+  const out = Object.entries(AMENITY_ODDS[type])
+    .filter(([, p]) => featureRand() < p)
+    .map(([k]) => k);
+  if (/piscina/i.test(title) && !out.includes('pool')) out.unshift('pool');
+  if (/sacada/i.test(title) && !out.includes('balcony')) out.push('balcony');
+  return out;
+}
 
 for (const type of plan) {
   const idPrefix = { apartment: 'apt', house: 'house', semi_detached: 'semi', land: 'land' }[type];
@@ -330,6 +363,7 @@ for (const type of plan) {
     if (approximateLocation) listing.approxCenter = approxCenterFor(id, b.center);
   }
 
+  listing.features = amenitiesFor(type, listing.title);
   listing.approximateLocation = approximateLocation;
   if (approximateLocation) listing.approxRadiusM = APPROX_RADIUS_M;
   listing.fictional = true;

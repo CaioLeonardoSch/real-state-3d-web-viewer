@@ -22,6 +22,28 @@ npm test          # testes unitários (Vitest)
 
 Os dados já estão versionados em `public/data/`, então o app funciona sem rede e sem nenhum servidor de tiles.
 
+## Como adicionar imóveis
+
+São três caminhos:
+
+1. **Pelo app ("+ Anunciar")**: preencha o formulário, clique em **Escolher no mapa** e clique num prédio cinza
+   (residencial e sem outro anúncio) ou, para terreno, num espaço livre. O lote é desenhado no ponto clicado com a
+   área informada, na proporção 2,5:1. O anúncio aparece na hora no mapa e na lista com a marca "Seu anúncio" e
+   fica salvo **só neste navegador** (`localStorage`). Para excluir, abra o anúncio e use **Excluir este anúncio**.
+2. **Publicar para todos**: no formulário, use **Exportar meus anúncios (JSON)** e depois rode
+   ```bash
+   npm run listings:add -- meus-anuncios.json
+   ```
+   O script valida o arquivo com as mesmas regras do `listings.json`. Ids repetidos ganham sufixo, e um anúncio num
+   prédio que já tem outro é recusado. O resultado combinado é validado de novo, e se falhar o `listings.json` volta
+   ao original. Depois é só fazer o commit.
+3. **Gerar mais imóveis fictícios**: `npm run data:listings -- --count 50` (de 4 a 80; o padrão é 30). Mantém a
+   proporção 5 : 4 : 3 : 3 entre apartamentos, casas, geminados e terrenos.
+
+A validação de um anúncio no app, no script e no `validate:data` segue as mesmas regras: prédio residencial do
+OSM (`scripts/lib/residential.mjs`), terreno dentro do bairro sem encostar em prédios, vias, água, áreas verdes ou
+outro terreno, e círculo aproximado que contém o local real.
+
 ### Verificações extras
 
 ```bash
@@ -47,6 +69,8 @@ NODE_USE_ENV_PROXY=1 npm run data
    - Converte o resultado com `osmtogeojson` e grava `boundary`, `buildings`, `roads`, `water`, `green` e `meta.json` em `public/data/`.
    - Guarda as respostas brutas em `.cache/osm/`, o que torna o script idempotente. Use `--refresh` para baixar de novo.
 2. `scripts/generate-listings.mjs`: gera `public/data/listings.json` de forma determinística (seed `20261007`).
+   Aceita `--count N` (padrão 30). As comodidades vêm de um gerador aleatório separado (seed + 1), com
+   probabilidades por tipo; um título que promete "piscina" ou "sacada" sempre tem essa comodidade.
 3. `scripts/validate-listings.mjs`: verificações de consistência (ver abaixo).
 
 Se o Nominatim ou o Overpass falharem, o script termina com erro e **não gera dados substitutos**.
@@ -57,11 +81,15 @@ Se o Nominatim ou o Overpass falharem, o script termina com erro e **não gera d
 scripts/        fetch-osm, generate-listings, validate-listings, e2e-check, lib/height (regra de renderHeight)
 public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json
 src/data/       tipos, validação em tempo de carga, carregamento
-src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL
+src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
+                anúncios salvos no navegador (userListings)
 src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação (suncalc)
-src/ui/         filtros, lista de resultados, drawer, seletor manhã/tarde/noite
-src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação
-tests/          Vitest: renderHeight, filtros e sugestões, ordenação/resumo de preço, URL, simulação de pagamento
+src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
+src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
+scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)
+docs/           screenshots e análise da concorrência (docs/analise-concorrencia.md)
+tests/          Vitest: renderHeight, filtros e sugestões, ordenação/resumo de preço, URL, simulação de pagamento,
+                geometria de novos anúncios
 docs/screenshots/  capturas geradas pelo verify:e2e
 ```
 
@@ -125,8 +153,21 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   casa 6.500–9.500, geminado 5.800–7.800, terreno 1.400–2.400 por m² de lote), arredondados a R$ 5.000. Não refletem
   o mercado real.
 - **Imobiliárias**: "Imobiliária Exemplo A" e "Imobiliária Exemplo B", alternadas entre os imóveis.
+- **Drawer**: mostra também o preço por m² e as comodidades. Anúncios criados no navegador têm selo azul "Seu anúncio"
+  e o botão **Excluir este anúncio**.
+- **Anunciar imóvel**: o painel abre à direita. Durante a escolha no mapa ele vira uma faixa com a instrução, o
+  cursor vira mira e cliques no mapa não abrem anúncios. Esc cancela a escolha (ou fecha o painel). O local
+  escolhido aparece em azul (`pick-preview`); apartamentos usam a altura `pavimentos × 3 m`, se informada.
+  Prédios com nome, não residenciais ou já anunciados são recusados com o motivo. Sem título, o anúncio recebe um
+  título automático ("Casa 3 quartos", "Terreno de 300 m²"). Um anúncio recém-salvo é aberto mesmo que os filtros
+  aplicados o escondam.
 - **Títulos e descrições** são genéricos e não citam nomes de ruas, para não sugerir endereço real.
-- **Filtros**: o formulário altera só o estado *pendente* (`FilterStore.setPending`), e o mapa só muda com **Buscar**
+- **Filtros principais**: tipo, preço mín./máx., quartos mín. e área mín.
+- **"Mais filtros"** (seção recolhível; o botão mostra quantos estão ativos, ex.: "Mais filtros (2)"): banheiros mín.,
+  vagas mín., área máx., **R$/m² máx.** (preço ÷ área), imobiliária, situação (pronto/em construção) e
+  **comodidades**: piscina, churrasqueira, sacada, elevador, academia, aceita pets, mobiliado, aceita financiamento
+  e aceita permuta. Com várias comodidades marcadas, o imóvel precisa ter **todas**. Ao buscar, a seção se recolhe.
+- **Filtros (comportamento)**: o formulário altera só o estado *pendente* (`FilterStore.setPending`), e o mapa só muda com **Buscar**
   (`apply()`). **Limpar** zera o formulário e também a busca aplicada, por ser um clique explícito. Um aviso
   "Alterações não aplicadas" aparece quando o formulário difere do que está aplicado.
 - **Pinos**: um círculo laranja com borda (camada `circle` do MapLibre, sem ícones nem fontes externas) no centro de
@@ -139,8 +180,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   preço, tipo, área, quartos, aviso de localização aproximada e "Clique para ver detalhes". Some ao sair do imóvel,
   ao clicar e enquanto o mapa é arrastado ou girado. Imóveis esmaecidos pela busca não mostram etiqueta. Em tela de
   toque não há hover, e o toque abre o painel direto.
-- **Lista sempre disponível** (`ResultsPanel`): sem filtro mostra "15 imóveis à venda"; com filtro, "N imóveis
-  encontrados de 15". Tem faixa de preço, ordenação e linhas clicáveis, e pode ser recolhida. No desktop começa
+- **Lista sempre disponível** (`ResultsPanel`): sem filtro mostra "30 imóveis à venda"; com filtro, "N imóveis
+  encontrados de 30". Tem faixa de preço, ordenação e linhas clicáveis, e pode ser recolhida. No desktop começa
   aberta, e a câmera desconta ~340 px à esquerda para nenhum imóvel ficar sob ela. No celular começa recolhida num
   botão compacto e continua recolhida após "Buscar" (o botão já mostra a contagem); ela também se recolhe ao abrir um
   imóvel por ela. É o caminho de teclado e leitor de tela para todos os imóveis.
@@ -148,14 +189,15 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   mouse no imóvel no mapa marca a linha.
 - **Anterior/próximo no painel**: percorre a lista atual na ordem exibida; botões desativados nas pontas; setas ← →
   funcionam com o foco no painel.
-- **Ordenação**: menor preço (padrão), maior preço, maior área. Como só reordena a lista e não filtra, aplica na hora,
+- **Ordenação**: menor preço (padrão), maior preço, maior área, menor preço/m². Como só reordena a lista e não filtra, aplica na hora,
   sem "Buscar". A faixa de preço usa um formatador compacto próprio ("R$ 505 mil – R$ 2,8 mi"), porque o
   `Intl` com `notation: 'compact'` gerava "R$ 505,0 mil" e varia entre versões de ICU.
 - **Busca sem resultados**: para cada filtro ativo, calcula quantos imóveis apareceriam sem ele e o valor mais próximo
   disponível (o mais barato, o maior etc.), e mostra as duas melhores sugestões como botões "Remover …". Clicar é uma
   ação explícita, como "Buscar": atualiza o formulário e refaz a busca.
-- **URL compartilhável**: `?imovel=&tipo=&precoMin=&precoMax=&quartos=&area=&imob=&ordem=`, com slugs em português
-  (`tipo=casa,terreno`, `ordem=maior-preco`). Valores inválidos são ignorados e removidos da URL ao carregar.
+- **URL compartilhável**: `?imovel=&tipo=&precoMin=&precoMax=&quartos=&banheiros=&vagas=&area=&areaMax=&m2Max=&situacao=&comodidades=&imob=&ordem=`,
+  com slugs em português (`tipo=casa,terreno`, `situacao=em-construcao`, `comodidades=piscina,pets`,
+  `ordem=menor-preco-m2`). Valores inválidos são ignorados e removidos da URL ao carregar.
   - Abrir um imóvel cria uma entrada no histórico, então o "voltar" do navegador fecha o painel.
   - Buscar, ordenar e anterior/próximo só substituem a entrada atual.
   - Fechar pelo ×/Esc/mapa usa `history.back()` quando a entrada foi criada pela abertura do painel e nada mudou
@@ -207,6 +249,12 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - A renderização foi verificada só em Chromium headless com WebGL por software (SwiftShader). Não testei Safari,
   Firefox nem GPUs reais.
 
+- Anúncios criados pelo app ficam só no `localStorage` do navegador: não aparecem para outras pessoas até serem
+  exportados e incorporados com `npm run listings:add`. Não há edição (exclua e crie de novo) nem envio de fotos.
+- O lote de um terreno criado no app é alinhado ao norte, não à rua mais próxima como no gerador.
+- Para um prédio de apartamentos criado no app sem número de pavimentos, a altura no mapa é a do OSM (muitas vezes
+  6 m por falta de dados).
+
 ## Próximos passos (não implementados)
 
 - Modelo 3D detalhado de um prédio "hero" com janelas por unidade e janelas acesas à noite, com Three.js como camada
@@ -214,6 +262,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - Sombras reais (shadow mapping) via camada customizada.
 - Rótulos de ruas, que exigem fontes/glyphs locais.
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
+- Fotos, contato por WhatsApp, favoritos e as demais melhorias priorizadas em
+  [`docs/analise-concorrencia.md`](docs/analise-concorrencia.md).
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 
 ## Dados (contagens da última execução)
@@ -234,29 +284,32 @@ Execução de 2026-10-07 (`public/data/meta.json`):
 - Bbox do limite: −48,864635, −26,303255, −48,842521, −26,277429 (W, S, E, N)
 - Bbox de todos os dados: −48,865804, −26,314700, −48,804361, −26,268235
 
-Imóveis fictícios (`listings.json`): 15 no total.
+Imóveis fictícios (`listings.json`): 30 no total (`--count 30`).
 
 | Tipo | Quantidade | Observação |
 |---|---|---|
-| Apartamentos | 5 | 8 a 14 pavimentos fictícios |
-| Casas | 4 | |
-| Geminados | 3 | Escolhidos por área: o OSM do bairro não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
-| Terrenos | 3 | Nenhum precisou ser reduzido |
+| Apartamentos | 10 | 8 a 14 pavimentos fictícios |
+| Casas | 8 | |
+| Geminados | 6 | Escolhidos por área: o OSM do bairro não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
+| Terrenos | 6 | Nenhum precisou ser reduzido. Distância mínima entre um terreno e os outros imóveis: 177 m (250 m × √(15/30)) |
 
-- 3 imóveis com localização aproximada: `house-06`, `semi-10` e `land-13`.
+- 3 imóveis com localização aproximada: `house-11`, `semi-19` e `land-25`.
+- Os 5 primeiros apartamentos são os mesmos da versão com 15 imóveis (mesma seed); os demais mudaram de id e posição.
 - Prédios residenciais elegíveis: 3.098.
 
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 29 testes (renderHeight, filtros + FilterStore, sugestões para busca vazia, ordenação e resumo de
-  preço, leitura/escrita da URL, simulação de pagamento).
+- `npm test`: 39 testes (renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
+  vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
+  geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial).
 - `npm run validate:data`:
-  - ids únicos e `fictional: true` em todos;
+  - ids únicos e `fictional: true` em todos; comodidades válidas e sem repetição;
+  - terrenos não se sobrepõem;
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 50 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 55 checagens:
   - camadas renderizadas;
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -274,6 +327,10 @@ Imóveis fictícios (`listings.json`): 15 no total.
     filtros/lista/imóvel, link inválido é ignorado;
   - botão "Visão geral" restaura o enquadramento inicial;
   - teclado: Tab → atalho → linha → Enter abre → Esc fecha e devolve o foco; anúncio da contagem para leitor de tela;
+  - "Mais filtros": abre, conta os critérios ativos ("Mais filtros (2)"), filtra por comodidade + banheiros e grava
+    `?banheiros=2&comodidades=piscina`;
+  - "Anunciar": casa num prédio cinza e terreno num espaço livre são salvos, abertos e aparecem na lista; continuam
+    após recarregar a página e podem ser excluídos;
   - em 390×844: sem rolagem horizontal, filtros recolhíveis, lista recolhida que expande e se recolhe ao abrir um
     imóvel, painel abre recolhido, expande pela alça e responde a arrastar para cima/baixo.
 - Screenshots em `docs/screenshots/`.

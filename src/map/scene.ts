@@ -31,6 +31,17 @@ const LISTING_SOURCES = ['listings', 'listing-pins'] as const;
 const PIN_FADE_START_ZOOM = 15.5;
 const PIN_MAX_ZOOM = 16.5;
 
+/** What the user clicked while choosing the place of a new listing ("Anunciar imóvel"). */
+export interface PickResult {
+  lngLat: [number, number];
+  /** Context building under the click, if any (buildings of existing listings are not pickable). */
+  building?: { osmId: string; properties: Record<string, unknown> };
+}
+
+/** Colour of the place being chosen for a new listing (distinct from the listing accent). */
+const PICK_COLOR = '#2f7de1';
+const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] };
+
 export interface SceneEvents {
   onListingClick: (listingId: string) => void;
   onEmptyClick: () => void;
@@ -44,6 +55,8 @@ export class Scene {
   private featureIdByListing = new Map<string, number>();
   private hoveredId: number | null = null;
   private selectedId: number | null = null;
+  private onPick: ((p: PickResult) => void) | null = null;
+  private listings: Listing[];
   readonly ready: Promise<void>;
 
   constructor(
@@ -51,7 +64,9 @@ export class Scene {
     private data: AppData,
     private theme: Theme,
     private events: SceneEvents,
+    listings: Listing[] = data.listings.listings,
   ) {
+    this.listings = listings;
     const [w, s, e, n] = data.meta.boundaryBbox;
     // maxBounds: neighbourhood bbox expanded by 60% of its size on each side
     const padX = (e - w) * 0.6;
@@ -84,11 +99,14 @@ export class Scene {
 
   // ---------------------------------------------------------------- style
 
+  /** Listing buildings are drawn by the listing layers, not as grey context. */
+  private contextFilter(): ExpressionSpecification {
+    const ids = this.listings.filter((l) => l.buildingOsmId && !l.approximateLocation).map((l) => l.buildingOsmId!);
+    return ['!', ['in', ['get', 'osmId'], ['literal', ids]]];
+  }
+
   private buildStyle(): StyleSpecification {
     const t = this.theme;
-    const listingBuildingIds = this.data.listings.listings
-      .filter((l) => l.buildingOsmId && !l.approximateLocation)
-      .map((l) => l.buildingOsmId!);
     const matchedFilter: ExpressionSpecification = ['==', ['get', 'matched'], true];
     const dimFilter: ExpressionSpecification = ['==', ['get', 'matched'], false];
     const hoverColor = (base: string): ExpressionSpecification => [
@@ -109,6 +127,7 @@ export class Scene {
         green: { type: 'geojson', data: this.data.green },
         listings: { type: 'geojson', data: this.listingCollection() },
         'listing-pins': { type: 'geojson', data: this.pinCollection() },
+        'pick-preview': { type: 'geojson', data: EMPTY_FC },
       },
       light: { anchor: 'map', ...t.light },
       sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon },
@@ -162,8 +181,7 @@ export class Scene {
           id: 'context-buildings',
           type: 'fill-extrusion',
           source: 'buildings',
-          // Listing buildings are drawn by the listing layers instead
-          filter: ['!', ['in', ['get', 'osmId'], ['literal', listingBuildingIds]]],
+          filter: this.contextFilter(),
           paint: {
             'fill-extrusion-color': t.context,
             'fill-extrusion-height': ['get', 'renderHeight'],
@@ -243,6 +261,17 @@ export class Scene {
           },
         },
         {
+          id: 'pick-preview',
+          type: 'fill-extrusion',
+          source: 'pick-preview',
+          paint: {
+            'fill-extrusion-color': PICK_COLOR,
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-opacity': 0.9,
+            'fill-extrusion-vertical-gradient': false,
+          },
+        },
+        {
           id: 'listing-pins-dimmed',
           type: 'circle',
           source: 'listing-pins',
@@ -281,7 +310,8 @@ export class Scene {
   private buildListingFeatures(): void {
     const byOsmId = new Map(this.data.buildings.features.map((f) => [f.properties.osmId, f]));
     this.listingFeatures = [];
-    this.data.listings.listings.forEach((l, i) => {
+    this.featureIdByListing.clear();
+    this.listings.forEach((l, i) => {
       const id = i + 1;
       this.featureIdByListing.set(l.id, id);
       let geometry: Polygon | MultiPolygon;
@@ -343,6 +373,51 @@ export class Scene {
     this.setHover(null);
   }
 
+  /** Replaces the listings shown on the map (e.g. after one is added or removed in this browser). */
+  setListings(listings: Listing[]): void {
+    this.setHover(null);
+    this.select(null);
+    this.listings = listings;
+    this.buildListingFeatures();
+    for (const source of LISTING_SOURCES) this.map.removeFeatureState({ source });
+    (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
+    (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
+    if (this.map.getLayer('context-buildings')) this.map.setFilter('context-buildings', this.contextFilter());
+  }
+
+  // ---------------------------------------------------------------- choosing a place for a new listing
+
+  /** Next map click is reported to `onPick` instead of opening listings, until `stopPicking()`. */
+  startPicking(onPick: (p: PickResult) => void): void {
+    this.onPick = onPick;
+    this.setHover(null);
+    this.events.onListingHover?.(null);
+    this.map.getCanvas().style.cursor = 'crosshair';
+  }
+
+  stopPicking(): void {
+    this.onPick = null;
+    this.map.getCanvas().style.cursor = '';
+  }
+
+  get isPicking(): boolean {
+    return this.onPick !== null;
+  }
+
+  /** Shows (or clears) the shape chosen for the new listing, extruded to `height` metres. */
+  setPickPreview(geometry: Polygon | MultiPolygon | null, height = 0.5): void {
+    const fc: FeatureCollection = geometry
+      ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { height }, geometry }] }
+      : EMPTY_FC;
+    (this.map.getSource('pick-preview') as GeoJSONSource | undefined)?.setData(fc);
+  }
+
+  /** Geometry and height of an OSM building (for the preview of a new listing). */
+  buildingShape(osmId: string): { geometry: Polygon | MultiPolygon; height: number } | null {
+    const b = this.data.buildings.features.find((f) => f.properties.osmId === osmId);
+    return b ? { geometry: b.geometry, height: b.properties.renderHeight } : null;
+  }
+
   listingBounds(listing: Listing): [number, number, number, number] | null {
     const f = this.listingFeatures.find((x) => x.properties.listingId === listing.id);
     return f ? (turfBbox(f) as [number, number, number, number]) : null;
@@ -350,7 +425,7 @@ export class Scene {
 
   /** Initial framing: every listing (pitched camera), so none starts off-screen. Also the "Visão geral" button. */
   showOverview(animate: boolean): void {
-    const all = this.unionBounds(this.data.listings.listings);
+    const all = this.unionBounds(this.listings);
     if (!all) return;
     this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: 58, bearing: -20, animate, duration: 1200 });
   }
@@ -467,6 +542,7 @@ export class Scene {
       this.events.onListingHover?.(null);
     };
     this.map.on('mousemove', (e) => {
+      if (this.onPick) return;
       // no tooltip while the user is dragging/rotating the map
       if (this.map.isMoving()) return hoverOff();
       const f = this.queryListing(e.point);
@@ -476,6 +552,14 @@ export class Scene {
     this.map.on('mouseout', hoverOff);
     this.map.on('movestart', hoverOff);
     this.map.on('click', (e) => {
+      if (this.onPick) {
+        const b = this.map.queryRenderedFeatures(e.point, { layers: ['context-buildings'] })[0];
+        this.onPick({
+          lngLat: [e.lngLat.lng, e.lngLat.lat],
+          ...(b ? { building: { osmId: String(b.properties.osmId), properties: { ...b.properties } } } : {}),
+        });
+        return;
+      }
       this.events.onListingHover?.(null);
       const f = this.queryListing(e.point);
       if (f) this.events.onListingClick(String(f.properties.listingId));
