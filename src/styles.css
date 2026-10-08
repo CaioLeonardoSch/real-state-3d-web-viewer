@@ -1,0 +1,697 @@
+:root {
+  --bg: #f6f5f2;
+  --panel: rgba(255, 255, 255, 0.96);
+  --text: #1f2328;
+  --muted: #646b73;
+  --line: #dcdcd8;
+  --accent: #f28c18;
+  --accent-strong: #c8650a;
+  --accent-soft: #fff1df;
+  --radius: 12px;
+  --shadow: 0 8px 28px rgba(20, 24, 31, 0.16);
+  --topbar-h: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+body[data-tod='night'] {
+  --panel: rgba(28, 34, 50, 0.96);
+  --text: #eef1f6;
+  --muted: #a6aec0;
+  --line: #3a4258;
+  --accent-soft: #3d2c16;
+  --bg: #141b2d;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+}
+body {
+  /* colour must be resolved on body, where the night theme redefines the variables */
+  color: var(--text);
+}
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+
+/* ---------------- top bar & filters ---------------- */
+.topbar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+}
+.demo-banner {
+  font-size: 12px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 1px 6px;
+  align-self: flex-start;
+}
+body[data-tod='night'] .demo-banner {
+  color: #ffc37a;
+}
+.filters-toggle {
+  display: none;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  flex: 1;
+}
+.filters fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.filters legend,
+.f-field {
+  font-size: 12px;
+  color: var(--muted);
+}
+.filters legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.f-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.f-field input,
+.f-field select {
+  width: 128px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+}
+.f-field select option {
+  color: #1f2328;
+}
+.chip {
+  cursor: pointer;
+}
+.chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.chip span {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+}
+.chip input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip input:focus-visible + span {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.f-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary,
+.btn-secondary,
+.filters-toggle {
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-secondary,
+.filters-toggle {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--line);
+}
+.f-pending {
+  font-size: 12px;
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .f-pending {
+  color: #ffc37a;
+}
+
+/* ---------------- map stage ---------------- */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+#map {
+  position: absolute;
+  inset: 0;
+}
+.status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.status:empty {
+  display: none;
+}
+.status.error {
+  color: #b42318;
+  background: var(--panel);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.time-of-day {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  background: var(--panel);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  padding: 3px;
+}
+.time-of-day button {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.time-of-day button[aria-checked='true'] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.results {
+  position: absolute;
+  top: 60px;
+  left: 12px;
+  z-index: 2;
+  width: 300px;
+  max-height: calc(100% - 120px);
+  overflow: auto;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+}
+.results-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.results-title {
+  margin: 0;
+  font-size: 15px;
+}
+.link-btn {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+body[data-tod='night'] .link-btn {
+  color: #ffc37a;
+}
+.results.collapsed {
+  padding: 6px 12px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 10;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 8px;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.results-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.results-range {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.results-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.results-sort select {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+}
+.results-sort select option {
+  color: #1f2328;
+}
+.results-empty p {
+  margin: 8px 0 4px;
+}
+.results-empty .relax li button .r-title {
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .results-empty .relax li button .r-title {
+  color: #ffc37a;
+}
+.results-empty .btn-secondary {
+  margin-top: 8px;
+  width: 100%;
+}
+.results ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.results li button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  padding: 8px 2px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.results li button:hover,
+.results li button.is-hover {
+  background: var(--accent-soft);
+}
+.r-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.r-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.icon-btn {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  color: var(--muted);
+}
+
+/* ---------------- hover tooltip ---------------- */
+.hover-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 240px;
+  padding: 7px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.hover-tooltip[hidden] {
+  display: none;
+}
+.tt-price {
+  font-size: 15px;
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .tt-price {
+  color: #ffb35c;
+}
+.tt-note {
+  color: var(--accent-strong);
+}
+body[data-tod='night'] .tt-note {
+  color: #ffc37a;
+}
+.tt-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ---------------- drawer ---------------- */
+.drawer {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 16px 20px 24px;
+  overflow-y: auto;
+  transform: translateX(105%);
+  transition: transform 0.25s ease;
+  outline: none;
+}
+.drawer.open {
+  transform: none;
+}
+.drawer-handle {
+  display: none;
+}
+.drawer-summary {
+  /* groups navigation, badge, title and price: the strip shown by the collapsed mobile sheet */
+  display: block;
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drawer-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nav-pos {
+  min-width: 58px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.badge-fictional {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #6b4ea8;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.drawer h2 {
+  margin: 10px 0 2px;
+  font-size: 20px;
+}
+.price {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  margin: 0 0 8px;
+}
+body[data-tod='night'] .price {
+  color: #ffb35c;
+}
+.notice-approx {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 12px 0;
+}
+.facts div,
+.simulation dl div {
+  display: flex;
+  flex-direction: column;
+}
+.facts dt,
+.simulation dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.facts dd,
+.simulation dd {
+  margin: 0;
+  font-weight: 600;
+}
+.description {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.floorplan {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+  color: var(--text);
+}
+.floorplan svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.floorplan figcaption {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.simulation {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+.simulation h3 {
+  margin: 4px 0 8px;
+  font-size: 15px;
+}
+.simulation dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.overview-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+}
+
+/* ---------------- attribution ---------------- */
+.maplibregl-ctrl-attrib {
+  font-size: 11px;
+}
+.drawer-attrib {
+  display: none;
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.drawer-attrib a {
+  color: inherit;
+}
+
+/* ---------------- mobile ---------------- */
+@media (max-width: 720px) {
+  :root {
+    --peek: 166px;
+  }
+  .topbar {
+    padding: 8px 12px;
+  }
+  .brand {
+    flex: 1;
+  }
+  .filters-toggle {
+    display: inline-block;
+  }
+  .filters {
+    display: none;
+    flex-basis: 100%;
+  }
+  body.filters-open .filters {
+    display: flex;
+  }
+  .f-field {
+    flex: 1 1 40%;
+  }
+  .f-field input,
+  .f-field select {
+    width: 100%;
+  }
+  .f-actions {
+    flex-basis: 100%;
+  }
+  .results {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    top: 54px;
+    max-height: 45%;
+  }
+  /* collapsed on mobile: a compact pill at the top right, leaving the map free */
+  .results.collapsed {
+    right: auto;
+    top: 54px;
+    border-radius: 999px;
+  }
+  .results.collapsed .muted {
+    display: none;
+  }
+  .results.collapsed .results-title {
+    font-size: 13px;
+  }
+  .drawer {
+    top: auto;
+    left: 0;
+    width: 100%;
+    max-height: 78%;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(105%);
+    padding-top: 8px;
+  }
+  .drawer.open {
+    transform: none;
+  }
+  /* collapsed sheet: only the summary strip is visible, the map stays usable above it */
+  .drawer.open:not(.expanded) {
+    transform: translateY(calc(100% - var(--peek)));
+    overflow: hidden;
+  }
+  /* lift the map controls (and attribution) above the collapsed sheet */
+  body.drawer-open .maplibregl-ctrl-bottom-left,
+  body.drawer-open .maplibregl-ctrl-bottom-right {
+    bottom: var(--peek);
+  }
+  /* the bottom sheet covers the map's attribution control, so repeat it inside the sheet */
+  .drawer-attrib {
+    display: block;
+  }
+  .drawer-handle {
+    display: block;
+    width: 100%;
+    height: 22px;
+    margin: -4px 0 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .drawer-handle span {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    margin: 0 auto;
+  }
+  .drawer.open:not(.expanded) .drawer-summary {
+    touch-action: none;
+  }
+  .time-of-day {
+    top: 8px;
+    left: 8px;
+  }
+}

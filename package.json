@@ -1,0 +1,43 @@
+{
+  "name": "real-state-3d-web-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "data": "node scripts/fetch-osm.mjs && node scripts/generate-listings.mjs",
+    "data:fetch": "node scripts/fetch-osm.mjs",
+    "data:listings": "node scripts/generate-listings.mjs",
+    "validate:data": "node scripts/validate-listings.mjs",
+    "verify:e2e": "node scripts/e2e-check.mjs"
+  },
+  "dependencies": {
+    "@turf/area": "^7.4.0",
+    "@turf/bbox": "^7.4.0",
+    "@turf/bearing": "^7.4.0",
+    "@turf/boolean-intersects": "^7.4.0",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "@turf/centroid": "^7.4.0",
+    "@turf/circle": "^7.4.0",
+    "@turf/destination": "^7.4.0",
+    "@turf/distance": "^7.4.0",
+    "@turf/helpers": "^7.4.0",
+    "@turf/nearest-point-on-line": "^7.4.0",
+    "@turf/transform-rotate": "^7.4.0",
+    "maplibre-gl": "^6.13.0",
+    "suncalc": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.6.4",
+    "osmtogeojson": "^3.0.0-beta.5",
+    "playwright": "^1.63.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  }
+}

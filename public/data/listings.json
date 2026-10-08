@@ -1,0 +1,367 @@
+{
+  "fictional": true,
+  "notice": "Imóveis, imobiliárias e valores FICTÍCIOS, gerados para demonstração. Não representam ofertas reais.",
+  "seed": 20261007,
+  "agencies": [
+    {
+      "id": "agency-a",
+      "name": "Imobiliária Exemplo A",
+      "fictional": true
+    },
+    {
+      "id": "agency-b",
+      "name": "Imobiliária Exemplo B",
+      "fictional": true
+    }
+  ],
+  "listings": [
+    {
+      "id": "apt-01",
+      "type": "apartment",
+      "title": "Apartamento amplo 4 quartos",
+      "agency": "agency-b",
+      "price": 1210000,
+      "areaM2": 123,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "parkingSpots": 3,
+      "status": "under_construction",
+      "buildingOsmId": "way/993176769",
+      "floors": 14,
+      "description": "Unidade de 123 m² em edifício de 14 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "apt-02",
+      "type": "apartment",
+      "title": "Apartamento com vista 3 quartos",
+      "agency": "agency-a",
+      "price": 850000,
+      "areaM2": 102,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
+      "status": "ready",
+      "buildingOsmId": "way/1035892958",
+      "floors": 11,
+      "description": "Unidade de 102 m² em edifício de 11 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "apt-03",
+      "type": "apartment",
+      "title": "Apartamento amplo 1 quarto",
+      "agency": "agency-b",
+      "price": 505000,
+      "areaM2": 63,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "parkingSpots": 1,
+      "status": "under_construction",
+      "buildingOsmId": "way/1035509899",
+      "floors": 13,
+      "description": "Unidade de 63 m² em edifício de 13 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "apt-04",
+      "type": "apartment",
+      "title": "Apartamento com sacada 1 quarto",
+      "agency": "agency-a",
+      "price": 525000,
+      "areaM2": 57,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "parkingSpots": 1,
+      "status": "ready",
+      "buildingOsmId": "way/512686002",
+      "floors": 8,
+      "description": "Unidade de 57 m² em edifício de 8 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "apt-05",
+      "type": "apartment",
+      "title": "Apartamento amplo 4 quartos",
+      "agency": "agency-b",
+      "price": 1215000,
+      "areaM2": 125,
+      "bedrooms": 4,
+      "bathrooms": 4,
+      "parkingSpots": 3,
+      "status": "ready",
+      "buildingOsmId": "way/1035503734",
+      "floors": 14,
+      "description": "Unidade de 125 m² em edifício de 14 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "house-06",
+      "type": "house",
+      "title": "Casa térrea com quintal 5 quartos",
+      "agency": "agency-a",
+      "price": 2805000,
+      "areaM2": 302,
+      "landAreaM2": 500,
+      "bedrooms": 5,
+      "bathrooms": 4,
+      "parkingSpots": 1,
+      "status": "ready",
+      "buildingOsmId": "way/1035897713",
+      "description": "Imóvel de 302 m² construídos, 5 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "approxCenter": [
+        -48.852745,
+        -26.28998
+      ],
+      "approximateLocation": true,
+      "approxRadiusM": 150,
+      "fictional": true
+    },
+    {
+      "id": "house-07",
+      "type": "house",
+      "title": "Casa com edícula 3 quartos",
+      "agency": "agency-b",
+      "price": 1855000,
+      "areaM2": 212,
+      "landAreaM2": 296,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 3,
+      "status": "ready",
+      "buildingOsmId": "way/993176684",
+      "description": "Imóvel de 212 m² construídos, 3 quartos e 3 vagas. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "house-08",
+      "type": "house",
+      "title": "Sobrado familiar 2 quartos",
+      "agency": "agency-a",
+      "price": 795000,
+      "areaM2": 90,
+      "landAreaM2": 205,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 2,
+      "status": "under_construction",
+      "buildingOsmId": "way/1035893635",
+      "description": "Imóvel de 90 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "house-09",
+      "type": "house",
+      "title": "Casa com edícula 3 quartos",
+      "agency": "agency-b",
+      "price": 1300000,
+      "areaM2": 199,
+      "landAreaM2": 494,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 1,
+      "status": "ready",
+      "buildingOsmId": "way/1035926541",
+      "description": "Imóvel de 199 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "semi-10",
+      "type": "semi_detached",
+      "title": "Geminado novo 3 quartos",
+      "agency": "agency-a",
+      "price": 1035000,
+      "areaM2": 145,
+      "landAreaM2": 200,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 1,
+      "status": "ready",
+      "buildingOsmId": "way/1035509714",
+      "description": "Imóvel de 145 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "approxCenter": [
+        -48.856826,
+        -26.284719
+      ],
+      "approximateLocation": true,
+      "approxRadiusM": 150,
+      "fictional": true
+    },
+    {
+      "id": "semi-11",
+      "type": "semi_detached",
+      "title": "Geminado com pátio 2 quartos",
+      "agency": "agency-b",
+      "price": 585000,
+      "areaM2": 91,
+      "landAreaM2": 104,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 1,
+      "status": "under_construction",
+      "buildingOsmId": "way/1035503528",
+      "description": "Imóvel de 91 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "semi-12",
+      "type": "semi_detached",
+      "title": "Geminado novo 3 quartos",
+      "agency": "agency-a",
+      "price": 745000,
+      "areaM2": 115,
+      "landAreaM2": 128,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 2,
+      "status": "under_construction",
+      "buildingOsmId": "way/1035509452",
+      "description": "Imóvel de 115 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "land-13",
+      "type": "land",
+      "title": "Terreno plano 15×35 m",
+      "agency": "agency-b",
+      "price": 790000,
+      "areaM2": 525,
+      "landAreaM2": 525,
+      "bedrooms": 0,
+      "bathrooms": 0,
+      "parkingSpots": 0,
+      "status": "ready",
+      "lotPolygon": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.857019,
+              -26.2916301
+            ],
+            [
+              -48.8570306,
+              -26.2917646
+            ],
+            [
+              -48.8573806,
+              -26.2917404
+            ],
+            [
+              -48.8573691,
+              -26.2916059
+            ],
+            [
+              -48.857019,
+              -26.2916301
+            ]
+          ]
+        ]
+      },
+      "description": "Lote de 525 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
+      "approxCenter": [
+        -48.857566,
+        -26.29291
+      ],
+      "approximateLocation": true,
+      "approxRadiusM": 150,
+      "fictional": true
+    },
+    {
+      "id": "land-14",
+      "type": "land",
+      "title": "Lote para construir 20×40 m",
+      "agency": "agency-a",
+      "price": 1795000,
+      "areaM2": 800,
+      "landAreaM2": 800,
+      "bedrooms": 0,
+      "bathrooms": 0,
+      "parkingSpots": 0,
+      "status": "ready",
+      "lotPolygon": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.8582444,
+              -26.2828729
+            ],
+            [
+              -48.8580442,
+              -26.2828846
+            ],
+            [
+              -48.8580703,
+              -26.2832436
+            ],
+            [
+              -48.8582705,
+              -26.2832319
+            ],
+            [
+              -48.8582444,
+              -26.2828729
+            ]
+          ]
+        ]
+      },
+      "description": "Lote de 800 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    },
+    {
+      "id": "land-15",
+      "type": "land",
+      "title": "Terreno plano 15×30 m",
+      "agency": "agency-b",
+      "price": 825000,
+      "areaM2": 450,
+      "landAreaM2": 450,
+      "bedrooms": 0,
+      "bathrooms": 0,
+      "parkingSpots": 0,
+      "status": "ready",
+      "lotPolygon": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.8528523,
+              -26.2812139
+            ],
+            [
+              -48.8528613,
+              -26.2813485
+            ],
+            [
+              -48.8531617,
+              -26.2813324
+            ],
+            [
+              -48.8531527,
+              -26.2811977
+            ],
+            [
+              -48.8528523,
+              -26.2812139
+            ]
+          ]
+        ]
+      },
+      "description": "Lote de 450 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
+      "approximateLocation": false,
+      "fictional": true
+    }
+  ]
+}
