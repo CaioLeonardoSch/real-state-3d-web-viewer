@@ -1,6 +1,9 @@
 :root {
   --bg: #f6f5f2;
   --panel: rgba(255, 255, 255, 0.96);
+  --panel-solid: #fff;
+  --scroll-thumb: rgba(31, 35, 40, 0.22);
+  --scroll-thumb-hover: rgba(31, 35, 40, 0.4);
   --text: #1f2328;
   --muted: #646b73;
   --line: #dcdcd8;
@@ -16,6 +19,9 @@
 }
 body[data-tod='night'] {
   --panel: rgba(28, 34, 50, 0.96);
+  --panel-solid: #1c2232;
+  --scroll-thumb: rgba(238, 241, 246, 0.2);
+  --scroll-thumb-hover: rgba(238, 241, 246, 0.38);
   --text: #eef1f6;
   --muted: #a6aec0;
   --line: #3a4258;
@@ -25,6 +31,28 @@ body[data-tod='night'] {
 
 * {
   box-sizing: border-box;
+}
+
+/* scrollbars: thin, in the panel colours (standard properties; ::-webkit-* for older Safari) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
 }
 html,
 body {
@@ -334,12 +362,30 @@ body[data-tod='night'] .link-btn {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
+.results-section {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+body[data-tod='night'] .results-section {
+  color: var(--accent);
+}
+/* price range + sort: stays at the top of the panel while the listings scroll */
 .results-tools {
+  position: sticky;
+  top: -10px; /* the panel's top padding */
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 6px;
+  margin: 2px -12px 0;
+  padding: 6px 12px;
+  background: var(--panel-solid);
+  border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
 .results-range {

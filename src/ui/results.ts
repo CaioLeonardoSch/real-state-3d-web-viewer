@@ -187,8 +187,9 @@ export class ResultsPanel {
       ${
         results.length === 0
           ? emptyHtml(suggestions)
-          : `<div class="results-tools">
-              <span class="results-range" title="Faixa de preço">${range}</span>
+          : `<h3 class="results-section">Imóveis</h3>
+            <div class="results-tools">
+              <span class="results-range" title="Faixa de preço dos imóveis listados">${range}</span>
               <label class="results-sort"><span class="sr-only">Ordenar por</span>
                 <select name="sort">${SORT_KEYS.map(
                   (k) => `<option value="${k}" ${k === sort ? 'selected' : ''}>${SORT_LABELS[k]}</option>`,
