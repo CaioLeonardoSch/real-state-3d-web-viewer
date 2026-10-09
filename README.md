@@ -1,10 +1,11 @@
-# Mapa 3D imobiliário: bairro América (Joinville/SC)
+# Mapa 3D imobiliário: Joinville, região norte e central (SC)
 
-Protótipo de **demonstração** de um portal imobiliário com mapa 3D. O bairro aparece como uma maquete neutra
-(prédios em cinza) e apenas os imóveis à venda ficam destacados e clicáveis.
+Protótipo de **demonstração** de um portal imobiliário com mapa 3D. Doze bairros (Centro, América, Atiradores,
+Glória, Saguaçu, Costa e Silva, Santo Antônio, Bom Retiro, Jardim Sofia, Iririú, Jardim Iririú e Aventureiro)
+aparecem como uma maquete neutra (prédios em cinza) e só os imóveis à venda ficam destacados e clicáveis.
 
-> **Imóveis, imobiliárias e valores são FICTÍCIOS.** Os prédios, as vias, a água, as áreas verdes e o limite do
-> bairro vêm do OpenStreetMap (© OpenStreetMap contributors, ODbL).
+> **Imóveis, imobiliárias e valores são FICTÍCIOS.** Os prédios, as vias, a água, as áreas verdes e os limites dos
+> bairros vêm do OpenStreetMap (© OpenStreetMap contributors, ODbL).
 
 ![Desktop, manhã](docs/screenshots/desktop-morning.png)
 
@@ -99,7 +100,40 @@ em ruas e outras torres.
 Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Opera (Halsten, Atiradores), ONE e Vitra
 (Plaenge, Atiradores) e Nola (Halsten, Cidade das Águas).
 
+## Mapa em blocos (PMTiles) e 3D só de perto
+
+O mapa base é **um único arquivo** `public/data/joinville-norte.pmtiles` (≈4 MB) com blocos vetoriais (vector tiles)
+dos prédios, vias, água, áreas verdes e limites de bairro. O navegador **não baixa o arquivo inteiro**: o protocolo
+`pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
+(range). Não há servidor de mapas: qualquer hospedagem estática que aceite `Range` serve (GitHub Pages, S3, Cloudflare,
+o `vite preview`).
+
+| Zoom | Conteúdo dos blocos | Tamanho (comprimido) |
+|---|---|---|
+| 10–11 | vias, água, verde, bairros | até 41 KB por bloco |
+| 12 | + prédios ≥ 250 m², só o contorno | até 104 KB |
+| 13 | + prédios ≥ 120 m², só o contorno | até 194 KB |
+| 14–15 | todos os prédios, com altura e marca de residencial | até 194 KB (z14) e 74 KB (z15) |
+
+Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). Abrir a visão geral custa ~250 KB; descer até uma rua,
+mais algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 20 MB só de prédios para esta região.
+
+**3D só de perto, sem ficar "chapado" de longe:**
+
+- de longe (zoom < 14,6) os prédios aparecem **planos**, como textura da cidade (`buildings-flat`), junto com ruas,
+  verde, água e os nomes dos bairros (rótulos HTML: o estilo não usa fontes);
+- a partir do zoom 14 eles **sobem** gradualmente até a altura cheia no 15,5
+  (`fill-extrusion-height` interpolado pelo zoom), então a transição é contínua;
+- com a câmera inclinada, o fundo da tela usa blocos de zoom menor, que não têm os prédios pequenos: **o centro da
+  tela fica em 3D e o horizonte fica plano** sem código extra; ao mover o mapa, o 3D acompanha;
+- imóveis à venda e empreendimentos ficam **sempre** em 3D, então se destacam na visão geral.
+
+Uma "bolha" 3D exatamente circular em volta do centro não existe no MapLibre (as expressões de estilo não sabem a
+distância até o centro da tela); exigiria uma camada customizada (Three.js). O efeito acima chega perto disso.
+
 ## Como regenerar os dados
+
+Requisitos extras: Python 3 com `pip install osmium shapely`.
 
 ```bash
 npm run data
@@ -107,23 +141,34 @@ npm run data
 NODE_USE_ENV_PROXY=1 npm run data
 ```
 
-1. `scripts/fetch-osm.mjs`:
-   - Localiza "América, Joinville, Santa Catarina, Brasil" no **Nominatim**, com User-Agent identificável e espera de 1 s entre requisições.
-   - Usa o polígono administrativo quando existe; se não existir, usa um bbox de ~1 km de raio.
-   - Consulta o **Overpass** restrito a esse polígono, com novas tentativas com espera crescente e depois espelhos alternativos.
-   - Converte o resultado com `osmtogeojson` e grava `boundary`, `buildings`, `roads`, `water`, `green` e `meta.json` em `public/data/`.
-   - Guarda as respostas brutas em `.cache/osm/`, o que torna o script idempotente. Use `--refresh` para baixar de novo.
-2. `scripts/generate-listings.mjs`: gera `public/data/listings.json` de forma determinística (seed `20261007`).
-   Aceita `--count N` (padrão 30). As comodidades vêm de um gerador aleatório separado (seed + 1), com
-   probabilidades por tipo; um título que promete "piscina" ou "sacada" sempre tem essa comodidade.
-3. `scripts/validate-listings.mjs`: verificações de consistência (ver abaixo).
+1. `npm run data:download` (`scripts/download-osm.mjs`): baixa o extrato do OpenStreetMap de Santa Catarina
+   (≈140 MB, OpenStreetMap France, atualizado diariamente) para `.cache/osm-pbf/` e confere o MD5. Não baixa de novo
+   se o arquivo já estiver atualizado. (A API Overpass, usada antes, estava recusando conexões.)
+2. `npm run data:region` (`scripts/extract-region.py`, pyosmium + shapely): recorta os bairros listados em
+   `scripts/data/region.json` (polígonos `admin_level=10` dentro do município de Joinville; nomes repetidos em cidades
+   vizinhas são descartados) e grava GeoJSON em `.cache/region/` (≈22 MB, **não versionado**). Um prédio entra se o
+   seu ponto interno estiver na região; vias, rios e áreas verdes entram se tocarem a região (+60 m).
+3. `npm run data:tiles` (`scripts/build-tiles.mjs`): gera os blocos com `geojson-vt` + `vt-pbf`, comprime cada
+   bloco com gzip e grava o `.pmtiles` com um gravador próprio (`scripts/lib/pmtiles-writer.mjs`, especificação v3:
+   diretório raiz, diretórios-folha quando necessário, blocos repetidos guardados uma vez). Também grava
+   `boundary.geojson`, `bairros.geojson` (pontos dos rótulos) e `meta.json`.
+4. `npm run data:listings` (`scripts/generate-listings.mjs`): imóveis fictícios de forma determinística
+   (seed `20261007`), espalhados pela região. Aceita `--count N` (padrão 60). Cada imóvel em prédio leva o contorno
+   (`footprint`) e a altura do prédio do OSM, porque o app não tem mais o arquivo de prédios inteiro. As comodidades
+   vêm de um gerador aleatório separado (seed + 1); um título que promete "piscina" ou "sacada" sempre a tem.
+5. `npm run data:developments`: empreendimentos (ver acima).
+6. `npm run validate:data`: verificações de consistência (ver abaixo), contra os dados de `.cache/region/`.
 
-Se o Nominatim ou o Overpass falharem, o script termina com erro e **não gera dados substitutos**.
+**Para mudar a região**, edite a lista de bairros em `scripts/data/region.json` e rode `npm run data:region`,
+`data:tiles` e, se quiser imóveis nos novos bairros, `data:listings`. A cidade inteira funciona do mesmo jeito: o
+tamanho do `.pmtiles` cresce, mas o que cada visitante baixa continua sendo só o que está na tela.
 
 ## Estrutura
 
 ```
-scripts/        fetch-osm, generate-listings, validate-listings, e2e-check, lib/height (regra de renderHeight)
+scripts/        download-osm, extract-region.py, build-tiles, generate-listings, generate-developments,
+                validate-listings, add-listings, e2e-check; lib/ (altura, residencial, gravador PMTiles)
+scripts/data/   região (bairros) e empreendimentos
 public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json
 src/data/       tipos, validação em tempo de carga, carregamento
 src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
@@ -144,7 +189,11 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 |---|---|
 | maplibre-gl | 6.13.0 |
 | @turf/* (módulos individuais) | 7.4.0 |
-| osmtogeojson | 3.0.0-beta.5 |
+| pmtiles | 4.5.0 |
+| geojson-vt | 4.0.3 |
+| vt-pbf | 3.1.3 |
+| pyosmium (Python) | 4.3.1 |
+| shapely (Python) | 2.2.0 |
 | suncalc | 2.1.1 |
 | vite | 8.3.3 |
 | typescript | 7.0.2 |
@@ -169,17 +218,15 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 
 ## Decisões e premissas
 
-- **Limite do bairro**: **administrativo**. O Nominatim retornou a relação OSM
-  [3482571](https://www.openstreetmap.org/relation/3482571) (`boundary=administrative`, "América, Joinville") com
-  polígono, e ele é usado tanto na consulta ao Overpass (`area(id:3603482571)`) quanto no mapa. O Overpass devolve
-  elementos com **algum nó** dentro da área, então vias e rios que cruzam o limite aparecem inteiros, um pouco além
-  dele (por isso o bbox dos dados é maior que o do limite).
+- **Limite da região**: união dos polígonos **administrativos** (`admin_level=10`) dos 12 bairros no OSM. O limite
+  externo aparece tracejado; os limites entre bairros, em tracejado mais fraco.
 - **Altura dos prédios (`renderHeight`)**: tag `height`, se válida; senão `building:levels × 3 m`; senão 6 m.
   Valores como `"12 m"` e `"7,5"` são aceitos. Valores inválidos (`"3;4"`) caem na regra seguinte.
 - **Prédios residenciais elegíveis** para imóveis: `building` ∈ {yes, house, residential, apartments, detached,
   semidetached_house, terrace}, sem as tags `amenity`, `shop`, `office`, `healthcare`, `craft`, `tourism`,
   `leisure`, `religion`, `denomination` e `industrial`, e **sem `name`**. Prédios com nome costumam ser pontos de
-  referência, então foram excluídos por precaução. O centróide precisa estar dentro do limite do bairro.
+  referência, então foram excluídos por precaução. O centróide precisa estar dentro da região. A marca
+  `residential` é calculada ao gerar os blocos, e o "Anunciar" a usa para recusar prédios não residenciais.
 - **Apartamentos** só usam prédios com área de projeção ≥ 250 m². A altura do prédio no mapa é sobrescrita por
   `floors × 3 m` (8 a 14 pavimentos fictícios).
 - **Geminados**: se houver pelo menos 3 prédios marcados como `semidetached_house` ou `terrace`, só eles são usados;
@@ -283,10 +330,16 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - O contorno dos imóveis é desenhado só na base do volume.
 - Muitos prédios do OSM têm só `building=yes`. Um prédio "residencial" escolhido pode, na realidade, ser comercial ou
   galpão, porque o filtro depende das tags existentes.
-- `npm audit` aponta vulnerabilidades em `@xmldom/xmldom`, que vem pelo `osmtogeojson` 3.0.0-beta.5. É uma
-  dependência só de desenvolvimento, usada no script de dados com entrada **JSON** do Overpass (o parser XML não é
-  usado), e não entra no bundle do navegador. A "correção" sugerida rebaixaria para `osmtogeojson` 2.x, o que foi
-  evitado.
+- **98,6% dos prédios da região (56.440 de 57.261) não têm altura nem número de pavimentos no OSM** e aparecem com
+  6 m. Bairros como Centro e Atiradores ficam bem mais baixos que na realidade. Veja `docs/dados-prefeitura.md`
+  para as fontes oficiais que podem corrigir isso.
+- O "Anunciar" escolhe prédios só de perto (zoom ≥ 14, já em 3D). A checagem de terreno livre usa os blocos
+  carregados na tela; um prédio que cruza a borda de um bloco vem recortado com uma margem de ~30 m, então
+  contornos muito grandes podem chegar incompletos na pré-visualização.
+- Anúncios salvos no navegador por versões anteriores (sem o contorno do prédio) são descartados ao carregar.
+- Durante voos de câmera o MapLibre às vezes pede ao mapa base um bloco acima do zoom 15, e esse pedido falha
+  ("Failed to fetch"). O bloco é descartado e o do zoom 15 ampliado é usado, sem buraco no mapa. Esses casos vão
+  para o console como aviso (`console.warn`); outros erros do mapa continuam como erro.
 - Os gestos do painel no celular (arrastar para cima/baixo) usam Pointer Events e foram testados com o mouse
   emulando o arrasto num viewport de celular, não com toque real num aparelho.
 - A acessibilidade foi verificada por automação (ordem do Tab, foco, `aria-live`, rótulos). Não testei com leitores
@@ -315,43 +368,42 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 
 ## Dados (contagens da última execução)
 
-Execução de 2026-10-07 (`public/data/meta.json`):
+Extrato OSM de 07/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 08/10/2026 (`public/data/meta.json`):
 
 | Camada | Feições |
 |---|---|
-| Prédios (`building`) | 3.357 |
-| ↳ altura pela tag `height` | 0 |
-| ↳ altura por `building:levels × 3 m` | 235 |
-| ↳ altura padrão de 6 m | 3.122 |
-| Vias (`highway`) | 576 |
-| Água (`natural=water`, `waterway`) | 15 |
-| Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 19 |
+| Prédios (`building`) | 57.261 |
+| ↳ altura pela tag `height` | 42 |
+| ↳ altura por `building:levels × 3 m` | 779 |
+| ↳ altura padrão de 6 m | 56.440 |
+| Vias (`highway`) | 5.531 |
+| Água (`natural=water`, `waterway`) | 280 |
+| Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 377 |
 
-- Centro (Nominatim): −26,2903607, −48,8535810
-- Bbox do limite: −48,864635, −26,303255, −48,842521, −26,277429 (W, S, E, N)
-- Bbox de todos os dados: −48,865804, −26,314700, −48,804361, −26,268235
+- Bbox da região: −48,898289, −26,318979, −48,786292, −26,218690 (W, S, E, N); centro −26,2713703, −48,8409923.
+- `joinville-norte.pmtiles`: 151 blocos, zooms 10 a 15, ≈4,1 MB.
 
-Imóveis fictícios (`listings.json`): 30 no total (`--count 30`).
+Imóveis fictícios (`listings.json`): 60 no total (`--count 60`), espalhados pelos 12 bairros.
 
 | Tipo | Quantidade | Observação |
 |---|---|---|
-| Apartamentos | 10 | 8 a 14 pavimentos fictícios |
-| Casas | 8 | |
-| Geminados | 6 | Escolhidos por área: o OSM do bairro não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
-| Terrenos | 6 | Nenhum precisou ser reduzido. Distância mínima entre um terreno e os outros imóveis: 177 m (250 m × √(15/30)) |
+| Apartamentos | 20 | 8 a 14 pavimentos fictícios |
+| Casas | 16 | |
+| Geminados | 12 | Escolhidos por área: o OSM não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
+| Terrenos | 12 | Nenhum precisou ser reduzido |
 
-- 3 imóveis com localização aproximada: `house-11`, `semi-19` e `land-25`.
-- Os 5 primeiros apartamentos são os mesmos da versão com 15 imóveis (mesma seed); os demais mudaram de id e posição.
-- Prédios residenciais elegíveis: 3.098.
+- 3 imóveis com localização aproximada: `house-21`, `semi-37` e `land-49`.
+- Prédios residenciais elegíveis: 56.147.
 
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 46 testes (renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
+- `npm test`: 49 testes: gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+  diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
   totais de unidades divulgados, andares sem sobreposição, unidades de um andar sem sobreposição, torres sem
-  sobreposição, face → sol, link com empreendimento e unidade).
+  sobreposição, face → sol, link com empreendimento e unidade.
 - `npm run validate:data`:
   - ids únicos e `fictional: true` em todos; comodidades válidas e sem repetição;
   - terrenos não se sobrepõem;
@@ -359,7 +411,7 @@ Imóveis fictícios (`listings.json`): 30 no total (`--count 30`).
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
 - `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 63 checagens:
-  - camadas renderizadas;
+  - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
   - passar o mouse mostra a etiqueta com o preço certo e cursor de mão, e sair a esconde;

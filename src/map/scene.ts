@@ -1,6 +1,6 @@
-import { AttributionControl, LngLatBounds, Map as MlMap, NavigationControl } from 'maplibre-gl';
+import { AttributionControl, LngLatBounds, Map as MlMap, Marker, NavigationControl } from 'maplibre-gl';
 import type { ExpressionSpecification, GeoJSONSource, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl';
-import type { Feature, FeatureCollection, Point, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, Point, Polygon, MultiPolygon } from 'geojson';
 import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
@@ -14,6 +14,18 @@ const MAPLIBRE_ATTRIBUTION = '<a href="https://maplibre.org/" target="_blank" re
 
 const LAND_HEIGHT_M = 0.5;
 const METERS_PER_FLOOR = 3;
+const DEFAULT_BUILDING_HEIGHT_M = 6;
+
+/**
+ * "3D only up close": the tiles carry buildings from z13. Up to Z_FLAT_END they are flat footprints;
+ * from Z_3D_START they rise until reaching their full height at Z_3D_FULL. With a pitched camera the
+ * far part of the view uses lower-zoom tiles, so the horizon stays light.
+ */
+const Z_3D_START = 14;
+const Z_3D_FULL = 15.5;
+const Z_FLAT_END = 14.6;
+/** Neighbourhood labels: region overview only. */
+const BAIRRO_LABEL_MAX_ZOOM = 15;
 
 type ListingKind = 'building' | 'land' | 'approx';
 interface ListingFeatureProps {
@@ -35,7 +47,9 @@ const PIN_MAX_ZOOM = 16.5;
 export interface PickResult {
   lngLat: [number, number];
   /** Context building under the click, if any (buildings of existing listings are not pickable). */
-  building?: { osmId: string; properties: Record<string, unknown> };
+  building?: { osmId: string; residential: boolean; height: number; geometry: Polygon | MultiPolygon };
+  /** Buildings are only pickable up close (3D, zoom ≥ Z_3D_START). */
+  tooFar?: boolean;
 }
 
 /** Colour of the place being chosen for a new listing (distinct from the listing accent). */
@@ -70,9 +84,9 @@ export class Scene {
   ) {
     this.listings = listings;
     const [w, s, e, n] = data.meta.boundaryBbox;
-    // maxBounds: neighbourhood bbox expanded by 60% of its size on each side
-    const padX = (e - w) * 0.6;
-    const padY = (n - s) * 0.6;
+    // maxBounds: region bbox expanded by 30% of its size on each side
+    const padX = (e - w) * 0.3;
+    const padY = (n - s) * 0.3;
     this.buildListingFeatures();
 
     this.map = new MlMap({
@@ -83,7 +97,7 @@ export class Scene {
       pitch: 58,
       bearing: -20,
       maxPitch: 75,
-      minZoom: 13.5,
+      minZoom: 10.5,
       maxZoom: 19.5,
       maxBounds: [w - padX, s - padY, e + padX, n + padY],
       attributionControl: false,
@@ -96,7 +110,32 @@ export class Scene {
     this.showOverview(false);
 
     this.ready = new Promise((resolve) => this.map.once('load', () => resolve()));
+    // While the camera flies, MapLibre sometimes asks the base map for a tile beyond the archive's zoom 15
+    // and that request fails ("Failed to fetch"); the tile is dropped and the overzoomed z15 tile is shown.
+    // Those go to the console as warnings; any other map error stays an error.
+    this.map.on('error', (e) => {
+      const { error, sourceId } = e as unknown as { error?: Error; sourceId?: string };
+      if (sourceId === 'osm') console.warn(`Bloco do mapa base não carregado: ${error?.message ?? error}`);
+      else console.error(error ?? e);
+    });
     this.bindInteractions();
+    this.addBairroLabels();
+  }
+
+  /** Neighbourhood names as HTML labels (the style has no fonts), shown in the region overview. */
+  private addBairroLabels(): void {
+    const labels = this.data.bairros.features.map((f) => {
+      const el = document.createElement('div');
+      el.className = 'bairro-label';
+      el.textContent = f.properties.name;
+      return new Marker({ element: el }).setLngLat(f.geometry.coordinates as [number, number]).addTo(this.map);
+    });
+    const update = () => {
+      const show = this.map.getZoom() < BAIRRO_LABEL_MAX_ZOOM;
+      labels.forEach((m) => m.getElement().classList.toggle('is-hidden', !show));
+    };
+    this.map.on('zoomend', update);
+    update();
   }
 
   // ---------------------------------------------------------------- style
@@ -126,13 +165,18 @@ export class Scene {
 
     return {
       version: 8,
-      // No external tiles, glyphs or sprites: everything comes from local GeoJSON.
+      // No glyphs or sprites. Base map: one local PMTiles file (vector tiles, loaded by range requests).
       sources: {
-        boundary: { type: 'geojson', data: this.data.boundary, attribution: OSM_ATTRIBUTION },
-        buildings: { type: 'geojson', data: this.data.buildings },
-        roads: { type: 'geojson', data: this.data.roads },
-        water: { type: 'geojson', data: this.data.water },
-        green: { type: 'geojson', data: this.data.green },
+        osm: {
+          type: 'vector',
+          url: `pmtiles://${this.data.tilesUrl}`,
+          // also stated here (the archive says the same): without it, tiles requested before the archive
+          // header is read use the default maxzoom and fail at z16+
+          minzoom: 10,
+          maxzoom: 15,
+          attribution: OSM_ATTRIBUTION,
+        },
+        boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },
         'listing-pins': { type: 'geojson', data: this.pinCollection() },
         'pick-preview': { type: 'geojson', data: EMPTY_FC },
@@ -144,27 +188,31 @@ export class Scene {
         {
           id: 'green',
           type: 'fill',
-          source: 'green',
+          source: 'osm',
+          'source-layer': 'green',
           paint: { 'fill-color': t.green, 'fill-opacity': 0.8 },
         },
         {
           id: 'water-area',
           type: 'fill',
-          source: 'water',
+          source: 'osm',
+          'source-layer': 'water',
           filter: ['==', ['geometry-type'], 'Polygon'],
           paint: { 'fill-color': t.water },
         },
         {
           id: 'water-line',
           type: 'line',
-          source: 'water',
+          source: 'osm',
+          'source-layer': 'water',
           filter: ['==', ['geometry-type'], 'LineString'],
           paint: { 'line-color': t.water, 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1.5, 18, 6] },
         },
         {
           id: 'roads',
           type: 'line',
-          source: 'roads',
+          source: 'osm',
+          'source-layer': 'roads',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': t.roads,
@@ -172,6 +220,8 @@ export class Scene {
               'interpolate',
               ['exponential', 1.6],
               ['zoom'],
+              11,
+              ['match', ['get', 'highway'], ['primary', 'secondary', 'tertiary'], 1.2, ['footway', 'path', 'steps', 'cycleway', 'pedestrian'], 0, 0.3],
               14,
               ['match', ['get', 'highway'], ['primary', 'secondary', 'tertiary'], 2.5, ['footway', 'path', 'steps', 'cycleway', 'pedestrian'], 0.5, 1.5],
               18,
@@ -180,19 +230,42 @@ export class Scene {
           },
         },
         {
+          id: 'bairros-line',
+          type: 'line',
+          source: 'osm',
+          'source-layer': 'bairros',
+          paint: { 'line-color': t.boundary, 'line-width': 1, 'line-dasharray': [2, 3], 'line-opacity': 0.45 },
+        },
+        {
           id: 'boundary-line',
           type: 'line',
           source: 'boundary',
           paint: { 'line-color': t.boundary, 'line-width': 1.5, 'line-dasharray': [3, 2], 'line-opacity': 0.8 },
         },
         {
+          // from afar: flat footprints (texture of the city without the cost and clutter of 3D)
+          id: 'buildings-flat',
+          type: 'fill',
+          source: 'osm',
+          'source-layer': 'buildings',
+          maxzoom: Z_FLAT_END,
+          filter: this.contextFilter(),
+          paint: {
+            'fill-color': t.context,
+            'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.45, Z_FLAT_END, 0.9],
+          },
+        },
+        {
+          // up close: buildings rise from flat to their height between Z_3D_START and Z_3D_FULL
           id: 'context-buildings',
           type: 'fill-extrusion',
-          source: 'buildings',
+          source: 'osm',
+          'source-layer': 'buildings',
+          minzoom: Z_3D_START,
           filter: this.contextFilter(),
           paint: {
             'fill-extrusion-color': t.context,
-            'fill-extrusion-height': ['get', 'renderHeight'],
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, ['get', 'height']],
             'fill-extrusion-base': 0,
             'fill-extrusion-opacity': 0.95,
             'fill-extrusion-vertical-gradient': true,
@@ -316,7 +389,6 @@ export class Scene {
   // ---------------------------------------------------------------- listings
 
   private buildListingFeatures(): void {
-    const byOsmId = new Map(this.data.buildings.features.map((f) => [f.properties.osmId, f]));
     this.listingFeatures = [];
     this.featureIdByListing.clear();
     this.listings.forEach((l, i) => {
@@ -334,11 +406,10 @@ export class Scene {
         kind = 'land';
         height = LAND_HEIGHT_M;
       } else {
-        const b = byOsmId.get(l.buildingOsmId!);
-        if (!b) return;
-        geometry = b.geometry;
+        if (!l.footprint) return;
+        geometry = l.footprint;
         kind = 'building';
-        height = l.floors ? l.floors * METERS_PER_FLOOR : b.properties.renderHeight;
+        height = l.floors ? l.floors * METERS_PER_FLOOR : (l.buildingHeightM ?? DEFAULT_BUILDING_HEIGHT_M);
       }
       this.listingFeatures.push({
         type: 'Feature',
@@ -390,7 +461,8 @@ export class Scene {
     for (const source of LISTING_SOURCES) this.map.removeFeatureState({ source });
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
     (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
-    if (this.map.getLayer('context-buildings')) this.map.setFilter('context-buildings', this.contextFilter());
+    for (const id of ['context-buildings', 'buildings-flat'])
+      if (this.map.getLayer(id)) this.map.setFilter(id, this.contextFilter());
   }
 
   // ---------------------------------------------------------------- choosing a place for a new listing
@@ -420,10 +492,15 @@ export class Scene {
     (this.map.getSource('pick-preview') as GeoJSONSource | undefined)?.setData(fc);
   }
 
-  /** Geometry and height of an OSM building (for the preview of a new listing). */
-  buildingShape(osmId: string): { geometry: Polygon | MultiPolygon; height: number } | null {
-    const b = this.data.buildings.features.find((f) => f.properties.osmId === osmId);
-    return b ? { geometry: b.geometry, height: b.properties.renderHeight } : null;
+  /** Features of a tile layer in the loaded tiles around `bbox` (used to check where a new lot fits). */
+  tileFeaturesIn(sourceLayer: string, bbox: [number, number, number, number]): Feature<Geometry>[] {
+    const out: Feature<Geometry>[] = [];
+    for (const f of this.map.querySourceFeatures('osm', { sourceLayer })) {
+      const g = f.geometry;
+      const [w, s, e, n] = turfBbox(g);
+      if (w <= bbox[2] && e >= bbox[0] && s <= bbox[3] && n >= bbox[1]) out.push({ type: 'Feature', properties: f.properties, geometry: g });
+    }
+    return out;
   }
 
   listingBounds(listing: Listing): [number, number, number, number] | null {
@@ -496,6 +573,8 @@ export class Scene {
     m.setPaintProperty('roads', 'line-color', t.roads);
     m.setPaintProperty('boundary-line', 'line-color', t.boundary);
     m.setPaintProperty('context-buildings', 'fill-extrusion-color', t.context);
+    m.setPaintProperty('buildings-flat', 'fill-color', t.context);
+    m.setPaintProperty('bairros-line', 'line-color', t.boundary);
     m.setPaintProperty('listing-dimmed', 'fill-extrusion-color', t.dimmed);
     m.setPaintProperty('listing-buildings', 'fill-extrusion-color', listingBuildingHover);
     m.setPaintProperty('listing-land', 'fill-extrusion-color', landHover);
@@ -566,10 +645,21 @@ export class Scene {
     this.map.on('movestart', hoverOff);
     this.map.on('click', (e) => {
       if (this.onPick) {
+        const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        if (this.map.getZoom() < Z_3D_START) return this.onPick({ lngLat, tooFar: true });
         const b = this.map.queryRenderedFeatures(e.point, { layers: ['context-buildings'] })[0];
         this.onPick({
-          lngLat: [e.lngLat.lng, e.lngLat.lat],
-          ...(b ? { building: { osmId: String(b.properties.osmId), properties: { ...b.properties } } } : {}),
+          lngLat,
+          ...(b && (b.geometry.type === 'Polygon' || b.geometry.type === 'MultiPolygon')
+            ? {
+                building: {
+                  osmId: String(b.properties.osmId),
+                  residential: b.properties.residential === true,
+                  height: Number(b.properties.height) || DEFAULT_BUILDING_HEIGHT_M,
+                  geometry: b.geometry,
+                },
+              }
+            : {}),
         });
         return;
       }

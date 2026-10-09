@@ -16,8 +16,11 @@ import { isResidentialBuilding } from './lib/residential.mjs';
 // Optional path: validate another file in the listings.json format (e.g. an export to be merged).
 const file = process.argv[2] ? path.resolve(process.argv[2]) : null;
 
-const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
-const read = async (f) => JSON.parse(await readFile(path.join(DATA, f), 'utf8'));
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DATA = path.join(ROOT, 'public', 'data');
+// buildings, roads etc. of the region (scripts/extract-region.py); not shipped to the browser
+const REGION = path.join(ROOT, '.cache', 'region');
+const read = async (f) => JSON.parse(await readFile(path.join(f === 'listings.json' ? DATA : REGION, f), 'utf8'));
 const [listingsFile, buildings, roads, water, green, boundaryFc] = await Promise.all([
   file ? readFile(file, 'utf8').then(JSON.parse) : read('listings.json'),
   ...['buildings.geojson', 'roads.geojson', 'water.geojson', 'green.geojson', 'boundary.geojson'].map(read),
@@ -60,6 +63,13 @@ if (missing.length) errors.push(`buildingOsmId not found: ${missing.map((l) => l
 else ok(`all ${withBuilding.length} buildingOsmId exist in buildings.geojson`);
 const bIds = withBuilding.map((l) => l.buildingOsmId);
 if (new Set(bIds).size !== bIds.length) errors.push('two listings share the same building');
+
+// footprint: the outline drawn by the app must be the building's OSM outline
+const badFootprint = withBuilding.filter(
+  (l) => byId.has(l.buildingOsmId) && JSON.stringify(l.footprint) !== JSON.stringify(byId.get(l.buildingOsmId).geometry),
+);
+if (badFootprint.length) errors.push(`footprint differs from the OSM building: ${badFootprint.map((l) => l.id).join(', ')}`);
+else ok('every building listing carries its OSM outline (footprint)');
 
 // residential & untagged building check
 const bad = withBuilding.filter((l) => !isResidentialBuilding(byId.get(l.buildingOsmId)?.properties));

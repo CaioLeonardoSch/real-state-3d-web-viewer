@@ -23,10 +23,10 @@ function storage(): Storage | null {
 }
 
 /**
- * Reads the stored listings. Entries that no longer validate (e.g. after a data update removed their
- * building) are dropped rather than breaking the page.
+ * Reads the stored listings. Entries that no longer validate (e.g. saved by an older version, without
+ * the building outline) are dropped rather than breaking the page.
  */
-export function loadUserListings(agencies: Agency[], buildingIds: Set<string>, takenIds: Set<string>): Listing[] {
+export function loadUserListings(agencies: Agency[], takenIds: Set<string>): Listing[] {
   let raw: unknown;
   try {
     raw = JSON.parse(storage()?.getItem(STORAGE_KEY) ?? '[]');
@@ -37,7 +37,7 @@ export function loadUserListings(agencies: Agency[], buildingIds: Set<string>, t
   const out: Listing[] = [];
   for (const item of raw) {
     try {
-      const [l] = validateListingsFile({ fictional: true, agencies, listings: [item] }, buildingIds).listings;
+      const [l] = validateListingsFile({ fictional: true, agencies, listings: [item] }).listings;
       if (takenIds.has(l.id)) continue;
       takenIds.add(l.id);
       out.push({ ...l, userAdded: true });

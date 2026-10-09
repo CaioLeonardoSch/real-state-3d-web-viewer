@@ -23,7 +23,8 @@ const SETBACK_M = 9;
 const PLATE_FACTOR = 1.3;
 const STAGE_SOLD = { launch: 0.3, construction: 0.6, ready: 0.8 };
 
-const readJson = async (f) => JSON.parse(await readFile(path.join(DATA, f), 'utf8'));
+// Region GeoJSON from scripts/extract-region.py (not versioned)
+const readJson = async (f) => JSON.parse(await readFile(path.join(ROOT, '.cache', 'region', f), 'utf8'));
 const [boundaryFc, buildingsFc, roadsFc] = await Promise.all(['boundary.geojson', 'buildings.geojson', 'roads.geojson'].map(readJson));
 const boundary = boundaryFc.features[0];
 

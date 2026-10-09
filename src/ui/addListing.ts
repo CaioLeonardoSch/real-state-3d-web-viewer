@@ -1,6 +1,5 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import turfCentroid from '@turf/centroid';
-import { isResidentialBuilding } from '../../scripts/lib/residential.mjs';
 import {
   AMENITIES,
   AMENITY_LABELS,
@@ -39,7 +38,7 @@ export interface AddListingDeps {
 
 /** Place chosen on the map for the new listing. */
 type Place =
-  | { kind: 'building'; osmId: string; center: [number, number] }
+  | { kind: 'building'; osmId: string; center: [number, number]; geometry: Polygon | MultiPolygon; height: number }
   | { kind: 'land'; center: [number, number]; lot: Polygon; front: number; depth: number };
 
 /**
@@ -215,19 +214,21 @@ export class AddListingPanel {
   }
 
   private onPick(p: PickResult): void {
-    if (!this.deps.checker.insideBoundary(p.lngLat)) return this.pickHint('Esse ponto fica fora do bairro América. Clique dentro do limite tracejado.');
+    if (!this.deps.checker.insideBoundary(p.lngLat)) return this.pickHint('Esse ponto fica fora da região do mapa. Clique dentro do limite tracejado.');
+    if (p.tooFar) return this.pickHint('Aproxime o mapa (os prédios ficam em 3D) e clique de novo.');
     if (this.type === 'land') {
       const problem = this.tryLot(p.lngLat);
       if (problem) return this.pickHint(problem);
     } else {
       if (!p.building) return this.pickHint('Aí não há prédio disponível. Clique num prédio cinza (os laranja já estão à venda).');
-      if (!isResidentialBuilding(p.building.properties))
+      // residential rule (scripts/lib/residential.mjs), computed when the tiles were built
+      if (!p.building.residential)
         return this.pickHint('Esse prédio não é residencial no OpenStreetMap (ou tem nome próprio). Escolha outro.');
       const taken = this.deps.listingOnBuilding(p.building.osmId);
       if (taken) return this.pickHint(`Esse prédio já tem um anúncio: "${taken.title}". Escolha outro.`);
-      const shape = this.deps.scene.buildingShape(p.building.osmId)!;
-      const center = turfCentroid({ type: 'Feature', properties: {}, geometry: shape.geometry }).geometry.coordinates as [number, number];
-      this.setPlace({ kind: 'building', osmId: p.building.osmId, center });
+      const { geometry, height, osmId } = p.building;
+      const center = turfCentroid({ type: 'Feature', properties: {}, geometry }).geometry.coordinates as [number, number];
+      this.setPlace({ kind: 'building', osmId, center, geometry, height });
     }
     this.deps.scene.stopPicking();
     this.endPickUi();
@@ -264,9 +265,8 @@ export class AddListingPanel {
     const { scene } = this.deps;
     if (!this.place) return scene.setPickPreview(null);
     if (this.place.kind === 'land') return scene.setPickPreview(this.place.lot, 0.5);
-    const shape = scene.buildingShape(this.place.osmId);
     const floors = this.type === 'apartment' ? parseNumberInput(this.value('floors')) : null;
-    scene.setPickPreview(shape?.geometry ?? null, floors ? floors * METERS_PER_FLOOR : (shape?.height ?? 6));
+    scene.setPickPreview(this.place.geometry, floors ? floors * METERS_PER_FLOOR : this.place.height);
   }
 
   private renderPlaceStatus(problem?: string): void {
@@ -336,7 +336,9 @@ export class AddListingPanel {
       parkingSpots,
       status,
       features,
-      ...(place.kind === 'land' ? { lotPolygon: place.lot } : { buildingOsmId: place.osmId }),
+      ...(place.kind === 'land'
+        ? { lotPolygon: place.lot }
+        : { buildingOsmId: place.osmId, footprint: place.geometry, buildingHeightM: place.height }),
       ...(floors ? { floors } : {}),
       approximateLocation: approximate,
       ...(approximate ? { approxCenter: approxCenterFor(id, place.center), approxRadiusM: APPROX_RADIUS_M } : {}),

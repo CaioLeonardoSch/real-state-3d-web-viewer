@@ -771,6 +771,28 @@ body[data-tod='night'] .a-error {
   font-size: 14px;
 }
 
+/* ---------------- neighbourhood labels (HTML markers: the map style has no fonts) ---------------- */
+.bairro-label {
+  pointer-events: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5c6470;
+  text-shadow:
+    0 0 3px var(--bg),
+    0 0 3px var(--bg),
+    0 0 6px var(--bg);
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+body[data-tod='night'] .bairro-label {
+  color: #b9c2d6;
+}
+.bairro-label.is-hidden {
+  opacity: 0;
+}
+
 /* ---------------- developments ("espelho de vendas 3D") ---------------- */
 :root {
   --st-available: #2e9d5b;
@@ -802,6 +824,9 @@ body[data-tod='night'] .a-error {
 }
 .dev-marker span {
   color: var(--muted);
+}
+.dev-marker.is-far {
+  display: none;
 }
 .dev-marker.is-open {
   border-left-color: var(--st-selected);

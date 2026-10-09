@@ -1,5 +1,6 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { setWorkerUrl } from 'maplibre-gl';
+import { addProtocol, setWorkerUrl, type AddProtocolAction } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 // MapLibre v6 loads its worker from a separate module next to the library file. After bundling,
 // that file must be emitted explicitly and its URL handed to MapLibre.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
@@ -31,6 +32,16 @@ import { DevelopmentPanel } from './ui/developmentPanel';
 import { countByStatus } from './data/developments';
 
 setWorkerUrl(workerUrl);
+// "pmtiles://" sources: vector tiles read from one static file with HTTP range requests.
+// When MapLibre cancels a tile (camera moved on), the request may fail with a generic error; report it as
+// an abort, which MapLibre ignores, instead of a map error.
+const pmtiles = new Protocol();
+addProtocol('pmtiles', (params, abortController) =>
+  (pmtiles.tile as AddProtocolAction)(params, abortController).catch((err: Error) => {
+    if (abortController.signal.aborted) throw new DOMException('Tile request cancelled', 'AbortError');
+    throw err;
+  }),
+);
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const status = $('#status');
@@ -51,14 +62,13 @@ interface HistoryState {
 }
 
 async function main() {
-  status.textContent = 'Carregando dados do bairro…';
+  status.textContent = 'Carregando o mapa…';
   const data = await loadData();
-  const [lon, lat] = data.meta.center; // from Nominatim, see scripts/fetch-osm.mjs
+  const [lon, lat] = data.meta.center; // centre of the region, see scripts/extract-region.py
   const agencies = data.listings.agencies;
   const baseListings = data.listings.listings;
-  const buildingIds = new Set(data.buildings.features.map((f) => f.properties.osmId));
   // listings added through "Anunciar imóvel", kept in this browser
-  let userListings = loadUserListings(agencies, buildingIds, new Set(baseListings.map((l) => l.id)));
+  let userListings = loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
   let listings = [...baseListings, ...userListings];
   const developments = data.developments;
   const known = {
@@ -252,7 +262,7 @@ async function main() {
   const addPanel = new AddListingPanel($('#add-panel'), {
     agencies,
     scene,
-    checker: new PlacementChecker(data),
+    checker: new PlacementChecker(data, (layer, bbox) => scene.tileFeaturesIn(layer, bbox)),
     listingOnBuilding: (osmId) => listings.find((l) => l.buildingOsmId === osmId),
     otherLots: () => listings.flatMap((l) => (l.lotPolygon ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),

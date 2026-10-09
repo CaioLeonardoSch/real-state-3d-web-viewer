@@ -25,6 +25,8 @@ export const DEV_COLORS = {
   leisure: '#86b8a4',
 };
 
+/** Tower labels appear from this zoom. */
+const MARKER_MIN_ZOOM = 13.5;
 /** Gap between stacked levels, so floors read as slabs. */
 const LEVEL_GAP_M = 0.35;
 const TOWER_LAYERS = ['dev-towers'];
@@ -209,6 +211,11 @@ export class DevelopmentLayer {
       });
       this.markers.push(new Marker({ element: el, anchor: 'top' }).setLngLat(d.center).addTo(this.map));
     }
+    // labels only once the towers are distinguishable (they pile up in the region overview)
+    const update = () =>
+      this.markers.forEach((m) => m.getElement().classList.toggle('is-far', this.map.getZoom() < MARKER_MIN_ZOOM));
+    this.map.on('zoomend', update);
+    update();
   }
 
   // ---------------------------------------------------------------- state

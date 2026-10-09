@@ -1,1 +1,63 @@
-{"generatedAt":"2026-10-07T18:50:58.783Z","source":"OpenStreetMap contributors (ODbL) via Nominatim + Overpass API","neighbourhood":"América, Joinville, Santa Catarina, Região Sul, Brasil","boundaryKind":"administrative","boundaryOsm":"relation/3482571","center":[-48.853581,-26.2903607],"boundaryBbox":[-48.8646354,-26.3032554,-48.8425209,-26.2774293],"dataBbox":[-48.8658037,-26.3147004,-48.8043615,-26.2682355],"counts":{"buildings":3357,"roads":576,"water":15,"green":19},"heightSources":{"height":0,"levels":235,"default":3122}}
+{
+  "region": "joinville-norte",
+  "regionName": "Joinville – região norte e central",
+  "bairros": [
+    "Centro",
+    "América",
+    "Atiradores",
+    "Glória",
+    "Saguaçu",
+    "Costa e Silva",
+    "Santo Antônio",
+    "Bom Retiro",
+    "Jardim Sofia",
+    "Iririú",
+    "Jardim Iririú",
+    "Aventureiro"
+  ],
+  "source": "santa-catarina-latest.osm.pbf",
+  "osmTimestamp": "2026-10-07T01:04:20Z",
+  "extractedAt": "2026-10-08T23:53:56Z",
+  "center": [
+    -48.8409923,
+    -26.2713703
+  ],
+  "boundaryBbox": [
+    -48.898289,
+    -26.318979,
+    -48.786292,
+    -26.21869
+  ],
+  "counts": {
+    "buildings": 57261,
+    "roads": 5531,
+    "water": 280,
+    "green": 377,
+    "heightFromTag": 42,
+    "heightFromLevels": 779,
+    "heightDefault": 56440
+  },
+  "tiles": "joinville-norte.pmtiles",
+  "tileZooms": {
+    "buildings": {
+      "minzoom": 12,
+      "maxzoom": 15
+    },
+    "roads": {
+      "minzoom": 10,
+      "maxzoom": 15
+    },
+    "water": {
+      "minzoom": 10,
+      "maxzoom": 15
+    },
+    "green": {
+      "minzoom": 10,
+      "maxzoom": 15
+    },
+    "bairros": {
+      "minzoom": 10,
+      "maxzoom": 15
+    }
+  }
+}

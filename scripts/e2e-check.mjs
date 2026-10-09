@@ -26,7 +26,6 @@ const TOTAL = DATA.length;
 const ALL_HEADING = `${TOTAL} imóveis à venda`;
 const LANDS = DATA.filter((l) => l.type === 'land');
 const brl = (n) => `R$ ${n.toLocaleString('pt-BR')}`;
-const RESIDENTIAL = ['yes', 'house', 'residential', 'apartments', 'detached', 'semidetached_house', 'terrace'];
 
 const results = [];
 const check = (name, pass, detail = '') => {
@@ -140,9 +139,10 @@ async function main() {
         return { lng: c.lng, lat: c.lat, zoom: m.getZoom(), bearing: m.getBearing(), pitch: m.getPitch() };
       });
     const initialCam = await camera();
-    const ctxCount = await renderedCount(page, 'context-buildings');
+    const ctxCount = await renderedCount(page, 'buildings-flat');
     const listingCount = await renderedCount(page, 'listing-buildings');
-    check('desktop: context building layer rendered', ctxCount > 0, `${ctxCount} features`);
+    check('desktop: region overview shows flat building footprints (3D only up close)',
+      ctxCount > 0 && (await renderedCount(page, 'context-buildings')) === 0, `${ctxCount} flat footprints`);
     check('desktop: listing layer rendered', listingCount > 0, `${listingCount} features`);
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
@@ -447,7 +447,7 @@ async function main() {
     const placeStatus = () => page.textContent('#add-panel .a-place-status');
     /** Clicks map points (grid scan) accepted by `accept` until the form reports a chosen place. */
     async function pickOnMap(accept, maxTries = 40) {
-      const candidates = await page.evaluate(({ accept, residential }) => {
+      const candidates = await page.evaluate(({ accept }) => {
         const map = window.__demo.map;
         const r = map.getCanvas().getBoundingClientRect();
         const out = [];
@@ -457,8 +457,7 @@ async function main() {
             const hits = map.queryRenderedFeatures([x, y]);
             const ok =
               accept === 'building'
-                ? hits[0]?.layer.id === 'context-buildings' && residential.includes(hits[0].properties.building) &&
-                  !['name', 'amenity', 'shop', 'office'].some((k) => k in hits[0].properties)
+                ? hits[0]?.layer.id === 'context-buildings' && hits[0].properties.residential === true
                 : // free ground: nothing but background around the point
                   [[0, 0], [-8, 0], [8, 0], [0, -8], [0, 8]].every(
                     ([dx, dy]) => map.queryRenderedFeatures([x + dx, y + dy]).every((h) => h.layer.id === 'boundary-line'),
@@ -468,7 +467,7 @@ async function main() {
         }
         // the middle of the view is inside the neighbourhood; the top rows may be beyond its limit
         return out.sort((a, b) => a.d - b.d);
-      }, { accept, residential: RESIDENTIAL });
+      }, { accept });
       for (const c of candidates.slice(0, maxTries)) {
         await page.mouse.click(c.x, c.y);
         await sleep(250);
@@ -477,6 +476,11 @@ async function main() {
       return false;
     }
 
+    // buildings are picked up close, where they are 3D
+    const META = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'meta.json'), 'utf8'));
+    const closeUp = () => page.evaluate((c) => window.__demo.map.jumpTo({ center: c, zoom: 16.3, pitch: 50, bearing: 0 }), META.center);
+    await closeUp();
+    await waitIdle(page);
     await page.click('.add-toggle');
     await sleep(200);
     check('"Anunciar" opens the form', await page.isVisible('#add-panel .add-form'));
@@ -507,9 +511,7 @@ async function main() {
     await page.keyboard.press('Escape');
     await sleep(300);
 
-    // back to the overview: the whole neighbourhood is visible, with more free ground than the close-up
-    await page.click('.overview-btn');
-    await sleep(300);
+    await closeUp();
     await waitIdle(page);
     await page.click('.add-toggle');
     await page.selectOption('#add-panel select[name="type"]', 'land');

@@ -1,0 +1,19 @@
+{
+  "id": "joinville-norte",
+  "name": "Joinville – região norte e central",
+  "city": "Joinville",
+  "bairros": [
+    "Centro",
+    "América",
+    "Atiradores",
+    "Glória",
+    "Saguaçu",
+    "Costa e Silva",
+    "Santo Antônio",
+    "Bom Retiro",
+    "Jardim Sofia",
+    "Iririú",
+    "Jardim Iririú",
+    "Aventureiro"
+  ]
+}

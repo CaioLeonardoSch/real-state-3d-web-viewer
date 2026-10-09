@@ -3,7 +3,8 @@
 // Deterministic: fixed seed, no Date/Math.random. Re-running produces the same file
 // as long as public/data/*.geojson do not change.
 //
-// Usage: node scripts/generate-listings.mjs [--count N]   (default 30, between 4 and 80)
+// Usage: node scripts/generate-listings.mjs [--count N]   (default 60, between 4 and 200)
+// Needs .cache/region/ (npm run data:region).
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -19,18 +20,21 @@ import turfNearestPointOnLine from '@turf/nearest-point-on-line';
 import turfBearing from '@turf/bearing';
 import { point, lineString, polygon } from '@turf/helpers';
 import { isResidentialBuilding } from './lib/residential.mjs';
+import { computeRenderHeight } from './lib/height.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'public', 'data');
+// Region GeoJSON from scripts/extract-region.py (not versioned)
+const SRC = path.join(ROOT, '.cache', 'region');
 const SEED = 20261007;
 const APPROX_RADIUS_M = 150;
 
 // ---------- how many listings ----------
 const argv = process.argv.slice(2);
 const countArg = argv.find((a) => a.startsWith('--count='))?.split('=')[1] ?? (argv.includes('--count') ? argv[argv.indexOf('--count') + 1] : undefined);
-const COUNT = countArg === undefined ? 30 : Number(countArg);
-if (!Number.isInteger(COUNT) || COUNT < 4 || COUNT > 80) {
-  console.error(`--count must be an integer between 4 and 80 (got ${countArg})`);
+const COUNT = countArg === undefined ? 60 : Number(countArg);
+if (!Number.isInteger(COUNT) || COUNT < 4 || COUNT > 200) {
+  console.error(`--count must be an integer between 4 and 200 (got ${countArg})`);
   process.exit(1);
 }
 
@@ -56,7 +60,7 @@ function strHash(s) {
 const roundTo = (n, step) => Math.round(n / step) * step;
 
 // ---------- load data ----------
-const readJson = async (f) => JSON.parse(await readFile(path.join(DATA, f), 'utf8'));
+const readJson = async (f) => JSON.parse(await readFile(path.join(SRC, f), 'utf8'));
 const boundaryFc = await readJson('boundary.geojson');
 const buildingsFc = await readJson('buildings.geojson');
 const roadsFc = await readJson('roads.geojson');
@@ -354,6 +358,9 @@ for (const type of plan) {
       parkingSpots,
       status,
       buildingOsmId: b.osmId,
+      // the app draws the listing from this outline (the tiles only carry the context buildings)
+      footprint: b.f.geometry,
+      buildingHeightM: computeRenderHeight(b.f.properties).renderHeight,
       ...(floors ? { floors } : {}),
       description:
         type === 'apartment'

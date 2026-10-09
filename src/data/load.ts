@@ -1,52 +1,49 @@
-import type { FeatureCollection, Polygon, MultiPolygon, Geometry } from 'geojson';
+import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson';
 import { validateListingsFile, type ListingsFile } from './types';
 import { validateDevelopmentsFile, type Development } from './developments';
 
-export interface BuildingProps {
-  osmId: string;
-  building: string;
-  renderHeight: number;
-  heightSource: 'height' | 'levels' | 'default';
-  [k: string]: unknown;
-}
-
+/** meta.json, written by scripts/build-tiles.mjs. */
 export interface DataMeta {
+  region: string;
+  regionName: string;
+  bairros: string[];
   center: [number, number];
-  boundaryKind: 'administrative' | 'approximate-bbox';
   boundaryBbox: [number, number, number, number];
+  /** Vector tiles file (PMTiles) next to meta.json. */
+  tiles: string;
+  osmTimestamp: string;
   counts: Record<string, number>;
 }
 
 export interface AppData {
   meta: DataMeta;
+  /** Outline of the mapped region (union of its neighbourhoods). */
   boundary: FeatureCollection<Polygon | MultiPolygon>;
-  buildings: FeatureCollection<Polygon | MultiPolygon, BuildingProps>;
-  roads: FeatureCollection<Geometry>;
-  water: FeatureCollection<Geometry>;
-  green: FeatureCollection<Geometry>;
+  /** One label point per neighbourhood. */
+  bairros: FeatureCollection<Point, { name: string }>;
+  /** Absolute URL of the PMTiles archive (buildings, roads, water, green, neighbourhood outlines). */
+  tilesUrl: string;
   listings: ListingsFile;
   /** Developments with units (empty when the file is missing). */
   developments: Development[];
 }
 
+const dataUrl = (name: string) => new URL(`${import.meta.env.BASE_URL}data/${name}`, location.href).href;
+
 async function getJson<T>(name: string): Promise<T> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/${name}`);
+  const res = await fetch(dataUrl(name));
   if (!res.ok) throw new Error(`Falha ao carregar ${name} (HTTP ${res.status})`);
   return (await res.json()) as T;
 }
 
 export async function loadData(): Promise<AppData> {
-  const [meta, boundary, buildings, roads, water, green, rawListings] = await Promise.all([
+  const [meta, boundary, bairros, rawListings] = await Promise.all([
     getJson<DataMeta>('meta.json'),
     getJson<AppData['boundary']>('boundary.geojson'),
-    getJson<AppData['buildings']>('buildings.geojson'),
-    getJson<AppData['roads']>('roads.geojson'),
-    getJson<AppData['water']>('water.geojson'),
-    getJson<AppData['green']>('green.geojson'),
+    getJson<AppData['bairros']>('bairros.geojson'),
     getJson<unknown>('listings.json'),
   ]);
-  const buildingIds = new Set(buildings.features.map((f) => f.properties.osmId));
-  const listings = validateListingsFile(rawListings, buildingIds);
+  const listings = validateListingsFile(rawListings);
   // optional layer: the map works without it
   const developments = await getJson<unknown>('developments.json')
     .then((raw) => validateDevelopmentsFile(raw).developments)
@@ -54,5 +51,5 @@ export async function loadData(): Promise<AppData> {
       console.warn(`Empreendimentos indisponíveis: ${err.message}`);
       return [];
     });
-  return { meta, boundary, buildings, roads, water, green, listings, developments };
+  return { meta, boundary, bairros, tilesUrl: dataUrl(meta.tiles), listings, developments };
 }

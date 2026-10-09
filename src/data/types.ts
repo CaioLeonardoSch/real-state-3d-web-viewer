@@ -1,4 +1,4 @@
-import type { Polygon } from 'geojson';
+import type { MultiPolygon, Polygon } from 'geojson';
 
 export const LISTING_TYPES = ['apartment', 'house', 'semi_detached', 'land'] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
@@ -55,8 +55,12 @@ export interface Listing {
   status: ListingStatus;
   /** Amenities, without duplicates. */
   features: Amenity[];
-  /** OSM id of a real building in buildings.geojson, e.g. "way/123". Absent for land. */
+  /** OSM id of a real building, e.g. "way/123". Absent for land. */
   buildingOsmId?: string;
+  /** Outline of that building (the map tiles only carry the context buildings). */
+  footprint?: Polygon | MultiPolygon;
+  /** Height of that building on the map, metres (OSM tag, levels × 3 m, or 6 m). */
+  buildingHeightM?: number;
   /** Generated lot polygon (land only). */
   lotPolygon?: Polygon;
   /** Fictional number of floors (apartments only); overrides the building height on the map. */
@@ -99,11 +103,8 @@ const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0
 const isLonLat = (v: unknown): v is [number, number] =>
   Array.isArray(v) && v.length === 2 && isNum(v[0]) && isNum(v[1]);
 
-/**
- * Load-time validation of listings.json. Returns the typed file or throws with every problem found.
- * `buildingIds` (optional) checks that each buildingOsmId exists in buildings.geojson.
- */
-export function validateListingsFile(raw: unknown, buildingIds?: Set<string>): ListingsFile {
+/** Load-time validation of listings.json. Returns the typed file or throws with every problem found. */
+export function validateListingsFile(raw: unknown): ListingsFile {
   const errors: string[] = [];
   if (!isObj(raw)) throw new Error('listings.json: root is not an object');
   if (raw.fictional !== true) errors.push('root.fictional must be true');
@@ -150,8 +151,9 @@ export function validateListingsFile(raw: unknown, buildingIds?: Set<string>): L
       if (!isObj(l.lotPolygon) || l.lotPolygon.type !== 'Polygon') errors.push(`${at}.lotPolygon missing`);
     } else {
       if (!isStr(l.buildingOsmId)) errors.push(`${at}.buildingOsmId missing`);
-      else if (buildingIds && !buildingIds.has(l.buildingOsmId))
-        errors.push(`${at}.buildingOsmId ${l.buildingOsmId} not in buildings.geojson`);
+      const fp = l.footprint;
+      if (!isObj(fp) || (fp.type !== 'Polygon' && fp.type !== 'MultiPolygon')) errors.push(`${at}.footprint missing`);
+      if (l.buildingHeightM !== undefined && !isNum(l.buildingHeightM)) errors.push(`${at}.buildingHeightM invalid`);
     }
     if (l.approximateLocation === true) {
       if (!isLonLat(l.approxCenter)) errors.push(`${at}.approxCenter missing`);
