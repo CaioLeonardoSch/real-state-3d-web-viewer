@@ -65,6 +65,12 @@ describe('URL state', () => {
     expect(searchToState('?reduzido=1', known)).toEqual(state);
     expect(searchToState('?reduzido=sim', known).criteria.reducedOnly).toBeNull();
   });
+  it('round-trips the rent search', () => {
+    const state = { criteria: { ...EMPTY_CRITERIA, transaction: 'rent' as const }, listingId: null, sort: 'relevance' as const, developmentId: null, unitId: null };
+    expect(stateToSearch(state)).toBe('?negocio=alugar&ordem=destaques');
+    expect(searchToState('?negocio=alugar&ordem=destaques', known)).toEqual(state);
+    expect(searchToState('?negocio=x', known).criteria.transaction).toBeNull();
+  });
   it('ignores unknown or invalid values', () => {
     const s = searchToState('?tipo=castelo,casa,casa&precoMin=-5&precoMax=abc&quartos=2.7&imob=agency-x&imovel=nope&ordem=xyz&comodidades=heliponto&situacao=x', known);
     expect(s).toEqual({

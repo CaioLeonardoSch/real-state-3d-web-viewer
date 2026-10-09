@@ -31,7 +31,7 @@ Os dados já estão versionados em `public/data/`, então o app funciona sem red
 
 São três caminhos:
 
-1. **Pelo app ("+ Anunciar")**: preencha o formulário, clique em **Escolher no mapa** e clique num prédio cinza
+1. **Pelo app ("+ Anunciar")**: preencha o formulário (cadastro completo, ver abaixo), clique em **Escolher no mapa** e clique num prédio cinza
    (residencial e sem outro anúncio) ou, para terreno, num espaço livre. O lote é desenhado no ponto clicado com a
    área informada, na proporção 2,5:1. O anúncio aparece na hora no mapa e na lista com a marca "Seu anúncio" e
    fica salvo **só neste navegador** (`localStorage`). Para excluir, abra o anúncio e use **Excluir este anúncio**.
@@ -42,12 +42,41 @@ São três caminhos:
    O script valida o arquivo com as mesmas regras do `listings.json`. Ids repetidos ganham sufixo, e um anúncio num
    prédio que já tem outro é recusado. O resultado combinado é validado de novo, e se falhar o `listings.json` volta
    ao original. Depois é só fazer o commit.
-3. **Gerar mais imóveis fictícios**: `npm run data:listings -- --count 50` (de 4 a 80; o padrão é 30). Mantém a
+3. **Gerar mais imóveis fictícios**: `npm run data:listings -- --count 50` (de 4 a 200; o padrão é 100). Mantém a
    proporção 5 : 4 : 3 : 3 entre apartamentos, casas, geminados e terrenos.
 
 A validação de um anúncio no app, no script e no `validate:data` segue as mesmas regras: prédio residencial do
 OSM (`scripts/lib/residential.mjs`), terreno dentro do bairro sem encostar em prédios, vias, água, áreas verdes ou
 outro terreno, e círculo aproximado que contém o local real.
+
+### Cadastro completo do anúncio
+
+O formulário segue, em linhas gerais, o que os portais pedem (o padrão de fato é o XML que as imobiliárias enviam a
+ZAP/VivaReal/OLX). Obrigatórios: local no mapa, preço (de venda e/ou aluguel), área, bairro, **5 fotos**, CRECI e
+WhatsApp.
+
+| Seção | Campos |
+|---|---|
+| Negócio | venda, locação ou ambos; preço de venda; aluguel mensal; condomínio; IPTU (por mês ou por ano); aceita financiamento/permuta; garantias da locação (caução, fiador, seguro fiança, título de capitalização) |
+| Imóvel | tipo, finalidade (residencial/comercial), área útil e total, área do terreno, quartos, suítes, banheiros, vagas e vagas cobertas, andar da unidade, andares do edifício, torres, ano de construção (ou de entrega), obra, comodidades, descrição |
+| Endereço | CEP (preenche rua, bairro e cidade pelo ViaCEP), rua, número, complemento, bairro (preenchido pelo ponto escolhido no mapa), cidade e **o que mostrar ao público**: endereço completo, só a rua ou só o bairro. Sem o endereço completo, o mapa mostra o raio de 150 m em vez do prédio |
+| Mídia | fotos (mínimo 5, até 12; capa escolhida, legendas), planta (imagem, entra no fim da galeria), vídeo (link do YouTube ou Vimeo, exibido embutido no anúncio) e link de tour 360° |
+| Anunciante | imobiliária, CRECI, código de referência, contato, WhatsApp, telefone, e-mail, exclusividade (com o documento de autorização, que seria conferido pelo backend) |
+| Publicação | situação (ativo, reservado, vendido), tipo de destaque (padrão, destaque, super destaque); datas de publicação e atualização automáticas |
+
+As fotos são reduzidas no navegador (JPEG, lado maior de 960 px) porque o `localStorage` comporta poucos MB; com
+backend elas iriam para um storage de arquivos. Os imóveis fictícios do gerador recebem os mesmos campos, **exceto
+fotos, rua e contato**, para não inventar dados de lugares e pessoas reais: o endereço deles mostra só o bairro.
+
+O painel do imóvel mostra a galeria de fotos (nativa, com a planta no fim), o vídeo embutido (YouTube pelo domínio
+`youtube-nocookie.com`, ou Vimeo; outros links viram só link), endereço conforme a escolha do anunciante,
+condomínio, IPTU, garantias, CRECI, código, datas, link do tour e o botão **Conversar no WhatsApp** (mensagem pronta
+com o título e o código). No próprio anúncio, **Gerenciar anúncio** muda a situação e o preço e mostra o
+**histórico de preço**, visível só para o anunciante.
+
+Na busca, **Comprar / Alugar** troca o modo (`?negocio=alugar`): no aluguel, preços, faixa e ordenação usam o valor
+mensal. A ordenação ganhou **Destaques primeiro** (super destaque, destaque, depois os mais recentes) e **Mais
+recentes**.
 
 ### Verificações extras
 
@@ -269,8 +298,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   ~1 km com pelo menos 300 prédios.
 - **Preço reduzido**: `previousPrice` (maior que `price`) e `priceReducedAt`. A lista, a etiqueta e o painel mostram o
   preço anterior riscado, o percentual ("−10%") e a data ("Preço reduzido em 22/09/2026"). Em "Mais filtros",
-  **Ofertas → Preço reduzido** filtra (`?reduzido=1`). No "Anunciar", o campo "Preço anterior" é opcional, precisa
-  ser maior que o atual e grava a data do dia. O gerador dá redução de 4% a 15% a ~20% dos imóveis.
+  **Ofertas → Preço reduzido** filtra (`?reduzido=1`). O anunciante **não digita** o preço anterior: a redução
+  aparece quando ele baixa o preço de um anúncio já publicado (em "Gerenciar anúncio"), e cada mudança fica em
+  `priceHistory`. Assim o desconto vem do histórico registrado na plataforma, não de um valor declarado. O gerador
+  dá redução de 4% a 15% a ~20% dos imóveis.
 - **Altura dos prédios (`renderHeight`)**: tag `height`, se válida; senão `building:levels × 3 m`; senão 6 m.
   Valores como `"12 m"` e `"7,5"` são aceitos. Valores inválidos (`"3;4"`) caem na regra seguinte.
 - **Prédios residenciais elegíveis** para imóveis: `building` ∈ {yes, house, residential, apartments, detached,
@@ -413,7 +444,7 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Backend (contas, anúncios, fotos, leads, espelho de vendas) e hospedagem multi-cliente: ver
   [`docs/backend.md`](docs/backend.md).
-- Fotos, contato por WhatsApp, favoritos e as demais melhorias priorizadas em
+- Favoritos, alertas e as demais melhorias priorizadas em
   [`docs/analise-concorrencia.md`](docs/analise-concorrencia.md).
 - Espelho de vendas com dados reais da incorporadora (planta do pavimento-tipo, tabela de unidades e de preços),
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
@@ -447,12 +478,13 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 | Terrenos | 20 | Nenhum precisou ser reduzido |
 
 - 19 com preço reduzido; 3 com localização aproximada: `house-35`, `semi-61` e `land-81`.
+- 14 também para alugar; 12 reservados; 9 com destaque e 4 com super destaque.
 - Prédios residenciais elegíveis (área urbana): 151.944.
 
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 57 testes: preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 66 testes: vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
@@ -464,7 +496,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 64 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 68 checagens:
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -484,8 +516,11 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - teclado: Tab → atalho → linha → Enter abre → Esc fecha e devolve o foco; anúncio da contagem para leitor de tela;
   - "Mais filtros": abre, conta os critérios ativos ("Mais filtros (2)"), filtra por comodidade + banheiros e grava
     `?banheiros=2&comodidades=piscina`;
-  - "Anunciar": casa num prédio cinza e terreno num espaço livre são salvos, abertos e aparecem na lista; continuam
-    após recarregar a página e podem ser excluídos;
+  - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
+  - "Anunciar": cadastro incompleto (4 fotos, sem CRECI) é recusado; casa num prédio cinza e terreno num espaço
+    livre são salvos, abertos e aparecem na lista, com galeria, endereço só da rua e link de WhatsApp; baixar o
+    preço no "Gerenciar anúncio" mostra o preço riscado e o histórico (só para o anunciante); continuam após recarregar e podem ser
+    excluídos;
   - empreendimentos: torres e rótulos no mapa; abrir divide a torre em unidades e lista todas por andar; escolher
     uma unidade mostra a ficha, deixa os andares de cima translúcidos e grava `?empreendimento=&unidade=`; "Só
     disponíveis" esmaece as demais; "Ver a vista da janela" leva a câmera à janela e Esc volta; "Voltar ao bairro"

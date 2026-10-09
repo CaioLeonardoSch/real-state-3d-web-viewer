@@ -25,6 +25,8 @@ const SORT_SLUGS: Record<SortKey, string> = {
   'price-desc': 'maior-preco',
   'area-desc': 'maior-area',
   'ppm2-asc': 'menor-preco-m2',
+  relevance: 'destaques',
+  recent: 'recentes',
 };
 const SLUG_TO_SORT = new Map(SORT_KEYS.map((k) => [SORT_SLUGS[k], k]));
 
@@ -82,6 +84,7 @@ function parseList<T>(raw: string | null, map: Map<string, T>): T[] {
 export function stateToSearch(state: UrlState): string {
   const p = new URLSearchParams();
   const c = state.criteria;
+  if (c.transaction === 'rent') p.set('negocio', 'alugar');
   if (state.listingId) p.set('imovel', state.listingId);
   if (state.developmentId) {
     p.set('empreendimento', state.developmentId);
@@ -114,6 +117,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
   const listingId = p.get('imovel');
   const criteria: FilterCriteria = {
     ...EMPTY_CRITERIA,
+    transaction: p.get('negocio') === 'alugar' ? 'rent' : null,
     types: parseList(p.get('tipo'), SLUG_TO_TYPE),
     statuses: parseList(p.get('situacao'), SLUG_TO_STATUS),
     features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),

@@ -128,6 +128,22 @@ describe('FilterStore', () => {
   });
 });
 
+describe('sale and rent', () => {
+  const rentals: Listing[] = [
+    { ...L('r1', 'apartment', 2_500, 2, 70, 'A'), transaction: 'rent', rentPrice: 2_500 },
+    { ...L('r2', 'house', 800_000, 3, 150, 'B'), transaction: 'both', rentPrice: 3_800 },
+    L('s1', 'house', 700_000, 3, 140, 'A'),
+  ];
+  it('the default search is for sale: rent-only listings are left out', () => {
+    expect(ids(filterListings(rentals, EMPTY_CRITERIA))).toEqual(['r2', 's1']);
+  });
+  it('searching for rent compares monthly rents', () => {
+    const rent = { ...EMPTY_CRITERIA, transaction: 'rent' as const };
+    expect(ids(filterListings(rentals, rent))).toEqual(['r1', 'r2']);
+    expect(ids(filterListings(rentals, { ...rent, priceMax: 3_000 }))).toEqual(['r1']);
+  });
+});
+
 describe('suggestRelaxations', () => {
   // fixture: a apt 600k 2q 70m² A · b apt 900k 3q 110m² B · c house 1.2M 4q 220m² A · d semi 550k 3q 120m² B · e land 400k 0q 360m² A
   it('returns nothing when no criterion is active', () => {

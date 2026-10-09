@@ -159,3 +159,34 @@ diferente do das imobiliárias:
 - **Permissões:** construtora (edita tudo do empreendimento), imobiliária parceira (vê tudo, reserva, vende),
   corretor (vê e reserva dentro da cota da imobiliária), público (vê só o que a construtora liberar; muitas preferem
   não mostrar preço ou disponibilidade abertamente).
+
+## 7. Cadastro do anúncio no backend
+
+O formulário do protótipo já tem o cadastro completo (negócio, imóvel, endereço, mídia, anunciante, publicação; ver o
+README). O que muda com backend:
+
+- **Fotos e planta** vão para o storage (R2/Supabase) com miniaturas; no protótipo ficam reduzidas no `localStorage`.
+- **Vídeo** continua sendo um link do YouTube/Vimeo exibido embutido (padrão dos portais); não hospedamos vídeo.
+- **Documento de exclusividade** é enviado e conferido por uma pessoa antes de o anúncio ganhar a marca "Exclusivo".
+- **Histórico de preço** é gravado pelo sistema a cada mudança e fica visível só para o anunciante. O preço riscado
+  ("de R$ X por R$ Y") só aparece a partir de um preço que esteve de fato publicado na plataforma: o anunciante não
+  digita o "preço anterior". O valor do desconto em si é decidido entre vendedor e corretor; a plataforma só garante
+  que o "de" é real.
+- **Datas** de publicação e atualização vêm do servidor; anúncios sem atualização por um prazo (ex.: 60 dias) pedem
+  confirmação ao anunciante.
+
+## 8. Diferenciais planejados (conversa de 09/10/2026)
+
+1. **Anunciar pela unidade no 3D.** Para apartamento: buscar o prédio ou o condomínio pelo nome ou endereço (cadastro
+   de condomínios), abrir o prédio dividido em andares e unidades e clicar na unidade a anunciar. Depende de saber o
+   número de andares, unidades por andar e a posição de cada uma: o cadastro da Prefeitura dá a área construída, mas
+   não a distribuição. Para prédios novos vem da construtora; para antigos, do próprio anunciante (um editor simples
+   de "andares × unidades por andar × posição do final") e vai sendo reaproveitado pelos próximos anúncios do prédio.
+2. **Espelho de vendas com a identidade de cada construtora e empreendimento** (cores, logotipo, fontes, materiais do
+   lançamento), além da disponibilidade ao vivo para corretores credenciados.
+3. **Camadas da Prefeitura como opções ligáveis**: mancha de inundação, zoneamento e lote real, desligadas por padrão
+   para não poluir o mapa.
+4. **Anúncios repetidos** só importam num modo portal (vários anunciantes). No produto vendido por imobiliária, cada
+   site mostra só os anúncios dela; a deduplicação da seção 5 fica para um eventual portal agregador.
+5. **Marca da imobiliária**: tema dinâmico por cliente (cores, logo, fontes, textos) aplicado ao mapa e ao site
+   embutido, como configuração (seção 2).

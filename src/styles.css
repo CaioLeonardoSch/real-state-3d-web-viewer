@@ -33,6 +33,33 @@ body[data-tod='night'] {
   box-sizing: border-box;
 }
 
+/* segmented choice (Comprar / Alugar) */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.segmented span {
+  display: block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.segmented input:checked + span {
+  background: var(--accent);
+  color: #fff;
+}
+.segmented input:focus-visible + span {
+  outline: 2px solid var(--accent-strong);
+}
+
 /* scrollbars: thin, in the panel colours (standard properties; ::-webkit-* for older Safari) */
 * {
   scrollbar-width: thin;
@@ -139,6 +166,10 @@ body[data-tod='night'] .demo-banner {
   float: left;
   width: 100%;
   margin-bottom: 4px;
+}
+.filters legend.sr-only {
+  float: none;
+  width: 1px;
 }
 .f-field {
   display: flex;
@@ -611,6 +642,130 @@ body[data-tod='night'] .price {
   font-size: 14px;
   line-height: 1.45;
 }
+/* listing details: tags, address, photos, contact, price history, owner tools */
+.drawer-tags {
+  margin: 4px 0;
+}
+.r-tag.tag-exclusive {
+  background: #0f8a4b;
+}
+.price small {
+  font-size: 0.6em;
+  font-weight: 600;
+}
+.drawer-address {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.gallery {
+  position: relative;
+  margin: 10px 0;
+}
+.gallery img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--line);
+}
+.gallery figcaption {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.gal-btn {
+  position: absolute;
+  top: calc(50% - 30px);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.gal-prev {
+  left: 8px;
+}
+.gal-next {
+  right: 8px;
+}
+.video {
+  margin: 8px 0;
+  aspect-ratio: 16 / 9;
+}
+.video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 10px;
+}
+.price-history small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.btn-whatsapp {
+  display: block;
+  margin: 8px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  text-align: center;
+  text-decoration: none;
+  background: #1f9d55;
+}
+.media-links {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+}
+.media-links a {
+  color: var(--accent-strong);
+}
+.floorplan img {
+  width: 100%;
+  border-radius: 8px;
+  background: #fff;
+}
+.price-history h3,
+.manage h3 {
+  margin: 14px 0 6px;
+  font-size: 14px;
+}
+.price-history ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+.price-history li {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.manage {
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.manage-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+.manage-form .a-hint,
+.manage-form .a-error,
+.manage-form button {
+  grid-column: 1 / -1;
+}
+.manage-form .a-error[hidden] {
+  display: none;
+}
 .floorplan {
   margin: 12px 0;
   border: 1px solid var(--line);
@@ -713,6 +868,29 @@ body[data-tod='night'] .btn-danger {
   border-radius: 4px;
   padding: 0 5px;
   vertical-align: 1px;
+}
+.r-tag.tag-featured,
+.r-tag.tag-super {
+  background: var(--accent-strong);
+}
+.r-tag.tag-reserved {
+  background: #8a6d00;
+}
+.r-tag.tag-sold {
+  background: #6b7280;
+}
+/* row with a cover photo: thumbnail on the left */
+.results li button.has-thumb {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 8px;
+}
+.results li button.has-thumb .r-thumb {
+  grid-row: span 2;
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 /* ---------------- "Anunciar imóvel" ---------------- */
@@ -829,6 +1007,98 @@ body[data-tod='night'] .a-error {
 .a-mine:empty {
   display: none;
 }
+.add-form [hidden] {
+  display: none !important;
+}
+.add-form fieldset.a-section {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.add-form fieldset.a-section > legend {
+  float: left; /* keeps the legend inside the grid instead of on the border */
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.a-pair > span {
+  display: flex;
+  gap: 6px;
+}
+.a-pair input,
+.a-pair select {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.a-pair input {
+  flex: 1;
+}
+.a-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.a-cep-status {
+  align-self: end;
+  margin: 0 0 8px;
+}
+.a-photos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.a-photos li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.a-photos img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.a-photos li:first-child img {
+  outline: 2px solid var(--accent);
+}
+.a-caption {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.a-cover {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.a-photos .link-btn {
+  margin: 0;
+  align-self: flex-start;
+}
+.a-photos-count {
+  justify-content: center;
+  color: var(--muted);
+}
+
 /* while choosing the place, the panel shrinks to a hint so the map can be clicked */
 .add-panel.picking {
   top: auto;

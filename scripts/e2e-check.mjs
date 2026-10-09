@@ -462,6 +462,26 @@ async function main() {
     await sleep(300);
     await waitIdle(page);
 
+    // rentals: "Alugar" lists listings also for rent, priced per month
+    await page.click('#filters .f-deal label:has-text("Alugar")');
+    await page.click('button:has-text("Buscar")');
+    await sleep(400);
+    await waitIdle(page);
+    const rent = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-title')?.textContent,
+      perMonth: [...document.querySelectorAll('#results .r-meta')].filter((m) => m.textContent.includes('/mês')).length,
+      range: document.querySelector('#results .results-range')?.textContent ?? '',
+      search: location.search,
+    }));
+    const rentCount = DATA.filter((l) => l.transaction === 'rent' || l.transaction === 'both').length;
+    check('"Alugar" lists the listings for rent with monthly prices',
+      rentCount > 0 && rent.header === `${rentCount} imóveis para alugar` && rent.perMonth === rentCount && rent.range.endsWith('/mês') &&
+        rent.search === '?negocio=alugar',
+      `${JSON.stringify(rent)}; expected ${rentCount}`);
+    await page.click('button:has-text("Limpar")');
+    await sleep(300);
+    await waitIdle(page);
+
     // ------------------------------------------------ "Anunciar imóvel"
     const rowCount = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
     const placeStatus = () => page.textContent('#add-panel .a-place-status');
@@ -504,6 +524,18 @@ async function main() {
     await page.click('.add-toggle');
     await sleep(200);
     check('"Anunciar" opens the form', await page.isVisible('#add-panel .add-form'));
+    // 1×1 PNG: the form shrinks photos in the browser, any image will do
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    /** Required fields other than price, area and place: photos, address, CRECI, WhatsApp. */
+    async function fillRequired(photoCount = 5) {
+      await page.setInputFiles('#add-panel input[name="photos"]',
+        Array.from({ length: photoCount }, (_, i) => ({ name: `foto${i + 1}.png`, mimeType: 'image/png', buffer: PNG })));
+      await page.waitForFunction((n) => document.querySelectorAll('#add-panel .a-photos img').length === n, photoCount);
+      if (!(await page.inputValue('#add-panel input[name="bairro"]'))) await page.fill('#add-panel input[name="bairro"]', 'Centro');
+      await page.fill('#add-panel input[name="street"]', 'Rua de Teste');
+      await page.fill('#add-panel input[name="creci"]', '12345-J');
+      await page.fill('#add-panel input[name="whatsapp"]', '(47) 90000-0000');
+    }
     await page.selectOption('#add-panel select[name="type"]', 'house');
     await page.fill('#add-panel input[name="price"]', '987000');
     await page.fill('#add-panel input[name="areaM2"]', '180');
@@ -513,6 +545,18 @@ async function main() {
     await sleep(200);
     const pickingUi = await page.evaluate(() => document.querySelector('#add-panel').classList.contains('picking'));
     const pickedBuilding = await pickOnMap('building');
+    const autoBairro = await page.inputValue('#add-panel input[name="bairro"]');
+    // incomplete record: 4 photos and no CRECI are refused
+    await fillRequired(4);
+    await page.fill('#add-panel input[name="creci"]', '');
+    await page.click('#add-panel button:has-text("Salvar anúncio")');
+    await sleep(200);
+    const refusal = await page.textContent('#add-panel .a-error');
+    check('the form refuses an incomplete record (fewer than 5 photos, no CRECI)',
+      /5 fotos/.test(refusal) && /CRECI/.test(refusal) && (await page.isVisible('#add-panel .add-form')), refusal);
+    await page.setInputFiles('#add-panel input[name="photos"]', [{ name: 'foto5.png', mimeType: 'image/png', buffer: PNG }]);
+    await page.waitForFunction(() => document.querySelectorAll('#add-panel .a-photos img').length === 5);
+    await page.fill('#add-panel input[name="creci"]', '12345-J');
     await page.screenshot({ path: path.join(SHOTS, 'desktop-add-listing.png') });
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(700);
@@ -522,12 +566,30 @@ async function main() {
       badge: document.querySelector('#drawer .badge-user')?.textContent ?? null,
       panelHidden: document.querySelector('#add-panel').hidden,
       stored: JSON.parse(localStorage.getItem('mapa3d-america:user-listings:v1') ?? '[]').length,
+      gallery: document.querySelector('#drawer .gal-pos')?.textContent ?? null,
+      whatsapp: document.querySelector('#drawer .btn-whatsapp')?.getAttribute('href') ?? null,
+      address: document.querySelector('#drawer .drawer-address')?.textContent ?? null,
     }));
     check('a new house is placed on a grey building, saved and opened',
       pickingUi && pickedBuilding && added.title === 'Casa de teste automatizado' && !!added.badge && added.panelHidden &&
         added.stored === 1 && (await rowCount()) === TOTAL + 1,
       JSON.stringify(added));
+    check('the saved listing shows its photos, address (street only) and a WhatsApp contact',
+      added.gallery === '1/5' && added.whatsapp?.startsWith('https://wa.me/5547900000000') && /Rua de Teste/.test(added.address ?? '') &&
+        !/Rua de Teste, /.test(added.address ?? ''),
+      `bairro from map: "${autoBairro}"; ${JSON.stringify({ ...added, whatsapp: added.whatsapp?.slice(0, 40) })}`);
     await page.screenshot({ path: path.join(SHOTS, 'desktop-added-listing.png') });
+    // owner lowers the price: the old one is struck through and the history records both
+    await page.fill('#drawer .manage-form input[name="price"]', '950000');
+    await page.click('#drawer .manage-form button[type="submit"]');
+    await sleep(500);
+    const managed = await page.evaluate(() => ({
+      was: document.querySelector('#drawer .price-was s')?.textContent ?? null,
+      cut: document.querySelector('#drawer .price-cut')?.textContent ?? null,
+      history: document.querySelectorAll('#drawer .price-history li').length,
+    }));
+    check('lowering the price of an own listing shows the reduction and the price history',
+      /987\.000/.test(managed.was ?? '') && managed.cut === '−4%' && managed.history === 2, JSON.stringify(managed));
     await page.keyboard.press('Escape');
     await sleep(300);
 
@@ -540,6 +602,7 @@ async function main() {
     await page.click('#add-panel [data-action="pick"]');
     await sleep(200);
     const pickedLot = await pickOnMap('land');
+    await fillRequired();
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(700);
     await waitIdle(page);

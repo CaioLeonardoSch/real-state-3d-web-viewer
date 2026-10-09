@@ -1,6 +1,8 @@
-import type { Amenity, Listing, ListingStatus, ListingType } from '../data/types';
+import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types';
 
 export interface FilterCriteria {
+  /** 'rent' = listings for rent, prices are monthly rents; null = for sale (the default). */
+  transaction: 'rent' | null;
   /** Empty = all types. */
   types: ListingType[];
   priceMin: number | null;
@@ -23,6 +25,7 @@ export interface FilterCriteria {
 }
 
 export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
+  transaction: null,
   types: [],
   priceMin: null,
   priceMax: null,
@@ -50,18 +53,22 @@ export const ADVANCED_FIELDS = [
   'reducedOnly',
 ] as const satisfies readonly RelaxableField[];
 
-export const pricePerM2 = (l: Listing) => l.price / l.areaM2;
+/** Price the criteria compare: sale price, or monthly rent when searching for rentals. */
+const priceFor = (l: Listing, c: Pick<FilterCriteria, 'transaction'>) => priceIn(l, c.transaction === 'rent') ?? l.price;
+export const pricePerM2 = (l: Listing, rent = false) => (priceIn(l, rent) ?? l.price) / l.areaM2;
 
 export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
+  if (priceIn(l, c.transaction === 'rent') === null) return false;
+  const price = priceFor(l, c);
   if (c.types.length > 0 && !c.types.includes(l.type)) return false;
-  if (c.priceMin !== null && l.price < c.priceMin) return false;
-  if (c.priceMax !== null && l.price > c.priceMax) return false;
+  if (c.priceMin !== null && price < c.priceMin) return false;
+  if (c.priceMax !== null && price > c.priceMax) return false;
   if (c.bedroomsMin !== null && l.bedrooms < c.bedroomsMin) return false;
   if (c.bathroomsMin !== null && l.bathrooms < c.bathroomsMin) return false;
   if (c.parkingMin !== null && l.parkingSpots < c.parkingMin) return false;
   if (c.areaMin !== null && l.areaM2 < c.areaMin) return false;
   if (c.areaMax !== null && l.areaM2 > c.areaMax) return false;
-  if (c.pricePerM2Max !== null && pricePerM2(l) > c.pricePerM2Max) return false;
+  if (c.pricePerM2Max !== null && pricePerM2(l, c.transaction === 'rent') > c.pricePerM2Max) return false;
   if (c.statuses.length > 0 && !c.statuses.includes(l.status)) return false;
   if (c.features.some((f) => !l.features.includes(f))) return false;
   if (c.agency !== null && l.agency !== c.agency) return false;
@@ -141,20 +148,20 @@ export function withoutCriterion(c: FilterCriteria, f: RelaxableField): FilterCr
 }
 
 /** Closest value among `found` for a numeric criterion (the one that would almost have matched). */
-function closestValue(field: RelaxableField, found: Listing[]): number | null {
+function closestValue(field: RelaxableField, found: Listing[], c: FilterCriteria): number | null {
   const min = (pick: (l: Listing) => number) => Math.min(...found.map(pick));
   const max = (pick: (l: Listing) => number) => Math.max(...found.map(pick));
   switch (field) {
     case 'priceMax':
-      return min((l) => l.price);
+      return min((l) => priceFor(l, c));
     case 'priceMin':
-      return max((l) => l.price);
+      return max((l) => priceFor(l, c));
     case 'areaMin':
       return max((l) => l.areaM2);
     case 'areaMax':
       return min((l) => l.areaM2);
     case 'pricePerM2Max':
-      return Math.round(min(pricePerM2));
+      return Math.round(min((l) => pricePerM2(l, c.transaction === 'rent')));
     case 'bedroomsMin':
       return max((l) => l.bedrooms);
     case 'bathroomsMin':
@@ -176,7 +183,7 @@ export function suggestRelaxations(listings: readonly Listing[], c: FilterCriter
     if (!isActive(c, field)) continue;
     const found = filterListings(listings, withoutCriterion(c, field));
     if (found.length === 0) continue;
-    out.push({ field, count: found.length, closest: closestValue(field, found) });
+    out.push({ field, count: found.length, closest: closestValue(field, found, c) });
   }
   return out.sort((a, b) => b.count - a.count);
 }

@@ -115,6 +115,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1170,
+      "iptu": {
+        "value": 1890,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Bom Retiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2022,
+      "usage": "residential",
+      "totalAreaM2": 192,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1001",
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-03-18",
+      "updatedAt": "2026-05-20",
+      "priceHistory": [
+        {
+          "date": "2026-03-18",
+          "price": 1115000
+        }
+      ],
       "fictional": true
     },
     {
@@ -233,6 +262,43 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 4000,
+      "rentGuarantees": [
+        "deposit",
+        "guarantor",
+        "insurance",
+        "capitalization"
+      ],
+      "condoFee": 610,
+      "iptu": {
+        "value": 1580,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Itinga",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 112,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXA-1002",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-22",
+      "updatedAt": "2026-10-08",
+      "priceHistory": [
+        {
+          "date": "2026-07-22",
+          "price": 870000
+        }
+      ],
       "fictional": true
     },
     {
@@ -291,6 +357,39 @@
       "previousPrice": 1395000,
       "priceReducedAt": "2026-09-10",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 800,
+      "iptu": {
+        "value": 2560,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Pirabeiraba Centro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 160,
+      "unitFloor": 5,
+      "towers": 1,
+      "referenceCode": "EXB-1003",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-18",
+      "updatedAt": "2026-09-10",
+      "priceHistory": [
+        {
+          "date": "2026-07-18",
+          "price": 1395000
+        },
+        {
+          "date": "2026-09-10",
+          "price": 1300000
+        }
+      ],
       "fictional": true
     },
     {
@@ -365,6 +464,45 @@
       "previousPrice": 1225000,
       "priceReducedAt": "2026-08-21",
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 4850,
+      "rentGuarantees": [
+        "guarantor",
+        "insurance",
+        "capitalization"
+      ],
+      "condoFee": 1210,
+      "iptu": {
+        "value": 2480,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Espinheiros",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 175,
+      "unitFloor": 3,
+      "towers": 2,
+      "referenceCode": "EXA-1004",
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-04-22",
+      "updatedAt": "2026-08-21",
+      "priceHistory": [
+        {
+          "date": "2026-04-22",
+          "price": 1225000
+        },
+        {
+          "date": "2026-08-21",
+          "price": 1070000
+        }
+      ],
       "fictional": true
     },
     {
@@ -426,6 +564,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 910,
+      "iptu": {
+        "value": 2190,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2019,
+      "usage": "residential",
+      "totalAreaM2": 177,
+      "unitFloor": 5,
+      "towers": 1,
+      "referenceCode": "EXB-1005",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-09",
+      "updatedAt": "2026-06-05",
+      "priceHistory": [
+        {
+          "date": "2026-04-09",
+          "price": 1455000
+        }
+      ],
       "fictional": true
     },
     {
@@ -546,6 +713,39 @@
       "previousPrice": 1170000,
       "priceReducedAt": "2026-08-28",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 750,
+      "iptu": {
+        "value": 1310,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Paraíso",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2011,
+      "usage": "residential",
+      "totalAreaM2": 134,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXA-1006",
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-07-20",
+      "updatedAt": "2026-08-28",
+      "priceHistory": [
+        {
+          "date": "2026-07-20",
+          "price": 1170000
+        },
+        {
+          "date": "2026-08-28",
+          "price": 1065000
+        }
+      ],
       "fictional": true
     },
     {
@@ -614,6 +814,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 570,
+      "iptu": {
+        "value": 1070,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Nova Brasília",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2001,
+      "usage": "residential",
+      "totalAreaM2": 84,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1007",
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-03-15",
+      "updatedAt": "2026-04-01",
+      "priceHistory": [
+        {
+          "date": "2026-03-15",
+          "price": 675000
+        }
+      ],
       "fictional": true
     },
     {
@@ -676,6 +905,35 @@
         "balcony"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 920,
+      "iptu": {
+        "value": 1810,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2009,
+      "usage": "residential",
+      "totalAreaM2": 123,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1008",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-07",
+      "updatedAt": "2026-06-17",
+      "priceHistory": [
+        {
+          "date": "2026-04-07",
+          "price": 860000
+        }
+      ],
       "fictional": true
     },
     {
@@ -742,6 +1000,39 @@
       "previousPrice": 1735000,
       "priceReducedAt": "2026-10-05",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1180,
+      "iptu": {
+        "value": 2760,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Fátima",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2000,
+      "usage": "residential",
+      "totalAreaM2": 187,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXB-1009",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-18",
+      "updatedAt": "2026-10-05",
+      "priceHistory": [
+        {
+          "date": "2026-07-18",
+          "price": 1735000
+        },
+        {
+          "date": "2026-10-05",
+          "price": 1480000
+        }
+      ],
       "fictional": true
     },
     {
@@ -798,6 +1089,35 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1230,
+      "iptu": {
+        "value": 3020,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2002,
+      "usage": "residential",
+      "totalAreaM2": 160,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1010",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-01",
+      "updatedAt": "2026-04-16",
+      "priceHistory": [
+        {
+          "date": "2026-03-01",
+          "price": 1355000
+        }
+      ],
       "fictional": true
     },
     {
@@ -893,6 +1213,36 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 350,
+      "iptu": {
+        "value": 1030,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Centro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 65,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1011",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-05-09",
+      "updatedAt": "2026-07-23",
+      "priceHistory": [
+        {
+          "date": "2026-05-09",
+          "price": 445000
+        }
+      ],
       "fictional": true
     },
     {
@@ -951,6 +1301,36 @@
         "furnished"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 710,
+      "iptu": {
+        "value": 1060,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Iririú",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 119,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1012",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "super",
+      "publishedAt": "2026-05-16",
+      "updatedAt": "2026-08-11",
+      "priceHistory": [
+        {
+          "date": "2026-05-16",
+          "price": 810000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1011,6 +1391,39 @@
       "previousPrice": 1345000,
       "priceReducedAt": "2026-08-25",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 880,
+      "iptu": {
+        "value": 2280,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Costa e Silva",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 160,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1013",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-27",
+      "updatedAt": "2026-08-25",
+      "priceHistory": [
+        {
+          "date": "2026-06-27",
+          "price": 1345000
+        },
+        {
+          "date": "2026-08-25",
+          "price": 1290000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1080,6 +1493,35 @@
         "pets"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1010,
+      "iptu": {
+        "value": 2400,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Petrópolis",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 2,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 132,
+      "unitFloor": 1,
+      "towers": 2,
+      "referenceCode": "EXA-1014",
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-03-11",
+      "updatedAt": "2026-05-26",
+      "priceHistory": [
+        {
+          "date": "2026-03-11",
+          "price": 1060000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1171,6 +1613,35 @@
         "elevator"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 860,
+      "iptu": {
+        "value": 2000,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jarivatuba",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2007,
+      "usage": "residential",
+      "totalAreaM2": 136,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXB-1015",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-04",
+      "updatedAt": "2026-03-25",
+      "priceHistory": [
+        {
+          "date": "2026-03-04",
+          "price": 830000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1265,6 +1736,40 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 2200,
+      "rentGuarantees": [
+        "insurance"
+      ],
+      "condoFee": 430,
+      "iptu": {
+        "value": 1090,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 79,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXA-1016",
+      "exclusive": true,
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-06-29",
+      "updatedAt": "2026-07-21",
+      "priceHistory": [
+        {
+          "date": "2026-06-29",
+          "price": 490000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1332,6 +1837,39 @@
       "previousPrice": 470000,
       "priceReducedAt": "2026-09-22",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 330,
+      "iptu": {
+        "value": 990,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Floresta",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2019,
+      "usage": "residential",
+      "totalAreaM2": 76,
+      "unitFloor": 3,
+      "towers": 2,
+      "referenceCode": "EXB-1017",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-06",
+      "updatedAt": "2026-09-22",
+      "priceHistory": [
+        {
+          "date": "2026-03-06",
+          "price": 470000
+        },
+        {
+          "date": "2026-09-22",
+          "price": 425000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1426,6 +1964,34 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 810,
+      "iptu": {
+        "value": 1480,
+        "period": "year"
+      },
+      "address": {
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 145,
+      "unitFloor": 4,
+      "towers": 1,
+      "referenceCode": "EXA-1018",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-13",
+      "updatedAt": "2026-06-05",
+      "priceHistory": [
+        {
+          "date": "2026-05-13",
+          "price": 1110000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1513,6 +2079,35 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 540,
+      "iptu": {
+        "value": 910,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Costa e Silva",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2003,
+      "usage": "residential",
+      "totalAreaM2": 79,
+      "unitFloor": 9,
+      "towers": 1,
+      "referenceCode": "EXB-1019",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-21",
+      "updatedAt": "2026-08-15",
+      "priceHistory": [
+        {
+          "date": "2026-06-21",
+          "price": 690000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1600,6 +2195,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 910,
+      "iptu": {
+        "value": 2720,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Cubatão",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 143,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1020",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-04",
+      "updatedAt": "2026-03-31",
+      "priceHistory": [
+        {
+          "date": "2026-03-04",
+          "price": 1180000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1658,6 +2282,35 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1220,
+      "iptu": {
+        "value": 2810,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Iririú",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2011,
+      "usage": "residential",
+      "totalAreaM2": 168,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1021",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-14",
+      "updatedAt": "2026-07-23",
+      "priceHistory": [
+        {
+          "date": "2026-06-14",
+          "price": 1265000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1713,6 +2366,39 @@
       "previousPrice": 990000,
       "priceReducedAt": "2026-10-07",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 640,
+      "iptu": {
+        "value": 1810,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Paraíso",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 113,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1022",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-08",
+      "updatedAt": "2026-10-07",
+      "priceHistory": [
+        {
+          "date": "2026-06-08",
+          "price": 990000
+        },
+        {
+          "date": "2026-10-07",
+          "price": 870000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1798,6 +2484,35 @@
         "gym"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 1080,
+      "iptu": {
+        "value": 1860,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Profipo",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2010,
+      "usage": "residential",
+      "totalAreaM2": 162,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXB-1023",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-08",
+      "updatedAt": "2026-04-16",
+      "priceHistory": [
+        {
+          "date": "2026-03-08",
+          "price": 1060000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1879,6 +2594,35 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 930,
+      "iptu": {
+        "value": 1790,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Boa Vista",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2005,
+      "usage": "residential",
+      "totalAreaM2": 144,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXA-1024",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-23",
+      "updatedAt": "2026-09-02",
+      "priceHistory": [
+        {
+          "date": "2026-07-23",
+          "price": 1050000
+        }
+      ],
       "fictional": true
     },
     {
@@ -1932,6 +2676,35 @@
         "pets"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 420,
+      "iptu": {
+        "value": 930,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "João Costa",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2022,
+      "usage": "residential",
+      "totalAreaM2": 82,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1025",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-18",
+      "updatedAt": "2026-06-15",
+      "priceHistory": [
+        {
+          "date": "2026-05-18",
+          "price": 675000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2003,6 +2776,36 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 690,
+      "iptu": {
+        "value": 1130,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Saguaçu",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2020,
+      "usage": "residential",
+      "totalAreaM2": 117,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1026",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-26",
+      "updatedAt": "2026-08-22",
+      "priceHistory": [
+        {
+          "date": "2026-06-26",
+          "price": 855000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2064,6 +2867,41 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 6650,
+      "rentGuarantees": [
+        "insurance",
+        "capitalization"
+      ],
+      "condoFee": 1130,
+      "iptu": {
+        "value": 3400,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Anita Garibaldi",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2013,
+      "usage": "residential",
+      "totalAreaM2": 178,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXB-1027",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-02",
+      "updatedAt": "2026-09-10",
+      "priceHistory": [
+        {
+          "date": "2026-07-02",
+          "price": 1390000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2119,6 +2957,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 660,
+      "iptu": {
+        "value": 1480,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Costa e Silva",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 95,
+      "unitFloor": 6,
+      "towers": 1,
+      "referenceCode": "EXA-1028",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-10",
+      "updatedAt": "2026-08-24",
+      "priceHistory": [
+        {
+          "date": "2026-06-10",
+          "price": 750000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2172,6 +3039,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 750,
+      "iptu": {
+        "value": 1180,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 2,
+      "yearBuilt": 2005,
+      "usage": "residential",
+      "totalAreaM2": 160,
+      "unitFloor": 1,
+      "towers": 1,
+      "referenceCode": "EXB-1029",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-01",
+      "updatedAt": "2026-06-16",
+      "priceHistory": [
+        {
+          "date": "2026-05-01",
+          "price": 940000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2257,6 +3153,41 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 4800,
+      "rentGuarantees": [
+        "guarantor",
+        "capitalization"
+      ],
+      "condoFee": 820,
+      "iptu": {
+        "value": 2170,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "totalAreaM2": 146,
+      "unitFloor": 3,
+      "towers": 1,
+      "referenceCode": "EXA-1030",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-06-02",
+      "updatedAt": "2026-07-25",
+      "priceHistory": [
+        {
+          "date": "2026-06-02",
+          "price": 1020000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2320,6 +3251,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 560,
+      "iptu": {
+        "value": 1160,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Floresta",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 106,
+      "unitFloor": 5,
+      "towers": 1,
+      "referenceCode": "EXB-1031",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-26",
+      "updatedAt": "2026-05-20",
+      "priceHistory": [
+        {
+          "date": "2026-04-26",
+          "price": 795000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2379,6 +3339,35 @@
         "pets"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 740,
+      "iptu": {
+        "value": 2170,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Adhemar Garcia",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2009,
+      "usage": "residential",
+      "totalAreaM2": 151,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXA-1032",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-31",
+      "updatedAt": "2026-05-29",
+      "priceHistory": [
+        {
+          "date": "2026-03-31",
+          "price": 1095000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2449,6 +3438,39 @@
       "previousPrice": 1075000,
       "priceReducedAt": "2026-09-17",
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 770,
+      "iptu": {
+        "value": 1830,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Itaum",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 2,
+      "yearBuilt": 2017,
+      "usage": "residential",
+      "totalAreaM2": 134,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXB-1033",
+      "availability": "reserved",
+      "highlight": "super",
+      "publishedAt": "2026-04-22",
+      "updatedAt": "2026-09-17",
+      "priceHistory": [
+        {
+          "date": "2026-04-22",
+          "price": 1075000
+        },
+        {
+          "date": "2026-09-17",
+          "price": 945000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2731,6 +3753,35 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 620,
+      "iptu": {
+        "value": 1720,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Bucarein",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "totalAreaM2": 109,
+      "unitFloor": 2,
+      "towers": 1,
+      "referenceCode": "EXA-1034",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-18",
+      "updatedAt": "2026-05-09",
+      "priceHistory": [
+        {
+          "date": "2026-03-18",
+          "price": 705000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2800,6 +3851,41 @@
       "priceReducedAt": "2026-08-11",
       "approximateLocation": true,
       "approxRadiusM": 150,
+      "transaction": "both",
+      "rentPrice": 4850,
+      "rentGuarantees": [
+        "deposit",
+        "guarantor",
+        "capitalization"
+      ],
+      "iptu": {
+        "value": 1250,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Morro do Meio",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2017,
+      "usage": "residential",
+      "referenceCode": "EXB-1035",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-17",
+      "updatedAt": "2026-08-11",
+      "priceHistory": [
+        {
+          "date": "2026-06-17",
+          "price": 1100000
+        },
+        {
+          "date": "2026-08-11",
+          "price": 1035000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2906,6 +3992,31 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 5410,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Rio Bonito",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 3,
+      "coveredParking": 1,
+      "yearBuilt": 1999,
+      "usage": "residential",
+      "referenceCode": "EXA-1036",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-22",
+      "updatedAt": "2026-07-07",
+      "priceHistory": [
+        {
+          "date": "2026-04-22",
+          "price": 2395000
+        }
+      ],
       "fictional": true
     },
     {
@@ -2960,6 +4071,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2960,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Sofia",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2018,
+      "usage": "residential",
+      "referenceCode": "EXB-1037",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "super",
+      "publishedAt": "2026-04-25",
+      "updatedAt": "2026-05-26",
+      "priceHistory": [
+        {
+          "date": "2026-04-25",
+          "price": 1225000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3022,6 +4159,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2280,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2014,
+      "usage": "residential",
+      "referenceCode": "EXA-1038",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-12",
+      "updatedAt": "2026-07-14",
+      "priceHistory": [
+        {
+          "date": "2026-05-12",
+          "price": 1050000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3078,6 +4240,36 @@
       "previousPrice": 1610000,
       "priceReducedAt": "2026-08-13",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2770,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Nova Brasília",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 3,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXB-1039",
+      "exclusive": true,
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-05-19",
+      "updatedAt": "2026-08-13",
+      "priceHistory": [
+        {
+          "date": "2026-05-19",
+          "price": 1610000
+        },
+        {
+          "date": "2026-08-13",
+          "price": 1445000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3152,6 +4344,31 @@
         "barbecue"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2920,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Comasa",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 0,
+      "yearBuilt": 1990,
+      "usage": "residential",
+      "referenceCode": "EXA-1040",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-11",
+      "updatedAt": "2026-07-23",
+      "priceHistory": [
+        {
+          "date": "2026-05-11",
+          "price": 2005000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3213,6 +4430,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2160,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Itinga",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 0,
+      "yearBuilt": 2002,
+      "usage": "residential",
+      "referenceCode": "EXB-1041",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-15",
+      "updatedAt": "2026-04-22",
+      "priceHistory": [
+        {
+          "date": "2026-03-15",
+          "price": 1555000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3266,6 +4509,37 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 14150,
+      "rentGuarantees": [
+        "guarantor",
+        "insurance",
+        "capitalization"
+      ],
+      "iptu": {
+        "value": 7450,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Rio Bonito",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXA-1042",
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-03-20",
+      "updatedAt": "2026-04-16",
+      "priceHistory": [
+        {
+          "date": "2026-03-20",
+          "price": 3475000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3342,6 +4616,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3080,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Iririú",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXB-1043",
+      "exclusive": true,
+      "availability": "reserved",
+      "highlight": "featured",
+      "publishedAt": "2026-06-16",
+      "updatedAt": "2026-08-02",
+      "priceHistory": [
+        {
+          "date": "2026-06-16",
+          "price": 1350000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3428,6 +4728,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2700,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 0,
+      "yearBuilt": 1990,
+      "usage": "residential",
+      "referenceCode": "EXA-1044",
+      "exclusive": true,
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-05-14",
+      "updatedAt": "2026-06-09",
+      "priceHistory": [
+        {
+          "date": "2026-05-14",
+          "price": 1825000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3479,6 +4805,31 @@
         "pets"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3050,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Sofia",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 0,
+      "yearBuilt": 2015,
+      "usage": "residential",
+      "referenceCode": "EXB-1045",
+      "availability": "active",
+      "highlight": "super",
+      "publishedAt": "2026-04-07",
+      "updatedAt": "2026-05-12",
+      "priceHistory": [
+        {
+          "date": "2026-04-07",
+          "price": 2040000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3596,6 +4947,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 4820,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 2,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXA-1046",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-11",
+      "updatedAt": "2026-04-16",
+      "priceHistory": [
+        {
+          "date": "2026-04-11",
+          "price": 2075000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3714,6 +5091,35 @@
       "previousPrice": 2955000,
       "priceReducedAt": "2026-08-23",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 5150,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 1996,
+      "usage": "residential",
+      "referenceCode": "EXB-1047",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-25",
+      "updatedAt": "2026-08-23",
+      "priceHistory": [
+        {
+          "date": "2026-03-25",
+          "price": 2955000
+        },
+        {
+          "date": "2026-08-23",
+          "price": 2655000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3791,6 +5197,38 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 6700,
+      "rentGuarantees": [
+        "deposit",
+        "guarantor",
+        "insurance"
+      ],
+      "iptu": {
+        "value": 3130,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 3,
+      "yearBuilt": 2014,
+      "usage": "residential",
+      "referenceCode": "EXA-1048",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-03",
+      "updatedAt": "2026-06-26",
+      "priceHistory": [
+        {
+          "date": "2026-05-03",
+          "price": 1720000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3869,6 +5307,36 @@
       "previousPrice": 2745000,
       "priceReducedAt": "2026-08-31",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3080,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Boehmerwald",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 4,
+      "coveredParking": 3,
+      "yearBuilt": 2015,
+      "usage": "residential",
+      "referenceCode": "EXB-1049",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-18",
+      "updatedAt": "2026-08-31",
+      "priceHistory": [
+        {
+          "date": "2026-07-18",
+          "price": 2745000
+        },
+        {
+          "date": "2026-08-31",
+          "price": 2550000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3930,6 +5398,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3680,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 0,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXA-1050",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-06",
+      "updatedAt": "2026-07-22",
+      "priceHistory": [
+        {
+          "date": "2026-05-06",
+          "price": 1985000
+        }
+      ],
       "fictional": true
     },
     {
@@ -3996,6 +5489,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1430,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 1995,
+      "usage": "residential",
+      "referenceCode": "EXB-1051",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-26",
+      "updatedAt": "2026-09-10",
+      "priceHistory": [
+        {
+          "date": "2026-07-26",
+          "price": 870000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4086,6 +5605,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2060,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Guanabara",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2011,
+      "usage": "residential",
+      "referenceCode": "EXA-1052",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-27",
+      "updatedAt": "2026-05-25",
+      "priceHistory": [
+        {
+          "date": "2026-04-27",
+          "price": 1215000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4155,6 +5699,37 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 4100,
+      "rentGuarantees": [
+        "deposit",
+        "insurance"
+      ],
+      "iptu": {
+        "value": 1990,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Parque Guarani",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2013,
+      "usage": "residential",
+      "referenceCode": "EXB-1053",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-27",
+      "updatedAt": "2026-07-28",
+      "priceHistory": [
+        {
+          "date": "2026-06-27",
+          "price": 915000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4224,6 +5799,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2970,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Espinheiros",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2017,
+      "usage": "residential",
+      "referenceCode": "EXA-1054",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-19",
+      "updatedAt": "2026-04-16",
+      "priceHistory": [
+        {
+          "date": "2026-03-19",
+          "price": 1450000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4277,6 +5877,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3180,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Bom Retiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 1991,
+      "usage": "residential",
+      "referenceCode": "EXB-1055",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-05",
+      "updatedAt": "2026-03-31",
+      "priceHistory": [
+        {
+          "date": "2026-03-05",
+          "price": 1650000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4334,6 +5959,35 @@
       "previousPrice": 2860000,
       "priceReducedAt": "2026-08-29",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 5130,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Pirabeiraba Centro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 4,
+      "coveredParking": 2,
+      "yearBuilt": 2016,
+      "usage": "residential",
+      "referenceCode": "EXA-1056",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-07",
+      "updatedAt": "2026-08-29",
+      "priceHistory": [
+        {
+          "date": "2026-07-07",
+          "price": 2860000
+        },
+        {
+          "date": "2026-08-29",
+          "price": 2685000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4389,6 +6043,31 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2850,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Boa Vista",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 1,
+      "yearBuilt": 2013,
+      "usage": "residential",
+      "referenceCode": "EXB-1057",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-27",
+      "updatedAt": "2026-05-14",
+      "priceHistory": [
+        {
+          "date": "2026-04-27",
+          "price": 1220000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4451,6 +6130,32 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2660,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "São Marcos",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 2,
+      "coveredParking": 0,
+      "yearBuilt": 1995,
+      "usage": "residential",
+      "referenceCode": "EXA-1058",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-27",
+      "updatedAt": "2026-08-19",
+      "priceHistory": [
+        {
+          "date": "2026-05-27",
+          "price": 1390000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4505,6 +6210,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3980,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Iririú",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 3,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "referenceCode": "EXB-1059",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-27",
+      "updatedAt": "2026-05-03",
+      "priceHistory": [
+        {
+          "date": "2026-03-27",
+          "price": 2025000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4585,6 +6315,37 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 7950,
+      "rentGuarantees": [
+        "guarantor",
+        "capitalization"
+      ],
+      "iptu": {
+        "value": 3110,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "América",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2024,
+      "usage": "residential",
+      "referenceCode": "EXA-1060",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-25",
+      "updatedAt": "2026-07-04",
+      "priceHistory": [
+        {
+          "date": "2026-04-25",
+          "price": 1805000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4641,6 +6402,31 @@
       ],
       "approximateLocation": true,
       "approxRadiusM": 150,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1450,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "referenceCode": "EXB-1061",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-20",
+      "updatedAt": "2026-08-15",
+      "priceHistory": [
+        {
+          "date": "2026-05-20",
+          "price": 880000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4701,6 +6487,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1600,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Ulysses Guimarães",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2013,
+      "usage": "residential",
+      "referenceCode": "EXA-1062",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-29",
+      "updatedAt": "2026-07-05",
+      "priceHistory": [
+        {
+          "date": "2026-06-29",
+          "price": 810000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4784,6 +6595,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1310,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXB-1063",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-03",
+      "updatedAt": "2026-04-06",
+      "priceHistory": [
+        {
+          "date": "2026-03-03",
+          "price": 900000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4855,6 +6691,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 840,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Bucarein",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 0,
+      "yearBuilt": 2018,
+      "usage": "residential",
+      "referenceCode": "EXA-1064",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-17",
+      "updatedAt": "2026-07-03",
+      "priceHistory": [
+        {
+          "date": "2026-04-17",
+          "price": 655000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4910,6 +6771,37 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 3950,
+      "rentGuarantees": [
+        "insurance",
+        "capitalization"
+      ],
+      "condoFee": 340,
+      "iptu": {
+        "value": 2150,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Costa e Silva",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2002,
+      "usage": "residential",
+      "referenceCode": "EXB-1065",
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-06-07",
+      "updatedAt": "2026-08-04",
+      "priceHistory": [
+        {
+          "date": "2026-06-07",
+          "price": 1015000
+        }
+      ],
       "fictional": true
     },
     {
@@ -4994,6 +6886,31 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1480,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Floresta",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 1,
+      "yearBuilt": 2002,
+      "usage": "residential",
+      "referenceCode": "EXA-1066",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-18",
+      "updatedAt": "2026-05-12",
+      "priceHistory": [
+        {
+          "date": "2026-03-18",
+          "price": 855000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5049,6 +6966,31 @@
         "pets"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1690,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2002,
+      "usage": "residential",
+      "referenceCode": "EXB-1067",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-16",
+      "updatedAt": "2026-05-21",
+      "priceHistory": [
+        {
+          "date": "2026-05-16",
+          "price": 775000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5104,6 +7046,33 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 380,
+      "iptu": {
+        "value": 1550,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Santa Catarina",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 0,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "referenceCode": "EXA-1068",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-15",
+      "updatedAt": "2026-08-22",
+      "priceHistory": [
+        {
+          "date": "2026-06-15",
+          "price": 1145000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5163,6 +7132,31 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1850,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Adhemar Garcia",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 0,
+      "yearBuilt": 2004,
+      "usage": "residential",
+      "referenceCode": "EXB-1069",
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-03-01",
+      "updatedAt": "2026-04-07",
+      "priceHistory": [
+        {
+          "date": "2026-03-01",
+          "price": 900000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5223,6 +7217,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2100,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Nova Brasília",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 0,
+      "yearBuilt": 1998,
+      "usage": "residential",
+      "referenceCode": "EXA-1070",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-12",
+      "updatedAt": "2026-05-29",
+      "priceHistory": [
+        {
+          "date": "2026-05-12",
+          "price": 850000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5287,6 +7306,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1780,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Paraíso",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 0,
+      "yearBuilt": 2003,
+      "usage": "residential",
+      "referenceCode": "EXB-1071",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-17",
+      "updatedAt": "2026-10-04",
+      "priceHistory": [
+        {
+          "date": "2026-07-17",
+          "price": 745000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5348,6 +7392,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1260,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2022,
+      "usage": "residential",
+      "referenceCode": "EXA-1072",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-14",
+      "updatedAt": "2026-04-23",
+      "priceHistory": [
+        {
+          "date": "2026-04-14",
+          "price": 870000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5407,6 +7476,34 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 2650,
+      "rentGuarantees": [
+        "guarantor"
+      ],
+      "iptu": {
+        "value": 850,
+        "period": "year"
+      },
+      "address": {
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2027,
+      "usage": "residential",
+      "referenceCode": "EXB-1073",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-06",
+      "updatedAt": "2026-07-05",
+      "priceHistory": [
+        {
+          "date": "2026-06-06",
+          "price": 670000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5458,6 +7555,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 350,
+      "iptu": {
+        "value": 1890,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Itaum",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2005,
+      "usage": "residential",
+      "referenceCode": "EXA-1074",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-30",
+      "updatedAt": "2026-07-03",
+      "priceHistory": [
+        {
+          "date": "2026-06-30",
+          "price": 950000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5527,6 +7650,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 930,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Nova Brasília",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 2,
+      "yearBuilt": 1998,
+      "usage": "residential",
+      "referenceCode": "EXB-1075",
+      "exclusive": true,
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-07-12",
+      "updatedAt": "2026-08-27",
+      "priceHistory": [
+        {
+          "date": "2026-07-12",
+          "price": 735000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5615,6 +7764,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 350,
+      "iptu": {
+        "value": 880,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Santo Antônio",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 1,
+      "coveredParking": 2,
+      "yearBuilt": 2028,
+      "usage": "residential",
+      "referenceCode": "EXA-1076",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-05",
+      "updatedAt": "2026-06-20",
+      "priceHistory": [
+        {
+          "date": "2026-05-05",
+          "price": 600000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5683,6 +7858,36 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 2900,
+      "rentGuarantees": [
+        "deposit",
+        "insurance"
+      ],
+      "iptu": {
+        "value": 940,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 0,
+      "yearBuilt": 2008,
+      "usage": "residential",
+      "referenceCode": "EXB-1077",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-21",
+      "updatedAt": "2026-10-08",
+      "priceHistory": [
+        {
+          "date": "2026-07-21",
+          "price": 595000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5756,6 +7961,36 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "both",
+      "rentPrice": 3400,
+      "rentGuarantees": [
+        "guarantor",
+        "insurance"
+      ],
+      "iptu": {
+        "value": 920,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Rio Bonito",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2016,
+      "usage": "residential",
+      "referenceCode": "EXA-1078",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-20",
+      "updatedAt": "2026-07-08",
+      "priceHistory": [
+        {
+          "date": "2026-05-20",
+          "price": 700000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5807,6 +8042,31 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2350,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Floresta",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 1,
+      "yearBuilt": 2024,
+      "usage": "residential",
+      "referenceCode": "EXB-1079",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-26",
+      "updatedAt": "2026-06-01",
+      "priceHistory": [
+        {
+          "date": "2026-03-26",
+          "price": 990000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5886,6 +8146,32 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "condoFee": 340,
+      "iptu": {
+        "value": 1670,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Comasa",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "suites": 0,
+      "coveredParking": 2,
+      "yearBuilt": 1995,
+      "usage": "residential",
+      "referenceCode": "EXA-1080",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-08",
+      "updatedAt": "2026-05-17",
+      "priceHistory": [
+        {
+          "date": "2026-05-08",
+          "price": 790000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5937,6 +8223,27 @@
       ],
       "approximateLocation": true,
       "approxRadiusM": 150,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1230,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1081",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-20",
+      "updatedAt": "2026-04-25",
+      "priceHistory": [
+        {
+          "date": "2026-04-20",
+          "price": 690000
+        }
+      ],
       "fictional": true
     },
     {
@@ -5981,6 +8288,27 @@
       "description": "Lote de 525 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
       "features": [],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2110,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Saguaçu",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1082",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-12",
+      "updatedAt": "2026-09-21",
+      "priceHistory": [
+        {
+          "date": "2026-07-12",
+          "price": 1005000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6027,6 +8355,26 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 3090,
+        "period": "year"
+      },
+      "address": {
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1083",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-24",
+      "updatedAt": "2026-09-10",
+      "priceHistory": [
+        {
+          "date": "2026-06-24",
+          "price": 1320000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6075,6 +8423,31 @@
       "previousPrice": 720000,
       "priceReducedAt": "2026-09-27",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1010,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Atiradores",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1084",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-16",
+      "updatedAt": "2026-09-27",
+      "priceHistory": [
+        {
+          "date": "2026-07-16",
+          "price": 720000
+        },
+        {
+          "date": "2026-09-27",
+          "price": 620000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6121,6 +8494,27 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1460,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Aventureiro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1085",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-06",
+      "updatedAt": "2026-05-16",
+      "priceHistory": [
+        {
+          "date": "2026-05-06",
+          "price": 895000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6167,6 +8561,27 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2000,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1086",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-24",
+      "updatedAt": "2026-09-06",
+      "priceHistory": [
+        {
+          "date": "2026-06-24",
+          "price": 1460000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6213,6 +8628,28 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2410,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "América",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1087",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-24",
+      "updatedAt": "2026-04-26",
+      "priceHistory": [
+        {
+          "date": "2026-03-24",
+          "price": 1405000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6259,6 +8696,27 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 910,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1088",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-05-18",
+      "updatedAt": "2026-08-03",
+      "priceHistory": [
+        {
+          "date": "2026-05-18",
+          "price": 595000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6308,6 +8766,31 @@
       "previousPrice": 1060000,
       "priceReducedAt": "2026-08-16",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2380,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1089",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-01",
+      "updatedAt": "2026-08-16",
+      "priceHistory": [
+        {
+          "date": "2026-06-01",
+          "price": 1060000
+        },
+        {
+          "date": "2026-08-16",
+          "price": 975000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6356,6 +8839,31 @@
       "previousPrice": 990000,
       "priceReducedAt": "2026-08-22",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1590,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Ulysses Guimarães",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1090",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-20",
+      "updatedAt": "2026-08-22",
+      "priceHistory": [
+        {
+          "date": "2026-03-20",
+          "price": 990000
+        },
+        {
+          "date": "2026-08-22",
+          "price": 910000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6400,6 +8908,27 @@
       "description": "Lote de 525 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
       "features": [],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 2400,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1091",
+      "availability": "active",
+      "highlight": "featured",
+      "publishedAt": "2026-06-21",
+      "updatedAt": "2026-06-24",
+      "priceHistory": [
+        {
+          "date": "2026-06-21",
+          "price": 980000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6444,6 +8973,28 @@
       "description": "Lote de 450 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
       "features": [],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1100,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Pirabeiraba Centro",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1092",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-17",
+      "updatedAt": "2026-09-12",
+      "priceHistory": [
+        {
+          "date": "2026-06-17",
+          "price": 645000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6493,6 +9044,31 @@
       "previousPrice": 680000,
       "priceReducedAt": "2026-08-12",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1260,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Paranaguamirim",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1093",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-01",
+      "updatedAt": "2026-08-12",
+      "priceHistory": [
+        {
+          "date": "2026-07-01",
+          "price": 680000
+        },
+        {
+          "date": "2026-08-12",
+          "price": 630000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6540,6 +9116,26 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1420,
+        "period": "year"
+      },
+      "address": {
+        "city": "Araquari"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1094",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-09",
+      "updatedAt": "2026-09-13",
+      "priceHistory": [
+        {
+          "date": "2026-07-09",
+          "price": 965000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6586,6 +9182,31 @@
       "previousPrice": 645000,
       "priceReducedAt": "2026-09-29",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 770,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Nova Brasília",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1095",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-03-10",
+      "updatedAt": "2026-09-29",
+      "priceHistory": [
+        {
+          "date": "2026-03-10",
+          "price": 645000
+        },
+        {
+          "date": "2026-09-29",
+          "price": 580000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6632,6 +9253,27 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1000,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Costa e Silva",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1096",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-04-08",
+      "updatedAt": "2026-05-22",
+      "priceHistory": [
+        {
+          "date": "2026-04-08",
+          "price": 695000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6678,6 +9320,27 @@
         "exchange"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1710,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jardim Sofia",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1097",
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-06-24",
+      "updatedAt": "2026-06-29",
+      "priceHistory": [
+        {
+          "date": "2026-06-24",
+          "price": 700000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6724,6 +9387,27 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1450,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Glória",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1098",
+      "availability": "reserved",
+      "highlight": "standard",
+      "publishedAt": "2026-07-19",
+      "updatedAt": "2026-09-27",
+      "priceHistory": [
+        {
+          "date": "2026-07-19",
+          "price": 825000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6770,6 +9454,27 @@
         "financing"
       ],
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1450,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Jarivatuba",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXB-1099",
+      "availability": "reserved",
+      "highlight": "featured",
+      "publishedAt": "2026-03-13",
+      "updatedAt": "2026-05-24",
+      "priceHistory": [
+        {
+          "date": "2026-03-13",
+          "price": 750000
+        }
+      ],
       "fictional": true
     },
     {
@@ -6818,6 +9523,32 @@
       "previousPrice": 1245000,
       "priceReducedAt": "2026-09-07",
       "approximateLocation": false,
+      "transaction": "sale",
+      "iptu": {
+        "value": 1360,
+        "period": "year"
+      },
+      "address": {
+        "bairro": "Vila Nova",
+        "city": "Joinville"
+      },
+      "addressDisplay": "neighborhood",
+      "referenceCode": "EXA-1100",
+      "exclusive": true,
+      "availability": "active",
+      "highlight": "standard",
+      "publishedAt": "2026-07-05",
+      "updatedAt": "2026-09-07",
+      "priceHistory": [
+        {
+          "date": "2026-07-05",
+          "price": 1245000
+        },
+        {
+          "date": "2026-09-07",
+          "price": 1080000
+        }
+      ],
       "fictional": true
     }
   ]

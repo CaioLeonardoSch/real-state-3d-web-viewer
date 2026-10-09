@@ -32,6 +32,75 @@ export const AMENITY_LABELS: Record<Amenity, string> = {
   exchange: 'Aceita permuta',
 };
 
+/** Kind of deal. For rent-only listings `price` holds the monthly rent (same as `rentPrice`). */
+export const TRANSACTIONS = ['sale', 'rent', 'both'] as const;
+export type Transaction = (typeof TRANSACTIONS)[number];
+export const TRANSACTION_LABELS: Record<Transaction, string> = {
+  sale: 'Venda',
+  rent: 'Locação',
+  both: 'Venda e locação',
+};
+
+export const RENT_GUARANTEES = ['deposit', 'guarantor', 'insurance', 'capitalization'] as const;
+export type RentGuarantee = (typeof RENT_GUARANTEES)[number];
+export const RENT_GUARANTEE_LABELS: Record<RentGuarantee, string> = {
+  deposit: 'Caução',
+  guarantor: 'Fiador',
+  insurance: 'Seguro fiança',
+  capitalization: 'Título de capitalização',
+};
+
+/** What the public sees of the address. Anything but `full` also hides the exact building on the map. */
+export const ADDRESS_DISPLAYS = ['full', 'street', 'neighborhood'] as const;
+export type AddressDisplay = (typeof ADDRESS_DISPLAYS)[number];
+export const ADDRESS_DISPLAY_LABELS: Record<AddressDisplay, string> = {
+  full: 'Endereço completo',
+  street: 'Só a rua',
+  neighborhood: 'Só o bairro',
+};
+
+export const USAGES = ['residential', 'commercial'] as const;
+export type Usage = (typeof USAGES)[number];
+export const USAGE_LABELS: Record<Usage, string> = { residential: 'Residencial', commercial: 'Comercial' };
+
+/** State of the advertisement (not of the construction, see `ListingStatus`). */
+export const AVAILABILITIES = ['active', 'reserved', 'sold'] as const;
+export type Availability = (typeof AVAILABILITIES)[number];
+export const AVAILABILITY_LABELS: Record<Availability, string> = { active: 'Ativo', reserved: 'Reservado', sold: 'Vendido' };
+
+export const HIGHLIGHTS = ['standard', 'featured', 'super'] as const;
+export type Highlight = (typeof HIGHLIGHTS)[number];
+export const HIGHLIGHT_LABELS: Record<Highlight, string> = { standard: 'Padrão', featured: 'Destaque', super: 'Super destaque' };
+
+export interface Address {
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  bairro?: string;
+  city?: string;
+}
+
+export interface Photo {
+  /** Image URL or data: URL (photos uploaded in this browser). */
+  src: string;
+  caption?: string;
+}
+
+export interface Advertiser {
+  creci?: string;
+  contactName?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+}
+
+export interface PricePoint {
+  /** YYYY-MM-DD */
+  date: string;
+  price: number;
+}
+
 export interface Agency {
   id: string;
   name: string;
@@ -78,6 +147,61 @@ export interface Listing {
   description: string;
   /** Added in this browser through "Anunciar imóvel" (kept in localStorage, never in listings.json). */
   userAdded?: true;
+
+  // ---- deal (absent = sale)
+  transaction?: Transaction;
+  /** Monthly rent (BRL) when the listing is also, or only, for rent. */
+  rentPrice?: number;
+  /** Monthly condominium fee (BRL). */
+  condoFee?: number;
+  iptu?: { value: number; period: 'month' | 'year' };
+  rentGuarantees?: RentGuarantee[];
+  // ---- address
+  address?: Address;
+  addressDisplay?: AddressDisplay;
+  // ---- unit and building
+  /** Floor of the unit (apartments). */
+  unitFloor?: number;
+  towers?: number;
+  suites?: number;
+  /** How many of `parkingSpots` are covered. */
+  coveredParking?: number;
+  /** Total area (m²), e.g. private + common areas; `areaM2` is the usable area. */
+  totalAreaM2?: number;
+  /** Year of construction (or expected delivery while under construction). */
+  yearBuilt?: number;
+  usage?: Usage;
+  // ---- media (the first photo is the cover)
+  photos?: Photo[];
+  floorPlanImage?: string;
+  videoUrl?: string;
+  tourUrl?: string;
+  // ---- advertiser
+  advertiser?: Advertiser;
+  /** Advertiser's own code for the property. */
+  referenceCode?: string;
+  /** Exclusive sale authorisation (the document is checked by the back end). */
+  exclusive?: boolean;
+  exclusivityDoc?: string;
+  // ---- control
+  availability?: Availability;
+  /** YYYY-MM-DD */
+  publishedAt?: string;
+  updatedAt?: string;
+  highlight?: Highlight;
+  /** Prices recorded by the platform, oldest first. A reduction is shown only from this history. */
+  priceHistory?: PricePoint[];
+}
+
+/** Minimum number of photos for a listing published through the form. */
+export const MIN_PHOTOS = 5;
+export const transactionOf = (l: Listing): Transaction => l.transaction ?? 'sale';
+export const isForSale = (l: Listing) => transactionOf(l) !== 'rent';
+export const isForRent = (l: Listing) => transactionOf(l) !== 'sale';
+/** Price in the given mode: sale price, or monthly rent. Null when the listing is not offered that way. */
+export function priceIn(l: Listing, rent: boolean): number | null {
+  if (rent) return isForRent(l) ? (l.rentPrice ?? l.price) : null;
+  return isForSale(l) ? l.price : null;
 }
 
 export interface ListingsFile {
@@ -163,6 +287,42 @@ export function validateListingsFile(raw: unknown): ListingsFile {
       if (!isObj(fp) || (fp.type !== 'Polygon' && fp.type !== 'MultiPolygon')) errors.push(`${at}.footprint missing`);
       if (l.buildingHeightM !== undefined && !isNum(l.buildingHeightM)) errors.push(`${at}.buildingHeightM invalid`);
     }
+    const optInt = (k: string, min = 0) => {
+      const v = l[k];
+      if (v !== undefined && (!isInt(v) || v < min)) errors.push(`${at}.${k} invalid`);
+    };
+    ['rentPrice', 'condoFee', 'unitFloor', 'suites', 'coveredParking'].forEach((k) => optInt(k));
+    optInt('towers', 1);
+    optInt('yearBuilt', 1800);
+    if (l.transaction !== undefined && !TRANSACTIONS.includes(l.transaction as Transaction)) errors.push(`${at}.transaction invalid`);
+    if (l.transaction === 'rent' || l.transaction === 'both') {
+      if (!isInt(l.rentPrice) || l.rentPrice <= 0) errors.push(`${at}.rentPrice required for rent`);
+    }
+    if (l.totalAreaM2 !== undefined && (!isNum(l.totalAreaM2) || l.totalAreaM2 < (l.areaM2 as number)))
+      errors.push(`${at}.totalAreaM2 must be at least areaM2`);
+    if (l.suites !== undefined && (l.suites as number) > (l.bedrooms as number)) errors.push(`${at}.suites above bedrooms`);
+    if (l.coveredParking !== undefined && (l.coveredParking as number) > (l.parkingSpots as number))
+      errors.push(`${at}.coveredParking above parkingSpots`);
+    const inList = <T extends string>(k: string, list: readonly T[]) => {
+      if (l[k] !== undefined && !list.includes(l[k] as T)) errors.push(`${at}.${k} invalid`);
+    };
+    inList('addressDisplay', ADDRESS_DISPLAYS);
+    inList('usage', USAGES);
+    inList('availability', AVAILABILITIES);
+    inList('highlight', HIGHLIGHTS);
+    if (l.rentGuarantees !== undefined && (!Array.isArray(l.rentGuarantees) || l.rentGuarantees.some((g) => !RENT_GUARANTEES.includes(g))))
+      errors.push(`${at}.rentGuarantees invalid`);
+    if (l.iptu !== undefined && (!isObj(l.iptu) || !isInt(l.iptu.value) || (l.iptu.period !== 'month' && l.iptu.period !== 'year')))
+      errors.push(`${at}.iptu invalid`);
+    if (l.photos !== undefined && (!Array.isArray(l.photos) || l.photos.some((p) => !isObj(p) || !isStr(p.src))))
+      errors.push(`${at}.photos invalid`);
+    for (const k of ['publishedAt', 'updatedAt'])
+      if (l[k] !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(l[k]))) errors.push(`${at}.${k} must be YYYY-MM-DD`);
+    if (
+      l.priceHistory !== undefined &&
+      (!Array.isArray(l.priceHistory) || l.priceHistory.some((p) => !isObj(p) || !isInt(p.price) || !/^\d{4}-\d{2}-\d{2}$/.test(String(p.date))))
+    )
+      errors.push(`${at}.priceHistory invalid`);
     if (l.approximateLocation === true) {
       if (!isLonLat(l.approxCenter)) errors.push(`${at}.approxCenter missing`);
       if (!isNum(l.approxRadiusM)) errors.push(`${at}.approxRadiusM missing`);

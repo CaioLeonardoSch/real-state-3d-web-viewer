@@ -1,5 +1,5 @@
 import type { Listing } from '../data/types';
-import { TYPE_LABELS, priceReduction } from '../data/types';
+import { AVAILABILITY_LABELS, HIGHLIGHT_LABELS, TYPE_LABELS, priceIn, priceReduction } from '../data/types';
 import { SORT_KEYS, SORT_LABELS, priceRangeLabel, type SortKey } from '../state/sort';
 import type { RelaxSuggestion, RelaxableField } from '../state/filters';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
@@ -32,9 +32,12 @@ export interface ResultsView {
   /** Shown when there are no results. */
   suggestions?: RelaxSuggestion[];
   developments?: DevelopmentSummary[];
+  /** Searching for rentals: prices are monthly rents. */
+  rent?: boolean;
 }
 
 const FIELD_LABELS: Record<RelaxableField, string> = {
+  transaction: 'a busca por aluguel',
   types: 'o filtro de tipo',
   priceMin: 'o preço mínimo',
   priceMax: 'o preço máximo',
@@ -98,16 +101,30 @@ function emptyHtml(suggestions: RelaxSuggestion[]): string {
   </div>`;
 }
 
-/** Price, with the previous one struck through and the reduction when there is one. */
-function priceHtml(l: Listing): string {
+/** Price, with the previous one struck through and the reduction when there is one; rent per month. */
+function priceHtml(l: Listing, rent = false): string {
+  if (rent) return `<b>${formatBRL(priceIn(l, true) ?? l.price)}</b>/mês`;
   const r = priceReduction(l);
   return r
     ? `<s class="price-old" aria-label="antes ${formatBRL(r.previous)}">${formatBRL(r.previous)}</s> <b>${formatBRL(l.price)}</b> <span class="price-cut">−${r.percent}%</span>`
     : `<b>${formatBRL(l.price)}</b>`;
 }
 
-export const resultsHeading = (count: number, filtered: boolean) =>
-  filtered
+/** Highlight and reserved/sold tags of a row. */
+function rowTags(l: Listing): string {
+  const tags: string[] = [];
+  if (l.highlight && l.highlight !== 'standard') tags.push(`<span class="r-tag tag-${l.highlight}">${HIGHLIGHT_LABELS[l.highlight]}</span>`);
+  if (l.availability && l.availability !== 'active')
+    tags.push(`<span class="r-tag tag-${l.availability}">${AVAILABILITY_LABELS[l.availability]}</span>`);
+  return tags.join(' ');
+}
+
+export const resultsHeading = (count: number, filtered: boolean, rent = false) =>
+  rent
+    ? count === 1
+      ? '1 imóvel para alugar'
+      : `${count} imóveis para alugar`
+    : filtered
     ? count === 1
       ? '1 imóvel encontrado'
       : `${count} imóveis encontrados`
@@ -162,12 +179,12 @@ export class ResultsPanel {
     return true;
   }
 
-  render({ results, total, sort, filtered, suggestions = [], developments = [] }: ResultsView): void {
-    const range = priceRangeLabel(results);
+  render({ results, total, sort, filtered, suggestions = [], developments = [], rent = false }: ResultsView): void {
+    const range = priceRangeLabel(results, rent);
     this.el.hidden = false;
     this.el.innerHTML = `
       <div class="results-head">
-        <h2 class="results-title" id="results-title">${resultsHeading(results.length, filtered)}</h2>
+        <h2 class="results-title" id="results-title">${resultsHeading(results.length, filtered, rent)}</h2>
         ${filtered ? `<span class="muted">de ${total}</span>` : ''}
         <button type="button" class="link-btn" data-action="toggle-results" aria-controls="results-body"></button>
       </div>
@@ -198,9 +215,10 @@ export class ResultsPanel {
             </div>
             <ul aria-labelledby="results-title">${results
               .map(
-                (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}">
-                  <span class="r-title">${escapeHtml(l.title)}${l.userAdded ? ' <span class="r-tag">Seu anúncio</span>' : ''}</span>
-                  <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · ${priceHtml(l)}</span>
+                (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}"${l.photos?.length ? ' class="has-thumb"' : ''}>
+                  ${l.photos?.length ? `<img class="r-thumb" src="${escapeHtml(l.photos[0].src)}" alt="" loading="lazy">` : ''}
+                  <span class="r-title">${escapeHtml(l.title)}${l.userAdded ? ' <span class="r-tag">Seu anúncio</span>' : ''} ${rowTags(l)}</span>
+                  <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · ${priceHtml(l, rent)}</span>
                 </button></li>`,
               )
               .join('')}</ul>`

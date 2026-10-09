@@ -1,6 +1,22 @@
 import type { Agency, Listing } from '../data/types';
-import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, priceReduction } from '../data/types';
-import { escapeHtml, formatArea, formatBRL, formatBRLCents } from '../utils/format';
+import {
+  AMENITY_LABELS,
+  AVAILABILITIES,
+  AVAILABILITY_LABELS,
+  HIGHLIGHT_LABELS,
+  RENT_GUARANTEE_LABELS,
+  STATUS_LABELS,
+  TRANSACTION_LABELS,
+  TYPE_LABELS,
+  USAGE_LABELS,
+  isForRent,
+  isForSale,
+  priceReduction,
+  transactionOf,
+  type Availability,
+} from '../data/types';
+import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
+import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
 
@@ -27,6 +43,8 @@ export class Drawer {
     private onNavigate: (id: string) => void = () => {},
     /** Deletes a listing added in this browser. */
     private onDelete: (id: string) => void = () => {},
+    /** Saves changes to a listing added in this browser; returns an error message or null. */
+    private onUpdate: (l: Listing) => string | null = () => null,
   ) {
     document.addEventListener('keydown', (e) => {
       if (!this.openId) return;
@@ -89,30 +107,74 @@ export class Drawer {
     this.nav = nav;
     const agency = this.agencies.find((a) => a.id === l.agency)?.name ?? l.agency;
     const sim = simulatePayment(l.price, l.status);
+    const sale = isForSale(l);
+    const rentOnly = !sale;
+    const building = l.type !== 'land';
+    const opt = (cond: unknown, row: [string, string]): [string, string][] => (cond ? [row] : []);
     const rows: [string, string][] = [
-      ['Tipo', TYPE_LABELS[l.type]],
-      ['Imobiliária', agency],
-      [l.type === 'land' ? 'Área do lote' : 'Área construída', formatArea(l.areaM2)],
-      ...(l.landAreaM2 && l.type !== 'land' ? ([['Área do terreno', formatArea(l.landAreaM2)]] as [string, string][]) : []),
-      ...(l.type !== 'land'
+      ['Tipo', TYPE_LABELS[l.type] + (l.usage === 'commercial' ? ` (${USAGE_LABELS.commercial.toLowerCase()})` : '')],
+      ...opt(l.transaction, ['Negócio', TRANSACTION_LABELS[transactionOf(l)]]),
+      [l.type === 'land' ? 'Área do lote' : 'Área útil', formatArea(l.areaM2)],
+      ...opt(l.totalAreaM2, ['Área total', formatArea(l.totalAreaM2 ?? 0)]),
+      ...opt(l.landAreaM2 && building, ['Área do terreno', formatArea(l.landAreaM2 ?? 0)]),
+      ...(building
         ? ([
-            ['Quartos', String(l.bedrooms)],
+            ['Quartos', l.suites ? `${l.bedrooms} (${l.suites} ${l.suites === 1 ? 'suíte' : 'suítes'})` : String(l.bedrooms)],
             ['Banheiros', String(l.bathrooms)],
-            ['Vagas', String(l.parkingSpots)],
+            ['Vagas', l.coveredParking ? `${l.parkingSpots} (${l.coveredParking} cobertas)` : String(l.parkingSpots)],
           ] as [string, string][])
         : []),
+      ...opt(l.unitFloor, ['Andar da unidade', `${l.unitFloor}º`]),
       ...(l.floors
         ? ([
             [
-              'Pavimentos do edifício',
+              'Andares do edifício',
               // the generator uses the building's real floors when the cadastre (or OSM) knows them
-              `${l.floors} (${l.buildingHeightM && Math.round(l.buildingHeightM / 3) === l.floors ? 'estimativa pelo cadastro' : 'fictício'})`,
+              l.userAdded
+                ? String(l.floors)
+                : `${l.floors} (${l.buildingHeightM && Math.round(l.buildingHeightM / 3) === l.floors ? 'estimativa pelo cadastro' : 'fictício'})`,
             ],
           ] as [string, string][])
         : []),
-      ['Situação', STATUS_LABELS[l.status]],
-      ['Preço por m²', `${formatBRL(Math.round(l.price / l.areaM2))}/m²`],
+      ...opt(l.towers && l.towers > 1, ['Torres', String(l.towers)]),
+      ...opt(l.yearBuilt, [l.status === 'under_construction' ? 'Entrega prevista' : 'Ano de construção', String(l.yearBuilt)]),
+      ...opt(building, ['Obra', STATUS_LABELS[l.status]]),
+      ...opt(sale, ['Preço por m²', `${formatBRL(Math.round(l.price / l.areaM2))}/m²`]),
+      ...opt(l.condoFee, ['Condomínio', `${formatBRL(l.condoFee ?? 0)}/mês`]),
+      ...opt(l.iptu, ['IPTU', l.iptu ? `${formatBRL(l.iptu.value)}/${l.iptu.period === 'month' ? 'mês' : 'ano'}` : '']),
+      ...opt(l.rentGuarantees?.length, ['Garantias aceitas', (l.rentGuarantees ?? []).map((g) => RENT_GUARANTEE_LABELS[g]).join(', ')]),
+      ['Imobiliária', agency],
+      ...opt(l.advertiser?.creci, ['CRECI', l.advertiser?.creci ?? '']),
+      ...opt(l.referenceCode, ['Código', l.referenceCode ?? '']),
+      ...opt(l.publishedAt, ['Publicado em', formatDate(l.publishedAt ?? '')]),
+      ...opt(l.updatedAt && l.updatedAt !== l.publishedAt, ['Atualizado em', formatDate(l.updatedAt ?? '')]),
     ];
+    const address = addressLabel(l);
+    const tags = [
+      l.availability && l.availability !== 'active' ? `<span class="r-tag tag-${l.availability}">${AVAILABILITY_LABELS[l.availability]}</span>` : '',
+      l.highlight && l.highlight !== 'standard' ? `<span class="r-tag tag-${l.highlight}">${HIGHLIGHT_LABELS[l.highlight]}</span>` : '',
+      l.exclusive ? '<span class="r-tag tag-exclusive">Exclusivo</span>' : '',
+    ].join(' ');
+    const priceBlock = (() => {
+      const rent = isForRent(l) ? `${formatBRL(l.rentPrice ?? l.price)}<small>/mês</small>` : '';
+      if (rentOnly) return `<p class="price">${rent}</p><p class="price-note">Aluguel</p>`;
+      const r = priceReduction(l);
+      const also = rent ? `<p class="price-note">ou aluguel de ${rent}</p>` : '';
+      if (!r) return `<p class="price">${formatBRL(l.price)}</p>${also}`;
+      const since = r.since ? ` em ${formatDate(r.since)}` : '';
+      return `<p class="price-was"><s>${formatBRL(r.previous)}</s> <span class="price-cut">−${r.percent}%</span></p>
+        <p class="price">${formatBRL(l.price)}</p>
+        <p class="price-note">Preço reduzido${since}</p>${also}`;
+    })();
+    const contact = l.advertiser?.whatsapp
+      ? whatsappLink(l.advertiser.whatsapp, `Olá! Vi o anúncio "${l.title}"${l.referenceCode ? ` (código ${l.referenceCode})` : ''} e gostaria de mais informações.`)
+      : null;
+    const video = safeUrl(l.videoUrl);
+    const tour = safeUrl(l.tourUrl);
+    // the price history is shown to the advertiser only (in "Gerenciar anúncio"), not to the public
+    const history = l.userAdded && (l.priceHistory ?? []).length > 1 ? l.priceHistory! : null;
+    const embed = videoEmbedUrl(l.videoUrl);
+    const slides = this.slides(l);
 
     this.el.innerHTML = `
       <button type="button" class="drawer-handle" aria-expanded="false" aria-label="Expandir detalhes"><span></span></button>
@@ -135,15 +197,31 @@ export class Drawer {
           : '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
       }
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>
-      ${(() => {
-        const r = priceReduction(l);
-        if (!r) return `<p class="price">${formatBRL(l.price)}</p>`;
-        const since = r.since ? ` em ${r.since.split('-').reverse().join('/')}` : '';
-        return `<p class="price-was"><s>${formatBRL(r.previous)}</s> <span class="price-cut">−${r.percent}%</span></p>
-          <p class="price">${formatBRL(l.price)}</p>
-          <p class="price-note">Preço reduzido${since}</p>`;
-      })()}
+      ${tags.trim() ? `<p class="drawer-tags">${tags}</p>` : ''}
+      ${priceBlock}
+      ${address ? `<p class="drawer-address">📍 ${escapeHtml(address)}</p>` : ''}
       </div>
+      ${
+        slides.length
+          ? `<figure class="gallery" data-index="0">
+              <img src="${escapeHtml(slides[0].src)}" alt="${escapeHtml(slides[0].caption ?? `Foto 1 de ${slides.length}`)}">
+              ${slides.length > 1 ? `<button type="button" class="gal-btn gal-prev" aria-label="Foto anterior">‹</button><button type="button" class="gal-btn gal-next" aria-label="Próxima foto">›</button>` : ''}
+              <figcaption><span class="gal-pos">1/${slides.length}</span> <span class="gal-caption">${escapeHtml(slides[0].caption ?? '')}</span></figcaption>
+            </figure>`
+          : ''
+      }
+      ${
+        embed
+          ? `<div class="video"><iframe src="${escapeHtml(embed)}" title="Vídeo do imóvel" loading="lazy"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
+          : ''
+      }
+      ${
+        contact
+          ? `<a class="btn-primary btn-whatsapp" href="${escapeHtml(contact)}" target="_blank" rel="noopener">Conversar no WhatsApp${l.advertiser?.contactName ? ` com ${escapeHtml(l.advertiser.contactName)}` : ''}</a>`
+          : ''
+      }
       ${
         l.approximateLocation
           ? `<p class="notice-approx">📍 Localização aproximada: a posição exata não é exibida; o círculo indica um raio de ~${l.approxRadiusM ?? 150} m.</p>`
@@ -156,11 +234,23 @@ export class Drawer {
           : ''
       }
       <p class="description">${escapeHtml(l.description)}</p>
-      <figure class="floorplan">
+      ${
+        (video && !embed) || tour
+          ? `<p class="media-links">${video && !embed ? `<a href="${escapeHtml(video)}" target="_blank" rel="noopener">▶ Ver vídeo</a>` : ''}${
+              tour ? `<a href="${escapeHtml(tour)}" target="_blank" rel="noopener">⟳ Tour 360°</a>` : ''
+            }</p>`
+          : ''
+      }
+      ${
+        l.floorPlanImage
+          ? ''
+          : `<figure class="floorplan">
         ${floorPlanSvg(l)}
         <figcaption>Planta ilustrativa (não corresponde ao imóvel real)</figcaption>
-      </figure>
-      <section class="simulation">
+      </figure>`
+      }
+
+      ${sale ? `<section class="simulation">
         <h3>Simulação ilustrativa</h3>
         <dl>
           <div><dt>Entrada (20%)</dt><dd>${formatBRLCents(sim.downPayment)}</dd></div>
@@ -172,10 +262,29 @@ export class Drawer {
           <div><dt>${sim.installments} parcelas mensais</dt><dd>${formatBRLCents(sim.installmentValue)}</dd></div>
         </dl>
         <p class="muted small">Sem juros nem correção. Valores apenas para demonstração; não é proposta de financiamento.</p>
-      </section>
+      </section>` : ''}
       ${
         l.userAdded
-          ? '<button type="button" class="btn-secondary btn-danger" data-action="delete">Excluir este anúncio</button>'
+          ? `<section class="manage">
+              <h3>Gerenciar anúncio</h3>
+              <form class="manage-form">
+                <label class="a-field">Situação<select name="availability">${AVAILABILITIES.map(
+                  (a) => `<option value="${a}" ${a === (l.availability ?? 'active') ? 'selected' : ''}>${AVAILABILITY_LABELS[a]}</option>`,
+                ).join('')}</select></label>
+                <label class="a-field">${rentOnly ? 'Aluguel (R$/mês)' : 'Preço de venda (R$)'}<input name="price" inputmode="numeric" value="${l.price}"></label>
+                <p class="a-hint">Baixar o preço mostra o preço anterior riscado; o histórico fica registrado.</p>
+                <p class="a-error" role="alert" hidden></p>
+                <button type="submit" class="btn-secondary">Salvar alterações</button>
+              </form>
+              ${
+                history
+                  ? `<div class="price-history"><h3>Histórico de preço <small>(visível só para você)</small></h3><ol>${history
+                      .map((h) => `<li><span>${formatDate(h.date)}</span> <b>${formatBRL(h.price)}</b></li>`)
+                      .join('')}</ol></div>`
+                  : ''
+              }
+              <button type="button" class="btn-secondary btn-danger" data-action="delete">Excluir este anúncio</button>
+            </section>`
           : ''
       }
       <p class="drawer-attrib">Mapa: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL) · <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a></p>
@@ -183,6 +292,11 @@ export class Drawer {
     this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
     this.el.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
       if (window.confirm(`Excluir o anúncio "${l.title}"? Ele só existe neste navegador.`)) this.onDelete(l.id);
+    });
+    this.bindGallery(l);
+    this.el.querySelector<HTMLFormElement>('.manage-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.saveManage(l, e.currentTarget as HTMLFormElement);
     });
     this.el.querySelector('[data-action="prev"]')?.addEventListener('click', () => nav?.prevId && this.onNavigate(nav.prevId));
     this.el.querySelector('[data-action="next"]')?.addEventListener('click', () => nav?.nextId && this.onNavigate(nav.nextId));
@@ -193,6 +307,61 @@ export class Drawer {
     this.el.setAttribute('aria-hidden', 'false');
     this.el.scrollTop = 0;
     this.el.focus({ preventScroll: true });
+  }
+
+  /** Photos (cover first), then the floor plan sent by the advertiser. */
+  private slides(l: Listing) {
+    return [...(l.photos ?? []), ...(l.floorPlanImage ? [{ src: l.floorPlanImage, caption: 'Planta' }] : [])];
+  }
+
+  private bindGallery(l: Listing): void {
+    const fig = this.el.querySelector<HTMLElement>('.gallery');
+    const photos = this.slides(l);
+    if (!fig || photos.length < 2) return;
+    const show = (i: number) => {
+      const n = (i + photos.length) % photos.length;
+      fig.dataset.index = String(n);
+      const img = fig.querySelector('img')!;
+      img.src = photos[n].src;
+      img.alt = photos[n].caption ?? `Foto ${n + 1} de ${photos.length}`;
+      fig.querySelector('.gal-pos')!.textContent = `${n + 1}/${photos.length}`;
+      fig.querySelector('.gal-caption')!.textContent = photos[n].caption ?? '';
+    };
+    fig.querySelector('.gal-prev')!.addEventListener('click', () => show(Number(fig.dataset.index) - 1));
+    fig.querySelector('.gal-next')!.addEventListener('click', () => show(Number(fig.dataset.index) + 1));
+  }
+
+  /** Status and price changes of the user's own listing. A lower price becomes a recorded reduction. */
+  private saveManage(l: Listing, form: HTMLFormElement): void {
+    const fd = new FormData(form);
+    const price = parseNumberInput(String(fd.get('price') ?? ''));
+    const err = form.querySelector<HTMLElement>('.a-error')!;
+    if (!price || price < 100) {
+      err.hidden = false;
+      err.textContent = 'Informe um preço válido.';
+      return;
+    }
+    const date = today();
+    const next: Listing = { ...l, availability: fd.get('availability') as Availability, updatedAt: date };
+    const newPrice = Math.round(price);
+    if (newPrice !== l.price) {
+      next.price = newPrice;
+      if (transactionOf(l) === 'rent') next.rentPrice = newPrice;
+      next.priceHistory = [...(l.priceHistory ?? [{ date: l.publishedAt ?? date, price: l.price }]), { date, price: newPrice }];
+      if (newPrice < l.price) {
+        // the struck-through price is the highest one since the last increase
+        next.previousPrice = Math.max(l.previousPrice ?? 0, l.price);
+        next.priceReducedAt = date;
+      } else {
+        delete next.previousPrice;
+        delete next.priceReducedAt;
+      }
+    }
+    const error = this.onUpdate(next);
+    if (error) {
+      err.hidden = false;
+      err.textContent = error;
+    }
   }
 
   close(): void {

@@ -47,6 +47,13 @@ export function mountFilters(
   agencies: Agency[],
 ): { setForm: (c: FilterCriteria) => void } {
   form.innerHTML = `
+    <fieldset class="f-chips f-deal">
+      <legend class="sr-only">Negócio</legend>
+      <div class="segmented">
+        <label><input type="radio" name="transaction" value="" checked><span>Comprar</span></label>
+        <label><input type="radio" name="transaction" value="rent"><span>Alugar</span></label>
+      </div>
+    </fieldset>
     ${chips('type', 'Tipo', LISTING_TYPES, TYPE_LABELS)}
     ${numberInput('priceMin')}
     ${numberInput('priceMax')}
@@ -86,6 +93,7 @@ export function mountFilters(
     const int = (k: string) => (str(k) === '' ? null : Number(str(k)));
     const agency = str('agency');
     return {
+      transaction: fd.get('transaction') === 'rent' ? 'rent' : null,
       types: fd.getAll('type').map(String) as ListingType[],
       priceMin: parseNumberInput(str('priceMin')),
       priceMax: parseNumberInput(str('priceMax')),
@@ -104,6 +112,7 @@ export function mountFilters(
   const writeForm = (c: FilterCriteria) => {
     const check = (name: string, values: readonly string[]) =>
       form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`).forEach((el) => (el.checked = values.includes(el.value)));
+    check('transaction', [c.transaction ?? '']);
     check('type', c.types);
     check('status', c.statuses);
     check('feature', c.features);

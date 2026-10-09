@@ -1,3 +1,4 @@
+import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { AttributionControl, LngLatBounds, Map as MlMap, Marker, NavigationControl } from 'maplibre-gl';
 import type { ExpressionSpecification, GeoJSONSource, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Geometry, Point, Polygon, MultiPolygon } from 'geojson';
@@ -515,6 +516,17 @@ export class Scene {
       if (w <= bbox[2] && e >= bbox[0] && s <= bbox[3] && n >= bbox[1]) out.push({ type: 'Feature', properties: f.properties, geometry: g });
     }
     return out;
+  }
+
+  /** Name of the neighbourhood containing the point (from the loaded tiles), or null. */
+  bairroAt([x, y]: [number, number]): string | null {
+    const d = 0.0005;
+    for (const f of this.tileFeaturesIn('bairros', [x - d, y - d, x + d, y + d])) {
+      const g = f.geometry;
+      if ((g.type === 'Polygon' || g.type === 'MultiPolygon') && turfBooleanPointInPolygon([x, y], g))
+        return (f.properties?.name as string | undefined) ?? null;
+    }
+    return null;
   }
 
   listingBounds(listing: Listing): [number, number, number, number] | null {

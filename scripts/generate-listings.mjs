@@ -3,7 +3,7 @@
 // Deterministic: fixed seed, no Date/Math.random. Re-running produces the same file
 // as long as public/data/*.geojson do not change.
 //
-// Usage: node scripts/generate-listings.mjs [--count N]   (default 60, between 4 and 200)
+// Usage: node scripts/generate-listings.mjs [--count N]   (default 100, between 4 and 200)
 // Needs .cache/region/ (npm run data:region).
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -304,6 +304,59 @@ function priceCut(price) {
   return previousPrice > price ? { previousPrice, priceReducedAt: day.toISOString().slice(0, 10) } : null;
 }
 
+// Full-record fields (deal, costs, unit, advertiser, control), from a fourth random stream.
+// No photos, street addresses or phone numbers: those would be invented data about real places and people.
+const detailRand = mulberry32(SEED + 3);
+const dBetween = (min, max) => min + (max - min) * detailRand();
+const dInt = (min, max) => Math.floor(dBetween(min, max + 1));
+const DAY = 86400000;
+const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+const regionAreas = JSON.parse(await readFile(path.join(SRC, 'bairros.geojson'), 'utf8')).features;
+const areaAt = (pt, kind) =>
+  regionAreas.find((f) => (f.properties.kind ?? 'bairro') === kind && turfBooleanPointInPolygon(pt, f))?.properties.name;
+
+function detailsFor(l, center) {
+  const building = l.type !== 'land';
+  const d = {};
+  if (building && detailRand() < 0.15) {
+    d.transaction = 'both';
+    d.rentPrice = roundTo(l.price * dBetween(0.0038, 0.005), 50);
+    d.rentGuarantees = ['deposit', 'guarantor', 'insurance', 'capitalization'].filter(() => detailRand() < 0.55);
+  } else d.transaction = 'sale';
+  if (l.type === 'apartment') d.condoFee = roundTo(l.areaM2 * dBetween(6, 10), 10);
+  else if (l.type === 'semi_detached' && detailRand() < 0.3) d.condoFee = roundTo(dBetween(150, 400), 10);
+  d.iptu = { value: roundTo(l.price * dBetween(0.0012, 0.0025), 10), period: 'year' };
+  const bairro = areaAt(center, 'bairro') ?? areaAt(center, 'distrito');
+  const city = areaAt(center, 'cidade');
+  d.address = { ...(bairro ? { bairro } : {}), ...(city ? { city } : {}) };
+  d.addressDisplay = 'neighborhood';
+  if (building) {
+    d.suites =
+      l.type === 'apartment' ? (l.bedrooms >= 2 ? dInt(1, Math.min(2, l.bedrooms)) : 0) : l.type === 'house' ? dInt(1, l.bedrooms - 1) : dInt(0, 1);
+    d.coveredParking = l.type === 'apartment' ? l.parkingSpots : dInt(0, l.parkingSpots);
+    d.yearBuilt = l.status === 'under_construction' ? dInt(2027, 2028) : l.type === 'apartment' ? dInt(2000, 2025) : dInt(1988, 2025);
+    d.usage = 'residential';
+  }
+  if (l.type === 'apartment') {
+    d.totalAreaM2 = Math.round(l.areaM2 * dBetween(1.25, 1.45));
+    d.unitFloor = dInt(1, Math.max(1, l.floors - 1));
+    d.towers = detailRand() < 0.2 ? 2 : 1;
+  }
+  d.referenceCode = `${l.agency === 'agency-a' ? 'EXA' : 'EXB'}-${1000 + Number(l.id.split('-').pop())}`;
+  if (detailRand() < 0.25) d.exclusive = true;
+  d.availability = detailRand() < 0.06 ? 'reserved' : 'active';
+  const h = detailRand();
+  d.highlight = h < 0.04 ? 'super' : h < 0.12 ? 'featured' : 'standard';
+  // published between March and July 2026; updated on the price cut, or some days later
+  const published = Date.UTC(2026, 2, 1) + Math.floor(detailRand() * 150) * DAY;
+  d.publishedAt = isoDay(published);
+  d.updatedAt = l.priceReducedAt ?? isoDay(Math.min(Date.UTC(2026, 9, 8), published + Math.floor(detailRand() * 90) * DAY));
+  d.priceHistory = l.previousPrice
+    ? [{ date: d.publishedAt, price: l.previousPrice }, { date: l.priceReducedAt, price: l.price }]
+    : [{ date: d.publishedAt, price: l.price }];
+  return d;
+}
+
 /** Amenities for a listing; the title's promise ("com piscina", "com sacada") is always kept. */
 function amenitiesFor(type, title) {
   const out = Object.entries(AMENITY_ODDS[type])
@@ -412,6 +465,10 @@ for (const type of plan) {
   if (cut) Object.assign(listing, cut);
   listing.approximateLocation = approximateLocation;
   if (approximateLocation) listing.approxRadiusM = APPROX_RADIUS_M;
+  const center = listing.lotPolygon
+    ? turfCentroid(polygon(listing.lotPolygon.coordinates)).geometry.coordinates
+    : turfCentroid({ type: 'Feature', properties: {}, geometry: listing.footprint }).geometry.coordinates;
+  Object.assign(listing, detailsFor(listing, center));
   listing.fictional = true;
   listings.push(listing);
 }

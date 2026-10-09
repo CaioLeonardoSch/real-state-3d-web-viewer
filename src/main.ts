@@ -111,7 +111,7 @@ async function main() {
   // Row that opened the drawer, to give focus back to it when the drawer closes.
   let openedFromRow: string | null = null;
   // The list the drawer browses with previous/next: applied search results, in display order.
-  let currentList: Listing[] = sortListings(listings, sort);
+  let currentList: Listing[] = sortListings(filterListings(listings, store.getApplied()), sort);
   // True while the UI is being updated from the URL (back/forward, initial load): don't write history.
   let syncingFromUrl = false;
   // True while a search closes the drawer because its listing is no longer in the results.
@@ -149,6 +149,7 @@ async function main() {
     },
     (id) => openListing(id, true),
     (id) => deleteUserListing(id),
+    (l) => updateUserListing(l),
   );
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
     // while the "Anunciar imóvel" form is open, the map is used to choose its place
@@ -195,9 +196,11 @@ async function main() {
   const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies);
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
-    currentList = sortListings(filterListings(listings, store.getApplied()), sort);
+    const rent = store.getApplied().transaction === 'rent';
+    currentList = sortListings(filterListings(listings, store.getApplied()), sort, rent);
     const filtered = !isEmptyCriteria(store.getApplied());
     results.render({
+      rent,
       results: currentList,
       total: listings.length,
       sort,
@@ -216,7 +219,7 @@ async function main() {
     showResults();
     // desktop: show the results; mobile: the collapsed pill already shows the count and the map is fitted
     if (!isMobile()) results.setCollapsed(false);
-    announce(resultsHeading(currentList.length, !isEmptyCriteria(criteria)));
+    announce(resultsHeading(currentList.length, !isEmptyCriteria(criteria), criteria.transaction === 'rent'));
     const matched = currentList;
     scene.setMatched(new Set(matched.map((l) => l.id)));
     if (drawer.currentId && !matched.some((l) => l.id === drawer.currentId)) {
@@ -249,6 +252,16 @@ async function main() {
     announce('Anúncio excluído.');
   }
 
+  function updateUserListing(l: Listing): string | null {
+    const next = userListings.map((x) => (x.id === l.id ? l : x));
+    if (!saveUserListings(next)) return 'O navegador não permitiu salvar a alteração.';
+    userListings = next;
+    listingsChanged();
+    announce('Anúncio atualizado.');
+    openListing(l.id, false);
+    return null;
+  }
+
   function downloadUserListings() {
     const json = JSON.stringify(exportUserListings(userListings, agencies), null, 2) + '\n';
     const a = document.createElement('a');
@@ -266,10 +279,11 @@ async function main() {
     listingOnBuilding: (osmId) => listings.find((l) => l.buildingOsmId === osmId),
     otherLots: () => listings.flatMap((l) => (l.lotPolygon ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),
+    bairroAt: (p) => scene.bairroAt(p),
     onSave: (l) => {
       const next = [...userListings, l];
       if (!saveUserListings(next))
-        return 'O navegador não permitiu salvar (modo privado ou armazenamento bloqueado). O anúncio não foi criado.';
+        return 'O navegador não permitiu salvar: falta espaço (as fotos ocupam espaço; exclua anúncios antigos) ou o armazenamento está bloqueado. O anúncio não foi criado.';
       userListings = next;
       listingsChanged();
       announce(`Anúncio "${l.title}" salvo.`);
@@ -380,6 +394,8 @@ async function main() {
 
   showResults();
   await scene.ready;
+  // rent-only listings start dimmed: the default search is "Comprar"
+  scene.setMatched(new Set(currentList.map((l) => l.id)));
   devLayer = new DevelopmentLayer(
     scene.map,
     developments,
