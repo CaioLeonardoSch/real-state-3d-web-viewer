@@ -546,14 +546,14 @@ async function main() {
     const pickingUi = await page.evaluate(() => document.querySelector('#add-panel').classList.contains('picking'));
     const pickedBuilding = await pickOnMap('building');
     const autoBairro = await page.inputValue('#add-panel input[name="bairro"]');
-    // incomplete record: 4 photos and no CRECI are refused
+    // incomplete record: no CRECI is refused
     await fillRequired(4);
     await page.fill('#add-panel input[name="creci"]', '');
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(200);
     const refusal = await page.textContent('#add-panel .a-error');
-    check('the form refuses an incomplete record (fewer than 5 photos, no CRECI)',
-      /5 fotos/.test(refusal) && /CRECI/.test(refusal) && (await page.isVisible('#add-panel .add-form')), refusal);
+    check('the form refuses an incomplete record (no CRECI)',
+      /CRECI/.test(refusal) && !/foto/.test(refusal) && (await page.isVisible('#add-panel .add-form')), refusal);
     await page.setInputFiles('#add-panel input[name="photos"]', [{ name: 'foto5.png', mimeType: 'image/png', buffer: PNG }]);
     await page.waitForFunction(() => document.querySelectorAll('#add-panel .a-photos img').length === 5);
     await page.fill('#add-panel input[name="creci"]', '12345-J');

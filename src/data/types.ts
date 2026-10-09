@@ -193,8 +193,6 @@ export interface Listing {
   priceHistory?: PricePoint[];
 }
 
-/** Minimum number of photos for a listing published through the form. */
-export const MIN_PHOTOS = 5;
 export const transactionOf = (l: Listing): Transaction => l.transaction ?? 'sale';
 export const isForSale = (l: Listing) => transactionOf(l) !== 'rent';
 export const isForRent = (l: Listing) => transactionOf(l) !== 'sale';

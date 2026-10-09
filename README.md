@@ -52,15 +52,15 @@ outro terreno, e círculo aproximado que contém o local real.
 ### Cadastro completo do anúncio
 
 O formulário segue, em linhas gerais, o que os portais pedem (o padrão de fato é o XML que as imobiliárias enviam a
-ZAP/VivaReal/OLX). Obrigatórios: local no mapa, preço (de venda e/ou aluguel), área, bairro, **5 fotos**, CRECI e
-WhatsApp.
+ZAP/VivaReal/OLX). Obrigatórios: local no mapa, preço (de venda e/ou aluguel), área, bairro, CRECI e WhatsApp. Fotos
+são opcionais e sem limite de quantidade.
 
 | Seção | Campos |
 |---|---|
 | Negócio | venda, locação ou ambos; preço de venda; aluguel mensal; condomínio; IPTU (por mês ou por ano); aceita financiamento/permuta; garantias da locação (caução, fiador, seguro fiança, título de capitalização) |
 | Imóvel | tipo, finalidade (residencial/comercial), área útil e total, área do terreno, quartos, suítes, banheiros, vagas e vagas cobertas, andar da unidade, andares do edifício, torres, ano de construção (ou de entrega), obra, comodidades, descrição |
 | Endereço | CEP (preenche rua, bairro e cidade pelo ViaCEP), rua, número, complemento, bairro (preenchido pelo ponto escolhido no mapa), cidade e **o que mostrar ao público**: endereço completo, só a rua ou só o bairro. Sem o endereço completo, o mapa mostra o raio de 150 m em vez do prédio |
-| Mídia | fotos (mínimo 5, até 12; capa escolhida, legendas), planta (imagem, entra no fim da galeria), vídeo (link do YouTube ou Vimeo, exibido embutido no anúncio) e link de tour 360° |
+| Mídia | fotos (sem mínimo nem máximo; capa escolhida, legendas), planta (imagem, entra no fim da galeria), vídeo (link do YouTube ou Vimeo, exibido embutido no anúncio) e link de tour 360° |
 | Anunciante | imobiliária, CRECI, código de referência, contato, WhatsApp, telefone, e-mail, exclusividade (com o documento de autorização, que seria conferido pelo backend) |
 | Publicação | situação (ativo, reservado, vendido), tipo de destaque (padrão, destaque, super destaque); datas de publicação e atualização automáticas |
 
@@ -517,7 +517,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - "Mais filtros": abre, conta os critérios ativos ("Mais filtros (2)"), filtra por comodidade + banheiros e grava
     `?banheiros=2&comodidades=piscina`;
   - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
-  - "Anunciar": cadastro incompleto (4 fotos, sem CRECI) é recusado; casa num prédio cinza e terreno num espaço
+  - "Anunciar": cadastro incompleto (sem CRECI) é recusado; casa num prédio cinza e terreno num espaço
     livre são salvos, abertos e aparecem na lista, com galeria, endereço só da rua e link de WhatsApp; baixar o
     preço no "Gerenciar anúncio" mostra o preço riscado e o histórico (só para o anunciante); continuam após recarregar e podem ser
     excluídos;

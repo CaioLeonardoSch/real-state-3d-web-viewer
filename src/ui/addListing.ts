@@ -11,7 +11,6 @@ import {
   HIGHLIGHT_LABELS,
   LISTING_STATUSES,
   LISTING_TYPES,
-  MIN_PHOTOS,
   RENT_GUARANTEES,
   RENT_GUARANTEE_LABELS,
   STATUS_LABELS,
@@ -41,8 +40,6 @@ import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type Placement
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
 
 const METERS_PER_FLOOR = 3;
-/** localStorage holds a few MB: photos are shrunk and capped. */
-const MAX_PHOTOS = 12;
 const TYPE_SLUG: Record<ListingType, string> = { apartment: 'apto', house: 'casa', semi_detached: 'geminado', land: 'terreno' };
 
 export interface AddListingDeps {
@@ -194,7 +191,7 @@ export class AddListingPanel {
 
         <fieldset class="a-section">
           <legend>Fotos e mídia</legend>
-          <label class="a-field a-wide">Fotos * (mínimo de ${MIN_PHOTOS}; a marcada como capa aparece primeiro)
+          <label class="a-field a-wide">Fotos (a marcada como capa aparece primeiro)
             <input name="photos" type="file" accept="image/*" multiple></label>
           <ul class="a-photos a-wide" aria-label="Fotos escolhidas"></ul>
           <label class="a-field a-wide">Planta (imagem)<input name="floorPlan" type="file" accept="image/*"></label>
@@ -310,11 +307,10 @@ export class AddListingPanel {
     if (!files.length) return;
     this.showError(null);
     try {
-      for (const f of files.slice(0, MAX_PHOTOS - this.photos.length)) this.photos.push({ src: await resizeImage(f) });
+      for (const f of files) this.photos.push({ src: await resizeImage(f) });
     } catch {
       this.showError('Não foi possível ler uma das imagens. Use JPEG, PNG ou WebP.');
     }
-    if (files.length + this.photos.length > MAX_PHOTOS) this.showError(`No protótipo cabem até ${MAX_PHOTOS} fotos por anúncio.`);
     this.renderPhotos();
   }
 
@@ -331,7 +327,6 @@ export class AddListingPanel {
   /** Thumbnails with caption, cover choice and removal. The cover is kept first in `photos`. */
   private renderPhotos(): void {
     const list = this.el.querySelector<HTMLElement>('.a-photos')!;
-    const missing = Math.max(0, MIN_PHOTOS - this.photos.length);
     list.innerHTML =
       this.photos
         .map(
@@ -343,7 +338,7 @@ export class AddListingPanel {
           </li>`,
         )
         .join('') +
-      `<li class="a-photos-count">${this.photos.length} ${this.photos.length === 1 ? 'foto' : 'fotos'}${missing ? ` · faltam ${missing}` : ' ✓'}</li>`;
+      (this.photos.length ? `<li class="a-photos-count">${this.photos.length} ${this.photos.length === 1 ? 'foto' : 'fotos'}</li>` : '');
     list.querySelectorAll<HTMLInputElement>('.a-caption').forEach((el) =>
       el.addEventListener('input', () => (this.photos[Number(el.dataset.i)].caption = el.value.trim() || undefined)),
     );
@@ -555,7 +550,6 @@ export class AddListingPanel {
     if (display !== 'neighborhood' && !address.street) problems.push('informe a rua (ou mostre só o bairro)');
     if (display === 'full' && !address.number) problems.push('informe o número (ou não mostre o endereço completo)');
     if (address.cep && address.cep.replace(/\D/g, '').length !== 8) problems.push('o CEP tem 8 dígitos');
-    if (this.photos.length < MIN_PHOTOS) problems.push(`envie pelo menos ${MIN_PHOTOS} fotos (há ${this.photos.length})`);
     for (const k of ['videoUrl', 'tourUrl']) if (this.value(k) && !safeUrl(this.value(k))) problems.push('os links precisam começar com https://');
     if (!this.value('creci')) problems.push('informe o CRECI');
     if (whatsapp.replace(/\D/g, '').length < 10) problems.push('informe o WhatsApp com DDD');
@@ -608,7 +602,7 @@ export class AddListingPanel {
       addressDisplay: display,
       approximateLocation: approximate,
       ...(approximate ? { approxCenter: approxCenterFor(id, place.center), approxRadiusM: APPROX_RADIUS_M } : {}),
-      photos: this.photos,
+      ...(this.photos.length ? { photos: this.photos } : {}),
       ...opt('floorPlanImage', this.floorPlan),
       ...opt('videoUrl', safeUrl(this.value('videoUrl'))),
       ...opt('tourUrl', safeUrl(this.value('tourUrl'))),
