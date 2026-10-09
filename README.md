@@ -430,7 +430,9 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   Firefox nem GPUs reais.
 
 - Anúncios criados pelo app ficam só no `localStorage` do navegador: não aparecem para outras pessoas até serem
-  exportados e incorporados com `npm run listings:add`. Não há edição (exclua e crie de novo) nem envio de fotos.
+  exportados e incorporados com `npm run listings:add`. Depois de salvo, só a situação e o preço podem ser
+  alterados ("Gerenciar anúncio"); o resto exige excluir e criar de novo. As fotos ocupam o pouco espaço do
+  `localStorage`, então muitos anúncios com muitas fotos podem esbarrar no limite do navegador.
 - O lote de um terreno criado no app é alinhado ao norte, não à rua mais próxima como no gerador.
 - Para um prédio de apartamentos criado no app sem número de pavimentos, a altura no mapa é a do OSM (muitas vezes
   6 m por falta de dados).
