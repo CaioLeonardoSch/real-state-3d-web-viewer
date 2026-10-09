@@ -18,6 +18,8 @@ export interface FilterCriteria {
   features: Amenity[];
   /** null = any agency. */
   agency: string | null;
+  /** true = only listings whose price was reduced. */
+  reducedOnly: true | null;
 }
 
 export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
@@ -33,6 +35,7 @@ export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   statuses: [],
   features: [],
   agency: null,
+  reducedOnly: null,
 }) as FilterCriteria;
 
 /** Criteria shown under "Mais filtros" (the form counts how many of them are active). */
@@ -44,6 +47,7 @@ export const ADVANCED_FIELDS = [
   'statuses',
   'features',
   'agency',
+  'reducedOnly',
 ] as const satisfies readonly RelaxableField[];
 
 export const pricePerM2 = (l: Listing) => l.price / l.areaM2;
@@ -61,6 +65,7 @@ export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
   if (c.statuses.length > 0 && !c.statuses.includes(l.status)) return false;
   if (c.features.some((f) => !l.features.includes(f))) return false;
   if (c.agency !== null && l.agency !== c.agency) return false;
+  if (c.reducedOnly && !(l.previousPrice && l.previousPrice > l.price)) return false;
   return true;
 }
 

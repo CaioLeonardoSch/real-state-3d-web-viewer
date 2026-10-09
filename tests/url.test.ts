@@ -59,6 +59,12 @@ describe('URL state', () => {
     expect(searchToState('?empreendimento=cora&unidade=9999', k)).toMatchObject({ developmentId: 'cora', unitId: null });
     expect(searchToState('?empreendimento=nada&unidade=1502', k)).toMatchObject({ developmentId: null, unitId: null });
   });
+  it('round-trips the reduced-price filter', () => {
+    const state = { criteria: { ...EMPTY_CRITERIA, reducedOnly: true as const }, listingId: null, sort: 'price-asc' as const, developmentId: null, unitId: null };
+    expect(stateToSearch(state)).toBe('?reduzido=1');
+    expect(searchToState('?reduzido=1', known)).toEqual(state);
+    expect(searchToState('?reduzido=sim', known).criteria.reducedOnly).toBeNull();
+  });
   it('ignores unknown or invalid values', () => {
     const s = searchToState('?tipo=castelo,casa,casa&precoMin=-5&precoMax=abc&quartos=2.7&imob=agency-x&imovel=nope&ordem=xyz&comodidades=heliponto&situacao=x', known);
     expect(s).toEqual({

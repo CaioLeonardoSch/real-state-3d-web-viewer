@@ -605,6 +605,34 @@ body[data-tod='night'] .price {
 }
 
 /* ---------------- drawer extras ---------------- */
+.price-old,
+.price-was s {
+  color: var(--muted);
+  font-weight: 400;
+}
+.price-cut {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #0f8a4b;
+  border-radius: 4px;
+  padding: 0 5px;
+  vertical-align: 1px;
+}
+.price-was {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.price-note {
+  margin: -6px 0 8px;
+  font-size: 12px;
+  color: #0f8a4b;
+  font-weight: 600;
+}
+body[data-tod='night'] .price-note {
+  color: #6fd59e;
+}
 .badge-user {
   background: #2f7de1;
 }
@@ -790,7 +818,21 @@ body[data-tod='night'] .bairro-label {
   color: #b9c2d6;
 }
 .bairro-label.is-hidden {
-  opacity: 0;
+  /* not opacity: MapLibre sets an inline opacity on markers */
+  visibility: hidden;
+}
+.bairro-label.kind-cidade {
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: #3d434c;
+}
+.bairro-label.kind-distrito {
+  font-size: 13px;
+  color: #4d545e;
+}
+body[data-tod='night'] .bairro-label.kind-cidade,
+body[data-tod='night'] .bairro-label.kind-distrito {
+  color: #dfe5f0;
 }
 
 /* ---------------- developments ("espelho de vendas 3D") ---------------- */

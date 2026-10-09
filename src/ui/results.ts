@@ -1,5 +1,5 @@
 import type { Listing } from '../data/types';
-import { TYPE_LABELS } from '../data/types';
+import { TYPE_LABELS, priceReduction } from '../data/types';
 import { SORT_KEYS, SORT_LABELS, priceRangeLabel, type SortKey } from '../state/sort';
 import type { RelaxSuggestion, RelaxableField } from '../state/filters';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
@@ -47,6 +47,7 @@ const FIELD_LABELS: Record<RelaxableField, string> = {
   statuses: 'o filtro de situação',
   features: 'as comodidades',
   agency: 'o filtro de imobiliária',
+  reducedOnly: 'o filtro de preço reduzido',
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -95,6 +96,14 @@ function emptyHtml(suggestions: RelaxSuggestion[]): string {
     }
     <button type="button" class="btn-secondary" data-action="clear-all">Limpar todos os filtros</button>
   </div>`;
+}
+
+/** Price, with the previous one struck through and the reduction when there is one. */
+function priceHtml(l: Listing): string {
+  const r = priceReduction(l);
+  return r
+    ? `<s class="price-old" aria-label="antes ${formatBRL(r.previous)}">${formatBRL(r.previous)}</s> <b>${formatBRL(l.price)}</b> <span class="price-cut">−${r.percent}%</span>`
+    : `<b>${formatBRL(l.price)}</b>`;
 }
 
 export const resultsHeading = (count: number, filtered: boolean) =>
@@ -190,7 +199,7 @@ export class ResultsPanel {
               .map(
                 (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}">
                   <span class="r-title">${escapeHtml(l.title)}${l.userAdded ? ' <span class="r-tag">Seu anúncio</span>' : ''}</span>
-                  <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · <b>${formatBRL(l.price)}</b></span>
+                  <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · ${priceHtml(l)}</span>
                 </button></li>`,
               )
               .join('')}</ul>`

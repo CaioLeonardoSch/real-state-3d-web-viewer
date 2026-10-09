@@ -347,6 +347,7 @@ async function main() {
       page.evaluate(() => ({
         pos: document.querySelector('#drawer .nav-pos')?.textContent,
         title: document.querySelector('#drawer h2')?.textContent,
+        id: new URLSearchParams(location.search).get('imovel'),
         prevDisabled: document.querySelector('#drawer [data-action="prev"]')?.disabled,
         nextDisabled: document.querySelector('#drawer [data-action="next"]')?.disabled,
       }));
@@ -359,8 +360,8 @@ async function main() {
     await sleep(300);
     const n2 = await navInfo();
     check('drawer previous/next browses the results (buttons and arrow keys)',
-      n0.pos === `1 de ${landCount}` && n0.prevDisabled === true && n1.pos === `2 de ${landCount}` && n1.title !== n0.title &&
-        n2.pos === n0.pos && n2.title === n0.title,
+      n0.pos === `1 de ${landCount}` && n0.prevDisabled === true && n1.pos === `2 de ${landCount}` && n1.id !== n0.id &&
+        n2.pos === n0.pos && n2.id === n0.id,
       `${n0.pos} → ${n1.pos} → ${n2.pos}`);
     await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer-nav.png') });
     await page.keyboard.press('Escape');
@@ -438,6 +439,25 @@ async function main() {
       moreVisible && moreLabel === 'Mais filtros (2)' && more.header?.startsWith(`${poolCount} `) &&
         more.search === '?banheiros=2&comodidades=piscina' && more.panelHidden,
       `${moreLabel}; ${JSON.stringify(more)}; expected ${poolCount}`);
+    await page.click('button:has-text("Limpar")');
+    await sleep(300);
+    await waitIdle(page);
+
+    // reduced prices: filter + struck-through old price in the list
+    await page.click('.f-more-toggle');
+    await page.click('#filters-more label.chip:has-text("Preço reduzido")');
+    await page.click('button:has-text("Buscar")');
+    await sleep(400);
+    await waitIdle(page);
+    const reduced = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-title')?.textContent,
+      struck: document.querySelectorAll('#results .price-old').length,
+      search: location.search,
+    }));
+    const reducedCount = DATA.filter((l) => l.previousPrice > l.price).length;
+    check('"Preço reduzido" lists only reduced listings, with the old price struck through',
+      reduced.header?.startsWith(`${reducedCount} `) && reduced.struck === reducedCount && reduced.search === '?reduzido=1',
+      `${JSON.stringify(reduced)}; expected ${reducedCount}`);
     await page.click('button:has-text("Limpar")');
     await sleep(300);
     await waitIdle(page);
@@ -740,7 +760,7 @@ async function main() {
     await mp.click('.filters-toggle');
     await sleep(300);
     await waitIdle(mp);
-    const mClicked = await clickSomeListing(mp);
+    const mClicked = await clickSomeListing(mp, ['listing-pins', 'listing-buildings']);
     const sheetInfo = () =>
       mp.evaluate(() => {
         const d = document.querySelector('#drawer');

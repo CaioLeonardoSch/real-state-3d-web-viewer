@@ -106,6 +106,7 @@ export class AddListingPanel {
         </div>
         <label class="a-field a-wide">Título<input name="title" maxlength="80" placeholder="ex.: Apartamento com sacada 2 quartos"></label>
         <label class="a-field">Preço (R$)<input name="price" inputmode="numeric" required></label>
+        <label class="a-field">Preço anterior (R$)<input name="previousPrice" inputmode="numeric" placeholder="se houve redução"></label>
         <label class="a-field"><span data-area-label>Área construída (m²)</span><input name="areaM2" inputmode="numeric" required></label>
         <label class="a-field" data-for="house semi_detached">Área do terreno (m²)<input name="landAreaM2" inputmode="numeric" placeholder="opcional"></label>
         <label class="a-field" data-for="apartment">Pavimentos do edifício<input name="floors" inputmode="numeric" placeholder="opcional"></label>
@@ -307,6 +308,9 @@ export class AddListingPanel {
     const problems: string[] = [];
     if (!this.place) problems.push(type === 'land' ? 'escolha o lote no mapa' : 'escolha o prédio no mapa');
     if (!price || price < 1000) problems.push('informe o preço');
+    const previousPrice = num('previousPrice');
+    if (previousPrice !== null && price && previousPrice <= price)
+      problems.push('o preço anterior precisa ser maior que o atual (ou deixe em branco)');
     if (!areaM2 || areaM2 < 10) problems.push('informe a área');
     if ([bedrooms, bathrooms, parkingSpots].some(Number.isNaN)) problems.push('quartos, banheiros e vagas vão de 0 a 10');
     if (floors !== null && (!Number.isInteger(floors) || floors < 1 || floors > 40)) problems.push('pavimentos vão de 1 a 40');
@@ -329,6 +333,9 @@ export class AddListingPanel {
       title,
       agency: this.value('agency'),
       price: Math.round(price!),
+      ...(previousPrice
+        ? { previousPrice: Math.round(previousPrice), priceReducedAt: new Date().toISOString().slice(0, 10) }
+        : {}),
       areaM2: Math.round(areaM2!),
       ...(type === 'land' ? { landAreaM2: Math.round(areaM2!) } : landAreaM2 ? { landAreaM2: Math.round(landAreaM2) } : {}),
       bedrooms,

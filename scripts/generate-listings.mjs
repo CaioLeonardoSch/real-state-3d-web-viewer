@@ -32,7 +32,7 @@ const APPROX_RADIUS_M = 150;
 // ---------- how many listings ----------
 const argv = process.argv.slice(2);
 const countArg = argv.find((a) => a.startsWith('--count='))?.split('=')[1] ?? (argv.includes('--count') ? argv[argv.indexOf('--count') + 1] : undefined);
-const COUNT = countArg === undefined ? 60 : Number(countArg);
+const COUNT = countArg === undefined ? 100 : Number(countArg);
 if (!Number.isInteger(COUNT) || COUNT < 4 || COUNT > 200) {
   console.error(`--count must be an integer between 4 and 200 (got ${countArg})`);
   process.exit(1);
@@ -84,8 +84,19 @@ const buildings = buildingsFc.features.map((f) => {
   };
 });
 
+// ---------- urban area ----------
+// The region includes rural land (Serra do Mar, farms): listings only go where buildings are dense.
+// Grid of ~1 km cells; a cell is urban with at least URBAN_MIN_BUILDINGS buildings.
+const URBAN_CELL = 0.01;
+const URBAN_MIN_BUILDINGS = 300;
+const cellKey = ([x, y]) => `${Math.floor(x / URBAN_CELL)}:${Math.floor(y / URBAN_CELL)}`;
+const cellCounts = new Map();
+for (const b of buildings) cellCounts.set(cellKey(b.center), (cellCounts.get(cellKey(b.center)) ?? 0) + 1);
+const urbanCells = [...cellCounts].filter(([, n]) => n >= URBAN_MIN_BUILDINGS).map(([k]) => k.split(':').map(Number));
+const isUrban = (p) => (cellCounts.get(cellKey(p)) ?? 0) >= URBAN_MIN_BUILDINGS;
+
 const candidates = buildings.filter(
-  (b) => isResidentialBuilding(b.f.properties) && turfBooleanPointInPolygon(point(b.center), boundary),
+  (b) => isResidentialBuilding(b.f.properties) && isUrban(b.center) && turfBooleanPointInPolygon(point(b.center), boundary),
 );
 
 // Flatten roads to LineStrings with bbox for quick filtering
@@ -136,7 +147,6 @@ const DRIVABLE = new Set([
   'residential', 'tertiary', 'secondary', 'primary', 'unclassified', 'living_street', 'service', 'tertiary_link', 'secondary_link',
 ]);
 const drivableRoads = roads.filter((r) => DRIVABLE.has(r.highway));
-const [bW, bS, bE, bN] = turfBbox(boundary);
 const lots = [];
 
 // turf/destination with a signed distance: negative moves the opposite way
@@ -165,7 +175,9 @@ const LOT_SPACING_M = Math.round(Math.min(250, 250 * Math.sqrt(15 / COUNT)));
 
 function tryLot(frontM, depthM, attempts) {
   for (let i = 0; i < attempts; i++) {
-    const c = [between(bW, bE), between(bS, bN)];
+    // a random point of a random urban cell
+    const [cx, cy] = pick(urbanCells);
+    const c = [(cx + rand()) * URBAN_CELL, (cy + rand()) * URBAN_CELL];
     if (!turfBooleanPointInPolygon(point(c), boundary)) continue;
     // keep away from other picks for spread
     if (selectedPoints.some((p) => turfDistance(point(p), point(c), { units: 'meters' }) < LOT_SPACING_M)) continue;
@@ -281,6 +293,17 @@ const AMENITY_ODDS = {
   semi_detached: { barbecue: 0.6, balcony: 0.3, pets: 0.8, furnished: 0.1, financing: 0.9, exchange: 0.25 },
   land: { financing: 0.5, exchange: 0.4 },
 };
+// Some listings had their price reduced recently (own random stream, like the amenities).
+const priceRand = mulberry32(SEED + 2);
+const REDUCED_SHARE = 0.2;
+/** { previousPrice, priceReducedAt } for ~20% of listings: 4–15% cut, between 01/08 and 07/10/2026. */
+function priceCut(price) {
+  if (priceRand() >= REDUCED_SHARE) return null;
+  const previousPrice = roundTo(price / (1 - (0.04 + priceRand() * 0.11)), 5000);
+  const day = new Date(Date.UTC(2026, 7, 1) + Math.floor(priceRand() * 68) * 86400000);
+  return previousPrice > price ? { previousPrice, priceReducedAt: day.toISOString().slice(0, 10) } : null;
+}
+
 /** Amenities for a listing; the title's promise ("com piscina", "com sacada") is always kept. */
 function amenitiesFor(type, title) {
   const out = Object.entries(AMENITY_ODDS[type])
@@ -385,6 +408,8 @@ for (const type of plan) {
   }
 
   listing.features = amenitiesFor(type, listing.title);
+  const cut = priceCut(listing.price);
+  if (cut) Object.assign(listing, cut);
   listing.approximateLocation = approximateLocation;
   if (approximateLocation) listing.approxRadiusM = APPROX_RADIUS_M;
   listing.fictional = true;

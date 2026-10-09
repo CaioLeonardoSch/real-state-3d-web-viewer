@@ -46,6 +46,10 @@ export interface Listing {
   agency: string;
   /** Price in BRL, integer. Illustrative only. */
   price: number;
+  /** Price before the last reduction (BRL). Shown struck through only when higher than `price`. */
+  previousPrice?: number;
+  /** When the price was reduced (YYYY-MM-DD). */
+  priceReducedAt?: string;
   /** Built area (buildings) or lot area (land), m². */
   areaM2: number;
   landAreaM2?: number;
@@ -131,6 +135,10 @@ export function validateListingsFile(raw: unknown): ListingsFile {
     if (!isStr(l.title)) errors.push(`${at}.title missing`);
     if (!isStr(l.agency) || !agencyIds.has(l.agency)) errors.push(`${at}.agency unknown`);
     if (!isInt(l.price) || l.price <= 0) errors.push(`${at}.price must be a positive integer`);
+    if (l.previousPrice !== undefined && (!isInt(l.previousPrice) || l.previousPrice <= (l.price as number)))
+      errors.push(`${at}.previousPrice must be an integer above price`);
+    if (l.priceReducedAt !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(l.priceReducedAt)))
+      errors.push(`${at}.priceReducedAt must be YYYY-MM-DD`);
     if (!isNum(l.areaM2) || l.areaM2 <= 0) errors.push(`${at}.areaM2 invalid`);
     if (l.landAreaM2 !== undefined && !isNum(l.landAreaM2)) errors.push(`${at}.landAreaM2 invalid`);
     for (const k of ['bedrooms', 'bathrooms', 'parkingSpots'] as const) {
@@ -163,4 +171,14 @@ export function validateListingsFile(raw: unknown): ListingsFile {
 
   if (errors.length) throw new Error('listings.json invalid:\n' + errors.join('\n'));
   return raw as unknown as ListingsFile;
+}
+
+/** Price reduction of a listing, or null when it has none. */
+export function priceReduction(l: Listing): { previous: number; percent: number; since?: string } | null {
+  if (!l.previousPrice || l.previousPrice <= l.price) return null;
+  return {
+    previous: l.previousPrice,
+    percent: Math.round((100 * (l.previousPrice - l.price)) / l.previousPrice),
+    since: l.priceReducedAt,
+  };
 }

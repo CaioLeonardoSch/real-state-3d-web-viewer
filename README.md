@@ -1,8 +1,8 @@
-# Mapa 3D imobiliário: Joinville, região norte e central (SC)
+# Mapa 3D imobiliário: Joinville e Araquari (SC)
 
-Protótipo de **demonstração** de um portal imobiliário com mapa 3D. Doze bairros (Centro, América, Atiradores,
-Glória, Saguaçu, Costa e Silva, Santo Antônio, Bom Retiro, Jardim Sofia, Iririú, Jardim Iririú e Aventureiro)
-aparecem como uma maquete neutra (prédios em cinza) e só os imóveis à venda ficam destacados e clicáveis.
+Protótipo de **demonstração** de um portal imobiliário com mapa 3D. **Joinville inteira (com o distrito de
+Pirabeiraba) e Araquari** aparecem como uma maquete neutra (prédios em cinza), e só os imóveis à venda ficam
+destacados e clicáveis.
 
 > **Imóveis, imobiliárias e valores são FICTÍCIOS.** Os prédios, as vias, a água, as áreas verdes e os limites dos
 > bairros vêm do OpenStreetMap (© OpenStreetMap contributors, ODbL).
@@ -106,7 +106,7 @@ Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Oper
 
 ## Mapa em blocos (PMTiles) e 3D só de perto
 
-O mapa base é **um único arquivo** `public/data/joinville-norte.pmtiles` (≈4 MB) com blocos vetoriais (vector tiles)
+O mapa base é **um único arquivo** `public/data/joinville.pmtiles` (≈14 MB, 164.679 prédios) com blocos vetoriais (vector tiles)
 dos prédios, vias, água, áreas verdes e limites de bairro. O navegador **não baixa o arquivo inteiro**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
 (range). Não há servidor de mapas: qualquer hospedagem estática que aceite `Range` serve (GitHub Pages, S3, Cloudflare,
@@ -114,18 +114,20 @@ o `vite preview`).
 
 | Zoom | Conteúdo dos blocos | Tamanho (comprimido) |
 |---|---|---|
-| 10–11 | vias, água, verde, bairros | até 41 KB por bloco |
-| 12 | + prédios ≥ 250 m², só o contorno | até 104 KB |
-| 13 | + prédios ≥ 120 m², só o contorno | até 194 KB |
-| 14–15 | todos os prédios, com altura e marca de residencial | até 194 KB (z14) e 74 KB (z15) |
+| 10 | vias, água, verde, bairros + prédios ≥ 1.500 m², só o contorno | até 156 KB por bloco |
+| 11 | + prédios ≥ 600 m², só o contorno | até 154 KB |
+| 12 | + prédios ≥ 250 m², só o contorno | até 252 KB |
+| 13 | + prédios ≥ 120 m², só o contorno | até 265 KB |
+| 14–15 | todos os prédios, com altura e marca de residencial | até 214 KB (z14) e 75 KB (z15) |
 
-Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). Abrir a visão geral custa ~250 KB; descer até uma rua,
-mais algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 20 MB só de prédios para esta região.
+São 2.511 blocos. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
+algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 58 MB só de prédios.
 
 **3D só de perto, sem ficar "chapado" de longe:**
 
 - de longe (zoom < 14,6) os prédios aparecem **planos**, como textura da cidade (`buildings-flat`), junto com ruas,
-  verde, água e os nomes dos bairros (rótulos HTML: o estilo não usa fontes);
+  verde e água. Os rótulos são HTML (o estilo não usa fontes): cidades e distritos (Joinville, Araquari,
+  Pirabeiraba) até o zoom 12,6, e bairros do 12,6 ao 15;
 - a partir do zoom 14 eles **sobem** gradualmente até a altura cheia no 15,5
   (`fill-extrusion-height` interpolado pelo zoom), então a transição é contínua;
 - com a câmera inclinada, o fundo da tela usa blocos de zoom menor, que não têm os prédios pequenos: **o centro da
@@ -137,17 +139,18 @@ distância até o centro da tela); exigiria uma camada customizada (Three.js). O
 
 ## Altura dos prédios: cadastro da Prefeitura
 
-No OpenStreetMap, 98,6% dos prédios da região não têm altura. Agora a altura vem, em ordem de prioridade, de:
+No OpenStreetMap, quase todos os prédios da região não têm altura. Agora a altura vem, em ordem de prioridade, de:
 
-1. tag `height` do OSM (42 prédios);
-2. `building:levels` do OSM × 3 m (779);
-3. **pavimentos estimados pelo cadastro imobiliário da Prefeitura** × 3 m (**54.274 prédios, 94,8%**);
-4. 6 m, quando nada disso existe (2.166, 3,8%).
+1. tag `height` do OSM (61 prédios);
+2. `building:levels` do OSM × 3 m (2.543);
+3. **pavimentos estimados pelo cadastro imobiliário da Prefeitura de Joinville** × 3 m (**153.283 prédios, 93,1%**);
+4. 6 m, quando nada disso existe (8.792, 5,3%). Inclui **Araquari**, cujo cadastro não está no servidor de
+   Joinville, e áreas rurais.
 
 **Como a estimativa é feita** (`scripts/estimate-heights.mjs`, regra em `scripts/lib/cadastre-floors.mjs`):
 
-- `npm run data:cadastre` baixa do servidor público do SIMGeo os 65.383 lotes da região (contorno + área construída)
-  e as 51 outorgas onerosas (altura autorizada). As páginas têm 2.000 registros, uma de cada vez, com pausa.
+- `npm run data:cadastre` baixa do servidor público do SIMGeo os 143.425 lotes urbanos (contorno + área construída)
+  e as 55 outorgas onerosas (altura autorizada). As páginas têm 2.000 registros, uma de cada vez, com pausa.
 - Cada prédio do OSM é ligado ao lote que contém o seu ponto interno.
 - **Pavimentos ≈ área construída do lote ÷ área de projeção dos prédios do OSM no lote.**
   - Se há um prédio principal (≥ 70% da projeção), os anexos contam 1 pavimento e o principal fica com o resto.
@@ -157,7 +160,7 @@ No OpenStreetMap, 98,6% dos prédios da região não têm altura. Agora a altura
   - mais de 4 pavimentos num contorno menor que 150 m² (quase sempre a torre não está desenhada no OSM e só a
     guarita ou a garagem aparece).
 
-  São 926 prédios nessa situação.
+  São 2.586 prédios nessa situação.
 - A outorga onerosa, quando existe, limita a altura. Hoje não limitou nenhum prédio.
 - Os apartamentos fictícios passaram a ocupar **prédios reais de 4 pavimentos ou mais** pelo cadastro, com esse
   número de pavimentos (antes: 8 a 14 inventados). As casas vão para prédios de até 2 pavimentos.
@@ -259,8 +262,15 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 
 ## Decisões e premissas
 
-- **Limite da região**: união dos polígonos **administrativos** (`admin_level=10`) dos 12 bairros no OSM. O limite
-  externo aparece tracejado; os limites entre bairros, em tracejado mais fraco.
+- **Limite da região**: união dos municípios de **Joinville e Araquari** (`admin_level=8` no OSM), configurável em
+  `scripts/data/region.json` (municípios inteiros ou uma lista de bairros). O limite externo aparece tracejado; os
+  limites entre bairros, em tracejado mais fraco.
+- **Área urbana para os imóveis fictícios**: a região inclui serra e área rural, então o gerador só usa células de
+  ~1 km com pelo menos 300 prédios.
+- **Preço reduzido**: `previousPrice` (maior que `price`) e `priceReducedAt`. A lista, a etiqueta e o painel mostram o
+  preço anterior riscado, o percentual ("−10%") e a data ("Preço reduzido em 22/09/2026"). Em "Mais filtros",
+  **Ofertas → Preço reduzido** filtra (`?reduzido=1`). No "Anunciar", o campo "Preço anterior" é opcional, precisa
+  ser maior que o atual e grava a data do dia. O gerador dá redução de 4% a 15% a ~20% dos imóveis.
 - **Altura dos prédios (`renderHeight`)**: tag `height`, se válida; senão `building:levels × 3 m`; senão 6 m.
   Valores como `"12 m"` e `"7,5"` são aceitos. Valores inválidos (`"3;4"`) caem na regra seguinte.
 - **Prédios residenciais elegíveis** para imóveis: `building` ∈ {yes, house, residential, apartments, detached,
@@ -415,34 +425,34 @@ Extrato OSM de 07/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 08/10/
 
 | Camada | Feições |
 |---|---|
-| Prédios (`building`) | 57.261 |
-| ↳ altura pela tag `height` | 42 |
-| ↳ altura por `building:levels × 3 m` | 779 |
-| ↳ altura estimada pelo cadastro da Prefeitura | 54.274 |
-| ↳ altura padrão de 6 m | 2.166 |
-| Vias (`highway`) | 5.531 |
-| Água (`natural=water`, `waterway`) | 280 |
-| Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 377 |
+| Prédios (`building`) | 164.679 |
+| ↳ altura pela tag `height` | 61 |
+| ↳ altura por `building:levels × 3 m` | 2.543 |
+| ↳ altura estimada pelo cadastro da Prefeitura | 153.283 |
+| ↳ altura padrão de 6 m | 8.792 |
+| Vias (`highway`) | 18.887 |
+| Água (`natural=water`, `waterway`) | 2.099 |
+| Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 2.140 |
 
-- Bbox da região: −48,898289, −26,318979, −48,786292, −26,218690 (W, S, E, N); centro −26,2713703, −48,8409923.
-- `joinville-norte.pmtiles`: 151 blocos, zooms 10 a 15, ≈4,1 MB.
+- Joinville e Araquari, 53 bairros com nome no OSM; bbox −49,200842, −26,599012, −48,650741, −26,074239 (W, S, E, N).
+- `joinville.pmtiles`: 2.511 blocos, zooms 10 a 15, ≈14 MB.
 
-Imóveis fictícios (`listings.json`): 60 no total (`--count 60`), espalhados pelos 12 bairros.
+Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área urbana.
 
 | Tipo | Quantidade | Observação |
 |---|---|---|
-| Apartamentos | 20 | Em prédios reais de 4 a 8 pavimentos (estimativa pelo cadastro) |
-| Casas | 16 | |
-| Geminados | 12 | Escolhidos por área: o OSM não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
-| Terrenos | 12 | Nenhum precisou ser reduzido |
+| Apartamentos | 34 | Em prédios reais de 4+ pavimentos (estimativa pelo cadastro) |
+| Casas | 26 | |
+| Geminados | 20 | Escolhidos por área: o OSM não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
+| Terrenos | 20 | Nenhum precisou ser reduzido |
 
-- 3 imóveis com localização aproximada: `house-21`, `semi-37` e `land-49`.
-- Prédios residenciais elegíveis: 56.147.
+- 19 com preço reduzido; 3 com localização aproximada: `house-35`, `semi-61` e `land-81`.
+- Prédios residenciais elegíveis (área urbana): 151.944.
 
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 54 testes: estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 57 testes: preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
@@ -454,7 +464,7 @@ Imóveis fictícios (`listings.json`): 60 no total (`--count 60`), espalhados pe
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 63 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 64 checagens:
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;

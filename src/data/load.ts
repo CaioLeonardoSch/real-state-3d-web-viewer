@@ -21,8 +21,8 @@ export interface AppData {
   meta: DataMeta;
   /** Outline of the mapped region (union of its neighbourhoods). */
   boundary: FeatureCollection<Polygon | MultiPolygon>;
-  /** One label point per neighbourhood. */
-  bairros: FeatureCollection<Point, { name: string }>;
+  /** One label point per neighbourhood, district and city. */
+  bairros: FeatureCollection<Point, { name: string; kind?: 'bairro' | 'distrito' | 'cidade' }>;
   /** Absolute URL of the PMTiles archive (buildings, roads, water, green, neighbourhood outlines). */
   tilesUrl: string;
   listings: ListingsFile;

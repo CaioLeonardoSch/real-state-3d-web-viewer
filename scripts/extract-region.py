@@ -51,39 +51,56 @@ def area_id(a):
     return f"{'way' if a.from_way() else 'relation'}/{a.orig_id()}"
 
 
-# ---------------------------------------------------------------- 1. neighbourhoods
+# ---------------------------------------------------------------- 1. region
+# Two ways to define it in region.json:
+#   "municipios": ["Joinville", "Araquari"]   whole municipalities (admin_level 8);
+#   "city" + "bairros": [...]                  chosen neighbourhoods (admin_level 10) of one city.
+# Every neighbourhood and district inside the region gets an outline/label.
 print(f'Lendo {SRC}')
-city = None
-bairros = {}
+MUNIS = REGION.get('municipios') or [REGION['city']]
+munis = {}
+districts = []  # admin_level 9 (e.g. Pirabeiraba, a district of Joinville)
+all_bairros = []
 for a in osmium.FileProcessor(SRC).with_areas(osmium.filter.TagFilter(('boundary', 'administrative'))) \
         .with_filter(osmium.filter.EntityFilter(osmium.osm.AREA)):
     t = dict(a.tags)
-    wanted = (t.get('admin_level') == '8' and t.get('name') == REGION['city']) or \
-        (t.get('admin_level') == '10' and t.get('name') in REGION['bairros'])
-    if not wanted:
+    level = t.get('admin_level')
+    if level not in ('8', '9', '10') or (level == '8' and t.get('name') not in MUNIS):
         continue
     try:
         g = shape(json.loads(factory.create_multipolygon(a)))
     except RuntimeError:
         continue  # broken boundary somewhere else in the state
-    if t['admin_level'] == '8':
-        city = g
+    if level == '8':
+        munis[t['name']] = g
+    elif level == '9':
+        districts.append((t.get('name'), area_id(a), g))
     else:
-        bairros.setdefault(t['name'], []).append((area_id(a), g))
-if city is None:
-    sys.exit(f"Município {REGION['city']} não encontrado no extrato")
-chosen = {}
-for name in REGION['bairros']:
-    # names repeat in neighbouring towns (e.g. "Santo Antônio"): keep the one inside the city
-    inside = [(i, g) for i, g in bairros.get(name, []) if city.contains(g.representative_point())]
-    if len(inside) != 1:
-        sys.exit(f'Bairro "{name}": {len(inside)} polígonos em {REGION["city"]} (esperado 1)')
-    chosen[name] = inside[0]
-region = unary_union([g for _, g in chosen.values()])
+        all_bairros.append((t.get('name'), area_id(a), g))
+missing = [m for m in MUNIS if m not in munis]
+if missing:
+    sys.exit(f'Município(s) não encontrado(s) no extrato: {missing}')
+cities = unary_union(list(munis.values()))
+in_cities = [(n, i, g) for n, i, g in all_bairros if cities.contains(g.representative_point())]
+if REGION.get('bairros'):
+    chosen = {}
+    for name in REGION['bairros']:
+        # names repeat in neighbouring towns (e.g. "Santo Antônio"): keep the one inside the city
+        inside = [(i, g) for n, i, g in in_cities if n == name]
+        if len(inside) != 1:
+            sys.exit(f'Bairro "{name}": {len(inside)} polígonos em {MUNIS} (esperado 1)')
+        chosen[name] = inside[0]
+    region = unary_union([g for _, g in chosen.values()])
+    labels = [(n, 'bairro', i, g) for n, (i, g) in chosen.items()]
+else:
+    region = cities
+    labels = [(n, 'bairro', i, g) for n, i, g in in_cities]
+    labels += [(n, 'distrito', i, g) for n, i, g in districts if cities.contains(g.representative_point())]
+    labels += [(n, 'cidade', None, g) for n, g in munis.items()]
 region_buf = prep(region.buffer(MARGIN_DEG))
 region_prep = prep(region)
 minx, miny, maxx, maxy = region.buffer(MARGIN_DEG).bounds
-print(f'Região: {len(chosen)} bairros, bbox {minx:.4f},{miny:.4f},{maxx:.4f},{maxy:.4f}')
+print(f'Região: {", ".join(MUNIS)}; {sum(1 for l in labels if l[1] == "bairro")} bairros, bbox {minx:.4f},{miny:.4f},{maxx:.4f},{maxy:.4f}')
 
 
 def in_bbox(g):
@@ -145,9 +162,12 @@ def write(name, features):
         json.dump({'type': 'FeatureCollection', 'features': features}, f, ensure_ascii=False, separators=(',', ':'))
 
 
-write('bairros.geojson', [{'type': 'Feature', 'properties': {'name': n, 'osmId': f'relation/{i}' if not i.startswith(('way', 'relation')) else i},
-                           'geometry': rounded(g)} for n, (i, g) in chosen.items()])
+write('bairros.geojson', [{'type': 'Feature', 'properties': {'name': n, 'kind': kind, **({'osmId': i} if i else {})},
+                           'geometry': rounded(g)} for n, kind, i, g in labels])
 write('boundary.geojson', [{'type': 'Feature', 'properties': {'name': REGION['name']}, 'geometry': rounded(region)}])
+# simplified outline (≈ 10 m) for the browser, which tests points against it
+write('boundary-simple.geojson', [{'type': 'Feature', 'properties': {'name': REGION['name']},
+                                   'geometry': rounded(region.simplify(0.0001, preserve_topology=True))}])
 write('buildings.geojson', buildings)
 write('roads.geojson', roads)
 write('water.geojson', water)
@@ -157,7 +177,8 @@ c = region.centroid
 meta = {
     'region': REGION['id'],
     'regionName': REGION['name'],
-    'bairros': list(chosen.keys()),
+    'municipios': MUNIS,
+    'bairros': sorted({n for n, kind, _, _ in labels if kind == 'bairro'}),
     'source': os.path.basename(SRC),
     'osmTimestamp': header_ts,
     'extractedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),

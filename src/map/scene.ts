@@ -26,8 +26,9 @@ const DEFAULT_BUILDING_HEIGHT_M = 6;
 const Z_3D_START = 14;
 const Z_3D_FULL = 15.5;
 const Z_FLAT_END = 14.6;
-/** Neighbourhood labels: region overview only. */
-const BAIRRO_LABEL_MAX_ZOOM = 15;
+/** Labels: cities and districts from afar, neighbourhoods in between, none up close. */
+const BAIRRO_LABEL_ZOOMS: [number, number] = [12.6, 15];
+const CITY_LABEL_MAX_ZOOM = 12.6;
 
 type ListingKind = 'building' | 'land' | 'approx';
 interface ListingFeatureProps {
@@ -99,7 +100,7 @@ export class Scene {
       pitch: 58,
       bearing: -20,
       maxPitch: 75,
-      minZoom: 10.5,
+      minZoom: 9.8,
       maxZoom: 19.5,
       maxBounds: [w - padX, s - padY, e + padX, n + padY],
       attributionControl: false,
@@ -111,7 +112,13 @@ export class Scene {
 
     this.showOverview(false);
 
-    this.ready = new Promise((resolve) => this.map.once('load', () => resolve()));
+    this.ready = new Promise((resolve) =>
+      this.map.once('load', () => {
+        // frame again: the container can change size while the page lays out (banner, panels)
+        this.showOverview(false);
+        resolve();
+      }),
+    );
     // While the camera flies, MapLibre sometimes asks the base map for a tile beyond the archive's zoom 15
     // and that request fails ("Failed to fetch"); the tile is dropped and the overzoomed z15 tile is shown.
     // Those go to the console as warnings; any other map error stays an error.
@@ -124,17 +131,22 @@ export class Scene {
     this.addBairroLabels();
   }
 
-  /** Neighbourhood names as HTML labels (the style has no fonts), shown in the region overview. */
+  /** Place names as HTML labels (the style has no fonts): cities/districts from afar, then neighbourhoods. */
   private addBairroLabels(): void {
     const labels = this.data.bairros.features.map((f) => {
+      const kind = f.properties.kind ?? 'bairro';
       const el = document.createElement('div');
-      el.className = 'bairro-label';
+      el.className = `bairro-label kind-${kind}`;
       el.textContent = f.properties.name;
-      return new Marker({ element: el }).setLngLat(f.geometry.coordinates as [number, number]).addTo(this.map);
+      const marker = new Marker({ element: el }).setLngLat(f.geometry.coordinates as [number, number]).addTo(this.map);
+      return { marker, kind };
     });
     const update = () => {
-      const show = this.map.getZoom() < BAIRRO_LABEL_MAX_ZOOM;
-      labels.forEach((m) => m.getElement().classList.toggle('is-hidden', !show));
+      const z = this.map.getZoom();
+      for (const { marker, kind } of labels) {
+        const show = kind === 'bairro' ? z >= BAIRRO_LABEL_ZOOMS[0] && z < BAIRRO_LABEL_ZOOMS[1] : z < CITY_LABEL_MAX_ZOOM;
+        marker.getElement().classList.toggle('is-hidden', !show);
+      }
     };
     this.map.on('zoomend', update);
     update();
@@ -254,7 +266,7 @@ export class Scene {
           filter: this.contextFilter(),
           paint: {
             'fill-color': t.context,
-            'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.45, Z_FLAT_END, 0.9],
+            'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.35, Z_FLAT_END, 0.9],
           },
         },
         {

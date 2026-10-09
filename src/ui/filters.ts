@@ -70,6 +70,7 @@ export function mountFilters(
         </select>
       </label>
       ${chips('status', 'Situação', LISTING_STATUSES, STATUS_LABELS)}
+      ${chips('reducedOnly', 'Ofertas', ['1'], { 1: 'Preço reduzido' })}
       ${chips('feature', 'Comodidades (todas as marcadas)', AMENITIES, AMENITY_LABELS)}
     </div>
   `;
@@ -97,6 +98,7 @@ export function mountFilters(
       statuses: fd.getAll('status').map(String) as ListingStatus[],
       features: fd.getAll('feature').map(String) as Amenity[],
       agency: agency === '' ? null : agency,
+      reducedOnly: fd.get('reducedOnly') ? true : null,
     };
   };
   const writeForm = (c: FilterCriteria) => {
@@ -105,6 +107,7 @@ export function mountFilters(
     check('type', c.types);
     check('status', c.statuses);
     check('feature', c.features);
+    check('reducedOnly', c.reducedOnly ? ['1'] : []);
     for (const k of [...Object.keys(NUMBER_INPUTS), ...Object.keys(MIN_SELECTS)] as (NumberInput | MinSelect)[])
       field<HTMLInputElement>(k).value = c[k]?.toString() ?? '';
     field<HTMLSelectElement>('agency').value = c.agency ?? '';

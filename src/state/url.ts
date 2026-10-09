@@ -92,6 +92,7 @@ export function stateToSearch(state: UrlState): string {
   if (c.statuses.length) p.set('situacao', c.statuses.map((s) => STATUS_SLUGS[s]).join(','));
   if (c.features.length) p.set('comodidades', c.features.map((f) => AMENITY_SLUGS[f]).join(','));
   if (c.agency !== null) p.set('imob', c.agency);
+  if (c.reducedOnly) p.set('reduzido', '1');
   if (state.sort !== DEFAULT_SORT) p.set('ordem', SORT_SLUGS[state.sort]);
   const s = p.toString();
   return s ? `?${s}` : '';
@@ -117,6 +118,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     statuses: parseList(p.get('situacao'), SLUG_TO_STATUS),
     features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),
     agency: agency && known.agencyIds.has(agency) ? agency : null,
+    reducedOnly: p.get('reduzido') === '1' ? true : null,
   };
   for (const [field, param] of NUMBER_PARAMS) {
     const n = nonNegative(p.get(param));

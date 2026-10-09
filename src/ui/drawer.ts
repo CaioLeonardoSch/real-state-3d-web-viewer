@@ -1,5 +1,5 @@
 import type { Agency, Listing } from '../data/types';
-import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS } from '../data/types';
+import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, priceReduction } from '../data/types';
 import { escapeHtml, formatArea, formatBRL, formatBRLCents } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
@@ -101,7 +101,15 @@ export class Drawer {
             ['Vagas', String(l.parkingSpots)],
           ] as [string, string][])
         : []),
-      ...(l.floors ? ([['Pavimentos do edifício', `${l.floors} (fictício)`]] as [string, string][]) : []),
+      ...(l.floors
+        ? ([
+            [
+              'Pavimentos do edifício',
+              // the generator uses the building's real floors when the cadastre (or OSM) knows them
+              `${l.floors} (${l.buildingHeightM && Math.round(l.buildingHeightM / 3) === l.floors ? 'estimativa pelo cadastro' : 'fictício'})`,
+            ],
+          ] as [string, string][])
+        : []),
       ['Situação', STATUS_LABELS[l.status]],
       ['Preço por m²', `${formatBRL(Math.round(l.price / l.areaM2))}/m²`],
     ];
@@ -127,7 +135,14 @@ export class Drawer {
           : '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
       }
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>
-      <p class="price">${formatBRL(l.price)}</p>
+      ${(() => {
+        const r = priceReduction(l);
+        if (!r) return `<p class="price">${formatBRL(l.price)}</p>`;
+        const since = r.since ? ` em ${r.since.split('-').reverse().join('/')}` : '';
+        return `<p class="price-was"><s>${formatBRL(r.previous)}</s> <span class="price-cut">−${r.percent}%</span></p>
+          <p class="price">${formatBRL(l.price)}</p>
+          <p class="price-note">Preço reduzido${since}</p>`;
+      })()}
       </div>
       ${
         l.approximateLocation

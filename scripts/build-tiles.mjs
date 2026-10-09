@@ -23,12 +23,12 @@ const SRC = path.join(ROOT, '.cache', 'region');
 const OUT = path.join(ROOT, 'public', 'data');
 
 /**
- * Zoom range of each layer. From afar (z12–z13, whole region on screen) buildings are drawn flat, so those
+ * Zoom range of each layer. From afar (z10–z13, whole region on screen) buildings are drawn flat, so those
  * tiles keep only the larger footprints, without attributes: the texture of the city at a fraction of the size.
  */
-const OVERVIEW_MIN_AREA_M2 = { 12: 250, 13: 120 };
+const OVERVIEW_MIN_AREA_M2 = { 10: 1500, 11: 600, 12: 250, 13: 120 };
 const LAYERS = {
-  buildings: { minzoom: 12, maxzoom: 15 },
+  buildings: { minzoom: 10, maxzoom: 15 },
   roads: { minzoom: 10, maxzoom: 15 },
   water: { minzoom: 10, maxzoom: 15 },
   green: { minzoom: 10, maxzoom: 15 },
@@ -55,6 +55,8 @@ for (const f of buildings.features) {
 for (const f of roads.features) f.properties = { highway: f.properties.highway };
 for (const f of water.features) f.properties = { waterway: f.properties.waterway ?? 'area' };
 for (const f of green.features) f.properties = {};
+// outlines in the tiles: neighbourhoods only (cities and districts are labels, their outline is the region's)
+bairros.features = bairros.features.filter((f) => (f.properties.kind ?? 'bairro') === 'bairro');
 
 const vt = (fc, maxZoom) => geojsonvt(fc, { maxZoom, indexMaxZoom: 5, indexMaxPoints: 100000, tolerance: 2, extent: 4096, buffer: 96 });
 const indexes = Object.fromEntries(
@@ -119,12 +121,14 @@ const archive = writePmtiles(tiles, {
 await writeFile(path.join(OUT, file), archive);
 
 // ---- small files read directly by the app
-await writeFile(path.join(OUT, 'boundary.geojson'), JSON.stringify(boundary));
+// simplified outline (≈ 10 m) when available: the full municipal coastline is much larger
+const simple = await read('boundary-simple.geojson').catch(() => boundary);
+await writeFile(path.join(OUT, 'boundary.geojson'), JSON.stringify(simple));
 const labels = {
   type: 'FeatureCollection',
-  features: bairros.features.map((f) => ({
+  features: (await read('bairros.geojson')).features.map((f) => ({
     type: 'Feature',
-    properties: { name: f.properties.name },
+    properties: { name: f.properties.name, kind: f.properties.kind ?? 'bairro' },
     // label point inside the polygon (a centroid can fall outside a concave neighbourhood)
     geometry: turfPointOnFeature(f).geometry,
   })),

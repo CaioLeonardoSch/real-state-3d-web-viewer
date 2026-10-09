@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Listing } from '../src/data/types';
+import { priceReduction, type Listing } from '../src/data/types';
 import {
   ADVANCED_FIELDS,
   EMPTY_CRITERIA,
@@ -82,6 +82,22 @@ describe('advanced criteria', () => {
       { field: 'pricePerM2Max', count: 1, closest: 8_000 },
       { field: 'features', count: 2, closest: null },
     ].sort((a, b) => b.count - a.count));
+  });
+});
+
+describe('reduced prices', () => {
+  const ls: Listing[] = [
+    { ...L('x', 'house', 900_000, 3, 150, 'A'), previousPrice: 1_000_000, priceReducedAt: '2026-09-10' },
+    { ...L('y', 'house', 800_000, 3, 150, 'A') },
+  ];
+  it('"Preço reduzido" keeps only listings with a previous, higher price', () => {
+    expect(ids(filterListings(ls, { ...EMPTY_CRITERIA, reducedOnly: true }))).toEqual(['x']);
+    expect(countActive({ ...EMPTY_CRITERIA, reducedOnly: true }, ADVANCED_FIELDS)).toBe(1);
+  });
+  it('priceReduction gives the old price, the cut in % and the date', () => {
+    expect(priceReduction(ls[0])).toEqual({ previous: 1_000_000, percent: 10, since: '2026-09-10' });
+    expect(priceReduction(ls[1])).toBeNull();
+    expect(priceReduction({ ...ls[1], previousPrice: 700_000 })).toBeNull(); // not a reduction
   });
 });
 
