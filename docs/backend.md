@@ -98,3 +98,64 @@ estáticos e rodam em qualquer CDN.
 - **Atualizações:** dependências (Dependabot) e versões do MapLibre e do pmtiles.
 - **Dados do mapa:** o job mensal do item 13, com alerta se a validação (`npm run validate:data`) falhar.
 - **LGPD:** registro de consentimentos, exportação e exclusão de dados de um contato a pedido.
+
+## 5. Vários anunciantes para o mesmo imóvel
+
+No Brasil é comum o mesmo apartamento ser anunciado por várias imobiliárias e corretores, muitas vezes com preços e
+fotos diferentes. Num mapa 3D isso é pior do que numa lista: viram vários pinos empilhados no mesmo prédio.
+
+**Separar o imóvel do anúncio:**
+
+- **Imóvel** é a coisa física: o prédio (id do OSM) + a unidade (andar e final), ou o lote do cadastro da Prefeitura
+  (inscrição imobiliária) para casas e terrenos. A matrícula, quando informada, é a chave mais forte.
+- **Anúncio** é a oferta de um anunciante sobre um imóvel: preço, fotos, texto, contato, tipo de autorização.
+- Um imóvel tem N anúncios. O mapa mostra **um pino por imóvel**, nunca um por anúncio.
+
+**Detectar duplicados:**
+
+- **Certeza:** mesma matrícula ou mesma inscrição imobiliária, ou mesmo prédio e mesma unidade.
+- **Provável:** mesmo prédio e unidade não informada, com área, quartos e vagas iguais (dentro de uma tolerância) e
+  preço próximo. Fica marcado "possivelmente o mesmo imóvel" e o anunciante confirma ou separa ao cadastrar.
+- Na importação dos XMLs das imobiliárias a mesma regra roda automaticamente.
+
+**Como mostrar ao visitante:**
+
+- Uma ficha do imóvel com "**anunciado por 3 imobiliárias**" e, para cada uma, preço, data e botão de contato. A
+  diferença de preço aparece; é transparência a favor de quem compra.
+- O contato vai para o anunciante que a pessoa escolheu. Nunca para todos.
+- A ordem entre anunciantes segue regras claras: exclusividade, anúncio mais completo (fotos, planta), mais recente.
+  Plano pago pode dar destaque, desde que isso esteja informado.
+
+**Exclusividade:**
+
+- Quem tem **autorização de venda com exclusividade** envia o documento, que é conferido. Com isso o anúncio dele
+  passa a ser o único exibido para aquele imóvel, e os outros ficam ocultos e avisados.
+- A exclusividade tem validade. Quando vence, os outros anúncios voltam a aparecer.
+- Também dá para registrar **parceria** entre imobiliárias (venda compartilhada, comum no mercado): o anúncio mostra
+  as duas e o lead chega às duas.
+
+**Regras de convivência:** denúncia de anúncio desatualizado ou já vendido, expiração automática sem atualização (por
+exemplo, 60 dias) e histórico de preço por imóvel. O histórico vira, com o tempo, um dado valioso.
+
+## 6. Construtoras e incorporadoras
+
+São poucas, mas cada uma vale muito: um lançamento tem dezenas a centenas de unidades, um orçamento de marketing
+próprio e um período de vendas de anos. O espelho de vendas 3D é feito para elas. O papel delas no sistema é
+diferente do das imobiliárias:
+
+- **A construtora é dona dos dados do empreendimento:** torres, plantas, unidades, tabela de preços e situação de
+  cada unidade. Ela atualiza; ninguém mais altera.
+- **Imobiliárias e corretores credenciados vendem** a partir desses dados. Não recadastram o empreendimento: veem o
+  espelho ao vivo, sempre com a disponibilidade correta, e o contato que aparece para o cliente é o deles.
+- **Experiência do corretor exclusivo ou credenciado:**
+  - link personalizado para enviar ao cliente, com as unidades que o corretor separou, a marca dele e o contato dele;
+  - modo apresentação no estande ou no tablet (tela cheia, vista da janela, sol por fachada);
+  - **reserva temporária** de uma unidade (por exemplo, 24 h) direto no espelho, que aparece como "reservada" para
+    todos os outros canais e expira sozinha;
+  - histórico do que o cliente viu (unidades abertas, tempo), com consentimento, para o corretor saber o que oferecer;
+  - simulação de pagamento com a tabela real da construtora (entrada, reforços, parcelas, correção pelo INCC).
+- **Para a própria construtora:** painel de vendas por canal (qual imobiliária vendeu o quê), mapa de calor das
+  unidades mais vistas e menos vistas, e o mesmo espelho embutido no site do lançamento.
+- **Permissões:** construtora (edita tudo do empreendimento), imobiliária parceira (vê tudo, reserva, vende),
+  corretor (vê e reserva dentro da cota da imobiliária), público (vê só o que a construtora liberar; muitas preferem
+  não mostrar preço ou disponibilidade abertamente).

@@ -9,6 +9,10 @@ aparecem como uma maquete neutra (prédios em cinza) e só os imóveis à venda 
 
 ![Desktop, manhã](docs/screenshots/desktop-morning.png)
 
+**Online:** https://caioleonardosch.github.io/real-state-3d-web-viewer/ (publicado pelo workflow
+`.github/workflows/pages.yml` a cada push no `main`; na primeira vez é preciso escolher, em Settings → Pages →
+Build and deployment, a fonte "GitHub Actions").
+
 ## Como instalar e rodar
 
 Requisitos: Node.js 22+ e npm.
