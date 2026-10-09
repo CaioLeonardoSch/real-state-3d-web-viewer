@@ -2,3 +2,8 @@ node_modules
 dist
 .cache
 *.log
+dist-backend
+.env.local
+.env.*.local
+supabase/.temp
+supabase/.branches

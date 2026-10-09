@@ -104,7 +104,8 @@ export interface PricePoint {
 export interface Agency {
   id: string;
   name: string;
-  fictional: true;
+  /** Demo agencies; real clients (from the back end) have no flag. */
+  fictional?: true;
 }
 
 export interface Listing {
@@ -143,10 +144,15 @@ export interface Listing {
   approxCenter?: [number, number];
   /** Radius of the uncertainty circle (m) when approximateLocation is true. */
   approxRadiusM?: number;
-  fictional: true;
+  /** Demo listing (listings.json); real listings from the back end have no flag. */
+  fictional?: true;
   description: string;
-  /** Added in this browser through "Anunciar imóvel" (kept in localStorage, never in listings.json). */
+  /** Editable by the current user: added in this browser, or (with the back end) created by their client. */
   userAdded?: true;
+  /** Stored in the back end (not in this browser). */
+  remote?: true;
+  /** Not published yet (back end only). */
+  draft?: true;
 
   // ---- deal (absent = sale)
   transaction?: Transaction;

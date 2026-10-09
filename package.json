@@ -19,9 +19,14 @@
     "data:developments": "node scripts/generate-developments.mjs",
     "validate:data": "node scripts/validate-listings.mjs",
     "listings:add": "node scripts/add-listings.mjs",
-    "verify:e2e": "node scripts/e2e-check.mjs"
+    "verify:e2e": "node scripts/e2e-check.mjs",
+    "test:backend": "node scripts/test-backend.mjs",
+    "db:start": "supabase start -x realtime,studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit",
+    "db:reset": "supabase db reset",
+    "verify:backend": "node scripts/e2e-backend.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "@turf/area": "^7.4.0",
     "@turf/bbox": "^7.4.0",
     "@turf/bearing": "^7.4.0",
@@ -44,6 +49,7 @@
     "@types/node": "^26.6.4",
     "geojson-vt": "^4.0.3",
     "playwright": "^1.63.0",
+    "supabase": "^2.120.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.3",
     "vitest": "^5.0.3",

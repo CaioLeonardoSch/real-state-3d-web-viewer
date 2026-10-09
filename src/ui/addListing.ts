@@ -54,7 +54,10 @@ export interface AddListingDeps {
   /** Neighbourhood containing a point (fills the address). */
   bairroAt: (lngLat: [number, number]) => string | null;
   /** Saves the new listing; returns an error message, or null on success. */
-  onSave: (l: Listing) => string | null;
+  /** Saves the new listing (`center`: exact point of the place); resolves to an error message, or null on success. */
+  onSave: (l: Listing, center: [number, number]) => Promise<string | null>;
+  /** With the back end: name of the client the listing is saved for (replaces the agency choice). */
+  remoteOrgName?: () => string | null;
   onExport: () => void;
   userCount: () => number;
   onClose: () => void;
@@ -115,6 +118,7 @@ export class AddListingPanel {
 
   private render(): void {
     const { agencies } = this.deps;
+    const remoteOrg = this.deps.remoteOrgName?.() ?? null;
     this.photos = [];
     this.floorPlan = null;
     const options = <T extends string>(values: readonly T[], labels: Record<T, string>, selected?: T) =>
@@ -130,8 +134,12 @@ export class AddListingPanel {
         <h2 id="add-title">Anunciar imóvel</h2>
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar formulário">×</button>
       </div>
-      <p class="muted small">O anúncio fica salvo só neste navegador. Para publicar para todos, exporte o JSON e rode
-        <code>npm run listings:add</code> (veja o README). Campos com * são obrigatórios.</p>
+      ${
+        remoteOrg
+          ? '<p class="muted small">Ao salvar, o anúncio é publicado para todos. Campos com * são obrigatórios.</p>'
+          : `<p class="muted small">O anúncio fica salvo só neste navegador. Para publicar para todos, exporte o JSON e rode
+        <code>npm run listings:add</code> (veja o README). Campos com * são obrigatórios.</p>`
+      }
       <form class="add-form" novalidate>
         <fieldset class="a-section">
           <legend>Negócio</legend>
@@ -201,9 +209,13 @@ export class AddListingPanel {
 
         <fieldset class="a-section">
           <legend>Anunciante</legend>
-          <label class="a-field a-wide">Imobiliária<select name="agency">${agencies
-            .map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`)
-            .join('')}</select></label>
+          ${
+            remoteOrg
+              ? `<p class="a-field a-wide">Imobiliária<strong>${escapeHtml(remoteOrg)}</strong></p>`
+              : `<label class="a-field a-wide">Imobiliária<select name="agency">${agencies
+                  .map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`)
+                  .join('')}</select></label>`
+          }
           ${field('CRECI *', `<input name="creci" maxlength="20" placeholder="ex.: 12345-J">`)}
           ${field('Código de referência', `<input name="referenceCode" maxlength="30" placeholder="seu código interno">`)}
           ${field('Nome do contato', `<input name="contactName" maxlength="60">`)}
@@ -251,7 +263,7 @@ export class AddListingPanel {
     });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      this.submit();
+      void this.submit();
     });
     this.onTypeChange();
     this.onTransactionChange();
@@ -498,7 +510,10 @@ export class AddListingPanel {
     el.textContent = msg ?? '';
   }
 
-  private submit(): void {
+  private saving = false;
+
+  private async submit(): Promise<void> {
+    if (this.saving) return;
     const type = this.type;
     const tx = this.value('transaction') as Transaction;
     const building = type !== 'land';
@@ -556,6 +571,7 @@ export class AddListingPanel {
     if (problems.length) return this.showError(`Falta pouco: ${[...new Set(problems)].join('; ')}.`);
 
     const place = this.place!;
+    const remote = !!this.deps.remoteOrgName?.();
     const id = this.deps.newId(TYPE_SLUG[type]);
     const approximate = display !== 'full';
     const features = checked('feature') as Amenity[];
@@ -574,7 +590,7 @@ export class AddListingPanel {
       id,
       type,
       title,
-      agency: this.value('agency'),
+      agency: this.value('agency') || 'remote',
       price,
       transaction: tx,
       ...(rentPrice ? { rentPrice: Math.round(rentPrice) } : {}),
@@ -618,17 +634,27 @@ export class AddListingPanel {
       publishedAt: date,
       updatedAt: date,
       priceHistory: [{ date, price }],
-      fictional: true,
-      description: this.value('description') || 'Anúncio cadastrado no protótipo. Dados de demonstração.',
+      ...(remote ? {} : { fictional: true as const }),
+      description: this.value('description') || (remote ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
       userAdded: true,
     };
-    const error = this.deps.onSave(listing);
-    if (error) return this.showError(error);
-    this.close();
+    const btn = this.form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    this.saving = true;
+    btn.disabled = true;
+    btn.textContent = 'Salvando…';
+    try {
+      const error = await this.deps.onSave(listing, place.center);
+      if (error) return this.showError(error);
+      this.close();
+    } finally {
+      this.saving = false;
+      btn.disabled = false;
+      btn.textContent = 'Salvar anúncio';
+    }
   }
 
   private renderMine(): void {
-    const n = this.deps.userCount();
+    const n = this.deps.remoteOrgName?.() ? 0 : this.deps.userCount();
     const el = this.el.querySelector<HTMLElement>('.a-mine')!;
     el.innerHTML = n
       ? `<p class="small">Você tem ${n === 1 ? '1 anúncio salvo' : `${n} anúncios salvos`} neste navegador.</p>

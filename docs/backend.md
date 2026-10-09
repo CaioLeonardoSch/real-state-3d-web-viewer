@@ -1,8 +1,12 @@
 # Backend e hospedagem: o que precisa existir para virar produto
 
-Anotações de 09/10/2026. Hoje o protótipo é 100% estático: arquivos em `public/data/` e anúncios do "Anunciar" no
-`localStorage` de cada navegador. Este documento lista o que precisa ir para um backend e como manter tudo rodando
-para vários clientes.
+Anotações de 09/10/2026. O protótipo começou 100% estático (arquivos em `public/data/` e anúncios no `localStorage`).
+Este documento lista o que precisa ir para um backend e como manter tudo rodando para vários clientes.
+
+**Situação (09/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
+imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS), 2 (criar, alterar situação e preço,
+excluir; busca por área com PostGIS) e 3 (fotos e planta no storage). Faltam: convite de corretores pela tela,
+edição completa do anúncio, miniaturas das fotos e os itens 4 a 13.
 
 ## 1. O que precisa estar no backend
 

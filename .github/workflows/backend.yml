@@ -1,0 +1,29 @@
+# Testes do backend: sobe o Supabase local (Docker), aplica as migrações e roda os testes de permissão (RLS),
+# privacidade do endereço, histórico de preço e storage.
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'package*.json', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'package*.json', '.github/workflows/backend.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run db:start
+      - run: npm run test:backend

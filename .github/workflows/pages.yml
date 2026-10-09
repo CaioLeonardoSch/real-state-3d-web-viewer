@@ -33,6 +33,13 @@ jobs:
       - run: npm test
       # inclui tsc --noEmit; os dados já estão em public/data (o .pmtiles é lido por range requests, que o Pages aceita)
       - run: npm run build
+        env:
+          # Backend (Supabase): definidos em Settings → Secrets and variables → Actions → Variables.
+          # Sem eles o site sai como hoje: só a demonstração, com "Anunciar" salvando no navegador.
+          # A chave "anon" é pública por natureza (vai no site); quem protege os dados é o RLS do banco.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_DEMO_LISTINGS: ${{ vars.VITE_DEMO_LISTINGS }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -41,10 +41,10 @@ export class Drawer {
     private agencies: Agency[],
     private onClose: () => void,
     private onNavigate: (id: string) => void = () => {},
-    /** Deletes a listing added in this browser. */
-    private onDelete: (id: string) => void = () => {},
-    /** Saves changes to a listing added in this browser; returns an error message or null. */
-    private onUpdate: (l: Listing) => string | null = () => null,
+    /** Deletes one of the user's listings; resolves to an error message or null. */
+    private onDelete: (id: string) => Promise<string | null> = async () => null,
+    /** Saves changes to one of the user's listings; resolves to an error message or null. */
+    private onUpdate: (l: Listing) => Promise<string | null> = async () => null,
   ) {
     document.addEventListener('keydown', (e) => {
       if (!this.openId) return;
@@ -193,8 +193,12 @@ export class Drawer {
       </div>
       ${
         l.userAdded
-          ? '<span class="badge-fictional badge-user">Seu anúncio · salvo só neste navegador</span>'
-          : '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
+          ? `<span class="badge-fictional badge-user">${
+              l.remote ? `Seu anúncio${l.draft ? ' · rascunho' : ''}` : 'Seu anúncio · salvo só neste navegador'
+            }</span>`
+          : l.fictional
+            ? '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
+            : ''
       }
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>
       ${tags.trim() ? `<p class="drawer-tags">${tags}</p>` : ''}
@@ -290,13 +294,16 @@ export class Drawer {
       <p class="drawer-attrib">Mapa: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL) · <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a></p>
     `;
     this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
-    this.el.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
-      if (window.confirm(`Excluir o anúncio "${l.title}"? Ele só existe neste navegador.`)) this.onDelete(l.id);
+    this.el.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
+      const where = l.remote ? 'Ele sai do ar para todos.' : 'Ele só existe neste navegador.';
+      if (!window.confirm(`Excluir o anúncio "${l.title}"? ${where}`)) return;
+      const error = await this.onDelete(l.id);
+      if (error) window.alert(error);
     });
     this.bindGallery(l);
     this.el.querySelector<HTMLFormElement>('.manage-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      this.saveManage(l, e.currentTarget as HTMLFormElement);
+      void this.saveManage(l, e.currentTarget as HTMLFormElement);
     });
     this.el.querySelector('[data-action="prev"]')?.addEventListener('click', () => nav?.prevId && this.onNavigate(nav.prevId));
     this.el.querySelector('[data-action="next"]')?.addEventListener('click', () => nav?.nextId && this.onNavigate(nav.nextId));
@@ -332,7 +339,7 @@ export class Drawer {
   }
 
   /** Status and price changes of the user's own listing. A lower price becomes a recorded reduction. */
-  private saveManage(l: Listing, form: HTMLFormElement): void {
+  private async saveManage(l: Listing, form: HTMLFormElement): Promise<void> {
     const fd = new FormData(form);
     const price = parseNumberInput(String(fd.get('price') ?? ''));
     const err = form.querySelector<HTMLElement>('.a-error')!;
@@ -357,7 +364,10 @@ export class Drawer {
         delete next.priceReducedAt;
       }
     }
-    const error = this.onUpdate(next);
+    const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    btn.disabled = true;
+    const error = await this.onUpdate(next);
+    btn.disabled = false;
     if (error) {
       err.hidden = false;
       err.textContent = error;

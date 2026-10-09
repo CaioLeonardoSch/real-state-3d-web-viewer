@@ -30,6 +30,8 @@ import { PlacementChecker } from './utils/placement';
 import { DevelopmentLayer } from './map/developmentLayer';
 import { DevelopmentPanel } from './ui/developmentPanel';
 import { countByStatus } from './data/developments';
+import { RemoteBackend, backendConfig } from './backend/remote';
+import { AccountPanel } from './ui/account';
 
 setWorkerUrl(workerUrl);
 // "pmtiles://" sources: vector tiles read from one static file with HTTP range requests.
@@ -65,11 +67,28 @@ async function main() {
   status.textContent = 'Carregando o mapa…';
   const data = await loadData();
   const [lon, lat] = data.meta.center; // centre of the region, see scripts/extract-region.py
-  const agencies = data.listings.agencies;
-  const baseListings = data.listings.listings;
-  // listings added through "Anunciar imóvel", kept in this browser
-  let userListings = loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
-  let listings = [...baseListings, ...userListings];
+  const agencies = [...data.listings.agencies];
+  // demo listings (listings.json); a client's site can hide them with VITE_DEMO_LISTINGS=false
+  const baseListings = import.meta.env.VITE_DEMO_LISTINGS === 'false' ? [] : data.listings.listings;
+  // With a back end (Supabase), listings come from it; without one, "Anunciar" keeps them in this browser.
+  let remote: RemoteBackend | null = null;
+  let remoteListings: Listing[] = [];
+  if (backendConfig) {
+    try {
+      remote = await RemoteBackend.connect(backendConfig.url, backendConfig.key);
+      const r = await remote.loadListings();
+      remoteListings = r.listings;
+      mergeAgencies(r.agencies);
+    } catch (err) {
+      console.error(err);
+      status.textContent = 'Não foi possível carregar os anúncios do servidor; mostrando só a demonstração.';
+    }
+  }
+  function mergeAgencies(more: typeof agencies) {
+    for (const a of more) if (!agencies.some((x) => x.id === a.id)) agencies.push(a);
+  }
+  let userListings = remote ? [] : loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
+  let listings = [...baseListings, ...remoteListings, ...userListings];
   const developments = data.developments;
   const known = {
     agencyIds: new Set(agencies.map((a) => a.id)),
@@ -236,27 +255,63 @@ async function main() {
   // ------------------------------------------------------------ listings added in this browser
   /** Refreshes map, list and known ids after a listing is added or removed. */
   function listingsChanged() {
-    listings = [...baseListings, ...userListings];
+    listings = [...baseListings, ...remoteListings, ...userListings];
+    known.agencyIds = new Set(agencies.map((a) => a.id));
     known.listingIds = new Set(listings.map((l) => l.id));
     scene.setListings(listings);
     showResults();
     scene.setMatched(new Set(filterListings(listings, store.getApplied()).map((l) => l.id)));
   }
 
-  function deleteUserListing(id: string) {
-    const next = userListings.filter((l) => l.id !== id);
-    if (!saveUserListings(next)) return void window.alert('O navegador não permitiu salvar a alteração.');
-    userListings = next;
-    drawer.close();
+  /** Reloads the back end's listings (after login, logout or a change) and refreshes the map and list. */
+  async function reloadRemote() {
+    if (!remote) return;
+    const r = await remote.loadListings();
+    mergeAgencies(r.agencies);
+    remoteListings = r.listings;
     listingsChanged();
-    announce('Anúncio excluído.');
   }
 
-  function updateUserListing(l: Listing): string | null {
-    const next = userListings.map((x) => (x.id === l.id ? l : x));
-    if (!saveUserListings(next)) return 'O navegador não permitiu salvar a alteração.';
-    userListings = next;
-    listingsChanged();
+  async function deleteUserListing(id: string): Promise<string | null> {
+    const l = listings.find((x) => x.id === id);
+    if (remote && l?.remote) {
+      try {
+        await remote.deleteListing(id, l.agency);
+        drawer.close();
+        await reloadRemote();
+      } catch (err) {
+        return (err as Error).message;
+      }
+    } else {
+      const next = userListings.filter((x) => x.id !== id);
+      if (!saveUserListings(next)) return 'O navegador não permitiu salvar a alteração.';
+      userListings = next;
+      drawer.close();
+      listingsChanged();
+    }
+    announce('Anúncio excluído.');
+    return null;
+  }
+
+  async function updateUserListing(l: Listing): Promise<string | null> {
+    const before = listings.find((x) => x.id === l.id);
+    if (remote && l.remote && before) {
+      try {
+        await remote.updateListing(l.id, {
+          ...(l.price !== before.price ? { price: l.price } : {}),
+          ...(l.transaction === 'rent' && l.price !== before.price ? { rentPrice: l.price } : {}),
+          ...(l.availability !== before.availability ? { availability: l.availability } : {}),
+        });
+        await reloadRemote();
+      } catch (err) {
+        return (err as Error).message;
+      }
+    } else {
+      const next = userListings.map((x) => (x.id === l.id ? l : x));
+      if (!saveUserListings(next)) return 'O navegador não permitiu salvar a alteração.';
+      userListings = next;
+      listingsChanged();
+    }
     announce('Anúncio atualizado.');
     openListing(l.id, false);
     return null;
@@ -280,7 +335,21 @@ async function main() {
     otherLots: () => listings.flatMap((l) => (l.lotPolygon ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),
     bairroAt: (p) => scene.bairroAt(p),
-    onSave: (l) => {
+    remoteOrgName: () => (remote ? (account?.currentOrg?.name ?? null) : null),
+    onSave: async (l, center) => {
+      if (remote) {
+        const org = account?.currentOrg;
+        if (!org) return 'Entre na sua conta e cadastre a imobiliária para anunciar.';
+        try {
+          const id = await remote.createListing(l, org.id, center);
+          await reloadRemote();
+          announce(`Anúncio "${l.title}" publicado.`);
+          setTimeout(() => openListing(id, true), 0);
+          return null;
+        } catch (err) {
+          return (err as Error).message;
+        }
+      }
       const next = [...userListings, l];
       if (!saveUserListings(next))
         return 'O navegador não permitiu salvar: falta espaço (as fotos ocupam espaço; exclua anúncios antigos) ou o armazenamento está bloqueado. O anúncio não foi criado.';
@@ -298,8 +367,20 @@ async function main() {
       addToggle.focus();
     },
   });
+  // account (login, client) when a back end is configured
+  const account = remote
+    ? new AccountPanel($('#account-panel'), $<HTMLButtonElement>('.account-toggle'), remote, () => {
+        void reloadRemote().catch((err) => console.error(err));
+      })
+    : null;
+  await account?.refresh();
   addToggle.addEventListener('click', () => {
     if (addPanel.opened) return addPanel.close();
+    // with a back end, announcing needs a logged-in user working for a client
+    if (account && !account.currentOrg) {
+      return account.open(account.loggedIn ? 'Cadastre a sua imobiliária para anunciar.' : 'Entre na sua conta para anunciar.');
+    }
+    account?.close();
     drawer.close();
     addPanel.open();
     addToggle.setAttribute('aria-expanded', 'true');
