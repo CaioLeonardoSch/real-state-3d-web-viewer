@@ -1,0 +1,48 @@
+# Publica o site no GitHub Pages a cada push no main (ou manualmente, em Actions → "Publicar no GitHub Pages").
+# Na primeira vez: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# um deploy por vez; um push novo cancela o que ainda está na fila
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          # o Playwright só é usado no verify:e2e, que não roda aqui
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm test
+      # inclui tsc --noEmit; os dados já estão em public/data (o .pmtiles é lido por range requests, que o Pages aceita)
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
