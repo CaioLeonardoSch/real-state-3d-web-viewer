@@ -11,6 +11,8 @@ import type { Theme } from './lighting';
 const OSM_ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL)';
 const MAPLIBRE_ATTRIBUTION = '<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a>';
+const CADASTRE_ATTRIBUTION =
+  'Alturas: <a href="https://www.joinville.sc.gov.br/servicos/acessar-sistema-de-informacoes-municipais-georreferenciadas-simgeo/" target="_blank" rel="noopener">cadastro da Prefeitura de Joinville (SIMGeo)</a>';
 
 const LAND_HEIGHT_M = 0.5;
 const METERS_PER_FLOOR = 3;
@@ -174,7 +176,7 @@ export class Scene {
           // header is read use the default maxzoom and fail at z16+
           minzoom: 10,
           maxzoom: 15,
-          attribution: OSM_ATTRIBUTION,
+          attribution: (this.data.meta.heightSources?.length ?? 0) > 1 ? `${OSM_ATTRIBUTION} · ${CADASTRE_ATTRIBUTION}` : OSM_ATTRIBUTION,
         },
         boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },

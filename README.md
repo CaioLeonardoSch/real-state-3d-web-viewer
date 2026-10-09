@@ -131,6 +131,39 @@ mais algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) te
 Uma "bolha" 3D exatamente circular em volta do centro não existe no MapLibre (as expressões de estilo não sabem a
 distância até o centro da tela); exigiria uma camada customizada (Three.js). O efeito acima chega perto disso.
 
+## Altura dos prédios: cadastro da Prefeitura
+
+No OpenStreetMap, 98,6% dos prédios da região não têm altura. Agora a altura vem, em ordem de prioridade, de:
+
+1. tag `height` do OSM (42 prédios);
+2. `building:levels` do OSM × 3 m (779);
+3. **pavimentos estimados pelo cadastro imobiliário da Prefeitura** × 3 m (**54.274 prédios, 94,8%**);
+4. 6 m, quando nada disso existe (2.166, 3,8%).
+
+**Como a estimativa é feita** (`scripts/estimate-heights.mjs`, regra em `scripts/lib/cadastre-floors.mjs`):
+
+- `npm run data:cadastre` baixa do servidor público do SIMGeo os 65.383 lotes da região (contorno + área construída)
+  e as 51 outorgas onerosas (altura autorizada). As páginas têm 2.000 registros, uma de cada vez, com pausa.
+- Cada prédio do OSM é ligado ao lote que contém o seu ponto interno.
+- **Pavimentos ≈ área construída do lote ÷ área de projeção dos prédios do OSM no lote.**
+  - Se há um prédio principal (≥ 70% da projeção), os anexos contam 1 pavimento e o principal fica com o resto.
+  - Se há vários prédios parecidos (condomínio de casas), todos recebem o mesmo número, no máximo 4.
+- **Descartes** (o prédio fica com o padrão):
+  - razão < 0,2 ou > 32;
+  - mais de 4 pavimentos num contorno menor que 150 m² (quase sempre a torre não está desenhada no OSM e só a
+    guarita ou a garagem aparece).
+
+  São 926 prédios nessa situação.
+- A outorga onerosa, quando existe, limita a altura. Hoje não limitou nenhum prédio.
+- Os apartamentos fictícios passaram a ocupar **prédios reais de 4 pavimentos ou mais** pelo cadastro, com esse
+  número de pavimentos (antes: 8 a 14 inventados). As casas vão para prédios de até 2 pavimentos.
+
+Conferência pelos nomes do OSM: Edifício HYDE 30 pavimentos, Ibis Styles 25, Helbor Offices 24.
+
+A atribuição do mapa cita o cadastro da Prefeitura (SIMGeo). **Os dados são públicos, mas não encontrei licença
+explícita.** Antes de usar em produto, confirme os termos com a SEPUR.UGP (simgeo@joinville.sc.gov.br). Detalhes e
+outras camadas úteis em [`docs/dados-prefeitura.md`](docs/dados-prefeitura.md).
+
 ## Como regenerar os dados
 
 Requisitos extras: Python 3 com `pip install osmium shapely`.
@@ -158,6 +191,10 @@ NODE_USE_ENV_PROXY=1 npm run data
    vêm de um gerador aleatório separado (seed + 1); um título que promete "piscina" ou "sacada" sempre a tem.
 5. `npm run data:developments`: empreendimentos (ver acima).
 6. `npm run validate:data`: verificações de consistência (ver abaixo), contra os dados de `.cache/region/`.
+
+Entre os passos 2 e 3 rodam `npm run data:cadastre` (cadastro da Prefeitura, em `.cache/cadastre/`) e
+`npm run data:heights` (pavimentos por prédio, em `.cache/region/heights.json`). Sem eles, os blocos e os imóveis
+usam só as alturas do OSM e o padrão de 6 m, e os apartamentos voltam a ter pavimentos fictícios.
 
 **Para mudar a região**, edite a lista de bairros em `scripts/data/region.json` e rode `npm run data:region`,
 `data:tiles` e, se quiser imóveis nos novos bairros, `data:listings`. A cidade inteira funciona do mesmo jeito: o
@@ -330,9 +367,9 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - O contorno dos imóveis é desenhado só na base do volume.
 - Muitos prédios do OSM têm só `building=yes`. Um prédio "residencial" escolhido pode, na realidade, ser comercial ou
   galpão, porque o filtro depende das tags existentes.
-- **98,6% dos prédios da região (56.440 de 57.261) não têm altura nem número de pavimentos no OSM** e aparecem com
-  6 m. Bairros como Centro e Atiradores ficam bem mais baixos que na realidade. Veja `docs/dados-prefeitura.md`
-  para as fontes oficiais que podem corrigir isso.
+- A altura pelo cadastro é uma **estimativa**: supõe 3 m por pavimento e pavimentos de área igual. Ela erra em
+  prédios com embasamento largo e torre estreita, em subsolos contados como área construída e em lotes onde o OSM e o
+  cadastro não batem. O cadastro também pode estar desatualizado em relação às obras recentes.
 - O "Anunciar" escolhe prédios só de perto (zoom ≥ 14, já em 3D). A checagem de terreno livre usa os blocos
   carregados na tela; um prédio que cruza a borda de um bloco vem recortado com uma margem de ~30 m, então
   contornos muito grandes podem chegar incompletos na pré-visualização.
@@ -360,6 +397,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - Sombras reais (shadow mapping) via camada customizada.
 - Rótulos de ruas, que exigem fontes/glyphs locais.
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
+- Backend (contas, anúncios, fotos, leads, espelho de vendas) e hospedagem multi-cliente: ver
+  [`docs/backend.md`](docs/backend.md).
 - Fotos, contato por WhatsApp, favoritos e as demais melhorias priorizadas em
   [`docs/analise-concorrencia.md`](docs/analise-concorrencia.md).
 - Espelho de vendas com dados reais da incorporadora (planta do pavimento-tipo, tabela de unidades e de preços),
@@ -375,7 +414,8 @@ Extrato OSM de 07/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 08/10/
 | Prédios (`building`) | 57.261 |
 | ↳ altura pela tag `height` | 42 |
 | ↳ altura por `building:levels × 3 m` | 779 |
-| ↳ altura padrão de 6 m | 56.440 |
+| ↳ altura estimada pelo cadastro da Prefeitura | 54.274 |
+| ↳ altura padrão de 6 m | 2.166 |
 | Vias (`highway`) | 5.531 |
 | Água (`natural=water`, `waterway`) | 280 |
 | Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 377 |
@@ -387,7 +427,7 @@ Imóveis fictícios (`listings.json`): 60 no total (`--count 60`), espalhados pe
 
 | Tipo | Quantidade | Observação |
 |---|---|---|
-| Apartamentos | 20 | 8 a 14 pavimentos fictícios |
+| Apartamentos | 20 | Em prédios reais de 4 a 8 pavimentos (estimativa pelo cadastro) |
 | Casas | 16 | |
 | Geminados | 12 | Escolhidos por área: o OSM não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
 | Terrenos | 12 | Nenhum precisou ser reduzido |
@@ -398,7 +438,7 @@ Imóveis fictícios (`listings.json`): 60 no total (`--count 60`), espalhados pe
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 49 testes: gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 54 testes: estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:

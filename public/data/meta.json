@@ -35,7 +35,8 @@
     "green": 377,
     "heightFromTag": 42,
     "heightFromLevels": 779,
-    "heightDefault": 56440
+    "heightFromCadastre": 54274,
+    "heightDefault": 2166
   },
   "tiles": "joinville-norte.pmtiles",
   "tileZooms": {
@@ -59,5 +60,9 @@
       "minzoom": 10,
       "maxzoom": 15
     }
-  }
+  },
+  "heightSources": [
+    "OpenStreetMap",
+    "Cadastro imobiliário da Prefeitura de Joinville (SIMGeo): área construída por lote"
+  ]
 }

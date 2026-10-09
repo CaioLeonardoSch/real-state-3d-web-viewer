@@ -20,7 +20,7 @@ import turfNearestPointOnLine from '@turf/nearest-point-on-line';
 import turfBearing from '@turf/bearing';
 import { point, lineString, polygon } from '@turf/helpers';
 import { isResidentialBuilding } from './lib/residential.mjs';
-import { computeRenderHeight } from './lib/height.mjs';
+import { computeRenderHeight, loadCadastreFloors, METERS_PER_LEVEL } from './lib/height.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'public', 'data');
@@ -67,15 +67,22 @@ const roadsFc = await readJson('roads.geojson');
 const waterFc = await readJson('water.geojson');
 const greenFc = await readJson('green.geojson');
 const boundary = boundaryFc.features[0];
+// floors estimated from the city cadastre (scripts/estimate-heights.mjs); empty if not downloaded
+const cadastreFloors = await loadCadastreFloors(ROOT);
 
-
-const buildings = buildingsFc.features.map((f) => ({
-  f,
-  osmId: f.properties.osmId,
-  area: turfArea(f),
-  center: turfCentroid(f).geometry.coordinates,
-  bbox: turfBbox(f),
-}));
+const buildings = buildingsFc.features.map((f) => {
+  const { renderHeight, source } = computeRenderHeight(f.properties, cadastreFloors.get(f.properties.osmId));
+  return {
+    f,
+    osmId: f.properties.osmId,
+    area: turfArea(f),
+    center: turfCentroid(f).geometry.coordinates,
+    bbox: turfBbox(f),
+    height: renderHeight,
+    /** Floors known from OSM or the cadastre (null when only the 6 m default is known). */
+    floors: source === 'default' ? null : Math.max(1, Math.round(renderHeight / METERS_PER_LEVEL)),
+  };
+});
 
 const candidates = buildings.filter(
   (b) => isResidentialBuilding(b.f.properties) && turfBooleanPointInPolygon(point(b.center), boundary),
@@ -231,13 +238,19 @@ function approxCenterFor(id, trueCenter) {
   );
 }
 
-// Plausible pools, avoiding overlap of building types
-const aptPool = candidates.filter((b) => b.area >= 250);
+// Plausible pools, avoiding overlap of building types. With the cadastre, apartments go into real
+// buildings of 4+ floors and houses into low ones; without it, large footprints get fictional floors.
+const MIN_APT_FLOORS = 4;
+const tallPool = candidates.filter((b) => b.area >= 200 && b.floors !== null && b.floors >= MIN_APT_FLOORS);
+const aptPool = tallPool.length >= 40 ? tallPool : candidates.filter((b) => b.area >= 250);
+const realAptFloors = aptPool === tallPool;
+const low = (maxFloors) => (b) => b.floors === null || b.floors <= maxFloors;
 const housePool = candidates.filter(
-  (b) => b.area >= 70 && b.area <= 400 && ['yes', 'house', 'residential', 'detached'].includes(b.f.properties.building),
+  (b) =>
+    b.area >= 70 && b.area <= 400 && ['yes', 'house', 'residential', 'detached'].includes(b.f.properties.building) && low(2)(b),
 );
 const semiTagged = candidates.filter((b) => ['semidetached_house', 'terrace'].includes(b.f.properties.building));
-const semiPool = semiTagged.length >= 3 ? semiTagged : candidates.filter((b) => b.area >= 50 && b.area <= 220);
+const semiPool = semiTagged.length >= 3 ? semiTagged : candidates.filter((b) => b.area >= 50 && b.area <= 220 && low(3)(b));
 
 // Mix of types (5 : 4 : 3 : 3, as in the original 15-listing demo), scaled to COUNT.
 const MIX = [
@@ -316,7 +329,8 @@ for (const type of plan) {
     const b = pickSpread(pool, type);
     let areaM2, bedrooms, bathrooms, parkingSpots, status, floors, landAreaM2, title, pricePerM2;
     if (type === 'apartment') {
-      floors = intBetween(8, 14);
+      // real floors (OSM or cadastre) when known; else fictional 8–14
+      floors = realAptFloors ? b.floors : intBetween(8, 14);
       bedrooms = intBetween(1, 4);
       // unit area grows with bedrooms: 1q ≈ 45–65 m², 4q ≈ 120–140 m²
       areaM2 = Math.round(23 + bedrooms * 24 + between(0, 20));
@@ -360,11 +374,11 @@ for (const type of plan) {
       buildingOsmId: b.osmId,
       // the app draws the listing from this outline (the tiles only carry the context buildings)
       footprint: b.f.geometry,
-      buildingHeightM: computeRenderHeight(b.f.properties).renderHeight,
+      buildingHeightM: b.height,
       ...(floors ? { floors } : {}),
       description:
         type === 'apartment'
-          ? `Unidade de ${areaM2} m² em edifício de ${floors} pavimentos (altura fictícia). ${status === 'ready' ? 'Pronto para morar.' : 'Em construção.'} Dados fictícios para demonstração.`
+          ? `Unidade de ${areaM2} m² em edifício de ${floors} pavimentos (${realAptFloors ? 'estimativa pelo cadastro da Prefeitura' : 'altura fictícia'}). ${status === 'ready' ? 'Pronto para morar.' : 'Em construção.'} Dados fictícios para demonstração.`
           : `Imóvel de ${areaM2} m² construídos, ${bedrooms} quartos e ${parkingSpots} ${parkingSpots === 1 ? 'vaga' : 'vagas'}. Dados fictícios para demonstração.`,
     };
     if (approximateLocation) listing.approxCenter = approxCenterFor(id, b.center);
@@ -386,6 +400,7 @@ const out = {
 };
 await writeFile(path.join(DATA, 'listings.json'), JSON.stringify(out, null, 2) + '\n');
 
+console.log(`Cadastre floors: ${cadastreFloors.size} buildings${realAptFloors ? '' : ' (apartments use fictional floors)'}`);
 console.log(`Residential candidate buildings: ${candidates.length} (apartment pool ${aptPool.length}, house pool ${housePool.length}, semi pool ${semiPool.length}${semiTagged.length >= 3 ? ' tagged' : ' by area'})`);
 console.log(`Generated ${listings.length} fictional listings:`);
 for (const l of listings) {

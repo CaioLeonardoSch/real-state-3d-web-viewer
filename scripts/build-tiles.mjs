@@ -14,7 +14,7 @@ import vtpbf from 'vt-pbf';
 import turfCentroid from '@turf/centroid';
 import turfPointOnFeature from '@turf/point-on-feature';
 import turfArea from '@turf/area';
-import { computeRenderHeight } from './lib/height.mjs';
+import { computeRenderHeight, loadCadastreFloors } from './lib/height.mjs';
 import { isResidentialBuilding } from './lib/residential.mjs';
 import { writePmtiles } from './lib/pmtiles-writer.mjs';
 
@@ -44,9 +44,11 @@ const [buildings, roads, water, green, bairros, boundary] = await Promise.all(
 );
 
 // ---- properties kept in the tiles (small: only what the style and the app read)
-const heightCounts = { height: 0, levels: 0, default: 0 };
+// heights: OSM tags, else floors estimated from the city cadastre (scripts/estimate-heights.mjs), else 6 m
+const cadastreFloors = await loadCadastreFloors(ROOT);
+const heightCounts = { height: 0, levels: 0, cadastre: 0, default: 0 };
 for (const f of buildings.features) {
-  const { renderHeight, source } = computeRenderHeight(f.properties);
+  const { renderHeight, source } = computeRenderHeight(f.properties, cadastreFloors.get(f.properties.osmId));
   heightCounts[source]++;
   f.properties = { osmId: f.properties.osmId, height: renderHeight, residential: isResidentialBuilding(f.properties) };
 }
@@ -133,7 +135,16 @@ const outMeta = {
   tiles: file,
   tileZooms: LAYERS,
   center: meta.center ?? turfCentroid(boundary).geometry.coordinates,
-  counts: { ...meta.counts, heightFromTag: heightCounts.height, heightFromLevels: heightCounts.levels, heightDefault: heightCounts.default },
+  counts: {
+    ...meta.counts,
+    heightFromTag: heightCounts.height,
+    heightFromLevels: heightCounts.levels,
+    heightFromCadastre: heightCounts.cadastre,
+    heightDefault: heightCounts.default,
+  },
+  heightSources: heightCounts.cadastre
+    ? ['OpenStreetMap', 'Cadastro imobiliário da Prefeitura de Joinville (SIMGeo): área construída por lote']
+    : ['OpenStreetMap'],
 };
 await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + '\n');
 

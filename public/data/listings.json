@@ -18,67 +18,63 @@
     {
       "id": "apt-01",
       "type": "apartment",
-      "title": "Apartamento amplo 4 quartos",
+      "title": "Apartamento com vista 4 quartos",
       "agency": "agency-b",
-      "price": 1210000,
-      "areaM2": 123,
+      "price": 1115000,
+      "areaM2": 135,
       "bedrooms": 4,
-      "bathrooms": 3,
+      "bathrooms": 4,
       "parkingSpots": 3,
-      "status": "under_construction",
-      "buildingOsmId": "way/517701758",
+      "status": "ready",
+      "buildingOsmId": "way/516646089",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8715128,
-                -26.270408
+                -48.847847,
+                -26.2749969
               ],
               [
-                -48.871505,
-                -26.2705823
+                -48.8478019,
+                -26.2750462
               ],
               [
-                -48.871368,
-                -26.2705785
+                -48.8477315,
+                -26.2751231
               ],
               [
-                -48.8713682,
-                -26.2705761
+                -48.8477262,
+                -26.2751288
               ],
               [
-                -48.8713703,
-                -26.2705161
+                -48.8476127,
+                -26.2750463
               ],
               [
-                -48.8713726,
-                -26.2704508
+                -48.8476233,
+                -26.2750343
               ],
               [
-                -48.871375,
-                -26.2703823
+                -48.8476142,
+                -26.2750288
               ],
               [
-                -48.8714217,
-                -26.2703845
+                -48.8477228,
+                -26.2749091
               ],
               [
-                -48.8714209,
-                -26.2704051
-              ],
-              [
-                -48.8715128,
-                -26.270408
+                -48.847847,
+                -26.2749969
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 14,
-      "description": "Unidade de 123 m² em edifício de 14 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 135 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -92,67 +88,51 @@
     {
       "id": "apt-02",
       "type": "apartment",
-      "title": "Apartamento com vista 3 quartos",
+      "title": "Apartamento com vista 2 quartos",
       "agency": "agency-a",
-      "price": 850000,
-      "areaM2": 102,
-      "bedrooms": 3,
-      "bathrooms": 2,
-      "parkingSpots": 2,
-      "status": "ready",
-      "buildingOsmId": "way/991614593",
+      "price": 870000,
+      "areaM2": 80,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "parkingSpots": 1,
+      "status": "under_construction",
+      "buildingOsmId": "way/992939396",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8027507,
-                -26.2390111
+                -48.8101464,
+                -26.2372756
               ],
               [
-                -48.8026564,
-                -26.2390865
+                -48.8100794,
+                -26.237338
               ],
               [
-                -48.8025964,
-                -26.2390312
+                -48.8100046,
+                -26.2372703
               ],
               [
-                -48.8025477,
-                -26.2389862
+                -48.8098878,
+                -26.2372116
               ],
               [
-                -48.8024743,
-                -26.2389186
+                -48.8099933,
+                -26.2371104
               ],
               [
-                -48.8025071,
-                -26.2388917
-              ],
-              [
-                -48.8024945,
-                -26.2388789
-              ],
-              [
-                -48.802549,
-                -26.2388331
-              ],
-              [
-                -48.8026636,
-                -26.2389342
-              ],
-              [
-                -48.8027507,
-                -26.2390111
+                -48.8101464,
+                -26.2372756
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 11,
-      "description": "Unidade de 102 m² em edifício de 11 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 80 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -166,87 +146,47 @@
     {
       "id": "apt-03",
       "type": "apartment",
-      "title": "Apartamento amplo 1 quarto",
+      "title": "Apartamento amplo 4 quartos",
       "agency": "agency-b",
-      "price": 505000,
-      "areaM2": 63,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
+      "price": 1300000,
+      "areaM2": 121,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "parkingSpots": 3,
       "status": "under_construction",
-      "buildingOsmId": "way/1032675629",
+      "buildingOsmId": "way/258398470",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8681843,
-                -26.3173447
+                -48.8696444,
+                -26.3185246
               ],
               [
-                -48.8681378,
-                -26.317344
+                -48.869352,
+                -26.3185414
               ],
               [
-                -48.8681379,
-                -26.3173631
+                -48.8693254,
+                -26.3181701
               ],
               [
-                -48.8680804,
-                -26.3173632
+                -48.8696178,
+                -26.3181533
               ],
               [
-                -48.8680807,
-                -26.3173488
-              ],
-              [
-                -48.8680221,
-                -26.3173544
-              ],
-              [
-                -48.8680213,
-                -26.317345
-              ],
-              [
-                -48.867988,
-                -26.317346
-              ],
-              [
-                -48.8679833,
-                -26.3172834
-              ],
-              [
-                -48.8679889,
-                -26.3172835
-              ],
-              [
-                -48.8679864,
-                -26.3172195
-              ],
-              [
-                -48.8681117,
-                -26.3172188
-              ],
-              [
-                -48.8681116,
-                -26.3172682
-              ],
-              [
-                -48.8681841,
-                -26.3172662
-              ],
-              [
-                -48.8681843,
-                -26.3173447
+                -48.8696444,
+                -26.3185246
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 13,
-      "description": "Unidade de 63 m² em edifício de 13 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 18,
+      "floors": 6,
+      "description": "Unidade de 121 m² em edifício de 6 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -258,71 +198,71 @@
     {
       "id": "apt-04",
       "type": "apartment",
-      "title": "Apartamento com sacada 1 quarto",
+      "title": "Apartamento com vista 4 quartos",
       "agency": "agency-a",
-      "price": 525000,
-      "areaM2": 57,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/962086644",
+      "price": 1070000,
+      "areaM2": 125,
+      "bedrooms": 4,
+      "bathrooms": 4,
+      "parkingSpots": 3,
+      "status": "under_construction",
+      "buildingOsmId": "way/481276493",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8181687,
-                -26.2803416
+                -48.8845823,
+                -26.2798299
               ],
               [
-                -48.8181597,
-                -26.2803507
+                -48.8844912,
+                -26.2798286
               ],
               [
-                -48.8181012,
-                -26.280411
+                -48.8844916,
+                -26.2797827
               ],
               [
-                -48.8180044,
-                -26.2805107
+                -48.8843571,
+                -26.2797808
               ],
               [
-                -48.8179321,
-                -26.2804513
+                -48.8843587,
+                -26.2796896
               ],
               [
-                -48.8179878,
-                -26.2803944
+                -48.8845167,
+                -26.2796919
               ],
               [
-                -48.8179361,
-                -26.2803533
+                -48.8845168,
+                -26.2797622
               ],
               [
-                -48.817998,
-                -26.28029
+                -48.8845376,
+                -26.2797621
               ],
               [
-                -48.8180648,
-                -26.280343
+                -48.8845379,
+                -26.2797596
               ],
               [
-                -48.8181112,
-                -26.2802957
+                -48.8845792,
+                -26.2797601
               ],
               [
-                -48.8181687,
-                -26.2803416
+                -48.8845823,
+                -26.2798299
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 57 m² em edifício de 8 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 15,
+      "floors": 5,
+      "description": "Unidade de 125 m² em edifício de 5 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -338,95 +278,67 @@
     {
       "id": "apt-05",
       "type": "apartment",
-      "title": "Apartamento amplo 4 quartos",
+      "title": "Apartamento garden 4 quartos",
       "agency": "agency-b",
-      "price": 1215000,
-      "areaM2": 125,
+      "price": 1455000,
+      "areaM2": 128,
       "bedrooms": 4,
       "bathrooms": 4,
       "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/516428371",
+      "buildingOsmId": "way/925628091",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8435812,
-                -26.2527983
+                -48.8113922,
+                -26.2799514
               ],
               [
-                -48.8435475,
-                -26.2528698
+                -48.811388,
+                -26.2800229
               ],
               [
-                -48.8435799,
-                -26.2528822
+                -48.8113847,
+                -26.2800801
               ],
               [
-                -48.8435167,
-                -26.2530183
+                -48.8113835,
+                -26.2800802
               ],
               [
-                -48.8434663,
-                -26.2529989
+                -48.8111726,
+                -26.2800918
               ],
               [
-                -48.8434725,
-                -26.2529856
+                -48.8111685,
+                -26.2799913
               ],
               [
-                -48.8434521,
-                -26.2529778
+                -48.811267,
+                -26.2799864
               ],
               [
-                -48.8434827,
-                -26.2529127
+                -48.8112668,
+                -26.2799611
               ],
               [
-                -48.8434575,
-                -26.252903
+                -48.8112698,
+                -26.2799608
               ],
               [
-                -48.8434179,
-                -26.2529872
-              ],
-              [
-                -48.8434227,
-                -26.252989
-              ],
-              [
-                -48.8434134,
-                -26.2530088
-              ],
-              [
-                -48.8433669,
-                -26.252991
-              ],
-              [
-                -48.8434069,
-                -26.2529026
-              ],
-              [
-                -48.8434602,
-                -26.2527846
-              ],
-              [
-                -48.843473,
-                -26.2527565
-              ],
-              [
-                -48.8435812,
-                -26.2527983
+                -48.8113922,
+                -26.2799514
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 14,
-      "description": "Unidade de 125 m² em edifício de 14 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 15,
+      "floors": 5,
+      "description": "Unidade de 128 m² em edifício de 5 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -439,67 +351,47 @@
     {
       "id": "apt-06",
       "type": "apartment",
-      "title": "Apartamento com sacada 1 quarto",
+      "title": "Apartamento com sacada 3 quartos",
       "agency": "agency-a",
-      "price": 710000,
-      "areaM2": 63,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
-      "status": "under_construction",
-      "buildingOsmId": "way/1035897497",
+      "price": 1065000,
+      "areaM2": 102,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 2,
+      "status": "ready",
+      "buildingOsmId": "way/910540729",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8489463,
-                -26.2929293
+                -48.8527416,
+                -26.2462125
               ],
               [
-                -48.8488254,
-                -26.2929372
+                -48.8526951,
+                -26.2462892
               ],
               [
-                -48.8488159,
-                -26.2928394
+                -48.8524887,
+                -26.2461886
               ],
               [
-                -48.8488292,
-                -26.2928382
+                -48.8525352,
+                -26.2461119
               ],
               [
-                -48.8488173,
-                -26.2927019
-              ],
-              [
-                -48.8488687,
-                -26.2926985
-              ],
-              [
-                -48.8489333,
-                -26.2926943
-              ],
-              [
-                -48.8489447,
-                -26.2928419
-              ],
-              [
-                -48.8489399,
-                -26.292842
-              ],
-              [
-                -48.8489463,
-                -26.2929293
+                -48.8527416,
+                -26.2462125
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 63 m² em edifício de 8 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 102 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "elevator",
@@ -513,79 +405,71 @@
     {
       "id": "apt-07",
       "type": "apartment",
-      "title": "Apartamento compacto 2 quartos",
+      "title": "Apartamento com vista 1 quarto",
       "agency": "agency-b",
-      "price": 860000,
-      "areaM2": 81,
-      "bedrooms": 2,
+      "price": 675000,
+      "areaM2": 64,
+      "bedrooms": 1,
       "bathrooms": 1,
       "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/1034794954",
+      "buildingOsmId": "way/960643249",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8807375,
-                -26.2928939
+                -48.839766,
+                -26.3019223
               ],
               [
-                -48.8807275,
-                -26.2929839
+                -48.8396523,
+                -26.3020201
               ],
               [
-                -48.8806663,
-                -26.2929784
+                -48.8396249,
+                -26.3019942
               ],
               [
-                -48.8806703,
-                -26.2929423
+                -48.8396173,
+                -26.3020009
               ],
               [
-                -48.8806422,
-                -26.2929397
+                -48.8396063,
+                -26.3019904
               ],
               [
-                -48.8806398,
-                -26.2929607
+                -48.8395913,
+                -26.3020033
               ],
               [
-                -48.8805798,
-                -26.2929553
+                -48.8395366,
+                -26.3019516
               ],
               [
-                -48.8805993,
-                -26.292778
+                -48.8396218,
+                -26.3018779
               ],
               [
-                -48.8807044,
-                -26.2927874
+                -48.8396305,
+                -26.3018862
               ],
               [
-                -48.8806984,
-                -26.292842
+                -48.8396814,
+                -26.3018424
               ],
               [
-                -48.8807347,
-                -26.2928453
-              ],
-              [
-                -48.8807294,
-                -26.2928931
-              ],
-              [
-                -48.8807375,
-                -26.2928939
+                -48.839766,
+                -26.3019223
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 13,
-      "description": "Unidade de 81 m² em edifício de 13 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 64 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -597,68 +481,61 @@
     {
       "id": "apt-08",
       "type": "apartment",
-      "title": "Apartamento compacto 4 quartos",
+      "title": "Apartamento com sacada 3 quartos",
       "agency": "agency-a",
-      "price": 1375000,
-      "areaM2": 128,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 3,
-      "status": "under_construction",
-      "buildingOsmId": "way/961171445",
+      "price": 860000,
+      "areaM2": 98,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
+      "status": "ready",
+      "buildingOsmId": "way/997338600",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8013293,
-                -26.2643694
+                -48.8204177,
+                -26.258247
               ],
               [
-                -48.8011436,
-                -26.2645636
+                -48.8203966,
+                -26.2583097
               ],
               [
-                -48.8009996,
-                -26.2644517
+                -48.8203893,
+                -26.2583314
               ],
               [
-                -48.8010795,
-                -26.2643683
+                -48.820379,
+                -26.2583286
               ],
               [
-                -48.8010741,
-                -26.264364
+                -48.8201602,
+                -26.2582684
               ],
               [
-                -48.8011008,
-                -26.264336
+                -48.8201886,
+                -26.258184
               ],
               [
-                -48.8011053,
-                -26.2643395
-              ],
-              [
-                -48.8011848,
-                -26.2642564
-              ],
-              [
-                -48.8013293,
-                -26.2643694
+                -48.8204177,
+                -26.258247
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 128 m² em edifício de 8 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 98 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "elevator",
         "pets",
-        "financing"
+        "financing",
+        "balcony"
       ],
       "approximateLocation": false,
       "fictional": true
@@ -666,47 +543,79 @@
     {
       "id": "apt-09",
       "type": "apartment",
-      "title": "Apartamento garden 4 quartos",
+      "title": "Apartamento com sacada 4 quartos",
       "agency": "agency-b",
-      "price": 1020000,
-      "areaM2": 127,
+      "price": 1480000,
+      "areaM2": 129,
       "bedrooms": 4,
-      "bathrooms": 4,
+      "bathrooms": 3,
       "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/1025606428",
+      "buildingOsmId": "way/1035893756",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8333153,
-                -26.2329398
+                -48.8652516,
+                -26.2939847
               ],
               [
-                -48.8332078,
-                -26.2330018
+                -48.8651201,
+                -26.2939945
               ],
               [
-                -48.833037,
-                -26.2327608
+                -48.8651125,
+                -26.2939111
               ],
               [
-                -48.8331446,
-                -26.2326988
+                -48.8651432,
+                -26.2939089
               ],
               [
-                -48.8333153,
-                -26.2329398
+                -48.8651411,
+                -26.293886
+              ],
+              [
+                -48.865109,
+                -26.2938884
+              ],
+              [
+                -48.8651017,
+                -26.2938085
+              ],
+              [
+                -48.8652341,
+                -26.2937987
+              ],
+              [
+                -48.8652414,
+                -26.2938782
+              ],
+              [
+                -48.8651982,
+                -26.2938814
+              ],
+              [
+                -48.8652003,
+                -26.2939051
+              ],
+              [
+                -48.865244,
+                -26.2939019
+              ],
+              [
+                -48.8652516,
+                -26.2939847
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 127 m² em edifício de 8 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 129 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -722,87 +631,47 @@
     {
       "id": "apt-10",
       "type": "apartment",
-      "title": "Apartamento compacto 3 quartos",
+      "title": "Apartamento garden 4 quartos",
       "agency": "agency-a",
-      "price": 1175000,
-      "areaM2": 114,
-      "bedrooms": 3,
+      "price": 1355000,
+      "areaM2": 125,
+      "bedrooms": 4,
       "bathrooms": 3,
-      "parkingSpots": 2,
+      "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/997338173",
+      "buildingOsmId": "way/517281255",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8207582,
-                -26.2537667
+                -48.867793,
+                -26.2645953
               ],
               [
-                -48.8207458,
-                -26.2537848
+                -48.8677911,
+                -26.2648173
               ],
               [
-                -48.8207215,
-                -26.2538003
+                -48.8676574,
+                -26.2648164
               ],
               [
-                -48.8206744,
-                -26.253812
+                -48.8676592,
+                -26.2645944
               ],
               [
-                -48.820662,
-                -26.2538116
-              ],
-              [
-                -48.8206511,
-                -26.2538061
-              ],
-              [
-                -48.8206034,
-                -26.2537463
-              ],
-              [
-                -48.8205965,
-                -26.2537506
-              ],
-              [
-                -48.8205624,
-                -26.2537111
-              ],
-              [
-                -48.8205261,
-                -26.2536689
-              ],
-              [
-                -48.8205188,
-                -26.2536605
-              ],
-              [
-                -48.8205604,
-                -26.2536346
-              ],
-              [
-                -48.8206364,
-                -26.2535874
-              ],
-              [
-                -48.8207575,
-                -26.2537467
-              ],
-              [
-                -48.8207582,
-                -26.2537667
+                -48.867793,
+                -26.2645953
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 14,
-      "description": "Unidade de 114 m² em edifício de 14 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 18,
+      "floors": 6,
+      "description": "Unidade de 125 m² em edifício de 6 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -818,91 +687,79 @@
     {
       "id": "apt-11",
       "type": "apartment",
-      "title": "Apartamento amplo 1 quarto",
+      "title": "Apartamento com vista 1 quarto",
       "agency": "agency-b",
-      "price": 520000,
-      "areaM2": 57,
+      "price": 445000,
+      "areaM2": 52,
       "bedrooms": 1,
       "bathrooms": 1,
       "parkingSpots": 1,
       "status": "under_construction",
-      "buildingOsmId": "way/516660298",
+      "buildingOsmId": "way/963050534",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8395673,
-                -26.2736306
+                -48.830112,
+                -26.2755572
               ],
               [
-                -48.83954,
-                -26.2736532
+                -48.8300457,
+                -26.2756777
               ],
               [
-                -48.8395363,
-                -26.2736493
+                -48.8299788,
+                -26.2756478
               ],
               [
-                -48.8393863,
-                -26.2737729
+                -48.8299756,
+                -26.2756537
               ],
               [
-                -48.8393786,
-                -26.273765
+                -48.8299505,
+                -26.2756426
               ],
               [
-                -48.8393406,
-                -26.2737967
+                -48.8299543,
+                -26.2756356
               ],
               [
-                -48.839315,
-                -26.2737705
+                -48.8298553,
+                -26.2755914
               ],
               [
-                -48.8393067,
-                -26.2737776
+                -48.829921,
+                -26.2754719
               ],
               [
-                -48.8392651,
-                -26.273734
+                -48.8300208,
+                -26.2755165
               ],
               [
-                -48.8393898,
-                -26.2736311
+                -48.8300242,
+                -26.2755102
               ],
               [
-                -48.8394003,
-                -26.2736429
+                -48.8300546,
+                -26.2755238
               ],
               [
-                -48.8394088,
-                -26.2736357
+                -48.8300512,
+                -26.2755301
               ],
               [
-                -48.8394236,
-                -26.2736514
-              ],
-              [
-                -48.8395225,
-                -26.2735726
-              ],
-              [
-                -48.8395316,
-                -26.2735844
-              ],
-              [
-                -48.8395673,
-                -26.2736306
+                -48.830112,
+                -26.2755572
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 57 m² em edifício de 8 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 52 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -917,63 +774,111 @@
     {
       "id": "apt-12",
       "type": "apartment",
-      "title": "Apartamento compacto 1 quarto",
+      "title": "Apartamento garden 3 quartos",
       "agency": "agency-a",
-      "price": 605000,
-      "areaM2": 66,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
+      "price": 810000,
+      "areaM2": 95,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/478458597",
+      "buildingOsmId": "way/1035926902",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8912894,
-                -26.2679126
+                -48.8542405,
+                -26.3098194
               ],
               [
-                -48.8912604,
-                -26.2679213
+                -48.8541995,
+                -26.3098602
               ],
               [
-                -48.8912701,
-                -26.2679498
+                -48.8541667,
+                -26.3098928
               ],
               [
-                -48.891133,
-                -26.2679918
+                -48.8541124,
+                -26.3099468
               ],
               [
-                -48.8911232,
-                -26.2679687
+                -48.8540468,
+                -26.3098871
               ],
               [
-                -48.8910373,
-                -26.2679982
+                -48.8540891,
+                -26.3098465
               ],
               [
-                -48.8910107,
-                -26.2679165
+                -48.8541129,
+                -26.3098664
               ],
               [
-                -48.8912767,
-                -26.2678236
+                -48.8541267,
+                -26.3098519
               ],
               [
-                -48.8912894,
-                -26.2679126
+                -48.8541186,
+                -26.3098446
+              ],
+              [
+                -48.8541163,
+                -26.3098468
+              ],
+              [
+                -48.8540565,
+                -26.3097939
+              ],
+              [
+                -48.8540608,
+                -26.3097903
+              ],
+              [
+                -48.8540376,
+                -26.3097707
+              ],
+              [
+                -48.8540553,
+                -26.3097547
+              ],
+              [
+                -48.854052,
+                -26.3097521
+              ],
+              [
+                -48.8541052,
+                -26.3097031
+              ],
+              [
+                -48.8541544,
+                -26.3097454
+              ],
+              [
+                -48.8541413,
+                -26.3097569
+              ],
+              [
+                -48.8541883,
+                -26.3097984
+              ],
+              [
+                -48.8542017,
+                -26.309786
+              ],
+              [
+                -48.8542405,
+                -26.3098194
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 11,
-      "description": "Unidade de 66 m² em edifício de 11 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 15,
+      "floors": 5,
+      "description": "Unidade de 95 m² em edifício de 5 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -987,111 +892,59 @@
     {
       "id": "apt-13",
       "type": "apartment",
-      "title": "Apartamento amplo 1 quarto",
+      "title": "Apartamento compacto 4 quartos",
       "agency": "agency-b",
-      "price": 470000,
-      "areaM2": 54,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/1035503546",
+      "price": 1290000,
+      "areaM2": 119,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "parkingSpots": 3,
+      "status": "under_construction",
+      "buildingOsmId": "way/962425461",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8570059,
-                -26.278607
+                -48.8030336,
+                -26.2591735
               ],
               [
-                -48.8569486,
-                -26.2786087
+                -48.8029398,
+                -26.259273
               ],
               [
-                -48.8569498,
-                -26.2786254
+                -48.802915,
+                -26.2592539
               ],
               [
-                -48.8569954,
-                -26.2786239
+                -48.8028158,
+                -26.2591776
               ],
               [
-                -48.8569994,
-                -26.27868
+                -48.8028884,
+                -26.2590991
               ],
               [
-                -48.8569997,
-                -26.2786845
+                -48.8029638,
+                -26.2591549
               ],
               [
-                -48.8569489,
-                -26.2786871
+                -48.802983,
+                -26.259135
               ],
               [
-                -48.8569509,
-                -26.2787123
-              ],
-              [
-                -48.85693,
-                -26.2787137
-              ],
-              [
-                -48.8568843,
-                -26.2787168
-              ],
-              [
-                -48.8568856,
-                -26.2787304
-              ],
-              [
-                -48.8568109,
-                -26.2787344
-              ],
-              [
-                -48.856804,
-                -26.2786325
-              ],
-              [
-                -48.8567945,
-                -26.2786331
-              ],
-              [
-                -48.8567903,
-                -26.278573
-              ],
-              [
-                -48.8568443,
-                -26.2785696
-              ],
-              [
-                -48.8568951,
-                -26.2785245
-              ],
-              [
-                -48.8569617,
-                -26.2785203
-              ],
-              [
-                -48.8569627,
-                -26.2785348
-              ],
-              [
-                -48.8570002,
-                -26.2785333
-              ],
-              [
-                -48.8570059,
-                -26.278607
+                -48.8030336,
+                -26.2591735
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 13,
-      "description": "Unidade de 54 m² em edifício de 13 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 15,
+      "floors": 5,
+      "description": "Unidade de 119 m² em edifício de 5 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -1105,63 +958,141 @@
     {
       "id": "apt-14",
       "type": "apartment",
-      "title": "Apartamento com vista 2 quartos",
+      "title": "Apartamento compacto 3 quartos",
       "agency": "agency-a",
-      "price": 755000,
-      "areaM2": 72,
-      "bedrooms": 2,
-      "bathrooms": 1,
-      "parkingSpots": 1,
+      "price": 1060000,
+      "areaM2": 101,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/1035926888",
+      "buildingOsmId": "relation/7481697",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.852397,
-                -26.3083322
+                -48.8474902,
+                -26.2595115
               ],
               [
-                -48.852252,
-                -26.3086241
+                -48.8474677,
+                -26.2595569
               ],
               [
-                -48.8523304,
-                -26.3086558
+                -48.8474459,
+                -26.2595477
               ],
               [
-                -48.852291,
-                -26.3087352
+                -48.8474397,
+                -26.2595573
               ],
               [
-                -48.852213,
-                -26.3087038
+                -48.8474626,
+                -26.259566
               ],
               [
-                -48.8520683,
-                -26.3089952
+                -48.8474497,
+                -26.2595918
               ],
               [
-                -48.8519415,
-                -26.308944
+                -48.8474042,
+                -26.2595718
               ],
               [
-                -48.8522704,
-                -26.3082812
+                -48.8473948,
+                -26.2595924
               ],
               [
-                -48.852397,
-                -26.3083322
+                -48.8474312,
+                -26.2596081
+              ],
+              [
+                -48.847416,
+                -26.2596393
+              ],
+              [
+                -48.8474108,
+                -26.2596381
+              ],
+              [
+                -48.8473911,
+                -26.2596768
+              ],
+              [
+                -48.8471124,
+                -26.2595647
+              ],
+              [
+                -48.847147,
+                -26.2594949
+              ],
+              [
+                -48.847139,
+                -26.2594917
+              ],
+              [
+                -48.8471958,
+                -26.259377
+              ],
+              [
+                -48.84723,
+                -26.2593907
+              ],
+              [
+                -48.8472276,
+                -26.2593955
+              ],
+              [
+                -48.8474801,
+                -26.259497
+              ],
+              [
+                -48.8474765,
+                -26.2595068
+              ],
+              [
+                -48.8474902,
+                -26.2595115
+              ]
+            ],
+            [
+              [
+                -48.8472979,
+                -26.2595042
+              ],
+              [
+                -48.8472449,
+                -26.2594843
+              ],
+              [
+                -48.8472358,
+                -26.2595041
+              ],
+              [
+                -48.8472186,
+                -26.2594976
+              ],
+              [
+                -48.8472109,
+                -26.2595144
+              ],
+              [
+                -48.8472811,
+                -26.2595407
+              ],
+              [
+                -48.8472979,
+                -26.2595042
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 13,
-      "description": "Unidade de 72 m² em edifício de 13 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 18,
+      "floors": 6,
+      "description": "Unidade de 101 m² em edifício de 6 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -1174,55 +1105,71 @@
     {
       "id": "apt-15",
       "type": "apartment",
-      "title": "Apartamento com vista 4 quartos",
+      "title": "Apartamento compacto 3 quartos",
       "agency": "agency-b",
-      "price": 1255000,
-      "areaM2": 133,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 3,
+      "price": 830000,
+      "areaM2": 98,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "ready",
-      "buildingOsmId": "way/516843453",
+      "buildingOsmId": "way/1035247783",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8567202,
-                -26.2619612
+                -48.8689551,
+                -26.2789265
               ],
               [
-                -48.8566514,
-                -26.2622838
+                -48.8689526,
+                -26.2790947
               ],
               [
-                -48.8566492,
-                -26.2622834
+                -48.8689312,
+                -26.279095
               ],
               [
-                -48.8565773,
-                -26.2622709
+                -48.8689344,
+                -26.2791889
               ],
               [
-                -48.8563308,
-                -26.2622281
+                -48.8688309,
+                -26.2791908
               ],
               [
-                -48.8563995,
-                -26.2619056
+                -48.8688262,
+                -26.2790707
               ],
               [
-                -48.8567202,
-                -26.2619612
+                -48.8688877,
+                -26.2790704
+              ],
+              [
+                -48.8688927,
+                -26.2789447
+              ],
+              [
+                -48.8688974,
+                -26.2789448
+              ],
+              [
+                -48.8688977,
+                -26.278927
+              ],
+              [
+                -48.8689551,
+                -26.2789265
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 14,
-      "description": "Unidade de 133 m² em edifício de 14 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 98 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "elevator"
@@ -1233,87 +1180,47 @@
     {
       "id": "apt-16",
       "type": "apartment",
-      "title": "Apartamento com vista 1 quarto",
+      "title": "Apartamento com sacada 1 quarto",
       "agency": "agency-a",
-      "price": 700000,
-      "areaM2": 67,
+      "price": 490000,
+      "areaM2": 56,
       "bedrooms": 1,
       "bathrooms": 1,
       "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/1035510029",
+      "status": "under_construction",
+      "buildingOsmId": "way/982362031",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8651578,
-                -26.2910794
+                -48.8379697,
+                -26.2883046
               ],
               [
-                -48.8650398,
-                -26.2910791
+                -48.8378963,
+                -26.2884919
               ],
               [
-                -48.8650408,
-                -26.291059
+                -48.8377782,
+                -26.2884544
               ],
               [
-                -48.8648927,
-                -26.2910576
+                -48.8378516,
+                -26.288267
               ],
               [
-                -48.8648856,
-                -26.2909802
-              ],
-              [
-                -48.8649585,
-                -26.2909798
-              ],
-              [
-                -48.8649614,
-                -26.2908779
-              ],
-              [
-                -48.864991,
-                -26.2908781
-              ],
-              [
-                -48.8649922,
-                -26.2908242
-              ],
-              [
-                -48.8650877,
-                -26.290824
-              ],
-              [
-                -48.8650876,
-                -26.2908753
-              ],
-              [
-                -48.8651288,
-                -26.2908764
-              ],
-              [
-                -48.8651301,
-                -26.2909169
-              ],
-              [
-                -48.8651565,
-                -26.2909174
-              ],
-              [
-                -48.8651578,
-                -26.2910794
+                -48.8379697,
+                -26.2883046
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 9,
-      "description": "Unidade de 67 m² em edifício de 9 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 56 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -1327,87 +1234,47 @@
     {
       "id": "apt-17",
       "type": "apartment",
-      "title": "Apartamento garden 1 quarto",
+      "title": "Apartamento amplo 1 quarto",
       "agency": "agency-b",
-      "price": 610000,
-      "areaM2": 59,
+      "price": 425000,
+      "areaM2": 53,
       "bedrooms": 1,
       "bathrooms": 1,
       "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/1032986035",
+      "buildingOsmId": "way/1034794990",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8779955,
-                -26.3065638
+                -48.8806452,
+                -26.2948089
               ],
               [
-                -48.8779557,
-                -26.3065655
+                -48.8803301,
+                -26.2949675
               ],
               [
-                -48.8779582,
-                -26.306614
+                -48.8802804,
+                -26.2948645
               ],
               [
-                -48.8779454,
-                -26.3066145
+                -48.8805848,
+                -26.2947113
               ],
               [
-                -48.8779524,
-                -26.3067482
-              ],
-              [
-                -48.8778491,
-                -26.3067526
-              ],
-              [
-                -48.8778487,
-                -26.3067461
-              ],
-              [
-                -48.8778402,
-                -26.3067465
-              ],
-              [
-                -48.8778361,
-                -26.3066869
-              ],
-              [
-                -48.8778455,
-                -26.3066865
-              ],
-              [
-                -48.8778374,
-                -26.3065336
-              ],
-              [
-                -48.877953,
-                -26.3065287
-              ],
-              [
-                -48.8779536,
-                -26.3065387
-              ],
-              [
-                -48.8779932,
-                -26.3065371
-              ],
-              [
-                -48.8779955,
-                -26.3065638
+                -48.8806452,
+                -26.2948089
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 12,
-      "description": "Unidade de 59 m² em edifício de 12 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 18,
+      "floors": 6,
+      "description": "Unidade de 53 m² em edifício de 6 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -1420,55 +1287,47 @@
     {
       "id": "apt-18",
       "type": "apartment",
-      "title": "Apartamento compacto 4 quartos",
+      "title": "Apartamento com sacada 3 quartos",
       "agency": "agency-a",
-      "price": 1045000,
-      "areaM2": 123,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 3,
+      "price": 1110000,
+      "areaM2": 101,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/997339550",
+      "buildingOsmId": "way/517749593",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8259607,
-                -26.2668699
+                -48.8826471,
+                -26.2662712
               ],
               [
-                -48.8256884,
-                -26.2670116
+                -48.8826364,
+                -26.2665037
               ],
               [
-                -48.8256088,
-                -26.2669107
+                -48.8824902,
+                -26.2664983
               ],
               [
-                -48.8256964,
-                -26.2668676
+                -48.8825009,
+                -26.2662658
               ],
               [
-                -48.8258521,
-                -26.2667911
-              ],
-              [
-                -48.825901,
-                -26.266767
-              ],
-              [
-                -48.8259607,
-                -26.2668699
+                -48.8826471,
+                -26.2662712
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 11,
-      "description": "Unidade de 123 m² em edifício de 11 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 24,
+      "floors": 8,
+      "description": "Unidade de 101 m² em edifício de 8 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -1482,79 +1341,71 @@
     {
       "id": "apt-19",
       "type": "apartment",
-      "title": "Apartamento com sacada 4 quartos",
+      "title": "Apartamento com sacada 1 quarto",
       "agency": "agency-b",
-      "price": 1355000,
-      "areaM2": 124,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 3,
+      "price": 690000,
+      "areaM2": 62,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/1025606741",
+      "buildingOsmId": "way/460140905",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8461554,
-                -26.2398874
+                -48.8519036,
+                -26.2889935
               ],
               [
-                -48.8461389,
-                -26.2399643
+                -48.8518771,
+                -26.2889975
               ],
               [
-                -48.8461284,
-                -26.2399625
+                -48.8518675,
+                -26.2889407
               ],
               [
-                -48.8461196,
-                -26.2399914
+                -48.8514431,
+                -26.2889996
               ],
               [
-                -48.8460719,
-                -26.2399823
+                -48.8514259,
+                -26.2888994
               ],
               [
-                -48.8460557,
-                -26.2400485
+                -48.8517489,
+                -26.2888545
               ],
               [
-                -48.8459795,
-                -26.2400323
+                -48.85175,
+                -26.288861
               ],
               [
-                -48.8459944,
-                -26.2399774
+                -48.8518726,
+                -26.2888439
               ],
               [
-                -48.8459437,
-                -26.2399693
+                -48.8518844,
+                -26.2889135
               ],
               [
-                -48.8459525,
-                -26.239928
+                -48.8518898,
+                -26.2889128
               ],
               [
-                -48.845943,
-                -26.2399271
-              ],
-              [
-                -48.8459573,
-                -26.2398553
-              ],
-              [
-                -48.8461554,
-                -26.2398874
+                -48.8519036,
+                -26.2889935
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 8,
-      "description": "Unidade de 124 m² em edifício de 8 pavimentos (altura fictícia). Pronto para morar. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 62 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Pronto para morar. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "elevator",
@@ -1569,47 +1420,75 @@
     {
       "id": "apt-20",
       "type": "apartment",
-      "title": "Apartamento garden 1 quarto",
+      "title": "Apartamento com sacada 3 quartos",
       "agency": "agency-a",
-      "price": 550000,
-      "areaM2": 60,
-      "bedrooms": 1,
-      "bathrooms": 1,
-      "parkingSpots": 1,
+      "price": 1180000,
+      "areaM2": 114,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/992932505",
+      "buildingOsmId": "way/926015937",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8185517,
-                -26.2396237
+                -48.7973558,
+                -26.2376561
               ],
               [
-                -48.8183711,
-                -26.239775
+                -48.7972899,
+                -26.2377163
               ],
               [
-                -48.8182086,
-                -26.2396174
+                -48.7972861,
+                -26.2377132
               ],
               [
-                -48.8183892,
-                -26.239466
+                -48.7972713,
+                -26.2377283
               ],
               [
-                -48.8185517,
-                -26.2396237
+                -48.7972059,
+                -26.2376744
+              ],
+              [
+                -48.7972241,
+                -26.2376572
+              ],
+              [
+                -48.7971265,
+                -26.2375693
+              ],
+              [
+                -48.7971496,
+                -26.2375473
+              ],
+              [
+                -48.7971411,
+                -26.2375407
+              ],
+              [
+                -48.7971754,
+                -26.2375073
+              ],
+              [
+                -48.7972809,
+                -26.237593
+              ],
+              [
+                -48.7973558,
+                -26.2376561
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "floors": 11,
-      "description": "Unidade de 60 m² em edifício de 11 pavimentos (altura fictícia). Em construção. Dados fictícios para demonstração.",
+      "buildingHeightM": 12,
+      "floors": 4,
+      "description": "Unidade de 114 m² em edifício de 4 pavimentos (estimativa pelo cadastro da Prefeitura). Em construção. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -1624,82 +1503,74 @@
     {
       "id": "house-21",
       "type": "house",
-      "title": "Sobrado familiar 4 quartos",
+      "title": "Sobrado familiar 5 quartos",
       "agency": "agency-b",
-      "price": 1990000,
-      "areaM2": 280,
-      "landAreaM2": 364,
-      "bedrooms": 4,
-      "bathrooms": 3,
-      "parkingSpots": 1,
+      "price": 3185000,
+      "areaM2": 350,
+      "landAreaM2": 487,
+      "bedrooms": 5,
+      "bathrooms": 5,
+      "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/982362457",
+      "buildingOsmId": "way/1025605725",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8347391,
-                -26.2887236
+                -48.8321757,
+                -26.2347327
               ],
               [
-                -48.834728,
-                -26.2887362
+                -48.8320688,
+                -26.2347951
               ],
               [
-                -48.8346809,
-                -26.2887895
+                -48.8320717,
+                -26.2347989
               ],
               [
-                -48.8346592,
-                -26.2887832
+                -48.8320634,
+                -26.2348041
               ],
               [
-                -48.8346162,
-                -26.2887507
+                -48.8320782,
+                -26.2348259
               ],
               [
-                -48.8345544,
-                -26.288704
+                -48.8319801,
+                -26.2348824
               ],
               [
-                -48.834625,
-                -26.2886248
+                -48.8319284,
+                -26.2348083
               ],
               [
-                -48.8346545,
-                -26.2886462
+                -48.8320377,
+                -26.2347445
               ],
               [
-                -48.8346709,
-                -26.2886296
+                -48.8321412,
+                -26.2346841
               ],
               [
-                -48.8347073,
-                -26.2886559
+                -48.8321662,
+                -26.2347192
               ],
               [
-                -48.8347235,
-                -26.2886677
-              ],
-              [
-                -48.8346981,
-                -26.2886936
-              ],
-              [
-                -48.8347391,
-                -26.2887236
+                -48.8321757,
+                -26.2347327
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 280 m² construídos, 4 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 350 m² construídos, 5 quartos e 3 vagas. Dados fictícios para demonstração.",
       "approxCenter": [
-        -48.834224,
-        -26.289424
+        -48.831624,
+        -26.235503
       ],
       "features": [
         "barbecue",
@@ -1713,63 +1584,79 @@
     {
       "id": "house-22",
       "type": "house",
-      "title": "Casa térrea com quintal 3 quartos",
+      "title": "Sobrado familiar 4 quartos",
       "agency": "agency-a",
-      "price": 1350000,
-      "areaM2": 204,
-      "landAreaM2": 265,
-      "bedrooms": 3,
-      "bathrooms": 2,
-      "parkingSpots": 3,
+      "price": 2665000,
+      "areaM2": 288,
+      "landAreaM2": 401,
+      "bedrooms": 4,
+      "bathrooms": 4,
+      "parkingSpots": 2,
       "status": "ready",
-      "buildingOsmId": "way/991610565",
+      "buildingOsmId": "way/960958023",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.798177,
-                -26.250122
+                -48.8027851,
+                -26.2709491
               ],
               [
-                -48.7980672,
-                -26.2502211
+                -48.8027549,
+                -26.2709943
               ],
               [
-                -48.7980163,
-                -26.2501725
+                -48.8027829,
+                -26.2710094
               ],
               [
-                -48.7980702,
-                -26.2501244
+                -48.8027293,
+                -26.2710798
               ],
               [
-                -48.798051,
-                -26.2501081
+                -48.8026878,
+                -26.2710575
               ],
               [
-                -48.7980941,
-                -26.2500708
+                -48.802703,
+                -26.2710374
               ],
               [
-                -48.7980898,
-                -26.2500675
+                -48.8026183,
+                -26.2709934
               ],
               [
-                -48.7981041,
-                -26.2500553
+                -48.8026203,
+                -26.2709901
               ],
               [
-                -48.798177,
-                -26.250122
+                -48.8026418,
+                -26.2709554
+              ],
+              [
+                -48.8026479,
+                -26.2709455
+              ],
+              [
+                -48.8026788,
+                -26.2708956
+              ],
+              [
+                -48.8027545,
+                -26.2709337
+              ],
+              [
+                -48.8027851,
+                -26.2709491
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 204 m² construídos, 3 quartos e 3 vagas. Dados fictícios para demonstração.",
+      "description": "Imóvel de 288 m² construídos, 4 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -1782,75 +1669,71 @@
     {
       "id": "house-23",
       "type": "house",
-      "title": "Casa com piscina 5 quartos",
+      "title": "Casa com piscina 2 quartos",
       "agency": "agency-b",
-      "price": 3325000,
-      "areaM2": 376,
-      "landAreaM2": 911,
-      "bedrooms": 5,
-      "bathrooms": 5,
-      "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/960643218",
+      "price": 1115000,
+      "areaM2": 152,
+      "landAreaM2": 358,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 3,
+      "status": "under_construction",
+      "buildingOsmId": "way/963059883",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8386086,
-                -26.30091
+                -48.8182713,
+                -26.2699918
               ],
               [
-                -48.8385618,
-                -26.3009515
+                -48.8182209,
+                -26.2700453
               ],
               [
-                -48.8384421,
-                -26.3010583
+                -48.8182191,
+                -26.2700473
               ],
               [
-                -48.8383466,
-                -26.300971
+                -48.8181945,
+                -26.2700269
               ],
               [
-                -48.8385464,
-                -26.3007932
+                -48.818109,
+                -26.2699554
               ],
               [
-                -48.8385975,
-                -26.3008398
+                -48.8181083,
+                -26.2699548
               ],
               [
-                -48.8385592,
-                -26.3008739
+                -48.8181657,
+                -26.2698935
               ],
               [
-                -48.8385503,
-                -26.3008658
+                -48.8181764,
+                -26.2698819
               ],
               [
-                -48.8384825,
-                -26.300926
+                -48.8182101,
+                -26.2699074
               ],
               [
-                -48.8384947,
-                -26.3009372
+                -48.8181904,
+                -26.2699275
               ],
               [
-                -48.8385675,
-                -26.3008725
-              ],
-              [
-                -48.8386086,
-                -26.30091
+                -48.8182713,
+                -26.2699918
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 376 m² construídos, 5 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "description": "Imóvel de 152 m² construídos, 2 quartos e 3 vagas. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -1863,47 +1746,55 @@
     {
       "id": "house-24",
       "type": "house",
-      "title": "Sobrado familiar 2 quartos",
+      "title": "Casa com edícula 5 quartos",
       "agency": "agency-a",
-      "price": 800000,
-      "areaM2": 120,
-      "landAreaM2": 230,
-      "bedrooms": 2,
-      "bathrooms": 1,
+      "price": 3135000,
+      "areaM2": 359,
+      "landAreaM2": 573,
+      "bedrooms": 5,
+      "bathrooms": 4,
       "parkingSpots": 3,
-      "status": "ready",
-      "buildingOsmId": "way/997925622",
+      "status": "under_construction",
+      "buildingOsmId": "way/991844342",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8000948,
-                -26.2257696
+                -48.8132399,
+                -26.2487749
               ],
               [
-                -48.7999978,
-                -26.2258415
+                -48.8131124,
+                -26.2489091
               ],
               [
-                -48.799955,
-                -26.225795
+                -48.8130198,
+                -26.2488358
               ],
               [
-                -48.800052,
-                -26.2257231
+                -48.8131326,
+                -26.2487198
               ],
               [
-                -48.8000948,
-                -26.2257696
+                -48.8131358,
+                -26.2487222
+              ],
+              [
+                -48.8131532,
+                -26.2487045
+              ],
+              [
+                -48.8132399,
+                -26.2487749
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 120 m² construídos, 2 quartos e 3 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 359 m² construídos, 5 quartos e 3 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets",
@@ -1915,67 +1806,87 @@
     {
       "id": "house-25",
       "type": "house",
-      "title": "Casa com edícula 4 quartos",
+      "title": "Sobrado familiar 3 quartos",
       "agency": "agency-b",
-      "price": 1975000,
-      "areaM2": 275,
-      "landAreaM2": 367,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 2,
+      "price": 1455000,
+      "areaM2": 174,
+      "landAreaM2": 298,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/518612064",
+      "buildingOsmId": "way/516474322",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8834531,
-                -26.2799806
+                -48.8375332,
+                -26.2507714
               ],
               [
-                -48.8834392,
-                -26.2799815
+                -48.8375206,
+                -26.2508065
               ],
               [
-                -48.8834449,
-                -26.280044
+                -48.8374969,
+                -26.2507963
               ],
               [
-                -48.8833361,
-                -26.2800519
+                -48.8374854,
+                -26.2508353
               ],
               [
-                -48.883326,
-                -26.2799499
+                -48.8374808,
+                -26.2508347
               ],
               [
-                -48.8833477,
-                -26.2799478
+                -48.8374764,
+                -26.2508476
               ],
               [
-                -48.8833435,
-                -26.279909
+                -48.8374797,
+                -26.2508486
               ],
               [
-                -48.8834461,
-                -26.279902
+                -48.8374719,
+                -26.2508719
               ],
               [
-                -48.8834496,
-                -26.2799417
+                -48.8373767,
+                -26.2508441
               ],
               [
-                -48.8834531,
-                -26.2799806
+                -48.8373969,
+                -26.2507823
+              ],
+              [
+                -48.8374259,
+                -26.2507916
+              ],
+              [
+                -48.837436,
+                -26.2507654
+              ],
+              [
+                -48.83748,
+                -26.2507807
+              ],
+              [
+                -48.8374933,
+                -26.2507561
+              ],
+              [
+                -48.8375332,
+                -26.2507714
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 275 m² construídos, 4 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 174 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets",
@@ -1987,63 +1898,47 @@
     {
       "id": "house-26",
       "type": "house",
-      "title": "Casa com piscina 2 quartos",
+      "title": "Casa térrea com quintal 2 quartos",
       "agency": "agency-a",
-      "price": 1515000,
-      "areaM2": 162,
-      "landAreaM2": 211,
+      "price": 1120000,
+      "areaM2": 120,
+      "landAreaM2": 207,
       "bedrooms": 2,
       "bathrooms": 1,
-      "parkingSpots": 1,
+      "parkingSpots": 2,
       "status": "ready",
-      "buildingOsmId": "way/963463973",
+      "buildingOsmId": "way/997925619",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8133415,
-                -26.269649
+                -48.8002832,
+                -26.2261576
               ],
               [
-                -48.8132948,
-                -26.2696975
+                -48.8002038,
+                -26.2262114
               ],
               [
-                -48.813266,
-                -26.2696746
+                -48.800144,
+                -26.2261404
               ],
               [
-                -48.8132292,
-                -26.2696452
+                -48.8002234,
+                -26.2260866
               ],
               [
-                -48.8132195,
-                -26.2696375
-              ],
-              [
-                -48.813195,
-                -26.2696179
-              ],
-              [
-                -48.8132331,
-                -26.2695795
-              ],
-              [
-                -48.8132425,
-                -26.26957
-              ],
-              [
-                -48.8133415,
-                -26.269649
+                -48.8002832,
+                -26.2261576
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 162 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "description": "Imóvel de 120 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -2057,67 +1952,55 @@
     {
       "id": "house-27",
       "type": "house",
-      "title": "Casa térrea com quintal 2 quartos",
+      "title": "Casa com edícula 4 quartos",
       "agency": "agency-b",
-      "price": 825000,
-      "areaM2": 103,
-      "landAreaM2": 148,
-      "bedrooms": 2,
-      "bathrooms": 2,
-      "parkingSpots": 2,
+      "price": 1890000,
+      "areaM2": 255,
+      "landAreaM2": 352,
+      "bedrooms": 4,
+      "bathrooms": 4,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/516165337",
+      "buildingOsmId": "way/991610320",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8387201,
-                -26.2629997
+                -48.7980795,
+                -26.248667
               ],
               [
-                -48.838676,
-                -26.263004
+                -48.7980726,
+                -26.2486732
               ],
               [
-                -48.8386757,
-                -26.2630018
+                -48.797991,
+                -26.2487468
               ],
               [
-                -48.8386253,
-                -26.2630062
+                -48.7979833,
+                -26.2487537
               ],
               [
-                -48.8386251,
-                -26.2630036
+                -48.7979007,
+                -26.2486743
               ],
               [
-                -48.8386059,
-                -26.2630051
+                -48.797998,
+                -26.2485871
               ],
               [
-                -48.8385998,
-                -26.2629496
-              ],
-              [
-                -48.8386454,
-                -26.2629455
-              ],
-              [
-                -48.8387126,
-                -26.2629402
-              ],
-              [
-                -48.8387201,
-                -26.2629997
+                -48.7980795,
+                -26.248667
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 103 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 255 m² construídos, 4 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pets",
         "financing",
@@ -2129,71 +2012,79 @@
     {
       "id": "house-28",
       "type": "house",
-      "title": "Casa térrea com quintal 3 quartos",
+      "title": "Sobrado familiar 5 quartos",
       "agency": "agency-a",
-      "price": 1480000,
-      "areaM2": 217,
-      "landAreaM2": 394,
-      "bedrooms": 3,
-      "bathrooms": 3,
-      "parkingSpots": 1,
+      "price": 2475000,
+      "areaM2": 380,
+      "landAreaM2": 848,
+      "bedrooms": 5,
+      "bathrooms": 4,
+      "parkingSpots": 2,
       "status": "ready",
-      "buildingOsmId": "way/1035893066",
+      "buildingOsmId": "way/1032985719",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8611964,
-                -26.3008626
+                -48.8702357,
+                -26.3040877
               ],
               [
-                -48.861141,
-                -26.3008637
+                -48.8701379,
+                -26.3040928
               ],
               [
-                -48.8611409,
-                -26.3008411
+                -48.8701365,
+                -26.3040386
               ],
               [
-                -48.8610295,
-                -26.3008423
+                -48.870024,
+                -26.3040453
               ],
               [
-                -48.8610283,
-                -26.3007749
+                -48.8700191,
+                -26.303982
               ],
               [
-                -48.861034,
-                -26.3007748
+                -48.8700043,
+                -26.3039825
               ],
               [
-                -48.8610337,
-                -26.3007576
+                -48.8700021,
+                -26.3039581
               ],
               [
-                -48.8610992,
-                -26.3007567
+                -48.8700144,
+                -26.3039581
               ],
               [
-                -48.8610995,
-                -26.3007734
+                -48.8700126,
+                -26.3039458
               ],
               [
-                -48.8611954,
-                -26.3007753
+                -48.8700984,
+                -26.3039426
               ],
               [
-                -48.8611964,
-                -26.3008626
+                -48.8700986,
+                -26.3039305
+              ],
+              [
+                -48.8702264,
+                -26.3039271
+              ],
+              [
+                -48.8702357,
+                -26.3040877
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 217 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 380 m² construídos, 5 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -2205,56 +2096,73 @@
     {
       "id": "house-29",
       "type": "house",
-      "title": "Casa térrea com quintal 4 quartos",
+      "title": "Casa com piscina 5 quartos",
       "agency": "agency-b",
-      "price": 1735000,
-      "areaM2": 240,
-      "landAreaM2": 312,
-      "bedrooms": 4,
-      "bathrooms": 3,
-      "parkingSpots": 2,
+      "price": 2475000,
+      "areaM2": 380,
+      "landAreaM2": 638,
+      "bedrooms": 5,
+      "bathrooms": 4,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/964041797",
+      "buildingOsmId": "way/1035897335",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8105092,
-                -26.2595904
+                -48.8542224,
+                -26.2986738
               ],
               [
-                -48.810466,
-                -26.2596348
+                -48.8541556,
+                -26.2986789
               ],
               [
-                -48.8104548,
-                -26.259627
+                -48.8541508,
+                -26.298627
               ],
               [
-                -48.8103994,
-                -26.2596828
+                -48.8540013,
+                -26.2986348
               ],
               [
-                -48.8103329,
-                -26.2596301
+                -48.8539983,
+                -26.2985887
               ],
               [
-                -48.8104332,
-                -26.2595321
+                -48.8540355,
+                -26.2985867
               ],
               [
-                -48.8105092,
-                -26.2595904
+                -48.8540293,
+                -26.2984893
+              ],
+              [
+                -48.8541619,
+                -26.2984795
+              ],
+              [
+                -48.8541704,
+                -26.2985712
+              ],
+              [
+                -48.8542147,
+                -26.298568
+              ],
+              [
+                -48.8542224,
+                -26.2986738
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 240 m² construídos, 4 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 380 m² construídos, 5 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
+        "pool",
         "barbecue",
         "pets",
         "financing",
@@ -2266,71 +2174,79 @@
     {
       "id": "house-30",
       "type": "house",
-      "title": "Casa com piscina 5 quartos",
+      "title": "Sobrado familiar 4 quartos",
       "agency": "agency-a",
-      "price": 2225000,
-      "areaM2": 324,
-      "landAreaM2": 698,
-      "bedrooms": 5,
-      "bathrooms": 5,
-      "parkingSpots": 2,
+      "price": 2060000,
+      "areaM2": 250,
+      "landAreaM2": 468,
+      "bedrooms": 4,
+      "bathrooms": 4,
+      "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/963050496",
+      "buildingOsmId": "way/519164870",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8288071,
-                -26.2763951
+                -48.8596129,
+                -26.2730318
               ],
               [
-                -48.8287239,
-                -26.2765104
+                -48.8595978,
+                -26.2730338
               ],
               [
-                -48.8285918,
-                -26.276433
+                -48.8595994,
+                -26.2730627
               ],
               [
-                -48.82858,
-                -26.2764493
+                -48.8595685,
+                -26.2730657
               ],
               [
-                -48.8285531,
-                -26.2764335
+                -48.8595734,
+                -26.2731325
               ],
               [
-                -48.828602,
-                -26.2763657
+                -48.8594655,
+                -26.2731409
               ],
               [
-                -48.8286107,
-                -26.2763708
+                -48.85945,
+                -26.2730075
               ],
               [
-                -48.828649,
-                -26.2763177
+                -48.8595012,
+                -26.2730026
               ],
               [
-                -48.828705,
-                -26.2763505
+                -48.8594998,
+                -26.272992
               ],
               [
-                -48.8287127,
-                -26.2763397
+                -48.8595368,
+                -26.272988
               ],
               [
-                -48.8288071,
-                -26.2763951
+                -48.8595353,
+                -26.2729545
+              ],
+              [
+                -48.8596063,
+                -26.272948
+              ],
+              [
+                -48.8596129,
+                -26.2730318
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 324 m² construídos, 5 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 250 m² construídos, 4 quartos e 3 vagas. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -2344,56 +2260,69 @@
     {
       "id": "house-31",
       "type": "house",
-      "title": "Sobrado familiar 4 quartos",
+      "title": "Casa com piscina 5 quartos",
       "agency": "agency-b",
-      "price": 2660000,
-      "areaM2": 289,
-      "landAreaM2": 564,
-      "bedrooms": 4,
+      "price": 2640000,
+      "areaM2": 380,
+      "landAreaM2": 556,
+      "bedrooms": 5,
       "bathrooms": 4,
-      "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/1035247992",
+      "parkingSpots": 2,
+      "status": "under_construction",
+      "buildingOsmId": "way/478457174",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.870263,
-                -26.2816078
+                -48.894299,
+                -26.2662288
               ],
               [
-                -48.8702519,
-                -26.2816087
+                -48.8942975,
+                -26.2663521
               ],
               [
-                -48.8702621,
-                -26.2817092
+                -48.8942799,
+                -26.2663516
               ],
               [
-                -48.8701503,
-                -26.2817184
+                -48.8941438,
+                -26.2663474
               ],
               [
-                -48.8701329,
-                -26.2815462
+                -48.894123,
+                -26.2663468
               ],
               [
-                -48.870255,
-                -26.2815362
+                -48.8941264,
+                -26.2662343
               ],
               [
-                -48.870263,
-                -26.2816078
+                -48.8941284,
+                -26.2662262
+              ],
+              [
+                -48.8941418,
+                -26.2662264
+              ],
+              [
+                -48.8942018,
+                -26.2662273
+              ],
+              [
+                -48.894299,
+                -26.2662288
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 289 m² construídos, 4 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "description": "Imóvel de 380 m² construídos, 5 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
+        "pool",
         "barbecue",
         "balcony",
         "pets",
@@ -2405,63 +2334,47 @@
     {
       "id": "house-32",
       "type": "house",
-      "title": "Casa térrea com quintal 5 quartos",
+      "title": "Sobrado familiar 2 quartos",
       "agency": "agency-a",
-      "price": 3420000,
-      "areaM2": 380,
-      "landAreaM2": 494,
-      "bedrooms": 5,
-      "bathrooms": 5,
-      "parkingSpots": 3,
+      "price": 1005000,
+      "areaM2": 134,
+      "landAreaM2": 204,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/459899672",
+      "buildingOsmId": "way/997342701",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8467446,
-                -26.2821108
+                -48.824619,
+                -26.2484585
               ],
               [
-                -48.8467199,
-                -26.2823548
+                -48.824545,
+                -26.2485099
               ],
               [
-                -48.8466391,
-                -26.2823476
+                -48.8244938,
+                -26.2484502
               ],
               [
-                -48.8466412,
-                -26.2823286
+                -48.8245679,
+                -26.2483988
               ],
               [
-                -48.8466259,
-                -26.2823273
-              ],
-              [
-                -48.8466343,
-                -26.2822477
-              ],
-              [
-                -48.8466432,
-                -26.2822487
-              ],
-              [
-                -48.846655,
-                -26.2821036
-              ],
-              [
-                -48.8467446,
-                -26.2821108
+                -48.824619,
+                -26.2484585
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 380 m² construídos, 5 quartos e 3 vagas. Dados fictícios para demonstração.",
+      "description": "Imóvel de 134 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -2474,47 +2387,47 @@
     {
       "id": "house-33",
       "type": "house",
-      "title": "Sobrado familiar 3 quartos",
+      "title": "Sobrado familiar 4 quartos",
       "agency": "agency-b",
-      "price": 1580000,
-      "areaM2": 208,
-      "landAreaM2": 342,
-      "bedrooms": 3,
-      "bathrooms": 2,
+      "price": 2185000,
+      "areaM2": 240,
+      "landAreaM2": 312,
+      "bedrooms": 4,
+      "bathrooms": 3,
       "parkingSpots": 2,
       "status": "ready",
-      "buildingOsmId": "way/991844689",
+      "buildingOsmId": "way/513060332",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8109099,
-                -26.248094
+                -48.8383018,
+                -26.2670063
               ],
               [
-                -48.8108352,
-                -26.2481704
+                -48.8381898,
+                -26.267021
               ],
               [
-                -48.8107487,
-                -26.2480976
+                -48.8381709,
+                -26.2669056
               ],
               [
-                -48.8108263,
-                -26.2480227
+                -48.8382829,
+                -26.2668909
               ],
               [
-                -48.8109099,
-                -26.248094
+                -48.8383018,
+                -26.2670063
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 208 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 240 m² construídos, 4 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets",
@@ -2527,59 +2440,47 @@
     {
       "id": "house-34",
       "type": "house",
-      "title": "Casa com edícula 4 quartos",
+      "title": "Casa com piscina 3 quartos",
       "agency": "agency-a",
-      "price": 1895000,
-      "areaM2": 230,
-      "landAreaM2": 352,
-      "bedrooms": 4,
-      "bathrooms": 4,
-      "parkingSpots": 2,
+      "price": 1775000,
+      "areaM2": 197,
+      "landAreaM2": 318,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/478501521",
+      "buildingOsmId": "way/996051892",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8806815,
-                -26.2662075
+                -48.839535,
+                -26.279831
               ],
               [
-                -48.8806788,
-                -26.2663382
+                -48.8394836,
+                -26.2798994
               ],
               [
-                -48.8805805,
-                -26.2663361
+                -48.8393696,
+                -26.2798296
               ],
               [
-                -48.8805539,
-                -26.2663355
+                -48.839421,
+                -26.2797612
               ],
               [
-                -48.8805563,
-                -26.2662674
-              ],
-              [
-                -48.880591,
-                -26.2662679
-              ],
-              [
-                -48.8805919,
-                -26.266206
-              ],
-              [
-                -48.8806815,
-                -26.2662075
+                -48.839535,
+                -26.279831
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 230 m² construídos, 4 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "description": "Imóvel de 197 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pool",
         "barbecue",
@@ -2592,53 +2493,48 @@
     {
       "id": "house-35",
       "type": "house",
-      "title": "Casa com piscina 3 quartos",
+      "title": "Casa com edícula 4 quartos",
       "agency": "agency-b",
-      "price": 1505000,
-      "areaM2": 222,
-      "landAreaM2": 331,
-      "bedrooms": 3,
-      "bathrooms": 2,
-      "parkingSpots": 2,
+      "price": 1975000,
+      "areaM2": 228,
+      "landAreaM2": 501,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "parkingSpots": 3,
       "status": "ready",
-      "buildingOsmId": "way/516632971",
+      "buildingOsmId": "way/516843363",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8475967,
-                -26.2679301
+                -48.8570388,
+                -26.2621951
               ],
               [
-                -48.8475042,
-                -26.2679354
+                -48.8569669,
+                -26.2622539
               ],
               [
-                -48.8474912,
-                -26.2677783
+                -48.8568324,
+                -26.2621204
               ],
               [
-                -48.8475791,
-                -26.2677735
+                -48.8569043,
+                -26.2620616
               ],
               [
-                -48.8475873,
-                -26.2678491
-              ],
-              [
-                -48.8475967,
-                -26.2679301
+                -48.8570388,
+                -26.2621951
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 222 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 228 m² construídos, 4 quartos e 3 vagas. Dados fictícios para demonstração.",
       "features": [
-        "pool",
         "barbecue",
         "balcony",
         "pets",
@@ -2650,55 +2546,71 @@
     {
       "id": "house-36",
       "type": "house",
-      "title": "Sobrado familiar 2 quartos",
+      "title": "Casa com edícula 3 quartos",
       "agency": "agency-a",
-      "price": 1395000,
-      "areaM2": 148,
-      "landAreaM2": 352,
-      "bedrooms": 2,
-      "bathrooms": 1,
+      "price": 1320000,
+      "areaM2": 188,
+      "landAreaM2": 407,
+      "bedrooms": 3,
+      "bathrooms": 2,
       "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/517352375",
+      "status": "under_construction",
+      "buildingOsmId": "way/1035245397",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8616652,
-                -26.2703226
+                -48.8735769,
+                -26.2874692
               ],
               [
-                -48.8616329,
-                -26.2703613
+                -48.8735248,
+                -26.2874703
               ],
               [
-                -48.861634,
-                -26.2703621
+                -48.8735256,
+                -26.2874958
               ],
               [
-                -48.8615592,
-                -26.2704515
+                -48.8734133,
+                -26.2874981
               ],
               [
-                -48.8614931,
-                -26.2704065
+                -48.8734129,
+                -26.2874859
               ],
               [
-                -48.8616002,
-                -26.2702784
+                -48.8733825,
+                -26.2874865
               ],
               [
-                -48.8616652,
-                -26.2703226
+                -48.8733809,
+                -26.2874227
+              ],
+              [
+                -48.8734257,
+                -26.2874218
+              ],
+              [
+                -48.8734254,
+                -26.2874078
+              ],
+              [
+                -48.8735753,
+                -26.2874047
+              ],
+              [
+                -48.8735769,
+                -26.2874692
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 148 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 188 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "pets",
@@ -2711,74 +2623,50 @@
     {
       "id": "semi-37",
       "type": "semi_detached",
-      "title": "Geminado novo 2 quartos",
+      "title": "Geminado com quintal 3 quartos",
       "agency": "agency-b",
-      "price": 730000,
-      "areaM2": 94,
-      "landAreaM2": 148,
-      "bedrooms": 2,
-      "bathrooms": 2,
+      "price": 935000,
+      "areaM2": 143,
+      "landAreaM2": 172,
+      "bedrooms": 3,
+      "bathrooms": 1,
       "parkingSpots": 2,
-      "status": "ready",
-      "buildingOsmId": "way/1034795416",
+      "status": "under_construction",
+      "buildingOsmId": "way/517745833",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8724726,
-                -26.2985062
+                -48.875903,
+                -26.2726979
               ],
               [
-                -48.8724204,
-                -26.2985087
+                -48.8759023,
+                -26.272749
               ],
               [
-                -48.8724219,
-                -26.298571
+                -48.8757235,
+                -26.2727469
               ],
               [
-                -48.8722965,
-                -26.2985766
+                -48.8757242,
+                -26.2726958
               ],
               [
-                -48.872291,
-                -26.298476
-              ],
-              [
-                -48.8723606,
-                -26.2984731
-              ],
-              [
-                -48.8723619,
-                -26.2984932
-              ],
-              [
-                -48.872408,
-                -26.2984916
-              ],
-              [
-                -48.8724073,
-                -26.2984712
-              ],
-              [
-                -48.8724704,
-                -26.2984686
-              ],
-              [
-                -48.8724726,
-                -26.2985062
+                -48.875903,
+                -26.2726979
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 94 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 143 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
       "approxCenter": [
-        -48.871163,
-        -26.298948
+        -48.874586,
+        -26.273167
       ],
       "features": [
         "barbecue",
@@ -2792,63 +2680,55 @@
     {
       "id": "semi-38",
       "type": "semi_detached",
-      "title": "Geminado novo 3 quartos",
+      "title": "Geminado com pátio 2 quartos",
       "agency": "agency-a",
-      "price": 1020000,
-      "areaM2": 150,
-      "landAreaM2": 195,
-      "bedrooms": 3,
-      "bathrooms": 1,
-      "parkingSpots": 2,
+      "price": 595000,
+      "areaM2": 95,
+      "landAreaM2": 126,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/910563374",
+      "buildingOsmId": "way/1025606630",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8519291,
-                -26.2469055
+                -48.8453089,
+                -26.2398144
               ],
               [
-                -48.8519035,
-                -26.2469481
+                -48.8452857,
+                -26.2399156
               ],
               [
-                -48.8518361,
-                -26.2469155
+                -48.845238,
+                -26.239906
               ],
               [
-                -48.8518283,
-                -26.2469285
+                -48.8452421,
+                -26.2398843
               ],
               [
-                -48.8517477,
-                -26.2468896
+                -48.8452376,
+                -26.239884
               ],
               [
-                -48.8517941,
-                -26.2468123
+                -48.8452554,
+                -26.2398052
               ],
               [
-                -48.8518731,
-                -26.2468505
-              ],
-              [
-                -48.8518601,
-                -26.2468721
-              ],
-              [
-                -48.8519291,
-                -26.2469055
+                -48.8453089,
+                -26.2398144
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 150 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 95 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pets",
         "financing",
@@ -2860,47 +2740,47 @@
     {
       "id": "semi-39",
       "type": "semi_detached",
-      "title": "Geminado novo 3 quartos",
+      "title": "Geminado com quintal 2 quartos",
       "agency": "agency-b",
-      "price": 715000,
-      "areaM2": 119,
-      "landAreaM2": 167,
-      "bedrooms": 3,
-      "bathrooms": 1,
-      "parkingSpots": 2,
-      "status": "ready",
-      "buildingOsmId": "way/1036180359",
+      "price": 760000,
+      "areaM2": 99,
+      "landAreaM2": 125,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 1,
+      "status": "under_construction",
+      "buildingOsmId": "way/997339674",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8475716,
-                -26.3013035
+                -48.8277745,
+                -26.266954
               ],
               [
-                -48.8475001,
-                -26.3013076
+                -48.8277042,
+                -26.2670076
               ],
               [
-                -48.8474808,
-                -26.3010363
+                -48.8275945,
+                -26.2668882
               ],
               [
-                -48.8475524,
-                -26.3010322
+                -48.8276665,
+                -26.2668338
               ],
               [
-                -48.8475716,
-                -26.3013035
+                -48.8277745,
+                -26.266954
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 119 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 99 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets",
@@ -2914,61 +2794,77 @@
       "type": "semi_detached",
       "title": "Geminado novo 2 quartos",
       "agency": "agency-a",
-      "price": 800000,
-      "areaM2": 111,
-      "landAreaM2": 125,
+      "price": 570000,
+      "areaM2": 94,
+      "landAreaM2": 148,
       "bedrooms": 2,
       "bathrooms": 1,
       "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/992939248",
+      "buildingOsmId": "way/1031505134",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8108037,
-                -26.2338616
+                -48.8771301,
+                -26.3100871
               ],
               [
-                -48.8107548,
-                -26.2339078
+                -48.8770887,
+                -26.3101271
               ],
               [
-                -48.8107443,
-                -26.2338989
+                -48.877086,
+                -26.3101247
               ],
               [
-                -48.8107154,
-                -26.233927
+                -48.877067,
+                -26.3101419
               ],
               [
-                -48.81063,
-                -26.2338515
+                -48.8770028,
+                -26.3100844
               ],
               [
-                -48.8106735,
-                -26.23381
+                -48.8770206,
+                -26.3100681
               ],
               [
-                -48.8106578,
-                -26.2337968
+                -48.8770047,
+                -26.3100539
               ],
               [
-                -48.810692,
-                -26.2337657
+                -48.8769935,
+                -26.3100641
               ],
               [
-                -48.8108037,
-                -26.2338616
+                -48.8769542,
+                -26.310029
+              ],
+              [
+                -48.8770513,
+                -26.3099408
+              ],
+              [
+                -48.8771183,
+                -26.3100006
+              ],
+              [
+                -48.8770762,
+                -26.3100389
+              ],
+              [
+                -48.8771301,
+                -26.3100871
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 111 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 94 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets",
@@ -2980,63 +2876,79 @@
     {
       "id": "semi-41",
       "type": "semi_detached",
-      "title": "Geminado com pátio 3 quartos",
+      "title": "Geminado com quintal 2 quartos",
       "agency": "agency-b",
       "price": 795000,
-      "areaM2": 118,
-      "landAreaM2": 161,
-      "bedrooms": 3,
-      "bathrooms": 3,
-      "parkingSpots": 1,
-      "status": "under_construction",
-      "buildingOsmId": "way/963042854",
+      "areaM2": 111,
+      "landAreaM2": 167,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 2,
+      "status": "ready",
+      "buildingOsmId": "way/992928382",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8209104,
-                -26.2727069
+                -48.8190777,
+                -26.241124
               ],
               [
-                -48.8208662,
-                -26.2727517
+                -48.8190662,
+                -26.2411279
               ],
               [
-                -48.8208911,
-                -26.2727728
+                -48.819069,
+                -26.2411345
               ],
               [
-                -48.8208495,
-                -26.2728157
+                -48.8189689,
+                -26.2411687
               ],
               [
-                -48.8208318,
-                -26.2728018
+                -48.8189548,
+                -26.2411352
               ],
               [
-                -48.8207922,
-                -26.2727708
+                -48.8189201,
+                -26.2411471
               ],
               [
-                -48.8208193,
-                -26.2727411
+                -48.8189054,
+                -26.241112
               ],
               [
-                -48.8208747,
-                -26.2726807
+                -48.8189411,
+                -26.2410998
               ],
               [
-                -48.8209104,
-                -26.2727069
+                -48.8189395,
+                -26.241096
+              ],
+              [
+                -48.8190396,
+                -26.2410619
+              ],
+              [
+                -48.8190432,
+                -26.2410702
+              ],
+              [
+                -48.8190535,
+                -26.2410666
+              ],
+              [
+                -48.8190777,
+                -26.241124
               ]
             ]
           ]
         ]
       },
       "buildingHeightM": 6,
-      "description": "Imóvel de 118 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "description": "Imóvel de 111 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -3049,55 +2961,71 @@
     {
       "id": "semi-42",
       "type": "semi_detached",
-      "title": "Geminado com pátio 3 quartos",
+      "title": "Geminado novo 2 quartos",
       "agency": "agency-a",
-      "price": 1070000,
-      "areaM2": 139,
-      "landAreaM2": 205,
-      "bedrooms": 3,
-      "bathrooms": 2,
+      "price": 755000,
+      "areaM2": 114,
+      "landAreaM2": 161,
+      "bedrooms": 2,
+      "bathrooms": 1,
       "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/1035245498",
+      "buildingOsmId": "way/1035503632",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8734161,
-                -26.2892691
+                -48.8622048,
+                -26.2846775
               ],
               [
-                -48.8733776,
-                -26.2892738
+                -48.8621419,
+                -26.2847605
               ],
               [
-                -48.873388,
-                -26.2893442
+                -48.8621126,
+                -26.2847631
               ],
               [
-                -48.8732525,
-                -26.2893605
+                -48.8620996,
+                -26.2846407
               ],
               [
-                -48.8732337,
-                -26.2892341
+                -48.8621006,
+                -26.2846407
               ],
               [
-                -48.8734078,
-                -26.2892131
+                -48.8621788,
+                -26.2846348
               ],
               [
-                -48.8734161,
-                -26.2892691
+                -48.8621924,
+                -26.284643
+              ],
+              [
+                -48.8621939,
+                -26.2846433
+              ],
+              [
+                -48.8621991,
+                -26.2846509
+              ],
+              [
+                -48.8622,
+                -26.2846521
+              ],
+              [
+                -48.8622048,
+                -26.2846775
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 139 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 114 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -3110,47 +3038,75 @@
     {
       "id": "semi-43",
       "type": "semi_detached",
-      "title": "Geminado com quintal 2 quartos",
+      "title": "Geminado com pátio 3 quartos",
       "agency": "agency-b",
-      "price": 665000,
-      "areaM2": 103,
-      "landAreaM2": 154,
-      "bedrooms": 2,
-      "bathrooms": 1,
+      "price": 795000,
+      "areaM2": 129,
+      "landAreaM2": 185,
+      "bedrooms": 3,
+      "bathrooms": 3,
       "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/1035509660",
+      "buildingOsmId": "way/479941521",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8563365,
-                -26.2880125
+                -48.8882569,
+                -26.2724499
               ],
               [
-                -48.856178,
-                -26.288022
+                -48.8882533,
+                -26.2725477
               ],
               [
-                -48.8561677,
-                -26.2878992
+                -48.8881495,
+                -26.2725453
               ],
               [
-                -48.8563285,
-                -26.2878902
+                -48.8881507,
+                -26.2725074
               ],
               [
-                -48.8563365,
-                -26.2880125
+                -48.8881415,
+                -26.2725072
+              ],
+              [
+                -48.8881447,
+                -26.2723991
+              ],
+              [
+                -48.8882037,
+                -26.2724011
+              ],
+              [
+                -48.8882036,
+                -26.2724076
+              ],
+              [
+                -48.8882386,
+                -26.2724081
+              ],
+              [
+                -48.888237,
+                -26.2724456
+              ],
+              [
+                -48.8882423,
+                -26.2724495
+              ],
+              [
+                -48.8882569,
+                -26.2724499
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 103 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 129 m² construídos, 3 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -3163,51 +3119,47 @@
     {
       "id": "semi-44",
       "type": "semi_detached",
-      "title": "Geminado novo 2 quartos",
+      "title": "Geminado com quintal 3 quartos",
       "agency": "agency-a",
-      "price": 730000,
-      "areaM2": 107,
-      "landAreaM2": 118,
-      "bedrooms": 2,
-      "bathrooms": 1,
-      "parkingSpots": 2,
-      "status": "ready",
-      "buildingOsmId": "way/517131208",
+      "price": 895000,
+      "areaM2": 127,
+      "landAreaM2": 149,
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "parkingSpots": 1,
+      "status": "under_construction",
+      "buildingOsmId": "way/964041958",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8661453,
-                -26.2640198
+                -48.8119154,
+                -26.2611284
               ],
               [
-                -48.8661431,
-                -26.264051
+                -48.8118606,
+                -26.2611837
               ],
               [
-                -48.8661356,
-                -26.264161
+                -48.8117716,
+                -26.2611118
               ],
               [
-                -48.8660256,
-                -26.2641548
+                -48.8118265,
+                -26.2610566
               ],
               [
-                -48.8660353,
-                -26.2640136
-              ],
-              [
-                -48.8661453,
-                -26.2640198
+                -48.8119154,
+                -26.2611284
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 107 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 127 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "balcony",
@@ -3222,45 +3174,61 @@
       "type": "semi_detached",
       "title": "Geminado com pátio 3 quartos",
       "agency": "agency-b",
-      "price": 1075000,
-      "areaM2": 148,
-      "landAreaM2": 197,
+      "price": 910000,
+      "areaM2": 118,
+      "landAreaM2": 134,
       "bedrooms": 3,
-      "bathrooms": 2,
+      "bathrooms": 3,
       "parkingSpots": 1,
-      "status": "ready",
-      "buildingOsmId": "way/1025606359",
+      "status": "under_construction",
+      "buildingOsmId": "way/962086745",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8376972,
-                -26.2400635
+                -48.8213737,
+                -26.2794724
               ],
               [
-                -48.8376523,
-                -26.2402449
+                -48.8213484,
+                -26.2795
               ],
               [
-                -48.8375999,
-                -26.2402312
+                -48.8213319,
+                -26.2794877
               ],
               [
-                -48.8376458,
-                -26.2400519
+                -48.8212867,
+                -26.279537
               ],
               [
-                -48.8376972,
-                -26.2400635
+                -48.8211924,
+                -26.2794668
+              ],
+              [
+                -48.8212672,
+                -26.2793851
+              ],
+              [
+                -48.8213614,
+                -26.2794553
+              ],
+              [
+                -48.8213571,
+                -26.27946
+              ],
+              [
+                -48.8213737,
+                -26.2794724
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 148 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 118 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "barbecue",
         "pets"
@@ -3271,55 +3239,47 @@
     {
       "id": "semi-46",
       "type": "semi_detached",
-      "title": "Geminado com quintal 3 quartos",
+      "title": "Geminado com pátio 2 quartos",
       "agency": "agency-a",
-      "price": 930000,
-      "areaM2": 133,
-      "landAreaM2": 192,
-      "bedrooms": 3,
-      "bathrooms": 1,
+      "price": 610000,
+      "areaM2": 85,
+      "landAreaM2": 98,
+      "bedrooms": 2,
+      "bathrooms": 2,
       "parkingSpots": 1,
       "status": "under_construction",
-      "buildingOsmId": "way/991609706",
+      "buildingOsmId": "way/1036180216",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.7934748,
-                -26.2432931
+                -48.8450747,
+                -26.2957925
               ],
               [
-                -48.7934084,
-                -26.2433544
+                -48.8448954,
+                -26.2958036
               ],
               [
-                -48.7933387,
-                -26.2432913
+                -48.8448861,
+                -26.29571
               ],
               [
-                -48.7934271,
-                -26.2432134
+                -48.8450664,
+                -26.2956986
               ],
               [
-                -48.7934499,
-                -26.2432337
-              ],
-              [
-                -48.793429,
-                -26.2432531
-              ],
-              [
-                -48.7934748,
-                -26.2432931
+                -48.8450747,
+                -26.2957925
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 133 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 85 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pets",
         "financing",
@@ -3331,79 +3291,71 @@
     {
       "id": "semi-47",
       "type": "semi_detached",
-      "title": "Geminado novo 3 quartos",
+      "title": "Geminado com pátio 2 quartos",
       "agency": "agency-b",
-      "price": 835000,
-      "areaM2": 124,
-      "landAreaM2": 147,
-      "bedrooms": 3,
-      "bathrooms": 1,
-      "parkingSpots": 1,
+      "price": 675000,
+      "areaM2": 96,
+      "landAreaM2": 123,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "parkingSpots": 2,
       "status": "under_construction",
-      "buildingOsmId": "way/960958129",
+      "buildingOsmId": "way/991615185",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.7986879,
-                -26.2715767
+                -48.8047019,
+                -26.2431503
               ],
               [
-                -48.7986457,
-                -26.2716188
+                -48.8046585,
+                -26.2431885
               ],
               [
-                -48.7986232,
-                -26.2716
+                -48.8046335,
+                -26.2432104
               ],
               [
-                -48.7985689,
-                -26.2716538
+                -48.8045514,
+                -26.2431343
               ],
               [
-                -48.7985014,
-                -26.2715988
+                -48.8045747,
+                -26.2431127
               ],
               [
-                -48.7985587,
-                -26.2715427
+                -48.8046047,
+                -26.2430863
               ],
               [
-                -48.7985538,
-                -26.2715392
+                -48.8046406,
+                -26.2431211
               ],
               [
-                -48.7985888,
-                -26.271505
+                -48.8046354,
+                -26.2431248
               ],
               [
-                -48.7985891,
-                -26.2715052
+                -48.8046607,
+                -26.2431472
               ],
               [
-                -48.7986129,
-                -26.2715224
+                -48.8046811,
+                -26.2431304
               ],
               [
-                -48.7986472,
-                -26.2715473
-              ],
-              [
-                -48.798682,
-                -26.2715724
-              ],
-              [
-                -48.7986879,
-                -26.2715767
+                -48.8047019,
+                -26.2431503
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 124 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 96 m² construídos, 2 quartos e 2 vagas. Dados fictícios para demonstração.",
       "features": [
         "balcony",
         "pets",
@@ -3415,59 +3367,47 @@
     {
       "id": "semi-48",
       "type": "semi_detached",
-      "title": "Geminado novo 2 quartos",
+      "title": "Geminado com pátio 3 quartos",
       "agency": "agency-a",
-      "price": 790000,
-      "areaM2": 108,
-      "landAreaM2": 127,
-      "bedrooms": 2,
+      "price": 870000,
+      "areaM2": 115,
+      "landAreaM2": 169,
+      "bedrooms": 3,
       "bathrooms": 2,
       "parkingSpots": 1,
       "status": "ready",
-      "buildingOsmId": "way/962424976",
+      "buildingOsmId": "way/516213490",
       "footprint": {
         "type": "MultiPolygon",
         "coordinates": [
           [
             [
               [
-                -48.8025879,
-                -26.2570224
+                -48.8349388,
+                -26.2587913
               ],
               [
-                -48.8025441,
-                -26.2570708
+                -48.8349153,
+                -26.2588655
               ],
               [
-                -48.8025248,
-                -26.2570576
+                -48.8348302,
+                -26.2588437
               ],
               [
-                -48.8024915,
-                -26.2570946
+                -48.8348537,
+                -26.2587693
               ],
               [
-                -48.8024159,
-                -26.2570396
-              ],
-              [
-                -48.8024965,
-                -26.2569513
-              ],
-              [
-                -48.8025162,
-                -26.2569674
-              ],
-              [
-                -48.8025879,
-                -26.2570224
+                -48.8349388,
+                -26.2587913
               ]
             ]
           ]
         ]
       },
-      "buildingHeightM": 6,
-      "description": "Imóvel de 108 m² construídos, 2 quartos e 1 vaga. Dados fictícios para demonstração.",
+      "buildingHeightM": 3,
+      "description": "Imóvel de 115 m² construídos, 3 quartos e 1 vaga. Dados fictícios para demonstração.",
       "features": [
         "pets",
         "financing"
@@ -3478,11 +3418,11 @@
     {
       "id": "land-49",
       "type": "land",
-      "title": "Lote para construir 15×35 m",
+      "title": "Lote para construir 12×30 m",
       "agency": "agency-b",
-      "price": 1200000,
-      "areaM2": 525,
-      "landAreaM2": 525,
+      "price": 825000,
+      "areaM2": 360,
+      "landAreaM2": 360,
       "bedrooms": 0,
       "bathrooms": 0,
       "parkingSpots": 0,
@@ -3492,29 +3432,29 @@
         "coordinates": [
           [
             [
-              -48.8715865,
-              -26.2884774
+              -48.8715731,
+              -26.2885007
             ],
             [
-              -48.8714363,
-              -26.288486
+              -48.8714529,
+              -26.2885075
             ],
             [
-              -48.8714585,
-              -26.2888001
+              -48.871472,
+              -26.2887768
             ],
             [
-              -48.8716087,
-              -26.2887916
+              -48.8715921,
+              -26.28877
             ],
             [
-              -48.8715865,
-              -26.2884774
+              -48.8715731,
+              -26.2885007
             ]
           ]
         ]
       },
-      "description": "Lote de 525 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
+      "description": "Lote de 360 m² em rua residencial, pronto para construir. Dados fictícios para demonstração.",
       "approxCenter": [
         -48.871224,
         -26.289374

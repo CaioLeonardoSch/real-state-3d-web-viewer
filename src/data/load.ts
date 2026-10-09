@@ -13,6 +13,8 @@ export interface DataMeta {
   tiles: string;
   osmTimestamp: string;
   counts: Record<string, number>;
+  /** Where building heights come from (OSM; the city cadastre when it was used). */
+  heightSources?: string[];
 }
 
 export interface AppData {
