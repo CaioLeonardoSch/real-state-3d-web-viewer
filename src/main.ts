@@ -284,12 +284,15 @@ async function main() {
     const l = listings.find((x) => x.id === id);
     if (remote && l?.remote) {
       try {
-        await remote.deleteListing(id, l.agency);
+        await remote.trashListing(id);
         drawer.close();
         await reloadRemote();
+        account?.refreshTrash();
       } catch (err) {
         return (err as Error).message;
       }
+      announce('Anúncio movido para a lixeira.');
+      return null;
     } else {
       const next = userListings.filter((x) => x.id !== id);
       if (!saveUserListings(next)) return 'O navegador não permitiu salvar a alteração.';

@@ -335,6 +335,35 @@ body[data-tod='night'] .f-pending {
 .account-list .link-btn {
   margin: 0;
 }
+details.account-section > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+details.account-section > .section-body {
+  margin-top: 8px;
+}
+.link-btn.btn-danger-text {
+  color: #b42318;
+}
+body[data-tod="night"] .link-btn.btn-danger-text {
+  color: #ff9b8f;
+}
+.audit-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 13px;
+}
+.audit-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.audit-list time {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
 .account-empty {
   font-size: 14px;
 }

@@ -281,20 +281,62 @@ try {
     pubEdited.title === 'Casa editada no backend' && /Rua do Teste/.test(pubEdited.address ?? '') && !/123/.test(pubEdited.address ?? '') && pubEdited.approx,
     JSON.stringify(pubEdited));
 
-  // ---- session survives a reload; delete
+  // ---- session survives a reload; trash → restore → trash → delete for good
   await page.reload();
   await page.waitForSelector('body[data-ready="true"]');
   await waitIdle(page);
   const stillIn = await page.textContent('.account-toggle');
-  page.once('dialog', (d) => d.accept());
+  page.on('dialog', (d) => d.accept());
+  await page.click(`#results button[data-id="${id}"]`);
+  await sleep(600);
+  const trashLabel = await page.textContent('#drawer [data-action="delete"]');
+  await page.click('#drawer [data-action="delete"]');
+  await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  await visitor.page.reload();
+  await visitor.page.waitForSelector('body[data-ready="true"]');
+  const visitorAfterTrash = await visitor.page.evaluate((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id);
+  await page.click('.account-toggle');
+  await page.click('#account-panel details[data-section="trash"] summary');
+  await page.waitForSelector('#account-panel [data-restore]', { timeout: 15000 });
+  const trashItem = await page.textContent('#account-panel details[data-section="trash"] li');
+  await page.screenshot({ path: path.join(SHOTS, 'backend-lixeira.png') });
+  await page.click('#account-panel [data-restore]');
+  await page.waitForFunction((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  check('excluir move para a lixeira (some do site, inclusive para o visitante) e dá para restaurar',
+    trashLabel === 'Mover para a lixeira' && !visitorAfterTrash && /Casa editada no backend/.test(trashItem ?? '') && /Corretor Teste/.test(trashItem ?? ''),
+    JSON.stringify({ trashLabel, visitorAfterTrash, trashItem: trashItem?.replace(/\s+/g, ' ') }));
+  await page.keyboard.press('Escape');
   await page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
   await page.click('#drawer [data-action="delete"]');
   await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  await page.click('.account-toggle');
+  await page.waitForSelector('#account-panel [data-purge]', { timeout: 15000 });
+  await page.click('#account-panel [data-purge]');
+  await page.waitForFunction(() => /vazia/.test(document.querySelector('#account-panel details[data-section="trash"]')?.textContent ?? ''), null, { timeout: 15000 });
   const folder = editedMine.strip[0].split('/listing-photos/')[1].split('/').slice(0, 2).join('/');
   const left = await svc.storage.from('listing-photos').list(folder);
-  check('a sessão continua após recarregar, e o anúncio pode ser excluído (com as fotos do storage)',
+  check('a sessão continua após recarregar, e "Excluir de vez" apaga o anúncio e as fotos do storage',
     stillIn === 'Imobiliária Teste Ação' && (await rows()) === before && left.data?.length === 0, `${stillIn}; ${left.data?.length} arquivos`);
+
+  // ---- the owner reads the history
+  const owner2 = await open(browser);
+  await owner2.page.click('.account-toggle');
+  await owner2.page.fill('#account-panel input[name="email"]', ownerEmail);
+  await owner2.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await owner2.page.click('#account-panel button[type="submit"]');
+  await owner2.page.click('#account-panel details[data-section="audit"] summary', { timeout: 15000 });
+  await owner2.page.waitForSelector('#account-panel .audit-list li', { timeout: 15000 });
+  const history = await owner2.page.evaluate(() => [...document.querySelectorAll('#account-panel .audit-list li span')].map((li) => li.textContent.trim()));
+  await owner2.page.screenshot({ path: path.join(SHOTS, 'backend-historico.png') });
+  const has = (re) => history.some((h) => re.test(h));
+  check('o dono vê o histórico em frases: quem criou, alterou, mandou para a lixeira, restaurou e excluiu',
+    has(/^Corretor Teste criou o anúncio "Casa publicada no backend"/) && has(/alterou "Casa publicada no backend": preço de R\$ 880\.000 para R\$ 800\.000/) &&
+      has(/moveu "Casa editada no backend" para a lixeira/) && has(/restaurou "Casa editada no backend"/) && has(/excluiu definitivamente "Casa editada no backend"/) &&
+      has(/alterou "Casa editada no backend": título, exibição do endereço/) && !history.some((h) => /um anúncio/.test(h)) &&
+      has(/Corretor Teste entrou na equipe como corretor/) && has(/convidou corretor-/),
+    JSON.stringify(history.slice(0, 12)));
+  await owner2.ctx.close();
   check('sem erros no console', errors.length === 0 && visitor.errors.length === 0, [...errors, ...visitor.errors].join(' | '));
   await visitor.ctx.close();
 } finally {

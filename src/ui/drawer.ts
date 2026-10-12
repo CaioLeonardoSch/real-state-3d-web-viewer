@@ -303,7 +303,7 @@ export class Drawer {
                       .join('')}</ol></div>`
                   : ''
               }
-              <button type="button" class="btn-secondary btn-danger" data-action="delete">Excluir este anúncio</button>
+              <button type="button" class="btn-secondary btn-danger" data-action="delete">${l.remote ? 'Mover para a lixeira' : 'Excluir este anúncio'}</button>
             </section>`
           : ''
       }
@@ -311,8 +311,10 @@ export class Drawer {
     `;
     this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
     this.el.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
-      const where = l.remote ? 'Ele sai do ar para todos.' : 'Ele só existe neste navegador.';
-      if (!window.confirm(`Excluir o anúncio "${l.title}"? ${where}`)) return;
+      const question = l.remote
+        ? `Mover "${l.title}" para a lixeira? Ele sai do ar na hora e pode ser restaurado por 30 dias em Minha conta → Lixeira.`
+        : `Excluir o anúncio "${l.title}"? Ele só existe neste navegador.`;
+      if (!window.confirm(question)) return;
       const error = await this.onDelete(l.id);
       if (error) window.alert(error);
     });

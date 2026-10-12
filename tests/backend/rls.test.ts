@@ -143,6 +143,51 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await anon().from('audit_log').select('id')).data ?? []).toHaveLength(0);
   });
 
+  it('lixeira: some do público, aparece na lixeira com quem excluiu, e pode ser restaurado', async () => {
+    const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
+    const id = l.data!.id;
+    // a data vem do servidor: tentar antedatar não adianta
+    await bruno.client.from('listings').update({ deleted_at: '2020-01-01T00:00:00Z' }).eq('id', id);
+    expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(0);
+    expect((await bruno.client.from('my_listings').select('id').eq('id', id)).data).toHaveLength(0);
+    const trash = (await ana.client.from('listing_trash').select('*').eq('id', id).single()).data!;
+    expect(trash.deleted_by).toBe(bruno.id);
+    expect(new Date(trash.deleted_at).getFullYear()).toBeGreaterThan(2025);
+    expect((await carla.client.from('listing_trash').select('id').eq('id', id)).data).toHaveLength(0);
+    await bruno.client.from('listings').update({ deleted_at: null }).eq('id', id);
+    expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(1);
+  });
+
+  it('limpeza automática: apaga o que passou de 30 dias e anota os arquivos para o site remover', async () => {
+    const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
+    const id = l.data!.id;
+    const path = `${orgA}/${id}/velha.jpg`;
+    await bruno.client.from('listing_photos').insert({ listing_id: id, org_id: orgA, path, thumb_path: `${orgA}/${id}/velha-mini.jpg` });
+    await bruno.client.from('listings').update({ deleted_at: 'now()' }).eq('id', id);
+    expect((await anon().rpc('purge_trash')).error).not.toBeNull();
+    expect((await bruno.client.rpc('purge_trash')).error).not.toBeNull();
+    await service().from('listings').update({ deleted_at: new Date(Date.now() - 31 * 86400000).toISOString() }).eq('id', id);
+    const purged = await service().rpc('purge_trash');
+    expect(purged.data).toBeGreaterThanOrEqual(1);
+    expect((await service().from('listings').select('id').eq('id', id)).data).toHaveLength(0);
+    const orphans = await bruno.client.from('storage_orphans').select('path').like('path', `%/${id}/%`);
+    expect(orphans.data!.map((o) => o.path).sort()).toEqual([path, `${orgA}/${id}/velha-mini.jpg`].sort());
+    expect((await carla.client.from('storage_orphans').select('id').like('path', `%/${id}/%`)).data).toHaveLength(0);
+  });
+
+  it('registro pela tela: administradores leem com nomes e títulos; corretor e outra imobiliária não', async () => {
+    const page = await ana.client.rpc('org_audit', { p_org: orgA, p_limit: 100 });
+    expect(page.error).toBeNull();
+    const rows = page.data as { table_name: string; action: string; subject: string | null; listing_title: string | null; actor_email: string | null }[];
+    expect(rows.some((r) => r.table_name === 'memberships' && r.action === 'INSERT' && r.subject === bruno.email)).toBe(true);
+    expect(rows.some((r) => r.table_name === 'listings' && r.listing_title)).toBe(true);
+    expect(rows.some((r) => r.actor_email === bruno.email)).toBe(true);
+    const older = await ana.client.rpc('org_audit', { p_org: orgA, p_before: (page.data as { id: number }[])[0].id, p_limit: 1 });
+    expect(older.data).toHaveLength(1);
+    expect((await bruno.client.rpc('org_audit', { p_org: orgA })).data).toHaveLength(0);
+    expect((await carla.client.rpc('org_audit', { p_org: orgA })).data).toHaveLength(0);
+  });
+
   it('ninguém se coloca na equipe da plataforma', async () => {
     const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
     expect(r.error).not.toBeNull();

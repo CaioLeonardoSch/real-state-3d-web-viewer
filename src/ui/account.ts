@@ -1,4 +1,5 @@
-import type { Invitation, Member, Org, PendingInvitation, RemoteBackend, Role } from '../backend/remote';
+import type { Invitation, Member, Org, PendingInvitation, RemoteBackend, Role, TrashItem } from '../backend/remote';
+import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
 import { escapeHtml } from '../utils/format';
 
 /** "Imobiliária Exemplo Ltda." → "imobiliaria-exemplo-ltda" (address of the client's site). */
@@ -30,7 +31,10 @@ export class AccountPanel {
   private orgs: Org[] = [];
   private org: Org | null = null;
   private email: string | null = null;
+  private userId: string | null = null;
   private staff = false;
+  /** Collapsible sections the user left open (kept across re-renders). */
+  private openSections = new Set<string>();
   private pending: PendingInvitation[] = [];
   /** Token from an invitation link (?convite=…), until it is accepted. */
   private linkToken: string | null = new URLSearchParams(location.search).get('convite');
@@ -66,6 +70,7 @@ export class AccountPanel {
     const session = await this.backend.session();
     const before = `${this.email}|${this.org?.id}`;
     this.email = session?.user.email ?? null;
+    this.userId = session?.user.id ?? null;
     [this.orgs, this.staff, this.pending] = this.email
       ? await Promise.all([this.backend.myOrgs(), this.backend.isStaff(), this.backend.myInvitations()])
       : [[], false, []];
@@ -78,6 +83,8 @@ export class AccountPanel {
     }
     this.org = this.orgs.find((o) => o.id === saved) ?? this.orgs[0] ?? null;
     this.toggle.textContent = this.email ? (this.org?.name ?? 'Minha conta') : 'Entrar';
+    // files of listings the daily clean-up removed (the database cannot delete from storage)
+    if (this.org) void this.backend.cleanupOrphans(this.org.id).catch(() => {});
     if (this.isOpen) await this.render();
     if (notify && before !== `${this.email}|${this.org?.id}`) this.onChange();
   }
@@ -138,10 +145,112 @@ export class AccountPanel {
       ${this.org ? this.orgHtml() : offers.length ? '' : `<p class="account-empty">Sua conta ainda não está ligada a nenhuma imobiliária.
         Peça o link de convite ao administrador da sua imobiliária.</p>`}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
+      ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
+      ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
       ${this.staff ? this.staffHtml() : ''}
       <div class="a-actions account-signout"><button type="button" class="btn-secondary" data-action="signout">Sair</button></div>`;
     this.bindClose();
     this.bindLoggedIn(members);
+    this.bindSections();
+  }
+
+  /** Re-reads the trash after a listing was moved there from the listing panel. */
+  refreshTrash(): void {
+    if (this.isOpen && this.openSections.has('trash')) void this.loadSection('trash');
+  }
+
+  private sectionHtml(key: string, title: string): string {
+    return `<details class="account-section" data-section="${key}" ${this.openSections.has(key) ? 'open' : ''}>
+      <summary>${title}</summary><div class="section-body"><p class="muted small">Carregando…</p></div></details>`;
+  }
+
+  private bindSections(): void {
+    this.el.querySelectorAll<HTMLDetailsElement>('details[data-section]').forEach((d) => {
+      const key = d.dataset.section!;
+      d.addEventListener('toggle', () => {
+        if (d.open) {
+          this.openSections.add(key);
+          void this.loadSection(key);
+        } else this.openSections.delete(key);
+      });
+      if (d.open) void this.loadSection(key);
+    });
+  }
+
+  private async loadSection(key: string, more = false): Promise<void> {
+    const body = this.el.querySelector<HTMLElement>(`details[data-section="${key}"] .section-body`);
+    if (!body || !this.org) return;
+    try {
+      if (key === 'trash') this.renderTrash(body, await this.backend.trash(this.org.id));
+      else {
+        const list = body.querySelector<HTMLElement>('.audit-list');
+        const last = more && list ? Number(list.dataset.last) : undefined;
+        this.renderAudit(body, await this.backend.audit(this.org.id, last), more);
+      }
+    } catch (ex) {
+      body.innerHTML = `<p class="a-error">${escapeHtml((ex as Error).message)}</p>`;
+    }
+  }
+
+  private renderTrash(body: HTMLElement, items: TrashItem[]): void {
+    const admin = this.org!.role === 'owner' || this.org!.role === 'admin';
+    const day = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
+    body.innerHTML = items.length
+      ? `<p class="a-hint">Anúncios excluídos ficam aqui por 30 dias e depois são apagados de vez.</p>
+        <ul class="account-list">${items
+          .map((t) => {
+            const mine = admin || t.createdBy === this.userId;
+            return `<li><span>${escapeHtml(t.title)}<small>excluído${t.deletedByName ? ` por ${escapeHtml(t.deletedByName)}` : ''} em ${day(t.deletedAt)} · apagado em ${day(t.purgeAt)}</small></span>
+              ${
+                mine
+                  ? `<button type="button" class="link-btn" data-restore="${t.id}">Restaurar</button>
+                     <button type="button" class="link-btn btn-danger-text" data-purge="${t.id}">Excluir de vez</button>`
+                  : ''
+              }</li>`;
+          })
+          .join('')}</ul>`
+      : '<p class="muted small">A lixeira está vazia.</p>';
+    body.querySelectorAll<HTMLButtonElement>('[data-restore]').forEach((b) =>
+      b.addEventListener('click', () =>
+        this.act(b, async () => {
+          await this.backend.restoreListing(b.dataset.restore!);
+          this.note = 'Anúncio restaurado: está de volta no site.';
+          this.onChange();
+          await this.render();
+        }),
+      ),
+    );
+    body.querySelectorAll<HTMLButtonElement>('[data-purge]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const t = items.find((x) => x.id === b.dataset.purge);
+        if (!window.confirm(`Excluir "${t?.title}" de vez? Não dá para desfazer.`)) return;
+        void this.act(b, async () => {
+          await this.backend.purgeListing(b.dataset.purge!, this.org!.id);
+          this.note = 'Anúncio excluído de vez.';
+          await this.render();
+        });
+      }),
+    );
+  }
+
+  private renderAudit(body: HTMLElement, entries: AuditEntry[], append: boolean): void {
+    const when = (iso: string) =>
+      new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const items = entries
+      .map((e) => `<li><time datetime="${e.at}">${when(e.at)}</time> <span><b>${escapeHtml(actorLabel(e))}</b> ${escapeHtml(describeAudit(e))}</span></li>`)
+      .join('');
+    let list = body.querySelector<HTMLElement>('.audit-list');
+    if (!append || !list) {
+      body.innerHTML = entries.length
+        ? `<ul class="audit-list"></ul><button type="button" class="link-btn" data-action="audit-more">Ver mais</button>`
+        : '<p class="muted small">Nada registrado ainda.</p>';
+      list = body.querySelector<HTMLElement>('.audit-list');
+      body.querySelector('[data-action="audit-more"]')?.addEventListener('click', () => void this.loadSection('audit', true));
+    }
+    if (!list) return;
+    list.insertAdjacentHTML('beforeend', items);
+    if (entries.length) list.dataset.last = String(entries.at(-1)!.id);
+    if (entries.length < 30) body.querySelector<HTMLElement>('[data-action="audit-more"]')?.remove();
   }
 
   private renderLogin(head: string): void {

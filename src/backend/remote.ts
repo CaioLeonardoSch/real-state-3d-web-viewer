@@ -2,6 +2,7 @@
 // (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY), so the static demo does not download the client library.
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Agency, Listing, Photo } from '../data/types';
+import type { AuditEntry } from './audit';
 import { dataUrlToBlob, listingToRow, rowToListing, type ListingRow, type PhotoRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
@@ -27,6 +28,15 @@ export interface Invitation {
   role: Role;
   token: string;
   expiresAt: string;
+}
+
+export interface TrashItem {
+  id: string;
+  title: string;
+  createdBy: string | null;
+  deletedAt: string;
+  deletedByName: string | null;
+  purgeAt: string;
 }
 
 export interface PendingInvitation {
@@ -333,11 +343,59 @@ export class RemoteBackend {
     if (!data?.length) throw new Error('Não foi possível salvar: sem permissão para editar este anúncio.');
   }
 
-  async deleteListing(id: string, orgId: string): Promise<void> {
+  /** "Excluir": to the trash (out of the site at once; restorable for 30 days). */
+  async trashListing(id: string): Promise<void> {
+    const { data, error } = await this.sb.from('listings').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id');
+    fail(error, 'Não foi possível excluir');
+    if (!data?.length) throw new Error('Não foi possível excluir: sem permissão.');
+  }
+
+  async restoreListing(id: string): Promise<void> {
+    const { data, error } = await this.sb.from('listings').update({ deleted_at: null }).eq('id', id).select('id');
+    fail(error, 'Não foi possível restaurar');
+    if (!data?.length) throw new Error('Não foi possível restaurar: sem permissão.');
+  }
+
+  /** Deletes for good: photos from storage, then the listing. */
+  async purgeListing(id: string, orgId: string): Promise<void> {
     await this.removeFiles(orgId, id);
     const { data, error } = await this.sb.from('listings').delete().eq('id', id).select('id');
     fail(error, 'Não foi possível excluir');
     if (!data?.length) throw new Error('Não foi possível excluir: sem permissão.');
+  }
+
+  async trash(orgId: string): Promise<TrashItem[]> {
+    const { data, error } = await this.sb.from('listing_trash').select('*').eq('org_id', orgId).order('deleted_at', { ascending: false });
+    fail(error, 'Não foi possível ler a lixeira');
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      title: r.title,
+      createdBy: r.created_by,
+      deletedAt: r.deleted_at,
+      deletedByName: r.deleted_by_name,
+      purgeAt: r.purge_at,
+    }));
+  }
+
+  /** Files of listings removed by the daily clean-up (the database cannot delete from storage). */
+  async cleanupOrphans(orgId: string): Promise<number> {
+    const { data } = await this.sb.from('storage_orphans').select('id, path').eq('org_id', orgId).limit(500);
+    if (!data?.length) return 0;
+    const rm = await this.sb.storage.from(PHOTOS).remove(data.map((o) => o.path));
+    if (rm.error) return 0;
+    await this.sb.from('storage_orphans').delete().in('id', data.map((o) => o.id));
+    return data.length;
+  }
+
+  /** A page of the client's audit log, newest first (admins and support). */
+  async audit(orgId: string, before?: number): Promise<AuditEntry[]> {
+    const { data, error } = await this.sb.rpc('org_audit', { p_org: orgId, p_before: before ?? null, p_limit: 30 });
+    fail(error, 'Não foi possível ler o histórico');
+    return (data ?? []) as AuditEntry[];
+  }
+
+  async userId(): Promise<string | null> {
+    return (await this.session())?.user.id ?? null;
   }
 
   /** Price histories (visible to the listing's client only), oldest first. */

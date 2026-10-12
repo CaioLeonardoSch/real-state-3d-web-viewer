@@ -7,7 +7,7 @@ Este documento lista o que precisa ir para um backend e como manter tudo rodando
 imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imobiliárias cadastradas só pelo
 suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
 com PostGIS; edição completa em 13/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
-automático dos convites por e-mail, lixeira e os itens 4 a 13.
+automático dos convites por e-mail e os itens 4 a 13. Lixeira e histórico de alterações pela tela: 14/10/2026.
 
 ## 1. O que precisa estar no backend
 
@@ -250,8 +250,8 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
    entram por convite (válido só para o e-mail convidado, uma vez, por 14 dias).
 2. ~~**Papel de suporte da plataforma** com registro de auditoria.~~ Feito em 12/10/2026 (`platform_staff`,
    `audit_log`).
-3. **Lixeira em vez de exclusão definitiva**, mais backups com restauração a um ponto no tempo (plano Pro). Protege
-   contra erro humano e contra uma conta de corretor invadida.
+3. ~~**Lixeira em vez de exclusão definitiva**~~ feita em 14/10/2026 (30 dias para restaurar). Falta ativar os
+   backups com restauração a um ponto no tempo (plano Pro).
 4. **Contas:** CAPTCHA no login e no cadastro (o Supabase integra hCaptcha e Turnstile), verificação em duas etapas
    para administradores, recusa de senhas vazadas (recurso do plano Pro).
 5. **Limites contra abuso** quando houver formulário de contato público: limite de envios por IP e CAPTCHA.

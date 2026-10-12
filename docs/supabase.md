@@ -65,6 +65,14 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
    local"), fotos (incluir, remover, legenda, capa), planta, preço e todos os outros campos. Fotos removidas saem do
    storage. Baixar o preço gera o preço riscado pelo histórico, como na atualização rápida.
 
+7. **Excluir** manda o anúncio para a **lixeira**: ele sai do site na hora e pode ser restaurado em **Minha conta →
+   Lixeira** por 30 dias (o corretor restaura os dele; administradores, todos). Depois disso uma tarefa diária do
+   banco (`pg_cron`) apaga de vez; as fotos que sobram no storage são removidas pelo site na próxima vez que alguém
+   da imobiliária entra. **Excluir de vez** na lixeira apaga na hora.
+8. **Histórico de alterações** (administradores e suporte), em **Minha conta**: cada ação em frases, com quem fez,
+   quando e o título que o anúncio tinha no momento ("Corretor X alterou "Casa com quintal": preço de R$ 900.000
+   para R$ 850.000").
+
 O suporte escolhe em **Atendendo** qual imobiliária está atendendo e pode corrigir anúncios e equipe de qualquer
 uma. Tudo o que muda (anúncios, equipe, convites, fotos) fica no registro de auditoria (`audit_log`), com quem fez,
 quando, o que mudou e se foi o suporte; os administradores de cada imobiliária leem o registro dela.
@@ -94,9 +102,10 @@ junto com o e-mail próprio (SMTP) e uma função no servidor.
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 17 testes de permissão, convites, auditoria, privacidade, preço e storage
+npm run test:backend    # 20 testes: permissões, convites, auditoria, lixeira, privacidade, preço e storage
 npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
-                        # corretor anuncia com fotos → visitante → preço → edição completa → excluir (16 checagens)
+                        # corretor anuncia com fotos → visitante → preço → edição completa → lixeira e
+                        # restauração → excluir de vez → histórico (18 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 
