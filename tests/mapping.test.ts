@@ -22,7 +22,7 @@ describe('rowToListing', () => {
   it('converts numbers, dates, photos (cover first) and the floor plan', () => {
     const l = rowToListing(row(), [
       { listing_id: 'l1', path: 'b.jpg', caption: null, position: 1, is_floor_plan: false },
-      { listing_id: 'l1', path: 'a.jpg', caption: 'Sala', position: 0, is_floor_plan: false },
+      { listing_id: 'l1', path: 'a.jpg', thumb_path: 'a-mini.jpg', caption: 'Sala', position: 0, is_floor_plan: false },
       { listing_id: 'l1', path: 'p.png', caption: 'Planta', position: 999, is_floor_plan: true },
       { listing_id: 'outro', path: 'x.jpg', caption: null, position: 0, is_floor_plan: false },
     ], url, false);
@@ -31,7 +31,7 @@ describe('rowToListing', () => {
       iptu: { value: 1200, period: 'year' }, publishedAt: '2026-09-01', updatedAt: '2026-10-01', approximateLocation: false,
       remote: true, highlight: 'featured',
     });
-    expect(l.photos).toEqual([{ src: 'https://cdn/a.jpg', caption: 'Sala' }, { src: 'https://cdn/b.jpg' }]);
+    expect(l.photos).toEqual([{ src: 'https://cdn/a.jpg', thumb: 'https://cdn/a-mini.jpg', caption: 'Sala' }, { src: 'https://cdn/b.jpg' }]);
     expect(l.floorPlanImage).toBe('https://cdn/p.png');
     expect(l.userAdded).toBeUndefined();
     expect(l.fictional).toBeUndefined();

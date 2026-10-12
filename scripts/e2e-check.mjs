@@ -590,6 +590,35 @@ async function main() {
     }));
     check('lowering the price of an own listing shows the reduction and the price history',
       /987\.000/.test(managed.was ?? '') && managed.cut === '−4%' && managed.history === 2, JSON.stringify(managed));
+    // full edit: the form opens filled in; change the title, drop a photo, pick another cover
+    await page.click('#drawer [data-action="edit"]');
+    await sleep(300);
+    const editForm = await page.evaluate(() => ({
+      heading: document.querySelector('#add-panel h2')?.textContent,
+      title: document.querySelector('#add-panel input[name="title"]')?.value,
+      price: document.querySelector('#add-panel input[name="price"]')?.value,
+      place: document.querySelector('#add-panel .a-place-status')?.textContent ?? '',
+      photos: document.querySelectorAll('#add-panel .a-photos img').length,
+    }));
+    await page.fill('#add-panel input[name="title"]', 'Casa de teste editada');
+    await page.click('#add-panel [data-remove="0"]');
+    await page.click('#add-panel input[name="cover"][value="2"]');
+    await page.click('#add-panel button:has-text("Salvar alterações")');
+    await sleep(700);
+    await waitIdle(page);
+    const edited = await page.evaluate(() => ({
+      title: document.querySelector('#drawer.open h2')?.textContent ?? null,
+      gallery: document.querySelector('#drawer .gal-pos')?.textContent ?? null,
+      strip: document.querySelectorAll('#drawer .gal-strip button').length,
+      was: document.querySelector('#drawer .price-was s')?.textContent ?? null,
+      stored: JSON.parse(localStorage.getItem('mapa3d-america:user-listings:v1') ?? '[]').map((l) => [l.title, l.photos.length, !!l.photos[0].thumb]),
+    }));
+    check('"Editar anúncio" opens the form filled in and saves title, photos and cover (keeping the reduction)',
+      editForm.heading === 'Editar anúncio' && editForm.title === 'Casa de teste automatizado' && editForm.price === '950000' &&
+        editForm.place.startsWith('✓') && editForm.photos === 5 && edited.title === 'Casa de teste editada' && edited.gallery === '1/4' &&
+        edited.strip === 4 && /987\.000/.test(edited.was ?? '') && JSON.stringify(edited.stored) === '[["Casa de teste editada",4,true]]' &&
+        (await rowCount()) === TOTAL + 1,
+      JSON.stringify({ editForm, edited }));
     await page.keyboard.press('Escape');
     await sleep(300);
 
@@ -618,7 +647,7 @@ async function main() {
     await waitIdle(page);
     const afterReload = await rowCount();
     page.once('dialog', (dlg) => dlg.accept());
-    await page.click('#results button:has-text("Casa de teste automatizado")');
+    await page.click('#results button:has-text("Casa de teste editada")');
     await sleep(600);
     await page.click('#drawer [data-action="delete"]');
     await sleep(500);

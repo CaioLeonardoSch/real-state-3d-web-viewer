@@ -216,7 +216,7 @@ export class ResultsPanel {
             <ul aria-labelledby="results-title">${results
               .map(
                 (l) => `<li><button type="button" data-id="${escapeHtml(l.id)}"${l.photos?.length ? ' class="has-thumb"' : ''}>
-                  ${l.photos?.length ? `<img class="r-thumb" src="${escapeHtml(l.photos[0].src)}" alt="" loading="lazy">` : ''}
+                  ${l.photos?.length ? `<img class="r-thumb" src="${escapeHtml(l.photos[0].thumb ?? l.photos[0].src)}" alt="" loading="lazy">` : ''}
                   <span class="r-title">${escapeHtml(l.title)}${l.userAdded ? ' <span class="r-tag">Seu anúncio</span>' : ''} ${rowTags(l)}</span>
                   <span class="r-meta">${TYPE_LABELS[l.type]} · ${formatArea(l.areaM2)} · ${priceHtml(l, rent)}</span>
                 </button></li>`,

@@ -62,6 +62,7 @@ export interface ListingRow {
 export interface PhotoRow {
   listing_id: string;
   path: string;
+  thumb_path?: string | null;
   caption: string | null;
   position: number;
   is_floor_plan: boolean;
@@ -84,7 +85,9 @@ export function rowToListing(r: ListingRow, photos: PhotoRow[], photoUrl: (path:
   const lot = mine ? r.lot_geojson : r.lot;
   const center = mine ? r.approx_center_geojson : approximate ? location : null;
   const own = photos.filter((p) => p.listing_id === r.id).sort((a, b) => a.position - b.position);
-  const gallery: Photo[] = own.filter((p) => !p.is_floor_plan).map((p) => ({ src: photoUrl(p.path), ...opt('caption', p.caption) }));
+  const gallery: Photo[] = own
+    .filter((p) => !p.is_floor_plan)
+    .map((p) => ({ src: photoUrl(p.path), ...(p.thumb_path ? { thumb: photoUrl(p.thumb_path) } : {}), ...opt('caption', p.caption) }));
   const plan = own.find((p) => p.is_floor_plan);
   return {
     id: r.id,

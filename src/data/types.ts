@@ -84,6 +84,8 @@ export interface Address {
 export interface Photo {
   /** Image URL or data: URL (photos uploaded in this browser). */
   src: string;
+  /** Small version (~320 px) for lists and thumbnails; falls back to `src`. */
+  thumb?: string;
   caption?: string;
 }
 

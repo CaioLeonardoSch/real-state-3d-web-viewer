@@ -1,7 +1,7 @@
 // Supabase back end: login, clients ("organizations"), listings and photos. Loaded only when configured
 // (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY), so the static demo does not download the client library.
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import type { Agency, Listing } from '../data/types';
+import type { Agency, Listing, Photo } from '../data/types';
 import { dataUrlToBlob, listingToRow, rowToListing, type ListingRow, type PhotoRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
@@ -201,7 +201,7 @@ export class RemoteBackend {
     if (!ids.length) return [];
     const { data, error } = await this.sb
       .from('listing_photos')
-      .select('listing_id, path, caption, position, is_floor_plan')
+      .select('listing_id, path, thumb_path, caption, position, is_floor_plan')
       .in('listing_id', ids);
     fail(error, 'Não foi possível ler as fotos');
     return data ?? [];
@@ -245,26 +245,81 @@ export class RemoteBackend {
     fail(error, 'Não foi possível salvar o anúncio');
     const id = data!.id as string;
     try {
-      const files = [
-        ...(l.photos ?? []).map((p, i) => ({ src: p.src, caption: p.caption ?? null, position: i, plan: false })),
-        ...(l.floorPlanImage ? [{ src: l.floorPlanImage, caption: 'Planta', position: 999, plan: true }] : []),
-      ];
-      const rows = [];
-      for (const f of files) {
-        const blob = dataUrlToBlob(f.src);
-        const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
-        const path = `${orgId}/${id}/${f.plan ? 'planta' : String(f.position).padStart(2, '0')}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-        const up = await this.sb.storage.from(PHOTOS).upload(path, blob, { contentType: blob.type });
-        fail(up.error, 'Não foi possível enviar uma foto');
-        rows.push({ listing_id: id, org_id: orgId, path, caption: f.caption, position: f.position, is_floor_plan: f.plan });
-      }
-      if (rows.length) fail((await this.sb.from('listing_photos').insert(rows)).error, 'Não foi possível registrar as fotos');
+      await this.syncPhotos(id, orgId, l.photos ?? [], l.floorPlanImage ?? null);
     } catch (err) {
       // no half-saved listing: remove it (its photo rows go with it)
+      await this.removeFiles(orgId, id);
       await this.sb.from('listings').delete().eq('id', id);
       throw err;
     }
     return id;
+  }
+
+  /**
+   * Saves every field of an edited listing (its client and id stay) and brings the photos in line with the form:
+   * kept photos get the new order and captions, new ones are uploaded, removed ones are deleted.
+   * The database records the price history and the reduction.
+   */
+  async updateListingFull(l: Listing, location: [number, number]): Promise<void> {
+    const { org_id: orgId, ...row } = listingToRow(l, l.agency, location);
+    const { data, error } = await this.sb.from('listings').update(row).eq('id', l.id).select('id');
+    fail(error, 'Não foi possível salvar');
+    if (!data?.length) throw new Error('Não foi possível salvar: sem permissão para editar este anúncio.');
+    await this.syncPhotos(l.id, orgId as string, l.photos ?? [], l.floorPlanImage ?? null);
+  }
+
+  private async upload(dataUrl: string, path: string): Promise<string> {
+    const blob = dataUrlToBlob(dataUrl);
+    const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const full = `${path}.${ext}`;
+    const up = await this.sb.storage.from(PHOTOS).upload(full, blob, { contentType: blob.type });
+    fail(up.error, 'Não foi possível enviar uma foto');
+    return full;
+  }
+
+  /** Photos of a listing as the form left them (photos already stored are recognised by their public URL). */
+  private async syncPhotos(id: string, orgId: string, photos: Photo[], floorPlan: string | null): Promise<void> {
+    const { data: rows, error } = await this.sb.from('listing_photos').select('id, path, thumb_path, is_floor_plan').eq('listing_id', id);
+    fail(error, 'Não foi possível ler as fotos');
+    const byUrl = new Map((rows ?? []).map((r) => [this.photoUrl(r.path), r]));
+    const kept = new Set<string>();
+    const inserts: Record<string, unknown>[] = [];
+    const name = () => `${orgId}/${id}/${crypto.randomUUID().slice(0, 8)}`;
+    for (const [i, p] of photos.entries()) {
+      const row = byUrl.get(p.src);
+      if (row && !row.is_floor_plan) {
+        kept.add(row.id);
+        fail((await this.sb.from('listing_photos').update({ position: i, caption: p.caption ?? null }).eq('id', row.id)).error, 'Não foi possível atualizar as fotos');
+      } else if (p.src.startsWith('data:')) {
+        const base = name();
+        const path = await this.upload(p.src, base);
+        const thumb = p.thumb?.startsWith('data:') ? await this.upload(p.thumb, `${base}-mini`) : null;
+        inserts.push({ listing_id: id, org_id: orgId, path, thumb_path: thumb, caption: p.caption ?? null, position: i, is_floor_plan: false });
+      }
+    }
+    if (floorPlan) {
+      const row = byUrl.get(floorPlan);
+      if (row?.is_floor_plan) kept.add(row.id);
+      else if (floorPlan.startsWith('data:'))
+        inserts.push({ listing_id: id, org_id: orgId, path: await this.upload(floorPlan, `${name()}-planta`), caption: 'Planta', position: 999, is_floor_plan: true });
+    }
+    if (inserts.length) fail((await this.sb.from('listing_photos').insert(inserts)).error, 'Não foi possível registrar as fotos');
+    const gone = (rows ?? []).filter((r) => !kept.has(r.id));
+    if (gone.length) {
+      fail((await this.sb.from('listing_photos').delete().in('id', gone.map((r) => r.id))).error, 'Não foi possível remover as fotos');
+      const rm = await this.sb.storage.from(PHOTOS).remove(gone.flatMap((r) => [r.path, ...(r.thumb_path ? [r.thumb_path] : [])]));
+      // the listing is already right; a file left behind is only storage to clean up later
+      if (rm.error) console.warn('Fotos removidas do anúncio, mas não do storage:', rm.error.message);
+    }
+  }
+
+  private async removeFiles(orgId: string, id: string): Promise<void> {
+    const { data: files, error } = await this.sb.storage.from(PHOTOS).list(`${orgId}/${id}`);
+    if (error) return console.warn('Não foi possível listar as fotos para apagar:', error.message);
+    if (files?.length) {
+      const rm = await this.sb.storage.from(PHOTOS).remove(files.map((f) => `${orgId}/${id}/${f.name}`));
+      if (rm.error) console.warn('Não foi possível apagar as fotos do storage:', rm.error.message);
+    }
   }
 
   /** Status and price changes from "Gerenciar anúncio" (the server records the history and the reduction). */
@@ -279,8 +334,7 @@ export class RemoteBackend {
   }
 
   async deleteListing(id: string, orgId: string): Promise<void> {
-    const { data: files } = await this.sb.storage.from(PHOTOS).list(`${orgId}/${id}`);
-    if (files?.length) await this.sb.storage.from(PHOTOS).remove(files.map((f) => `${orgId}/${id}/${f.name}`));
+    await this.removeFiles(orgId, id);
     const { data, error } = await this.sb.from('listings').delete().eq('id', id).select('id');
     fail(error, 'Não foi possível excluir');
     if (!data?.length) throw new Error('Não foi possível excluir: sem permissão.');

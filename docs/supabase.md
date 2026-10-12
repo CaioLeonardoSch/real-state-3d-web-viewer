@@ -60,7 +60,10 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
 4. **O dono convida os corretores** em **Minha conta → Equipe** (e-mail e papel: corretor ou administrador). Cada
    convite gera um link que vale 14 dias e só funciona para o e-mail convidado. Na mesma tela ele muda papéis,
    remove pessoas e cancela convites.
-5. **+ Anunciar**: o anúncio é publicado ao salvar, com as fotos no storage.
+5. **+ Anunciar**: o anúncio é publicado ao salvar, com as fotos (e uma miniatura de cada) no storage.
+6. **Editar:** no painel do anúncio, **Editar anúncio** abre o mesmo formulário preenchido: título, local ("Trocar
+   local"), fotos (incluir, remover, legenda, capa), planta, preço e todos os outros campos. Fotos removidas saem do
+   storage. Baixar o preço gera o preço riscado pelo histórico, como na atualização rápida.
 
 O suporte escolhe em **Atendendo** qual imobiliária está atendendo e pode corrigir anúncios e equipe de qualquer
 uma. Tudo o que muda (anúncios, equipe, convites, fotos) fica no registro de auditoria (`audit_log`), com quem fez,
@@ -84,14 +87,16 @@ junto com o e-mail próprio (SMTP) e uma função no servidor.
   chave de serviço).
 - Fotos: qualquer um vê as de anúncios publicados; só membros da imobiliária gravam na pasta dela.
 - Rascunhos (`published = false`) não aparecem para o público.
+- Editar um anúncio sem mudá-lo de lugar mantém o mesmo círculo aproximado (sortear um novo a cada edição permitiria
+  estimar o endereço escondido comparando os círculos).
 
 ## Testes
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 16 testes de permissão, convites, auditoria, privacidade, preço e storage
+npm run test:backend    # 17 testes de permissão, convites, auditoria, privacidade, preço e storage
 npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
-                        # corretor anuncia com fotos → visitante → preço → excluir (14 checagens)
+                        # corretor anuncia com fotos → visitante → preço → edição completa → excluir (16 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

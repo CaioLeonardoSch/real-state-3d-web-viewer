@@ -6,8 +6,8 @@ Este documento lista o que precisa ir para um backend e como manter tudo rodando
 **Situação (12/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
 imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imobiliárias cadastradas só pelo
 suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
-com PostGIS) e 3 (fotos e planta no storage). Faltam: edição completa do anúncio, miniaturas das fotos, envio
-automático dos convites por e-mail e os itens 4 a 13.
+com PostGIS; edição completa em 13/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
+automático dos convites por e-mail, lixeira e os itens 4 a 13.
 
 ## 1. O que precisa estar no backend
 

@@ -12,3 +12,6 @@ export async function resizeImage(file: File, max = 960, quality = 0.72): Promis
   bitmap.close();
   return canvas.toDataURL('image/jpeg', quality);
 }
+
+/** Small version of a photo for lists and the gallery strip (~320 px, a few KB). */
+export const makeThumb = (file: File) => resizeImage(file, 320, 0.7);

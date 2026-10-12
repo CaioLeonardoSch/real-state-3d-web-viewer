@@ -445,8 +445,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   Firefox nem GPUs reais.
 
 - Anúncios criados pelo app ficam só no `localStorage` do navegador: não aparecem para outras pessoas até serem
-  exportados e incorporados com `npm run listings:add`. Depois de salvo, só a situação e o preço podem ser
-  alterados ("Gerenciar anúncio"); o resto exige excluir e criar de novo. As fotos ocupam o pouco espaço do
+  exportados e incorporados com `npm run listings:add`. Depois de salvo, **Editar anúncio** (no painel do imóvel)
+  altera tudo, inclusive local e fotos. As fotos ocupam o pouco espaço do
   `localStorage`, então muitos anúncios com muitas fotos podem esbarrar no limite do navegador.
 - O lote de um terreno criado no app é alinhado ao norte, não à rua mais próxima como no gerador.
 - Para um prédio de apartamentos criado no app sem número de pavimentos, a altura no mapa é a do OSM (muitas vezes
@@ -501,7 +501,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 72 testes (mais 16 do backend em `npm run test:backend`): conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 75 testes (mais 17 do backend em `npm run test:backend`): conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
@@ -513,7 +513,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 68 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 69 checagens:
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -536,7 +536,8 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
   - "Anunciar": cadastro incompleto (sem CRECI) é recusado; casa num prédio cinza e terreno num espaço
     livre são salvos, abertos e aparecem na lista, com galeria, endereço só da rua e link de WhatsApp; baixar o
-    preço no "Gerenciar anúncio" mostra o preço riscado e o histórico (só para o anunciante); continuam após recarregar e podem ser
+    preço no "Gerenciar anúncio" mostra o preço riscado e o histórico (só para o anunciante); "Editar anúncio" abre o
+    formulário preenchido e salva título, fotos e capa; continuam após recarregar e podem ser
     excluídos;
   - empreendimentos: torres e rótulos no mapa; abrir divide a torre em unidades e lista todas por andar; escolher
     uma unidade mostra a ficha, deixa os andares de cima translúcidos e grava `?empreendimento=&unidade=`; "Só

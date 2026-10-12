@@ -34,7 +34,7 @@ import {
   type Usage,
 } from '../data/types';
 import { formatCep, safeUrl, today } from '../data/listingText';
-import { resizeImage } from '../utils/images';
+import { makeThumb, resizeImage } from '../utils/images';
 import type { PickResult, Scene } from '../map/scene';
 import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type PlacementChecker } from '../utils/placement';
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
@@ -48,14 +48,15 @@ export interface AddListingDeps {
   checker: PlacementChecker;
   /** Listing already using this OSM building, if any. */
   listingOnBuilding: (osmId: string) => Listing | undefined;
-  /** Lots of the other land listings (a new lot must not overlap them). */
-  otherLots: () => (Polygon | MultiPolygon)[];
+  /** Lots of the other land listings (a new lot must not overlap them); `exceptId`: the listing being edited. */
+  otherLots: (exceptId?: string) => (Polygon | MultiPolygon)[];
   newId: (slug: string) => string;
   /** Neighbourhood containing a point (fills the address). */
   bairroAt: (lngLat: [number, number]) => string | null;
-  /** Saves the new listing; returns an error message, or null on success. */
   /** Saves the new listing (`center`: exact point of the place); resolves to an error message, or null on success. */
   onSave: (l: Listing, center: [number, number]) => Promise<string | null>;
+  /** Saves an edited listing (same id); resolves to an error message, or null on success. */
+  onUpdate: (l: Listing, center: [number, number]) => Promise<string | null>;
   /** With the back end: name of the client the listing is saved for (replaces the agency choice). */
   remoteOrgName?: () => string | null;
   onExport: () => void;
@@ -75,6 +76,8 @@ type Place =
 export class AddListingPanel {
   private place: Place | null = null;
   private isOpen = false;
+  /** Listing being edited (null: a new one). */
+  private editing: Listing | null = null;
 
   constructor(
     private el: HTMLElement,
@@ -93,11 +96,85 @@ export class AddListingPanel {
 
   open(): void {
     this.isOpen = true;
+    this.editing = null;
     this.place = null;
     this.render();
     this.el.hidden = false;
     document.body.classList.add('add-open');
     this.el.querySelector<HTMLElement>('select[name="type"]')?.focus();
+  }
+
+  /** Opens the form filled with one of the user's listings; saving keeps its id, history and dates. */
+  openEdit(l: Listing): void {
+    this.isOpen = true;
+    this.editing = l;
+    this.place = null;
+    this.render();
+    this.fill(l);
+    this.el.hidden = false;
+    document.body.classList.add('add-open');
+    this.el.querySelector<HTMLElement>('input[name="title"]')?.focus();
+  }
+
+  get editingId(): string | null {
+    return this.isOpen ? (this.editing?.id ?? null) : null;
+  }
+
+  /** Puts a listing's values in the form (edit mode). */
+  private fill(l: Listing): void {
+    const f = this.form;
+    const set = (name: string, v: string | number | undefined | null) => {
+      const el = f.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+      if (el && v !== undefined && v !== null) el.value = String(v);
+    };
+    const check = (name: string, values: readonly string[]) =>
+      f.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`).forEach((el) => (el.checked = values.includes(el.value)));
+    const tx = l.transaction ?? 'sale';
+    set('transaction', tx);
+    set('price', tx === 'rent' ? undefined : l.price);
+    set('rentPrice', l.rentPrice ?? (tx === 'rent' ? l.price : undefined));
+    set('condoFee', l.condoFee);
+    set('iptu', l.iptu?.value);
+    set('iptuPeriod', l.iptu?.period);
+    check('feature', l.features);
+    check('guarantee', l.rentGuarantees ?? []);
+    set('type', l.type);
+    set('usage', l.usage);
+    set('title', l.title);
+    set('areaM2', l.areaM2);
+    set('totalAreaM2', l.totalAreaM2);
+    if (l.type !== 'land') set('landAreaM2', l.landAreaM2);
+    for (const k of ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking', 'unitFloor', 'floors', 'towers', 'yearBuilt'] as const)
+      set(k, l[k]);
+    set('status', l.status);
+    set('description', l.description);
+    for (const k of ['cep', 'street', 'number', 'complement', 'bairro', 'city'] as const) set(k, l.address?.[k] ?? (k === 'city' ? '' : undefined));
+    set('addressDisplay', l.addressDisplay ?? (l.approximateLocation ? 'neighborhood' : 'full'));
+    set('videoUrl', l.videoUrl);
+    set('tourUrl', l.tourUrl);
+    set('agency', l.agency);
+    for (const k of ['creci', 'contactName', 'whatsapp', 'phone', 'email'] as const) set(k, l.advertiser?.[k]);
+    set('referenceCode', l.referenceCode);
+    (f.elements.namedItem('exclusive') as HTMLInputElement).checked = !!l.exclusive;
+    this.el.querySelector<HTMLElement>('[data-exclusive]')!.hidden = !l.exclusive;
+    set('availability', l.availability);
+    set('highlight', l.highlight);
+    this.photos = (l.photos ?? []).map((p) => ({ ...p }));
+    this.floorPlan = l.floorPlanImage ?? null;
+    this.renderPhotos();
+    this.renderPlanStatus();
+    this.onTypeChange();
+    this.onTransactionChange();
+    // the place the listing already has
+    const centroid = (g: Polygon | MultiPolygon) =>
+      turfCentroid({ type: 'Feature', properties: {}, geometry: g }).geometry.coordinates as [number, number];
+    if (l.type === 'land' && l.lotPolygon) {
+      const { front, depth } = lotSize(l.areaM2);
+      this.lastLandCenter = centroid(l.lotPolygon);
+      this.setPlace({ kind: 'land', center: this.lastLandCenter, lot: l.lotPolygon, front, depth });
+    } else if (l.footprint && l.buildingOsmId) {
+      this.setPlace({ kind: 'building', osmId: l.buildingOsmId, center: centroid(l.footprint), geometry: l.footprint, height: l.buildingHeightM ?? 6 });
+    }
   }
 
   close(): void {
@@ -131,11 +208,13 @@ export class AddListingPanel {
     const buildingOnly = 'data-for="apartment house semi_detached"';
     this.el.innerHTML = `
       <div class="add-head">
-        <h2 id="add-title">Anunciar imóvel</h2>
+        <h2 id="add-title">${this.editing ? 'Editar anúncio' : 'Anunciar imóvel'}</h2>
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar formulário">×</button>
       </div>
       ${
-        remoteOrg
+        this.editing
+          ? '<p class="muted small">As mudanças valem ao salvar. Para mudar o local, use "Trocar local". Campos com * são obrigatórios.</p>'
+          : remoteOrg
           ? '<p class="muted small">Ao salvar, o anúncio é publicado para todos. Campos com * são obrigatórios.</p>'
           : `<p class="muted small">O anúncio fica salvo só neste navegador. Para publicar para todos, exporte o JSON e rode
         <code>npm run listings:add</code> (veja o README). Campos com * são obrigatórios.</p>`
@@ -203,6 +282,7 @@ export class AddListingPanel {
             <input name="photos" type="file" accept="image/*" multiple></label>
           <ul class="a-photos a-wide" aria-label="Fotos escolhidas"></ul>
           <label class="a-field a-wide">Planta (imagem)<input name="floorPlan" type="file" accept="image/*"></label>
+          <p class="a-plan a-wide" hidden><span></span> <button type="button" class="link-btn" data-action="remove-plan">Remover planta</button></p>
           <label class="a-field a-wide">Vídeo (link do YouTube ou Vimeo)<input name="videoUrl" type="url" placeholder="https://"></label>
           <label class="a-field a-wide">Tour 360° (link)<input name="tourUrl" type="url" placeholder="https://"></label>
         </fieldset>
@@ -237,7 +317,7 @@ export class AddListingPanel {
 
         <p class="a-error a-wide" role="alert" hidden></p>
         <div class="a-actions a-wide">
-          <button type="submit" class="btn-primary">Salvar anúncio</button>
+          <button type="submit" class="btn-primary">${this.editing ? 'Salvar alterações' : 'Salvar anúncio'}</button>
           <button type="button" class="btn-secondary" data-action="close">Cancelar</button>
         </div>
       </form>
@@ -258,6 +338,10 @@ export class AddListingPanel {
     input('cep').addEventListener('input', () => this.onCepInput());
     input('photos').addEventListener('change', () => void this.addPhotos());
     input('floorPlan').addEventListener('change', () => void this.setFloorPlan());
+    this.el.querySelector('[data-action="remove-plan"]')!.addEventListener('click', () => {
+      this.floorPlan = null;
+      this.renderPlanStatus();
+    });
     input('exclusive').addEventListener('change', () => {
       this.el.querySelector<HTMLElement>('[data-exclusive]')!.hidden = !input('exclusive').checked;
     });
@@ -319,7 +403,7 @@ export class AddListingPanel {
     if (!files.length) return;
     this.showError(null);
     try {
-      for (const f of files) this.photos.push({ src: await resizeImage(f) });
+      for (const f of files) this.photos.push({ src: await resizeImage(f), thumb: await makeThumb(f) });
     } catch {
       this.showError('Não foi possível ler uma das imagens. Use JPEG, PNG ou WebP.');
     }
@@ -329,11 +413,18 @@ export class AddListingPanel {
   private async setFloorPlan(): Promise<void> {
     const file = (this.form.elements.namedItem('floorPlan') as HTMLInputElement).files?.[0];
     try {
-      this.floorPlan = file ? await resizeImage(file, 1200, 0.8) : null;
+      this.floorPlan = file ? await resizeImage(file, 1200, 0.8) : this.floorPlan;
     } catch {
-      this.floorPlan = null;
       this.showError('Não foi possível ler a imagem da planta.');
     }
+    this.renderPlanStatus();
+  }
+
+  /** "Planta enviada" with a remove button, when there is one (edit mode keeps the current plan). */
+  private renderPlanStatus(): void {
+    const el = this.el.querySelector<HTMLElement>('.a-plan')!;
+    el.hidden = !this.floorPlan;
+    el.querySelector('span')!.textContent = '✓ Planta enviada.';
   }
 
   /** Thumbnails with caption, cover choice and removal. The cover is kept first in `photos`. */
@@ -343,7 +434,7 @@ export class AddListingPanel {
       this.photos
         .map(
           (p, i) => `<li>
-            <img src="${p.src}" alt="Foto ${i + 1}">
+            <img src="${escapeHtml(p.thumb ?? p.src)}" alt="Foto ${i + 1}">
             <label class="a-cover"><input type="radio" name="cover" value="${i}" ${i === 0 ? 'checked' : ''}> Capa</label>
             <input class="a-caption" data-i="${i}" maxlength="80" placeholder="Legenda" value="${escapeHtml(p.caption ?? '')}" aria-label="Legenda da foto ${i + 1}">
             <button type="button" class="link-btn" data-remove="${i}" aria-label="Remover foto ${i + 1}">Remover</button>
@@ -444,7 +535,7 @@ export class AddListingPanel {
       if (!p.building.residential)
         return this.pickHint('Esse prédio não é residencial no OpenStreetMap (ou tem nome próprio). Escolha outro.');
       const taken = this.deps.listingOnBuilding(p.building.osmId);
-      if (taken) return this.pickHint(`Esse prédio já tem um anúncio: "${taken.title}". Escolha outro.`);
+      if (taken && taken.id !== this.editing?.id) return this.pickHint(`Esse prédio já tem um anúncio: "${taken.title}". Escolha outro.`);
       const { geometry, height, osmId } = p.building;
       const center = turfCentroid({ type: 'Feature', properties: {}, geometry }).geometry.coordinates as [number, number];
       this.setPlace({ kind: 'building', osmId, center, geometry, height });
@@ -465,7 +556,7 @@ export class AddListingPanel {
     if (!area) return 'Informe uma área de lote entre 50 e 20.000 m².';
     const { front, depth } = lotSize(area);
     const lot = lotRectangle(center, front, depth);
-    const problem = this.deps.checker.lotProblem(lot, this.deps.otherLots());
+    const problem = this.deps.checker.lotProblem(lot, this.deps.otherLots(this.editing?.id));
     if (problem) {
       this.renderPlaceStatus(problem);
       return problem;
@@ -572,7 +663,8 @@ export class AddListingPanel {
 
     const place = this.place!;
     const remote = !!this.deps.remoteOrgName?.();
-    const id = this.deps.newId(TYPE_SLUG[type]);
+    const editing = this.editing;
+    const id = editing?.id ?? this.deps.newId(TYPE_SLUG[type]);
     const approximate = display !== 'full';
     const features = checked('feature') as Amenity[];
     const guarantees = tx !== 'sale' ? (checked('guarantee') as RentGuarantee[]) : [];
@@ -590,7 +682,7 @@ export class AddListingPanel {
       id,
       type,
       title,
-      agency: this.value('agency') || 'remote',
+      agency: editing?.remote ? editing.agency : this.value('agency') || 'remote',
       price,
       transaction: tx,
       ...(rentPrice ? { rentPrice: Math.round(rentPrice) } : {}),
@@ -628,14 +720,18 @@ export class AddListingPanel {
         ),
       ),
       ...opt('referenceCode', this.value('referenceCode')),
-      ...(exclusive ? { exclusive: true, ...opt('exclusivityDoc', doc?.name) } : {}),
+      ...(exclusive ? { exclusive: true, ...opt('exclusivityDoc', doc?.name ?? editing?.exclusivityDoc) } : {}),
       availability: this.value('availability') as Availability,
       highlight: this.value('highlight') as Highlight,
-      publishedAt: date,
+      publishedAt: editing?.publishedAt ?? date,
       updatedAt: date,
-      priceHistory: [{ date, price }],
-      ...(remote ? {} : { fictional: true as const }),
-      description: this.value('description') || (remote ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
+      // edit: history and reduction come from the price rules (withPriceChange / database trigger)
+      priceHistory: editing?.priceHistory ?? [{ date, price }],
+      ...(editing?.previousPrice ? { previousPrice: editing.previousPrice, priceReducedAt: editing.priceReducedAt } : {}),
+      ...((editing ? editing.fictional : !remote) ? { fictional: true as const } : {}),
+      ...(editing?.remote ? { remote: true as const } : {}),
+      ...(editing?.draft ? { draft: true as const } : {}),
+      description: this.value('description') || (remote || editing ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
       userAdded: true,
     };
     const btn = this.form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
@@ -643,13 +739,13 @@ export class AddListingPanel {
     btn.disabled = true;
     btn.textContent = 'Salvando…';
     try {
-      const error = await this.deps.onSave(listing, place.center);
+      const error = editing ? await this.deps.onUpdate(listing, place.center) : await this.deps.onSave(listing, place.center);
       if (error) return this.showError(error);
       this.close();
     } finally {
       this.saving = false;
       btn.disabled = false;
-      btn.textContent = 'Salvar anúncio';
+      btn.textContent = editing ? 'Salvar alterações' : 'Salvar anúncio';
     }
   }
 

@@ -15,6 +15,7 @@ import {
   transactionOf,
   type Availability,
 } from '../data/types';
+import { withPriceChange } from '../state/priceChange';
 import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
 import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
@@ -45,6 +46,8 @@ export class Drawer {
     private onDelete: (id: string) => Promise<string | null> = async () => null,
     /** Saves changes to one of the user's listings; resolves to an error message or null. */
     private onUpdate: (l: Listing) => Promise<string | null> = async () => null,
+    /** Opens the full edit form for one of the user's listings. */
+    private onEdit: (l: Listing) => void = () => {},
   ) {
     document.addEventListener('keydown', (e) => {
       if (!this.openId) return;
@@ -211,6 +214,16 @@ export class Drawer {
               <img src="${escapeHtml(slides[0].src)}" alt="${escapeHtml(slides[0].caption ?? `Foto 1 de ${slides.length}`)}">
               ${slides.length > 1 ? `<button type="button" class="gal-btn gal-prev" aria-label="Foto anterior">‹</button><button type="button" class="gal-btn gal-next" aria-label="Próxima foto">›</button>` : ''}
               <figcaption><span class="gal-pos">1/${slides.length}</span> <span class="gal-caption">${escapeHtml(slides[0].caption ?? '')}</span></figcaption>
+              ${
+                slides.length > 1
+                  ? `<div class="gal-strip">${slides
+                      .map(
+                        (p, i) => `<button type="button" data-slide="${i}" aria-label="Ver foto ${i + 1}" ${i === 0 ? 'aria-current="true"' : ''}>
+                          <img src="${escapeHtml(('thumb' in p && p.thumb) || p.src)}" alt="" loading="lazy"></button>`,
+                      )
+                      .join('')}</div>`
+                  : ''
+              }
             </figure>`
           : ''
       }
@@ -271,6 +284,9 @@ export class Drawer {
         l.userAdded
           ? `<section class="manage">
               <h3>Gerenciar anúncio</h3>
+              <button type="button" class="btn-primary manage-edit" data-action="edit">Editar anúncio</button>
+              <p class="a-hint">Título, local, fotos, capa, preço e todos os outros campos.</p>
+              <h4 class="manage-quick">Atualização rápida</h4>
               <form class="manage-form">
                 <label class="a-field">Situação<select name="availability">${AVAILABILITIES.map(
                   (a) => `<option value="${a}" ${a === (l.availability ?? 'active') ? 'selected' : ''}>${AVAILABILITY_LABELS[a]}</option>`,
@@ -301,6 +317,7 @@ export class Drawer {
       if (error) window.alert(error);
     });
     this.bindGallery(l);
+    this.el.querySelector('[data-action="edit"]')?.addEventListener('click', () => this.onEdit(l));
     this.el.querySelector<HTMLFormElement>('.manage-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
       void this.saveManage(l, e.currentTarget as HTMLFormElement);
@@ -333,7 +350,9 @@ export class Drawer {
       img.alt = photos[n].caption ?? `Foto ${n + 1} de ${photos.length}`;
       fig.querySelector('.gal-pos')!.textContent = `${n + 1}/${photos.length}`;
       fig.querySelector('.gal-caption')!.textContent = photos[n].caption ?? '';
+      fig.querySelectorAll('[data-slide]').forEach((b) => b.toggleAttribute('aria-current', Number((b as HTMLElement).dataset.slide) === n));
     };
+    fig.querySelectorAll<HTMLButtonElement>('[data-slide]').forEach((b) => b.addEventListener('click', () => show(Number(b.dataset.slide))));
     fig.querySelector('.gal-prev')!.addEventListener('click', () => show(Number(fig.dataset.index) - 1));
     fig.querySelector('.gal-next')!.addEventListener('click', () => show(Number(fig.dataset.index) + 1));
   }
@@ -348,22 +367,12 @@ export class Drawer {
       err.textContent = 'Informe um preço válido.';
       return;
     }
-    const date = today();
-    const next: Listing = { ...l, availability: fd.get('availability') as Availability, updatedAt: date };
     const newPrice = Math.round(price);
-    if (newPrice !== l.price) {
-      next.price = newPrice;
-      if (transactionOf(l) === 'rent') next.rentPrice = newPrice;
-      next.priceHistory = [...(l.priceHistory ?? [{ date: l.publishedAt ?? date, price: l.price }]), { date, price: newPrice }];
-      if (newPrice < l.price) {
-        // the struck-through price is the highest one since the last increase
-        next.previousPrice = Math.max(l.previousPrice ?? 0, l.price);
-        next.priceReducedAt = date;
-      } else {
-        delete next.previousPrice;
-        delete next.priceReducedAt;
-      }
-    }
+    const next = withPriceChange(
+      l,
+      { ...l, availability: fd.get('availability') as Availability, price: newPrice, ...(transactionOf(l) === 'rent' ? { rentPrice: newPrice } : {}) },
+      today(),
+    );
     const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
     btn.disabled = true;
     const error = await this.onUpdate(next);

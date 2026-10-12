@@ -32,6 +32,8 @@ import { DevelopmentPanel } from './ui/developmentPanel';
 import { countByStatus } from './data/developments';
 import { RemoteBackend, backendConfig } from './backend/remote';
 import { AccountPanel } from './ui/account';
+import { withPriceChange } from './state/priceChange';
+import { today } from './data/listingText';
 
 setWorkerUrl(workerUrl);
 // "pmtiles://" sources: vector tiles read from one static file with HTTP range requests.
@@ -169,6 +171,12 @@ async function main() {
     (id) => openListing(id, true),
     (id) => deleteUserListing(id),
     (l) => updateUserListing(l),
+    (l) => {
+      drawer.close();
+      account?.close();
+      addPanel.openEdit(l);
+      addToggle.setAttribute('aria-expanded', 'true');
+    },
   );
   const scene = new Scene($('#map'), data, themeFor(tod, lat, lon).theme, {
     // while the "Anunciar imóvel" form is open, the map is used to choose its place
@@ -317,6 +325,29 @@ async function main() {
     return null;
   }
 
+  /** Full edit from the "Anunciar" form in edit mode (same id). */
+  async function saveEditedListing(l: Listing, center: [number, number]): Promise<string | null> {
+    const before = listings.find((x) => x.id === l.id);
+    if (!before) return 'Este anúncio não existe mais.';
+    if (remote && l.remote) {
+      try {
+        await remote.updateListingFull(l, center);
+        await reloadRemote();
+      } catch (err) {
+        return (err as Error).message;
+      }
+    } else {
+      const next = userListings.map((x) => (x.id === l.id ? withPriceChange(before, l, today()) : x));
+      if (!saveUserListings(next))
+        return 'O navegador não permitiu salvar: falta espaço (as fotos ocupam espaço) ou o armazenamento está bloqueado.';
+      userListings = next;
+      listingsChanged();
+    }
+    announce(`Anúncio "${l.title}" atualizado.`);
+    setTimeout(() => openListing(l.id, true), 0);
+    return null;
+  }
+
   function downloadUserListings() {
     const json = JSON.stringify(exportUserListings(userListings, agencies), null, 2) + '\n';
     const a = document.createElement('a');
@@ -332,7 +363,7 @@ async function main() {
     scene,
     checker: new PlacementChecker(data, (layer, bbox) => scene.tileFeaturesIn(layer, bbox)),
     listingOnBuilding: (osmId) => listings.find((l) => l.buildingOsmId === osmId),
-    otherLots: () => listings.flatMap((l) => (l.lotPolygon ? [l.lotPolygon] : [])),
+    otherLots: (exceptId) => listings.flatMap((l) => (l.lotPolygon && l.id !== exceptId ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),
     bairroAt: (p) => scene.bairroAt(p),
     remoteOrgName: () => (remote ? (account?.currentOrg?.name ?? null) : null),
@@ -360,6 +391,7 @@ async function main() {
       setTimeout(() => openListing(l.id, true), 0);
       return null;
     },
+    onUpdate: saveEditedListing,
     onExport: downloadUserListings,
     userCount: () => userListings.length,
     onClose: () => {

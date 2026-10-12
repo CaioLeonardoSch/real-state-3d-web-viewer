@@ -206,6 +206,17 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(h.address).toEqual({ bairro: 'Centro', city: 'Joinville' });
   });
 
+  it('editar sem mudar de lugar mantém o círculo aproximado; mudar de lugar sorteia de novo', async () => {
+    const l = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'street' })).select('id').single();
+    const center = async () => (await anon().from('public_listings').select('location').eq('id', l.data!.id).single()).data!.location.coordinates;
+    const c0 = await center();
+    // mesmo ponto com diferença de arredondamento (como o centro recalculado no formulário)
+    await ana.client.from('listings').update({ title: 'Editado', location: point(-48.8500001, -26.3000001) }).eq('id', l.data!.id);
+    expect(await center()).toEqual(c0);
+    await ana.client.from('listings').update({ location: point(-48.86, -26.31) }).eq('id', l.data!.id);
+    expect(await center()).not.toEqual(c0);
+  });
+
   it('rascunho não aparece para o público', async () => {
     const d = await ana.client.from('listings').insert(listingRow(orgA, { published: false })).select('id').single();
     const pub = await anon().from('public_listings').select('id').eq('id', d.data!.id);
@@ -265,6 +276,11 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(pub.data).toEqual([{ path, caption: 'Sala' }]);
     const bad = await carla.client.storage.from('listing-photos').upload(`${orgA}/${l.data!.id}/invasao.jpg`, jpg);
     expect(bad.error).not.toBeNull();
+    expect((await carla.client.storage.from('listing-photos').list(`${orgA}/${l.data!.id}`)).data ?? []).toHaveLength(0);
+    expect((await bruno.client.storage.from('listing-photos').list(`${orgA}/${l.data!.id}`)).data).toHaveLength(1);
+    const rm = await carla.client.storage.from('listing-photos').remove([path]);
+    expect(rm.data ?? []).toHaveLength(0);
+    expect((await bruno.client.storage.from('listing-photos').list(`${orgA}/${l.data!.id}`)).data).toHaveLength(1);
     const badRow = await carla.client
       .from('listing_photos')
       .insert({ listing_id: l.data!.id, org_id: orgA, path: `${orgA}/${l.data!.id}/x.jpg` });

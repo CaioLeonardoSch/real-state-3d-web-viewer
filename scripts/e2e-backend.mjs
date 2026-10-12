@@ -246,6 +246,41 @@ try {
   }));
   check('o visitante vê a redução, mas não o histórico', /880\.000/.test(pubCut.was ?? '') && pubCut.history === 0, JSON.stringify(pubCut));
 
+  // ---- full edit: title, one photo out and one in, address down to the street
+  await page.click('#drawer [data-action="edit"]');
+  await page.waitForSelector('#add-panel:not([hidden]) input[name="title"]');
+  const editPhotos = await page.evaluate(() => document.querySelectorAll('#add-panel .a-photos img').length);
+  await page.fill('#add-panel input[name="title"]', 'Casa editada no backend');
+  await page.click('#add-panel [data-remove="0"]');
+  await page.setInputFiles('#add-panel input[name="photos"]', [{ name: 'nova.png', mimeType: 'image/png', buffer: PNG }]);
+  await page.waitForFunction(() => document.querySelectorAll('#add-panel .a-photos img').length === 2);
+  await page.click('#add-panel input[name="cover"][value="1"]');
+  await page.selectOption('#add-panel select[name="addressDisplay"]', 'street');
+  await page.click('#add-panel button:has-text("Salvar alterações")');
+  await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa editada no backend', null, { timeout: 20000 });
+  const editedMine = await page.evaluate(() => ({
+    pos: document.querySelector('#drawer .gal-pos')?.textContent,
+    strip: [...document.querySelectorAll('#drawer .gal-strip img')].map((i) => i.getAttribute('src')),
+    was: document.querySelector('#drawer .price-was s')?.textContent,
+  }));
+  const files = await svc.storage.from('listing-photos').list(editedMine.strip[0]?.split('/listing-photos/')[1]?.split('/').slice(0, 2).join('/'));
+  check('edição completa: título, fotos (com miniaturas) e capa salvos no servidor; a foto removida sai do storage',
+    editPhotos === 2 && editedMine.pos === '1/2' && editedMine.strip.length === 2 && editedMine.strip.every((u) => /-mini\.jpg$/.test(u ?? '')) &&
+      /880\.000/.test(editedMine.was ?? '') && files.data?.length === 4,
+    JSON.stringify({ editPhotos, ...editedMine, files: files.data?.map((f) => f.name) }));
+  await visitor.page.reload();
+  await visitor.page.waitForSelector('body[data-ready="true"]');
+  await visitor.page.click(`#results button[data-id="${id}"]`);
+  await sleep(600);
+  const pubEdited = await visitor.page.evaluate(() => ({
+    title: document.querySelector('#drawer h2')?.textContent,
+    address: document.querySelector('#drawer .drawer-address')?.textContent,
+    approx: !!document.querySelector('#drawer .notice-approx'),
+  }));
+  check('o visitante vê a edição, e sem o número quando o endereço passa a "só a rua"',
+    pubEdited.title === 'Casa editada no backend' && /Rua do Teste/.test(pubEdited.address ?? '') && !/123/.test(pubEdited.address ?? '') && pubEdited.approx,
+    JSON.stringify(pubEdited));
+
   // ---- session survives a reload; delete
   await page.reload();
   await page.waitForSelector('body[data-ready="true"]');
@@ -256,7 +291,10 @@ try {
   await sleep(600);
   await page.click('#drawer [data-action="delete"]');
   await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
-  check('a sessão continua após recarregar, e o anúncio pode ser excluído', stillIn === 'Imobiliária Teste Ação' && (await rows()) === before, stillIn);
+  const folder = editedMine.strip[0].split('/listing-photos/')[1].split('/').slice(0, 2).join('/');
+  const left = await svc.storage.from('listing-photos').list(folder);
+  check('a sessão continua após recarregar, e o anúncio pode ser excluído (com as fotos do storage)',
+    stillIn === 'Imobiliária Teste Ação' && (await rows()) === before && left.data?.length === 0, `${stillIn}; ${left.data?.length} arquivos`);
   check('sem erros no console', errors.length === 0 && visitor.errors.length === 0, [...errors, ...visitor.errors].join(' | '));
   await visitor.ctx.close();
 } finally {
