@@ -194,3 +194,70 @@ README). O que muda com backend:
    site mostra só os anúncios dela; a deduplicação da seção 5 fica para um eventual portal agregador.
 5. **Marca da imobiliária**: tema dinâmico por cliente (cores, logo, fontes, textos) aplicado ao mapa e ao site
    embutido, como configuração (seção 2).
+
+## 9. Como o produto chega ao site do cliente (conversa de 12/10/2026)
+
+**Como o mercado faz hoje.** A maioria dos sites de imobiliária no Brasil não é feita sob medida: vem de uma
+plataforma que vende CRM + site prontos (Kenlo, Jetimob, Tecimob, Univen, Vista e outras). Por isso os sites se
+parecem: mesma busca com filtros na lateral, mesma ficha do imóvel, só mudam logo e cores. A imobiliária aponta o
+domínio dela para a plataforma, e os anúncios saem do CRM, que também envia o XML para os portais (ZAP, VivaReal,
+Chaves na Mão).
+
+**Duas formas de entrarmos:**
+
+1. **Site completo (o principal).** Nós hospedamos o site inteiro com a marca do cliente: página inicial, busca com
+   filtros, mapa 3D, ficha do imóvel, contato. O cliente aponta o domínio para nós (um registro DNS, tipo CNAME, que
+   ele ou o técnico dele altera no Registro.br ou onde o domínio estiver), e o certificado HTTPS é emitido
+   automaticamente. É o modelo das plataformas acima, e o que justifica a assinatura com manutenção.
+2. **Busca embutida (a porta de entrada).** Para quem não quer trocar de site agora: um trecho de código (`<script>`
+   ou `<iframe>`) colocado numa página do site atual, por exemplo `imobiliariax.com.br/mapa`, mostra o nosso mapa e
+   a busca com os anúncios dele. Menos atrito para fechar o primeiro contrato; depois migra para o site completo.
+
+Nos dois casos os anúncios entram pela **importação do XML** do sistema atual do cliente, que é o mesmo arquivo que
+ele já manda para os portais. Assim ele não recadastra nada e pode continuar usando o CRM que tem.
+
+**Migração de um cliente novo (roteiro):**
+
+1. Cadastrar a imobiliária, o administrador dela e os corretores (convite por e-mail).
+2. Importar os anúncios pelo XML, com as fotos baixadas para o nosso storage, e conferir com o cliente.
+3. Configurar a marca (logo, cores, textos, contatos) e revisar o site num endereço provisório
+   (`imobiliariax.nossoproduto.com.br`).
+4. Virar o domínio (CNAME). Antes disso, mapear os endereços antigos dos imóveis para os novos com redirecionamento
+   301, senão o cliente perde a posição que já tem no Google.
+5. Acompanhar a primeira semana: contatos chegando, anúncios atualizados, Google indexando.
+
+**Papéis:** suporte da plataforma (nossa equipe: vê e corrige qualquer cliente, com registro de tudo o que faz),
+dono e administradores da imobiliária (gerenciam corretores e todos os anúncios dela), corretores (os próprios
+anúncios).
+
+## 10. Segurança
+
+**O Supabase é seguro para isso?** Sim, como plataforma: Postgres gerenciado, certificação SOC 2 Type 2,
+criptografia em trânsito e em repouso, proteção contra DDoS na frente da API, backups. É usado em produção por
+muitas empresas. Mas a segurança dos **nossos dados** depende das regras que nós escrevemos, e é aí que mora o risco.
+
+**"Qualquer um, até com uma IA, pode atacar o site?"** Pode tentar, e é por isso que as regras ficam no banco, não
+no site. A chave que vai no site é pública por natureza; com ela, sem login, só se lê o que é público (anúncios
+publicados, sem endereço oculto). Escrever exige login, e o banco confere em cada operação se a pessoa é da
+imobiliária dona do dado. Os testes automáticos (`npm run test:backend`) tentam exatamente esses ataques: visitante
+criando anúncio, corretor de uma imobiliária editando a outra, corretor se promovendo a administrador, forjando o
+preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
+
+**O que ainda falta fechar antes do primeiro cliente:**
+
+1. **Cadastro aberto de imobiliárias.** Hoje qualquer pessoa cria uma conta e cadastra uma imobiliária. Para um
+   produto vendido por contrato, só a nossa equipe deve criar imobiliárias, e corretores entram só por convite.
+2. **Papel de suporte da plataforma** com registro de auditoria (quem alterou o quê e quando), em vez de usar a
+   chave de serviço no dia a dia.
+3. **Lixeira em vez de exclusão definitiva**, mais backups com restauração a um ponto no tempo (plano Pro). Protege
+   contra erro humano e contra uma conta de corretor invadida.
+4. **Contas:** CAPTCHA no login e no cadastro (o Supabase integra hCaptcha e Turnstile), verificação em duas etapas
+   para administradores, recusa de senhas vazadas (recurso do plano Pro).
+5. **Limites contra abuso** quando houver formulário de contato público: limite de envios por IP e CAPTCHA.
+6. **Fotos sem localização:** fotos de celular carregam as coordenadas GPS de onde foram tiradas, o que revelaria o
+   endereço de quem escolheu escondê-lo. O site já remove esses dados ao redimensionar a foto; a importação por XML
+   precisa fazer o mesmo no servidor.
+7. **LGPD:** termos de uso, política de privacidade, contrato de tratamento de dados com cada imobiliária (ela é a
+   controladora dos dados dos clientes dela; nós somos operadores) e exclusão de dados a pedido.
+8. **Antes de lançar:** revisão de segurança por alguém de fora (teste de invasão), o "Security Advisor" do painel do
+   Supabase sem alertas e monitoramento de erros (Sentry).
