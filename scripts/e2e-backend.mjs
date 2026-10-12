@@ -7,12 +7,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { createClient } from '@supabase/supabase-js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'dist-backend';
 const PORT = 4179;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
@@ -37,13 +39,13 @@ async function waitIdle(page) {
   await sleep(400);
 }
 
-async function open(browser) {
+async function open(browser, url = URL_) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto(URL_);
+  await page.goto(url);
   await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
   await waitIdle(page);
   return { ctx, page, errors };
@@ -58,30 +60,96 @@ try {
     } catch {}
     await sleep(500);
   }
-  const { page, errors } = await open(browser);
+  const tag = Date.now().toString(36);
+  const PASSWORD = 'senha-segura-123';
+
+  // ---- someone without an invitation cannot create a client
+  const stranger = await open(browser);
+  check('"Entrar" aparece quando há backend', await stranger.page.isVisible('.account-toggle'));
+  await stranger.page.click('.add-toggle');
+  await sleep(300);
+  const note = await stranger.page.textContent('#account-panel .account-note');
+  check('"Anunciar" sem login abre a conta e explica', /Entre na sua conta/.test(note ?? ''), note);
+  await stranger.page.click('#account-panel [data-action="switch"]');
+  await stranger.page.fill('#account-panel input[name="name"]', 'Sem Convite');
+  await stranger.page.fill('#account-panel input[name="email"]', `sem-convite-${tag}@teste.local`);
+  await stranger.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await stranger.page.click('#account-panel button[type="submit"]');
+  await stranger.page.waitForSelector('#account-panel .account-empty', { timeout: 15000 });
+  const strangerUi = await stranger.page.evaluate(() => ({
+    orgForm: !!document.querySelector('#account-panel input[name="orgName"]'),
+    text: document.querySelector('#account-panel .account-empty')?.textContent ?? '',
+  }));
+  check('conta sem convite não cadastra imobiliária', !strangerUi.orgForm && /convite/.test(strangerUi.text), JSON.stringify(strangerUi));
+  await stranger.ctx.close();
+
+  // ---- the platform's support staff creates the client and invites its owner
+  const staffEmail = `suporte-${tag}@teste.local`;
+  const svc = createClient(status.API_URL, status.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const created = await svc.auth.admin.createUser({ email: staffEmail, password: PASSWORD, email_confirm: true });
+  await svc.from('platform_staff').insert({ user_id: created.data.user.id });
+  const staff = await open(browser);
+  await staff.page.click('.account-toggle');
+  await staff.page.fill('#account-panel input[name="email"]', staffEmail);
+  await staff.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await staff.page.click('#account-panel button[type="submit"]');
+  await staff.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 15000 });
+  const ownerEmail = `dona-${tag}@teste.local`;
+  await staff.page.fill('#account-panel input[name="orgName"]', 'Imobiliária Teste Ação');
+  const slug = await staff.page.inputValue('#account-panel input[name="orgSlug"]');
+  await staff.page.fill('#account-panel input[name="orgSlug"]', `${slug}-${tag}`);
+  await staff.page.fill('#account-panel input[name="ownerEmail"]', ownerEmail);
+  await staff.page.click('#account-panel form[data-form="org"] button[type="submit"]');
+  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 15000 });
+  const ownerLink = await staff.page.inputValue('#account-panel .org-result input');
+  await staff.page.screenshot({ path: path.join(SHOTS, 'backend-suporte.png') });
+  check('o suporte cadastra a imobiliária e recebe o link do convite do dono',
+    slug === 'imobiliaria-teste-acao' && /\?convite=[0-9a-f-]{36}$/.test(ownerLink), ownerLink);
+  await staff.ctx.close();
+
+  // ---- the owner opens the link, creates the account with the invited e-mail and accepts
+  const owner = await open(browser, ownerLink);
+  await owner.page.waitForSelector('#account-panel:not([hidden]) input[name="name"]', { timeout: 15000 });
+  const prefilled = await owner.page.inputValue('#account-panel input[name="email"]');
+  await owner.page.fill('#account-panel input[name="name"]', 'Dona Teste');
+  await owner.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await owner.page.click('#account-panel button[type="submit"]');
+  await owner.page.click('#account-panel [data-accept]', { timeout: 15000 });
+  await owner.page.waitForFunction(() => document.querySelector('.account-toggle')?.textContent === 'Imobiliária Teste Ação', null, { timeout: 15000 });
+  check('o dono entra pelo link (e-mail já preenchido) e aceita o convite', prefilled === ownerEmail && !(await owner.page.evaluate(() => location.search.includes('convite'))), prefilled);
+
+  // ---- the owner invites a broker from the team screen
+  const brokerEmail = `corretor-${tag}@teste.local`;
+  await owner.page.fill('#account-panel form[data-form="invite"] input[name="email"]', brokerEmail);
+  await owner.page.selectOption('#account-panel form[data-form="invite"] select[name="role"]', 'agent');
+  await owner.page.click('#account-panel form[data-form="invite"] button[type="submit"]');
+  await owner.page.waitForSelector('#account-panel .invite-result input', { timeout: 15000 });
+  const brokerLink = await owner.page.inputValue('#account-panel .invite-result input');
+  await owner.page.screenshot({ path: path.join(SHOTS, 'backend-equipe.png') });
+  const pendingShown = await owner.page.evaluate((e) => [...document.querySelectorAll('#account-panel .account-list li')].some((li) => li.textContent.includes(e)), brokerEmail);
+  check('o dono convida um corretor pela tela', /\?convite=/.test(brokerLink) && pendingShown, brokerLink);
+
+  // ---- the broker joins through the link and announces
+  const { page, errors } = await open(browser, brokerLink);
   const rows = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
   const before = await rows();
-
-  // ---- account
-  check('"Entrar" aparece quando há backend', await page.isVisible('.account-toggle'));
-  await page.click('.add-toggle');
-  await sleep(300);
-  const note = await page.textContent('#account-panel .account-note');
-  check('"Anunciar" sem login abre a conta e explica', /Entre na sua conta/.test(note ?? ''), note);
-  await page.click('#account-panel [data-action="switch"]');
-  const email = `corretor-${Date.now().toString(36)}@teste.local`;
+  await page.waitForSelector('#account-panel:not([hidden]) input[name="name"]', { timeout: 15000 });
   await page.fill('#account-panel input[name="name"]', 'Corretor Teste');
-  await page.fill('#account-panel input[name="email"]', email);
-  await page.fill('#account-panel input[name="password"]', 'senha-segura-123');
+  await page.fill('#account-panel input[name="password"]', PASSWORD);
   await page.click('#account-panel button[type="submit"]');
-  await page.waitForSelector('#account-panel input[name="orgName"]', { timeout: 15000 });
-  await page.fill('#account-panel input[name="orgName"]', 'Imobiliária Teste Ação');
-  const slug = await page.inputValue('#account-panel input[name="orgSlug"]');
-  await page.fill('#account-panel input[name="orgSlug"]', `${slug}-${Date.now().toString(36)}`);
-  await page.click('#account-panel button[type="submit"]');
-  await page.waitForFunction(() => /cadastrada/.test(document.querySelector('#account-panel .account-note')?.textContent ?? ''), null, { timeout: 15000 });
-  const toggle = await page.textContent('.account-toggle');
-  check('criar conta e cadastrar a imobiliária', slug === 'imobiliaria-teste-acao' && toggle === 'Imobiliária Teste Ação', `${slug} / ${toggle}`);
+  await page.waitForSelector('#account-panel [data-accept]', { timeout: 15000 });
+  await page.screenshot({ path: path.join(SHOTS, 'backend-convite.png') });
+  await page.click('#account-panel [data-accept]');
+  await page.waitForFunction(() => document.querySelector('.account-toggle')?.textContent === 'Imobiliária Teste Ação', null, { timeout: 15000 });
+  const brokerUi = await page.evaluate(() => ({ team: !!document.querySelector('#account-panel form[data-form="invite"]') }));
+  check('o corretor entra pelo link; corretor não vê a gestão da equipe', !brokerUi.team, JSON.stringify(brokerUi));
+  await owner.page.reload();
+  await owner.page.waitForSelector('body[data-ready="true"]');
+  await owner.page.click('.account-toggle');
+  await owner.page.waitForSelector('#account-panel li[data-user]');
+  const team = await owner.page.evaluate(() => [...document.querySelectorAll('#account-panel li[data-user]')].map((li) => li.textContent.replace(/\s+/g, ' ').trim()));
+  check('o dono vê o corretor na equipe', team.some((t) => t.includes('Corretor Teste')), JSON.stringify(team));
+  await owner.ctx.close();
   await page.keyboard.press('Escape');
 
   // ---- announce on a grey building, close up

@@ -374,11 +374,17 @@ async function main() {
       })
     : null;
   await account?.refresh();
+  // opened from an invitation link (?convite=…): show it right away
+  await account?.openFromLink();
   addToggle.addEventListener('click', () => {
     if (addPanel.opened) return addPanel.close();
     // with a back end, announcing needs a logged-in user working for a client
     if (account && !account.currentOrg) {
-      return account.open(account.loggedIn ? 'Cadastre a sua imobiliária para anunciar.' : 'Entre na sua conta para anunciar.');
+      return account.open(
+        account.loggedIn
+          ? 'Para anunciar, sua conta precisa estar ligada a uma imobiliária: aceite o convite que o administrador enviou.'
+          : 'Entre na sua conta para anunciar.',
+      );
     }
     account?.close();
     drawer.close();

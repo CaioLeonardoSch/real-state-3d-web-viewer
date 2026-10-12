@@ -46,16 +46,36 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
 
 ## 3. Primeiro uso
 
-1. **Entrar → Criar uma conta**, confirme o e-mail e entre.
-2. Cadastre a imobiliária (nome e endereço do site). Quem cadastra vira **dono**.
-3. **+ Anunciar**: o anúncio é publicado para todos ao salvar, com as fotos no storage.
-4. Para incluir corretores na imobiliária, por enquanto: a pessoa cria a conta, e você inclui pelo painel do
-   Supabase (**Table Editor → memberships**: `org_id` da imobiliária, `user_id` da pessoa, `role` = `agent`). A tela
-   de convite é o próximo passo.
+1. **Você vira suporte da plataforma** (uma vez): entre no site com **Entrar → Criar uma conta**, confirme o
+   e-mail e, no painel do Supabase, **SQL Editor**, rode:
+   ```sql
+   insert into public.platform_staff (user_id)
+   select id from auth.users where email = 'seu-email@exemplo.com';
+   ```
+   Ao entrar de novo, a sua conta mostra "suporte da plataforma".
+2. **Cadastrar um cliente:** em **Minha conta → Suporte: nova imobiliária**, informe o nome, o endereço do site e o
+   e-mail do dono. Aparece um **link de convite**: copie ou mande por WhatsApp. Só a equipe de suporte cadastra
+   imobiliárias; uma conta comum não consegue.
+3. **O dono entra pelo link**, cria a conta com o e-mail convidado (já vem preenchido) e clica em **Aceitar**.
+4. **O dono convida os corretores** em **Minha conta → Equipe** (e-mail e papel: corretor ou administrador). Cada
+   convite gera um link que vale 14 dias e só funciona para o e-mail convidado. Na mesma tela ele muda papéis,
+   remove pessoas e cancela convites.
+5. **+ Anunciar**: o anúncio é publicado ao salvar, com as fotos no storage.
+
+O suporte escolhe em **Atendendo** qual imobiliária está atendendo e pode corrigir anúncios e equipe de qualquer
+uma. Tudo o que muda (anúncios, equipe, convites, fotos) fica no registro de auditoria (`audit_log`), com quem fez,
+quando, o que mudou e se foi o suporte; os administradores de cada imobiliária leem o registro dela.
+
+Os e-mails de convite ainda não são enviados pelo sistema: quem convida manda o link. O envio automático entra
+junto com o e-mail próprio (SMTP) e uma função no servidor.
 
 ## O que o banco garante (testado)
 
+- Só a equipe de suporte cadastra imobiliárias; ninguém se coloca na equipe pelo site.
+- Corretores entram só por convite, e o convite só vale para o e-mail convidado, uma vez, por 14 dias. Corretor não
+  convida; administrador não cria dono; a imobiliária nunca fica sem dono.
 - Cada imobiliária vê e edita só os próprios anúncios; o corretor edita os dele, o dono/administrador edita todos.
+- O suporte atende qualquer imobiliária, e cada ação dele fica marcada no registro de auditoria.
 - O público lê por uma view que **esconde o endereço exato** quando o anunciante escolheu "só a rua" ou "só o
   bairro": sem ponto exato, sem prédio, sem número e sem CEP. O centro do círculo aproximado é sorteado no servidor.
 - O preço riscado é calculado pelo banco a partir do histórico; o anunciante não consegue digitar um "preço
@@ -69,8 +89,9 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 10 testes de permissão, privacidade, preço e storage contra o banco local
-npm run verify:backend  # navegador: criar conta → imobiliária → anunciar com fotos → visitante → preço → excluir
+npm run test:backend    # 16 testes de permissão, convites, auditoria, privacidade, preço e storage
+npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
+                        # corretor anuncia com fotos → visitante → preço → excluir (14 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

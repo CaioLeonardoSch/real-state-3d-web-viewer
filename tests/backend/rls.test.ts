@@ -14,7 +14,14 @@ const opts = { auth: { persistSession: false, autoRefreshToken: false } };
 const anon = () => createClient(URL_!, ANON, opts);
 const tag = Date.now().toString(36);
 
-async function userClient(name: string): Promise<{ client: SupabaseClient; id: string }> {
+interface User {
+  client: SupabaseClient;
+  id: string;
+  email: string;
+}
+const service = () => createClient(URL_!, SERVICE, opts);
+
+async function userClient(name: string): Promise<User> {
   const admin = createClient(URL_!, SERVICE, opts);
   const email = `${name}-${tag}@teste.local`;
   const password = 'senha-de-teste-123';
@@ -23,7 +30,13 @@ async function userClient(name: string): Promise<{ client: SupabaseClient; id: s
   const client = anon();
   const { error: e2 } = await client.auth.signInWithPassword({ email, password });
   if (e2) throw e2;
-  return { client, id: data.user.id };
+  return { client, id: data.user.id, email };
+}
+
+/** Accepts an invitation as `u`; fails the test on error. */
+async function accept(u: User, token: string) {
+  const r = await u.client.rpc('accept_invitation', { p_token: token });
+  expect(r.error).toBeNull();
 }
 
 const point = (lon: number, lat: number) => `SRID=4326;POINT(${lon} ${lat})`;
@@ -47,22 +60,93 @@ const listingRow = (org: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
-  let ana: { client: SupabaseClient; id: string }; // dona da imobiliária A
-  let bruno: { client: SupabaseClient; id: string }; // corretor da A
-  let carla: { client: SupabaseClient; id: string }; // dona da imobiliária B
+  let staff: User; // suporte da plataforma
+  let ana: User; // dona da imobiliária A
+  let bruno: User; // corretor da A
+  let carla: User; // dona da imobiliária B
   let orgA: string;
   let orgB: string;
 
   beforeAll(async () => {
-    [ana, bruno, carla] = await Promise.all([userClient('ana'), userClient('bruno'), userClient('carla')]);
-    const a = await ana.client.rpc('create_organization', { p_name: 'Imobiliária A', p_slug: `imob-a-${tag}` });
-    const b = await carla.client.rpc('create_organization', { p_name: 'Imobiliária B', p_slug: `imob-b-${tag}` });
+    [staff, ana, bruno, carla] = await Promise.all(['suporte', 'ana', 'bruno', 'carla'].map(userClient));
+    // a equipe só entra pelo painel (chave de serviço)
+    expect((await service().from('platform_staff').insert({ user_id: staff.id })).error).toBeNull();
+    const a = await staff.client.rpc('create_organization', { p_name: 'Imobiliária A', p_slug: `imob-a-${tag}`, p_owner_email: ana.email });
+    const b = await staff.client.rpc('create_organization', { p_name: 'Imobiliária B', p_slug: `imob-b-${tag}`, p_owner_email: carla.email.toUpperCase() });
     expect(a.error).toBeNull();
     expect(b.error).toBeNull();
-    orgA = a.data.id;
-    orgB = b.data.id;
-    const m = await ana.client.from('memberships').insert({ org_id: orgA, user_id: bruno.id, role: 'agent' });
-    expect(m.error).toBeNull();
+    orgA = a.data[0].id;
+    orgB = b.data[0].id;
+    await accept(ana, a.data[0].invite_token);
+    await accept(carla, b.data[0].invite_token); // e-mail do convite em maiúsculas: comparado sem diferença
+    const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: bruno.email, role: 'agent' }).select('token').single();
+    expect(inv.error).toBeNull();
+    await accept(bruno, inv.data!.token);
+  });
+
+  it('só a equipe da plataforma cadastra imobiliárias', async () => {
+    const r = await ana.client.rpc('create_organization', { p_name: 'Minha', p_slug: `minha-${tag}` });
+    expect(r.error?.message).toMatch(/equipe da plataforma/);
+    const direct = await ana.client.from('organizations').insert({ name: 'Direta', slug: `direta-${tag}` });
+    expect(direct.error).not.toBeNull();
+  });
+
+  it('convites: só o e-mail convidado aceita, uma vez, dentro do prazo', async () => {
+    const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: `novo-${tag}@teste.local`, role: 'agent' }).select('token').single();
+    const token = inv.data!.token;
+    const info = await anon().rpc('invitation_info', { p_token: token });
+    expect(info.data[0]).toMatchObject({ org_name: 'Imobiliária A', expired: false, accepted: false });
+    const wrong = await carla.client.rpc('accept_invitation', { p_token: token });
+    expect(wrong.error?.message).toMatch(/este convite é para novo-/);
+    const reused = await bruno.client.rpc('accept_invitation', { p_token: (await ana.client.from('invitations').select('token').eq('email', bruno.email).single()).data!.token });
+    expect(reused.error?.message).toMatch(/já foi usado/);
+    const late = await ana.client.from('invitations').insert({ org_id: orgA, email: carla.email, role: 'agent' }).select('id, token').single();
+    await service().from('invitations').update({ expires_at: '2020-01-01' }).eq('id', late.data!.id);
+    expect((await carla.client.rpc('accept_invitation', { p_token: late.data!.token })).error?.message).toMatch(/expirou/);
+  });
+
+  it('convites: corretor não convida; administrador não convida dono; convite pendente aparece para a pessoa', async () => {
+    const byAgent = await bruno.client.from('invitations').insert({ org_id: orgA, email: `x-${tag}@teste.local`, role: 'agent' });
+    expect(byAgent.error).not.toBeNull();
+    await ana.client.from('memberships').update({ role: 'admin' }).eq('org_id', orgA).eq('user_id', bruno.id);
+    const ownerByAdmin = await bruno.client.from('invitations').insert({ org_id: orgA, email: `y-${tag}@teste.local`, role: 'owner' });
+    expect(ownerByAdmin.error).not.toBeNull();
+    const ok = await bruno.client.from('invitations').insert({ org_id: orgA, email: carla.email, role: 'agent' });
+    expect(ok.error).toBeNull();
+    const pending = await carla.client.rpc('my_invitations');
+    expect(pending.data.map((p: { org_name: string }) => p.org_name)).toContain('Imobiliária A');
+    await ana.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', bruno.id);
+    await ana.client.from('invitations').delete().eq('org_id', orgA).eq('email', carla.email);
+    expect((await carla.client.rpc('my_invitations')).data).toHaveLength(0);
+  });
+
+  it('membros: a dona vê nome e e-mail da equipe dela; outra imobiliária não vê; o único dono não sai', async () => {
+    const m = await ana.client.rpc('org_members', { p_org: orgA });
+    expect(m.data.map((x: { email: string }) => x.email).sort()).toEqual([ana.email, bruno.email].sort());
+    expect((await carla.client.rpc('org_members', { p_org: orgA })).data).toHaveLength(0);
+    const leave = await ana.client.from('memberships').delete().eq('org_id', orgA).eq('user_id', ana.id);
+    expect(leave.error?.message).toMatch(/pelo menos um dono/);
+  });
+
+  it('suporte: edita anúncio de qualquer cliente, e fica registrado como suporte; o registro é só do cliente', async () => {
+    const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
+    const upd = await staff.client.from('listings').update({ title: 'Corrigido pelo suporte' }).eq('id', l.data!.id).select('id');
+    expect(upd.data).toHaveLength(1);
+    const orgs = await staff.client.rpc('my_organizations');
+    expect(orgs.data.map((o: { id: string }) => o.id)).toEqual(expect.arrayContaining([orgA, orgB]));
+    const log = await ana.client.from('audit_log').select('actor, actor_is_staff, action, changes').eq('row_id', l.data!.id).order('id');
+    expect(log.data!.map((e) => e.action)).toEqual(['INSERT', 'UPDATE']);
+    expect(log.data![1]).toMatchObject({ actor: staff.id, actor_is_staff: true, changes: { title: ['Apartamento de teste', 'Corrigido pelo suporte'] } });
+    expect(log.data![0]).toMatchObject({ actor: bruno.id, actor_is_staff: false });
+    expect((await carla.client.from('audit_log').select('id').eq('row_id', l.data!.id)).data).toHaveLength(0);
+    expect((await bruno.client.from('audit_log').select('id').eq('org_id', orgA)).data).toHaveLength(0); // corretor não lê
+    expect((await anon().from('audit_log').select('id')).data ?? []).toHaveLength(0);
+  });
+
+  it('ninguém se coloca na equipe da plataforma', async () => {
+    const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
+    expect(r.error).not.toBeNull();
+    expect((await ana.client.rpc('is_staff')).data).toBe(false);
   });
 
   it('visitante não cria cliente nem anúncio', async () => {
@@ -192,6 +276,8 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(promote.data ?? []).toHaveLength(0);
     const add = await bruno.client.from('memberships').insert({ org_id: orgA, user_id: carla.id, role: 'agent' });
     expect(add.error).not.toBeNull();
+    // a dona inclui pelo convite; incluir direto pelo id também é recusado para quem não é administrador
+    expect((await carla.client.rpc('org_members', { p_org: orgA })).data).toHaveLength(0);
   });
 
   it('busca por área do mapa devolve só publicados dentro do retângulo', async () => {

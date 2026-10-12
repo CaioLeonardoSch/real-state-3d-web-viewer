@@ -3,10 +3,11 @@
 Anotações de 09/10/2026. O protótipo começou 100% estático (arquivos em `public/data/` e anúncios no `localStorage`).
 Este documento lista o que precisa ir para um backend e como manter tudo rodando para vários clientes.
 
-**Situação (09/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
-imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS), 2 (criar, alterar situação e preço,
-excluir; busca por área com PostGIS) e 3 (fotos e planta no storage). Faltam: convite de corretores pela tela,
-edição completa do anúncio, miniaturas das fotos e os itens 4 a 13.
+**Situação (12/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
+imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imobiliárias cadastradas só pelo
+suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
+com PostGIS) e 3 (fotos e planta no storage). Faltam: edição completa do anúncio, miniaturas das fotos, envio
+automático dos convites por e-mail e os itens 4 a 13.
 
 ## 1. O que precisa estar no backend
 
@@ -245,10 +246,10 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
 
 **O que ainda falta fechar antes do primeiro cliente:**
 
-1. **Cadastro aberto de imobiliárias.** Hoje qualquer pessoa cria uma conta e cadastra uma imobiliária. Para um
-   produto vendido por contrato, só a nossa equipe deve criar imobiliárias, e corretores entram só por convite.
-2. **Papel de suporte da plataforma** com registro de auditoria (quem alterou o quê e quando), em vez de usar a
-   chave de serviço no dia a dia.
+1. ~~**Cadastro aberto de imobiliárias.**~~ Feito em 12/10/2026: só o suporte cadastra imobiliárias, e corretores
+   entram por convite (válido só para o e-mail convidado, uma vez, por 14 dias).
+2. ~~**Papel de suporte da plataforma** com registro de auditoria.~~ Feito em 12/10/2026 (`platform_staff`,
+   `audit_log`).
 3. **Lixeira em vez de exclusão definitiva**, mais backups com restauração a um ponto no tempo (plano Pro). Protege
    contra erro humano e contra uma conta de corretor invadida.
 4. **Contas:** CAPTCHA no login e no cadastro (o Supabase integra hCaptcha e Turnstile), verificação em duas etapas

@@ -4,11 +4,36 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Agency, Listing } from '../data/types';
 import { dataUrlToBlob, listingToRow, rowToListing, type ListingRow, type PhotoRow } from './mapping';
 
+export type Role = 'owner' | 'admin' | 'agent';
+
 export interface Org {
   id: string;
   name: string;
   slug: string;
-  role: 'owner' | 'admin' | 'agent';
+  /** Effective role; the platform's support staff act as owner of every client. */
+  role: Role;
+}
+
+export interface Member {
+  userId: string;
+  name: string | null;
+  email: string | null;
+  role: Role;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: Role;
+  token: string;
+  expiresAt: string;
+}
+
+export interface PendingInvitation {
+  token: string;
+  orgId: string;
+  orgName: string;
+  role: Role;
 }
 
 export interface PricePoint {
@@ -21,10 +46,11 @@ const PHOTOS = 'listing-photos';
 /** Message for the user from a Supabase/PostgREST error. */
 function fail(error: { message: string; code?: string } | null, what: string): void {
   if (!error) return;
+  // messages raised by our database functions are already in Portuguese and meant for the user
   const msg =
     error.code === '23505'
       ? 'já existe um registro com esse identificador'
-      : error.code === '42501' || /row-level security/i.test(error.message)
+      : /row-level security|permission denied/i.test(error.message)
         ? 'sem permissão para isso'
         : error.message;
   throw new Error(`${what}: ${msg}`);
@@ -68,24 +94,103 @@ export class RemoteBackend {
     await this.sb.auth.signOut();
   }
 
+  /** Clients the user works for (all of them for the support staff), with the effective role. */
   async myOrgs(): Promise<Org[]> {
-    const user = (await this.session())?.user;
-    if (!user) return [];
-    const { data, error } = await this.sb
-      .from('memberships')
-      .select('role, organizations(id, name, slug)')
-      .eq('user_id', user.id);
-    fail(error, 'Não foi possível ler seus clientes');
-    return (data ?? []).map((m) => {
-      const o = m.organizations as unknown as { id: string; name: string; slug: string };
-      return { id: o.id, name: o.name, slug: o.slug, role: m.role as Org['role'] };
-    });
+    if (!(await this.session())) return [];
+    const { data, error } = await this.sb.rpc('my_organizations');
+    fail(error, 'Não foi possível ler suas imobiliárias');
+    return (data ?? []) as Org[];
   }
 
-  async createOrg(name: string, slug: string): Promise<Org> {
-    const { data, error } = await this.sb.rpc('create_organization', { p_name: name, p_slug: slug });
-    fail(error, 'Não foi possível criar a imobiliária');
-    return { id: data.id, name: data.name, slug: data.slug, role: 'owner' };
+  async isStaff(): Promise<boolean> {
+    if (!(await this.session())) return false;
+    const { data } = await this.sb.rpc('is_staff');
+    return data === true;
+  }
+
+  /** Support staff only: new client, with an invitation for its first owner. Returns the invitation token. */
+  async createOrg(name: string, slug: string, ownerEmail: string): Promise<{ org: Org; inviteToken: string | null }> {
+    const { data, error } = await this.sb.rpc('create_organization', { p_name: name, p_slug: slug, p_owner_email: ownerEmail });
+    fail(error, 'Não foi possível cadastrar a imobiliária');
+    const row = data[0];
+    return { org: { id: row.id, name: row.name, slug: row.slug, role: 'owner' }, inviteToken: row.invite_token };
+  }
+
+  // ---------------------------------------------------------------- team and invitations
+
+  async members(orgId: string): Promise<Member[]> {
+    const { data, error } = await this.sb.rpc('org_members', { p_org: orgId });
+    fail(error, 'Não foi possível ler a equipe');
+    return (data ?? []).map((m: { user_id: string; full_name: string | null; email: string | null; role: Role }) => ({
+      userId: m.user_id,
+      name: m.full_name,
+      email: m.email,
+      role: m.role,
+    }));
+  }
+
+  async setRole(orgId: string, userId: string, role: Role): Promise<void> {
+    const { data, error } = await this.sb.from('memberships').update({ role }).eq('org_id', orgId).eq('user_id', userId).select('user_id');
+    fail(error, 'Não foi possível alterar o papel');
+    if (!data?.length) throw new Error('Não foi possível alterar o papel: sem permissão.');
+  }
+
+  async removeMember(orgId: string, userId: string): Promise<void> {
+    const { data, error } = await this.sb.from('memberships').delete().eq('org_id', orgId).eq('user_id', userId).select('user_id');
+    fail(error, 'Não foi possível remover');
+    if (!data?.length) throw new Error('Não foi possível remover: sem permissão.');
+  }
+
+  /** Pending invitations of a client (admins). */
+  async invitations(orgId: string): Promise<Invitation[]> {
+    const { data, error } = await this.sb
+      .from('invitations')
+      .select('id, email, role, token, expires_at')
+      .eq('org_id', orgId)
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at');
+    fail(error, 'Não foi possível ler os convites');
+    return (data ?? []).map((i) => ({ id: i.id, email: i.email, role: i.role, token: i.token, expiresAt: i.expires_at }));
+  }
+
+  /** Creates an invitation; returns its token (the link is sent by the admin, by e-mail or WhatsApp). */
+  async invite(orgId: string, email: string, role: Role): Promise<string> {
+    const { data, error } = await this.sb.from('invitations').insert({ org_id: orgId, email, role }).select('token').single();
+    fail(error, 'Não foi possível criar o convite');
+    return data!.token as string;
+  }
+
+  async cancelInvitation(id: string): Promise<void> {
+    fail((await this.sb.from('invitations').delete().eq('id', id)).error, 'Não foi possível cancelar o convite');
+  }
+
+  /** What an invitation link points to (works before login). */
+  async invitationInfo(token: string): Promise<{ orgName: string; email: string; role: Role; expired: boolean; accepted: boolean } | null> {
+    const { data, error } = await this.sb.rpc('invitation_info', { p_token: token });
+    if (error || !data?.length) return null;
+    const i = data[0];
+    return { orgName: i.org_name, email: i.email, role: i.role, expired: i.expired, accepted: i.accepted };
+  }
+
+  /** Invitations waiting for the logged-in user's e-mail. */
+  async myInvitations(): Promise<PendingInvitation[]> {
+    if (!(await this.session())) return [];
+    const { data, error } = await this.sb.rpc('my_invitations');
+    fail(error, 'Não foi possível ler seus convites');
+    return (data ?? []).map((i: { token: string; org_id: string; org_name: string; role: Role }) => ({
+      token: i.token,
+      orgId: i.org_id,
+      orgName: i.org_name,
+      role: i.role,
+    }));
+  }
+
+  /** Joins the client of the invitation; returns its id. */
+  async acceptInvitation(token: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('accept_invitation', { p_token: token });
+    fail(error, 'Não foi possível aceitar o convite');
+    return data as string;
   }
 
   // ---------------------------------------------------------------- listings
