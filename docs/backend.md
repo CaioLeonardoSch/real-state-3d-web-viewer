@@ -262,3 +262,43 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
    controladora dos dados dos clientes dela; nós somos operadores) e exclusão de dados a pedido.
 8. **Antes de lançar:** revisão de segurança por alguém de fora (teste de invasão), o "Security Advisor" do painel do
    Supabase sem alertas e monitoramento de erros (Sentry).
+
+## 11. Cobrança e contrato (proposta de 12/10/2026)
+
+**Quem paga:** a imobiliária (o cliente), não o corretor. O corretor é usuário da conta da imobiliária. Corretor
+autônomo entra como uma "imobiliária" de uma pessoa só, num plano menor.
+
+**Como cobrar:**
+- **Implantação** (valor único): migração dos anúncios pelo XML, configuração da marca, virada do domínio,
+  treinamento. Cobre o trabalho inicial e filtra quem não está comprometido.
+- **Mensalidade** por plano, com faixas por **número de anúncios ativos** e de **usuários** (é o que muda o custo
+  para nós: fotos, armazenamento, suporte). Exemplo de estrutura, com valores a validar em conversas com
+  imobiliárias:
+  | Plano | Para quem | Limites |
+  |---|---|---|
+  | Corretor | autônomo | 1 usuário, até 30 anúncios |
+  | Imobiliária | pequena e média | até 10 usuários, até 300 anúncios |
+  | Construtora / Rede | espelho de vendas, várias lojas | sob consulta |
+- **Plano anual** com desconto (por exemplo, 2 meses grátis), que reduz cancelamento e melhora o caixa.
+- **Período de teste** de 14 a 30 dias com os anúncios do cliente já importados: é o argumento de venda.
+
+**Meio de pagamento:** um gateway brasileiro com assinatura recorrente, boleto, Pix e cartão, avisos de cobrança
+automáticos e emissão de nota fiscal de serviço, como **Asaas** (o mais usado por SaaS pequeno no Brasil) ou Iugu.
+Stripe é ótimo para cartão, mas boleto/Pix e nota fiscal brasileira dão mais trabalho. Imobiliária costuma pagar por
+boleto ou Pix, então isso pesa.
+
+**Contrato:** termo de adesão aceito no cadastro (termos de uso + contrato de tratamento de dados da LGPD) e, para
+quem tem implantação, contrato assinado eletronicamente (Clicksign, ZapSign ou D4Sign).
+
+**Como o sistema valida o acesso:**
+1. Tabela `subscriptions` por imobiliária: plano, limites (anúncios, usuários), situação (`trialing`, `active`,
+   `past_due`, `suspended`, `canceled`) e data de vencimento.
+2. O gateway avisa cada pagamento ou atraso por **webhook** a uma função no servidor (Supabase Edge Function), que
+   atualiza a situação. A chave do gateway fica só no servidor.
+3. As regras ficam no banco, como as de permissão: com a assinatura em dia, tudo funciona; acima do limite, novos
+   anúncios ou convites são recusados com a mensagem do plano.
+4. **Inadimplência em etapas**, para não derrubar o site do cliente por um boleto atrasado: aviso no painel →
+   após ~10 dias, edição bloqueada (o site continua no ar) → após ~30 dias, site suspenso. Pagou, volta na hora.
+5. **Cancelamento:** o cliente exporta os anúncios (XML/planilha) e os dados são apagados após um prazo combinado
+   (por exemplo, 90 dias), como manda a LGPD.
+6. O suporte vê a situação de todos os clientes e pode dar carência manualmente, com registro na auditoria.
