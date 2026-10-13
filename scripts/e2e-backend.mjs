@@ -63,6 +63,8 @@ try {
     } catch {}
     await sleep(500);
   }
+  // with --strictPort, a busy port makes our server exit while another one answers (e.g. the demo build)
+  if (server.exitCode !== null) throw new Error(`a porta ${PORT} está ocupada por outro servidor`);
   const tag = Date.now().toString(36);
   const PASSWORD = 'senha-segura-123';
 
@@ -397,6 +399,65 @@ try {
       has(/Corretor Teste entrou na equipe como corretor/) && has(/convidou corretor-/),
     JSON.stringify(history.slice(0, 12)));
   await owner2.ctx.close();
+
+  // ---- the client's site (site.html): the owner customizes it, a visitor offers a property
+  const siteUrl = `${URL_}site.html?imobiliaria=${slug}-${tag}`;
+  const siteOpen = async (url) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(String(e)));
+    p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
+    await p.goto(url);
+    await p.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+    return { ctx, p, errs };
+  };
+  const ed = await siteOpen(`${siteUrl}&editar=1`);
+  check('site: visitante sem login não vê "Personalizar"; o editor pede o login de dono', await ed.p.isVisible('.editor .ed-login'));
+  await ed.p.fill('.editor [name=email]', ownerEmail);
+  await ed.p.fill('.editor [name=password]', PASSWORD);
+  await ed.p.click('.editor .ed-login button');
+  await ed.p.waitForSelector('.editor .ed-body', { timeout: 15000 });
+  await ed.p.click('.editor [data-template=escuro]');
+  await ed.p.click('.editor summary:has-text("Contatos e redes")');
+  await ed.p.fill('.editor [data-k="contacts.whatsapp"]', '(47) 98888-1234');
+  await ed.p.fill('.editor [data-k="name"]', 'Ação Imóveis');
+  await sleep(400);
+  await ed.p.click('.editor [data-save]');
+  await ed.p.waitForSelector('.toast:not([hidden])');
+  const savedBranding = (await svc.from('organizations').select('branding').eq('slug', `${slug}-${tag}`).single()).data.branding;
+  check('site: o dono personaliza e publica; fica salvo no banco já validado',
+    savedBranding.template === 'escuro' && savedBranding.name === 'Ação Imóveis' && savedBranding.contacts.whatsapp === '47988881234', JSON.stringify({ t: savedBranding.template, n: savedBranding.name }));
+  await ed.ctx.close();
+  const vis = await siteOpen(`${siteUrl}&p=anunciar`);
+  const look = await vis.p.evaluate(() => ({ theme: document.documentElement.dataset.theme, brand: document.querySelector('.brand-name')?.textContent, edit: !!document.querySelector('.edit-fab'), demo: !!document.querySelector('.demo-note') }));
+  check('site: o visitante vê a personalização, sem o botão de editar e sem aviso de demonstração', look.theme === 'dark' && look.brand === 'Ação Imóveis' && !look.edit && !look.demo, JSON.stringify(look));
+  await vis.p.selectOption('[name=x-finalidade]', 'Vender');
+  await vis.p.selectOption('[name=x-tipo]', 'Casa');
+  await vis.p.fill('[name=x-bairro]', 'Glória');
+  await vis.p.fill('main [name=name]', 'Proprietária Site');
+  await vis.p.fill('main [name=phone]', '(47) 97777-1111');
+  await vis.p.check('main [name=consent]');
+  await vis.p.click('main form.lead button[type=submit]');
+  await vis.p.waitForSelector('main .form-msg.ok', { timeout: 15000 });
+  await vis.p.screenshot({ path: path.join(SHOTS, 'backend-site.png') });
+  check('sem erros no console (site)', vis.errs.length === 0, vis.errs.join(' | '));
+  await vis.ctx.close();
+  const owner3 = await open(browser);
+  await owner3.page.click('.account-toggle');
+  await owner3.page.fill('#account-panel input[name="email"]', ownerEmail);
+  await owner3.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await owner3.page.click('#account-panel button[type="submit"]');
+  await owner3.page.click('#account-panel details[data-section="leads"] summary', { timeout: 15000 });
+  await owner3.page.waitForSelector('#account-panel .lead-origin', { timeout: 15000 });
+  const offer = await owner3.page.evaluate(() => {
+    const li = [...document.querySelectorAll('#account-panel .lead-item')].find((x) => x.textContent.includes('Proprietária Site'));
+    return { origin: li?.querySelector('.lead-origin')?.textContent, details: li?.querySelector('.lead-details')?.textContent };
+  });
+  const siteLink = await owner3.page.getAttribute('#account-panel [data-action=customize]', 'href');
+  check('a oferta de imóvel chega em Minha conta → Contatos, com as respostas; o dono tem o link "Personalizar o site"',
+    /anunciar/.test(offer.origin ?? '') && /Casa/.test(offer.details ?? '') && /Glória/.test(offer.details ?? '') && siteLink.includes('editar=1'), JSON.stringify(offer));
+  await owner3.ctx.close();
   check('sem erros no console', errors.length === 0 && visitor.errors.length === 0, [...errors, ...visitor.errors].join(' | '));
   await visitor.ctx.close();
 } finally {

@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
   const db = rest();
   const since = new Date(Date.now() - 10 * 60_000).toISOString();
   const [lead] = await db.get<LeadForEmail & { org_id: string; assigned_to: string | null }>(
-    `leads?id=eq.${leadId}&source=eq.form&notified_at=is.null&created_at=gt.${encodeURIComponent(since)}` +
-      '&select=id,org_id,listing_id,listing_title,assigned_to,name,email,phone,message,created_at',
+    `leads?id=eq.${leadId}&source=in.(form,contact,owner)&notified_at=is.null&created_at=gt.${encodeURIComponent(since)}` +
+      '&select=id,org_id,listing_id,listing_title,assigned_to,source,details,name,email,phone,message,created_at',
   );
   if (!lead) return json({ sent: false, reason: 'nada a avisar' });
 

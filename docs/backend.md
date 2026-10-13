@@ -8,7 +8,8 @@ imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imo
 suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
 com PostGIS; edição completa em 12/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
 dos itens 5 em diante: o 6 (páginas para o Google), o 8 (importação do XML) e o envio dos convites por e-mail
-ficaram prontos em 13/10/2026. Lixeira e histórico de alterações pela tela: 12/10/2026.
+ficaram prontos em 13/10/2026. Lixeira e histórico de alterações pela tela: 12/10/2026. Site configurável de cada
+imobiliária (white label, item 12): 13/10/2026.
 
 ## 1. O que precisa estar no backend
 
@@ -307,3 +308,76 @@ quem tem implantação, contrato assinado eletronicamente (Clicksign, ZapSign ou
 5. **Cancelamento:** o cliente exporta os anúncios (XML/planilha) e os dados são apagados após um prazo combinado
    (por exemplo, 90 dias), como manda a LGPD.
 6. O suporte vê a situação de todos os clientes e pode dar carência manualmente, com registro na auditoria.
+
+## 12. Site de cada imobiliária (conversa de 13/10/2026)
+
+**O que vimos no mercado de Joinville** (pelos prints enviados): GW Imóveis e Nozz usam o mesmo fornecedor
+(cabeçalho escuro com menu, busca com "Filtrar", "12 imóveis de 212", ordenação, grade/lista, cards com código,
+comparar, favorito e carrossel). A wPrime usa outro (filtros na lateral, mapa ou grade, preço sobre a foto). A The
+Office usa outro (tema escuro, muitos filtros no topo, chips removíveis). A 636 se destaca pela leveza: cabeçalho
+branco, busca rápida sobre a capa com o número de resultados no botão "Buscar", abas Todos / Prontos /
+Lançamentos, botão **"Apenas com desconto"** e filtros que não cansam (abrem só em "Filtros"). Os fornecedores
+desse mercado incluem Tecimob, apresenta.me, labbo e outros. Não fizemos uma análise detalhada dos produtos deles:
+a comparação abaixo vem dos prints e do que é comum nesses sites.
+
+**O que foi feito.** Um único código de site (`site.html`, `src/site/`) que monta o site de qualquer imobiliária
+a partir de uma **configuração** (dados, não código), guardada em `organizations.branding`:
+
+- **Marca:** nome, CRECI, logo (com altura), três cores (principal, destaque, cabeçalho), fundo claro ou escuro,
+  fontes (do sistema ou Google Fonts, de uma lista fechada) e cantos.
+- **Modelos prontos:** *Leve* (inspirado na 636), *Clássico* (GW/Nozz), *Filtros na lateral* (wPrime), *Escuro*
+  (The Office) e *Moderno*. Trocar o modelo muda cores, fontes e o jeito da busca, sem perder textos e contatos.
+- **Contatos e redes:** WhatsApp (botão flutuante e no topo), telefone, e-mail, endereço, horário, Instagram,
+  Facebook, YouTube, LinkedIn, TikTok.
+- **Menu** (itens e ordem): Comprar, Alugar, Lançamentos, Baixaram o preço, Mapa 3D, Sobre nós, Anunciar imóvel,
+  Contato, Favoritos.
+- **Página inicial:** título e subtítulo da capa, foto de capa, busca rápida no estilo da 636 e seções escolhidas e
+  ordenadas pelo cliente (destaques, baixaram o preço, chamada para o mapa 3D, lançamentos, bairros com mais
+  imóveis, recentes, sobre, "anuncie seu imóvel").
+- **Busca:** filtros na lateral ou no topo; aplicam na hora, sem botão "Aplicar"; chips removíveis; bairros como
+  chips no campo; quartos, suítes, banheiros e vagas em botões 1 2 3 4+; ordenação; grade, lista ou **mapa 3D**;
+  paginação; sugestão de qual filtro tirar quando não há resultado; a URL guarda a busca (link compartilhável).
+- **Cards:** carrossel de fotos, código, favorito, comparar, selos (destaque, lançamento, financiamento, permuta,
+  reservado), preço abaixo ou sobre a foto e **redução com o preço anterior riscado**.
+- **Página do imóvel:** galeria com miniaturas, ficha completa, vídeo, planta, tour 360, o **prédio em destaque no
+  mapa 3D**, WhatsApp com o código e o link do imóvel na mensagem, formulário de contato (LGPD), imóveis parecidos,
+  dados para o Google (JSON-LD) e endereço canônico apontando para a página estática do anúncio.
+- **Favoritos e comparação** (até 4 lado a lado, com a maior área e o menor valor do m² destacados), sem login.
+- **Sobre, Contato e Anunciar imóvel:** os formulários viram contatos em Minha conta → Contatos, com as respostas
+  (tipo, bairro, valor pretendido) e aviso por e-mail aos administradores. "Anunciar imóvel" é a **captação de
+  proprietários**, que o mercado costuma tratar como formulário solto.
+- **Editor "Personalizar site"** (dono e administradores; `?editar=1` ou link em Minha conta): pré-visualização
+  ao vivo, aviso de contraste das cores (WCAG) e correção automática da cor dos textos, envio de logo e fotos,
+  "Desfazer" e "Publicar alterações".
+
+**Onde ficamos à frente** (a confirmar com clientes):
+1. **Mapa 3D da cidade** dentro do site do cliente, filtrando junto com a busca, e o prédio do imóvel na ficha.
+2. **Desconto confiável:** "Apenas com desconto" e o preço riscado vêm do histórico registrado pela plataforma,
+   não de um "de/por" digitado.
+3. **Velocidade:** o site carrega cerca de 80 KB de código (menos de 30 KB compactado); o mapa 3D (1,2 MB) só
+   baixa quando o visitante abre a vista de mapa ou a ficha do imóvel. As páginas mudam sem recarregar.
+4. **O cliente muda o próprio site** e vê na hora, sem abrir chamado.
+5. **Acessibilidade:** contraste garantido, navegação por teclado, textos para leitores de tela.
+6. Captação de proprietários, contatos e WhatsApp no mesmo lugar (Minha conta → Contatos).
+
+**Segurança.** A configuração é escrita pelo cliente, então é tratada como dado não confiável: o site a valida
+campo a campo antes de usar (`normalizeSiteConfig`: cores só em `#rrggbb`, imagens só em `https`, redes sociais
+só no domínio da rede, listas só com valores conhecidos) e nunca a insere como HTML. No banco, a configuração
+precisa ser um objeto de no máximo 64 KB; endereço (slug) e domínio só o suporte muda. As imagens vão para o bucket
+`site-assets`, na pasta do cliente, só por donos e administradores, e sem SVG (que pode conter scripts: o editor
+converte SVG em PNG).
+
+**O que falta para colocar o site de um cliente no ar com o domínio dele:**
+1. **Hospedagem que atende vários domínios.** O GitHub Pages serve um domínio por repositório. Para vários
+   clientes, publicar o mesmo `dist/` num serviço que aceite domínios personalizados em quantidade com HTTPS
+   automático (Cloudflare Pages ou Cloudflare for SaaS, Vercel, Netlify). O site já descobre o cliente pelo
+   domínio (`organizations.custom_domain`) ou por `?imobiliaria=<slug>` no endereço provisório.
+2. **Páginas estáticas por cliente** para o Google (hoje a página estática é por anúncio, no endereço do mapa):
+   gerar a página inicial, a busca por bairro e as fichas no domínio de cada cliente, com o `sitemap.xml` dele.
+   Até lá, o Google indexa o site pelo JavaScript (funciona, mas é mais lento para entrar).
+3. Redirecionamentos 301 dos endereços antigos (ver item 9), página de política de privacidade e o CAPTCHA
+   (Turnstile) nos formulários, se aparecer spam.
+4. Ideias para depois: blog, páginas extras livres, banner com várias fotos na capa, "Seja corretor" (vagas),
+   alerta de imóvel novo por e-mail para a busca salva.
+
+*Anotado por Claude (assistente de IA), 13/10/2026, para consulta na manutenção.*

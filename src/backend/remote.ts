@@ -45,7 +45,10 @@ export interface Lead {
   listingId: string | null;
   listingTitle: string | null;
   assignedTo: string | null;
-  source: 'form' | 'whatsapp';
+  /** form: message on a listing; contact: the site's contact page; owner: "Anunciar imóvel" (an owner offering one). */
+  source: 'form' | 'whatsapp' | 'contact' | 'owner';
+  /** Extra answers of the site forms (e.g. type and neighbourhood of the property offered). */
+  details: Record<string, string> | null;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -88,6 +91,18 @@ export interface PricePoint {
 }
 
 const PHOTOS = 'listing-photos';
+const SITE_ASSETS = 'site-assets';
+
+/** A client as its public site sees it. */
+export interface SiteOrg {
+  id: string;
+  name: string;
+  slug: string;
+  creci: string | null;
+  customDomain: string | null;
+  /** Site configuration, unchecked (see src/site/config.ts). */
+  branding: unknown;
+}
 
 /** Message for the user from a Supabase/PostgREST error. */
 function fail(error: { message: string; code?: string } | null, what: string): void {
@@ -474,6 +489,7 @@ export class RemoteBackend {
       listingTitle: r.listing_title,
       assignedTo: r.assigned_to,
       source: r.source,
+      details: r.details ?? null,
       name: r.name,
       email: r.email,
       phone: r.phone,
@@ -512,6 +528,68 @@ export class RemoteBackend {
   }
 
   /** Price histories (visible to the listing's client only), oldest first. */
+  // ---------------------------------------------------------------- client's site
+
+  /** The client whose site is open: by its own domain, or by slug (?imobiliaria=). */
+  async siteOrg(by: { slug?: string; host?: string }): Promise<SiteOrg | null> {
+    let q = this.sb.from('organizations').select('id, name, slug, creci, custom_domain, branding');
+    if (by.slug) q = q.eq('slug', by.slug.toLowerCase());
+    else if (by.host) q = q.eq('custom_domain', by.host.toLowerCase().replace(/^www\./, ''));
+    else return null;
+    const { data, error } = await q.maybeSingle();
+    fail(error, 'Não foi possível ler a imobiliária');
+    return data ? { id: data.id, name: data.name, slug: data.slug, creci: data.creci, customDomain: data.custom_domain, branding: data.branding } : null;
+  }
+
+  /** Published listings of one client (what its site shows). */
+  async publicListingsOf(orgId: string): Promise<Listing[]> {
+    const { data, error } = await this.sb.from('public_listings').select('*').eq('org_id', orgId);
+    fail(error, 'Não foi possível carregar os anúncios');
+    const rows = (data ?? []) as ListingRow[];
+    const photos = await this.photosFor(rows.map((r) => r.id));
+    return rows.map((r) => rowToListing(r, photos, this.photoUrl, false));
+  }
+
+  /** Saves the site configuration (owners and admins; the database checks the size and the fields). */
+  async saveSiteConfig(orgId: string, config: unknown): Promise<void> {
+    const { error } = await this.sb.from('organizations').update({ branding: config }).eq('id', orgId);
+    fail(error, 'Não foi possível salvar o site');
+  }
+
+  /** Uploads a logo or banner (data URL prepared by the editor); returns its public URL. */
+  async uploadSiteImage(orgId: string, dataUrl: string, kind: 'logo' | 'capa' | 'sobre'): Promise<string> {
+    const blob = dataUrlToBlob(dataUrl);
+    const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${orgId}/${kind}-${Date.now().toString(36)}.${ext}`;
+    const up = await this.sb.storage.from(SITE_ASSETS).upload(path, blob, { contentType: blob.type });
+    fail(up.error, 'Não foi possível enviar a imagem');
+    return this.sb.storage.from(SITE_ASSETS).getPublicUrl(path).data.publicUrl;
+  }
+
+  /** Contact page or "Anunciar imóvel" form of the site (no listing). */
+  async submitSiteLead(orgId: string, source: 'contact' | 'owner', l: LeadInput, details: Record<string, string> = {}): Promise<void> {
+    const { data, error } = await this.sb.rpc('submit_site_lead', {
+      p_org: orgId,
+      p_source: source,
+      p_name: l.name,
+      p_email: l.email || null,
+      p_phone: l.phone || null,
+      p_message: l.message,
+      p_details: details,
+      p_consent: true,
+      p_consent_text: l.consentText,
+      p_trap: l.trap || null,
+    });
+    fail(error, 'Não foi possível enviar');
+    void this.sb.functions.invoke('notify-lead', { body: { lead_id: data } }).catch(() => {});
+  }
+
+  /** Whether the logged-in user may edit this client's site (owner, admin or platform support). */
+  async canEditSite(orgId: string): Promise<boolean> {
+    if (!(await this.session())) return false;
+    return (await this.myOrgs()).some((o) => o.id === orgId && (o.role === 'owner' || o.role === 'admin'));
+  }
+
   private async historyFor(ids: string[]): Promise<Map<string, PricePoint[]>> {
     const out = new Map<string, PricePoint[]>();
     if (!ids.length) return out;

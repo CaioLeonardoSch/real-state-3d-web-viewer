@@ -298,6 +298,92 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(mail.text).toMatch(/como corretor\(a\)/);
   }, 30_000);
 
+  describe('site do cliente', () => {
+    const consent = 'Concordo em compartilhar meus dados com a Imobiliária A.';
+    const siteLead = (source: string, extra: Record<string, unknown> = {}) => ({
+      p_org: orgA, p_source: source, p_name: 'Dono do imóvel', p_email: null,
+      p_phone: `(47) 9${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`, p_message: 'Quero vender',
+      p_consent: true, p_consent_text: consent, ...extra,
+    });
+
+    it('dono e admin editam a configuração do site; corretor e outra imobiliária não; o público lê', async () => {
+      const config = { template: 'escuro', name: 'A Imóveis', colors: { primary: '#123456' } };
+      expect((await ana.client.from('organizations').update({ branding: config }).eq('id', orgA)).error).toBeNull();
+      expect((await bruno.client.from('organizations').update({ branding: {} }).eq('id', orgA).select('id')).data ?? []).toHaveLength(0);
+      expect((await carla.client.from('organizations').update({ branding: {} }).eq('id', orgA).select('id')).data ?? []).toHaveLength(0);
+      const pub = await anon().from('organizations').select('name, slug, branding, custom_domain').eq('id', orgA).single();
+      expect(pub.data!.branding).toEqual(config);
+    });
+
+    it('endereço (slug) e domínio próprio: só o suporte muda; domínio inválido é recusado', async () => {
+      expect((await ana.client.from('organizations').update({ slug: `outro-${tag}` }).eq('id', orgA)).error?.message).toMatch(/suporte/);
+      expect((await ana.client.from('organizations').update({ custom_domain: `a-${tag}.com.br` }).eq('id', orgA)).error?.message).toMatch(/suporte/);
+      expect((await staff.client.from('organizations').update({ custom_domain: `imob-a-${tag}.com.br` }).eq('id', orgA)).error).toBeNull();
+      expect((await staff.client.from('organizations').update({ custom_domain: 'www.imob.com.br' }).eq('id', orgB)).error).not.toBeNull();
+      expect((await staff.client.from('organizations').update({ custom_domain: 'http://x' }).eq('id', orgB)).error).not.toBeNull();
+      const byHost = await anon().from('organizations').select('id').eq('custom_domain', `imob-a-${tag}.com.br`).single();
+      expect(byHost.data!.id).toBe(orgA);
+    });
+
+    it('configuração que não é objeto ou grande demais é recusada', async () => {
+      expect((await ana.client.from('organizations').update({ branding: ['x'] }).eq('id', orgA)).error).not.toBeNull();
+      const big = { about: { text: 'x'.repeat(70_000) + Math.random() } };
+      expect((await ana.client.from('organizations').update({ branding: big }).eq('id', orgA)).error).not.toBeNull();
+    });
+
+    it('contato pelo site e oferta de imóvel vão para os administradores, com as respostas do formulário', async () => {
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      const r = await anon().rpc('submit_site_lead', siteLead('owner', { p_details: { tipo: 'Casa', bairro: 'Glória', valor: '900000', vazio: '', [`k${'x'.repeat(80)}`]: 'y'.repeat(500) } }));
+      expect(r.error).toBeNull();
+      const row = (await ana.client.from('leads').select('*').eq('id', r.data).single()).data!;
+      expect(row).toMatchObject({ source: 'owner', listing_id: null, assigned_to: null, consent_text: consent });
+      expect(row.details).toMatchObject({ tipo: 'Casa', bairro: 'Glória', valor: '900000' });
+      expect('vazio' in row.details).toBe(false);
+      expect(Object.values(row.details).every((v) => (v as string).length <= 200)).toBe(true);
+      expect((await bruno.client.from('leads').select('id').eq('id', r.data)).data).toHaveLength(0); // sem responsável: só admins
+      expect((await carla.client.from('leads').select('id').eq('id', r.data)).data).toHaveLength(0);
+      expect((await ana.client.rpc('my_new_leads', { p_org: orgA })).data).toBeGreaterThanOrEqual(1);
+      // o corretor responsável não muda as respostas
+      await ana.client.from('leads').update({ assigned_to: bruno.id }).eq('id', r.data);
+      const upd = await bruno.client.from('leads').update({ details: { tipo: 'Outro' }, status: 'contacted' }).eq('id', r.data).select('details, status').single();
+      expect(upd.data).toMatchObject({ status: 'contacted', details: { tipo: 'Casa' } });
+    });
+
+    it('contato pelo site: mesmas proteções (consentimento, robô, tipo válido, cliente existente)', async () => {
+      expect((await anon().rpc('submit_site_lead', siteLead('contact', { p_consent: false }))).error?.message).toMatch(/concordar/);
+      expect((await anon().rpc('submit_site_lead', siteLead('form'))).error?.message).toMatch(/tipo de contato/);
+      expect((await anon().rpc('submit_site_lead', siteLead('contact', { p_org: '00000000-0000-0000-0000-000000000000' }))).error?.message).toMatch(/não encontrada/);
+      const bot = await anon().rpc('submit_site_lead', siteLead('contact', { p_trap: 'x', p_name: 'Robô do site' }));
+      expect(bot.error).toBeNull();
+      expect((await ana.client.from('leads').select('id').eq('name', 'Robô do site')).data).toHaveLength(0);
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+    });
+
+    it('imagens do site: admins enviam na pasta do cliente; corretor e outro cliente não; o público vê; SVG não', async () => {
+      const png = new Blob([Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' });
+      const path = `${orgA}/logo-${tag}.png`;
+      expect((await ana.client.storage.from('site-assets').upload(path, png, { contentType: 'image/png' })).error).toBeNull();
+      expect((await bruno.client.storage.from('site-assets').upload(`${orgA}/b-${tag}.png`, png, { contentType: 'image/png' })).error).not.toBeNull();
+      expect((await carla.client.storage.from('site-assets').upload(`${orgA}/c-${tag}.png`, png, { contentType: 'image/png' })).error).not.toBeNull();
+      const svg = new Blob(['<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'], { type: 'image/svg+xml' });
+      expect((await ana.client.storage.from('site-assets').upload(`${orgA}/x-${tag}.svg`, svg, { contentType: 'image/svg+xml' })).error).not.toBeNull();
+      const url = anon().storage.from('site-assets').getPublicUrl(path).data.publicUrl;
+      expect((await fetch(url)).status).toBe(200);
+    });
+
+    it.skipIf(!env.MAIL_LOG)('aviso por e-mail da oferta de imóvel vai aos administradores, com as respostas', async () => {
+      const { readFileSync } = await import(/* @vite-ignore */ 'node:fs' as string);
+      const id = (await anon().rpc('submit_site_lead', siteLead('owner', { p_name: 'Proprietário Pedro', p_details: { tipo: 'Terreno', bairro: 'Vila Nova' } }))).data;
+      const res = await fetch(`${URL_}/functions/v1/notify-lead`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: id }) }).then((r) => r.json());
+      expect(res).toEqual({ sent: true, to: 1 });
+      const sent = readFileSync(env.MAIL_LOG, 'utf8').trim().split('\n').map((l: string) => JSON.parse(l)).find((m: { text: string }) => m.text.includes('Proprietário Pedro'));
+      expect(sent.to).toEqual([ana.email]);
+      expect(sent.subject).toBe('Novo imóvel oferecido pelo site');
+      expect(sent.text).toMatch(/Tipo do imóvel: Terreno/);
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+    }, 30_000);
+  });
+
   it('ninguém se coloca na equipe da plataforma', async () => {
     const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
     expect(r.error).not.toBeNull();

@@ -21,3 +21,18 @@ describe('lead e-mail', () => {
     expect(waNumber('123')).toBeNull();
   });
 });
+
+describe('site leads e-mail', () => {
+  it('owner offering a property: own subject, answers listed, no listing link', () => {
+    const m = leadEmail(
+      { id: 'x', listing_id: null, listing_title: null, source: 'owner', details: { tipo: 'Casa', bairro: 'Glória <b>', valor: 'R$ 900 mil' }, name: 'João', email: null, phone: '47999998888', message: null, created_at: '2026-10-13T15:00:00Z' },
+      'Imob',
+      'https://site.com.br',
+    );
+    expect(m.subject).toBe('Novo imóvel oferecido pelo site');
+    expect(m.text).toMatch(/Tipo do imóvel: Casa/);
+    expect(m.text).toMatch(/Valor pretendido: R\$ 900 mil/);
+    expect(m.text).not.toMatch(/Ver o anúncio/);
+    expect(m.html).toMatch(/Glória &lt;b&gt;/);
+  });
+});

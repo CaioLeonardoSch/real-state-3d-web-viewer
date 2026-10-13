@@ -65,13 +65,43 @@ interface HistoryState {
   pristine?: boolean;
 }
 
+/**
+ * Map embedded in a client's site (src/site): ?embed=1&site=<agency>&cor=<hex>&pagina=<listing page with __ID__>.
+ * Only that client's listings, no top bar; the site sends the ids of its search results (postMessage).
+ */
+const embedParams = new URLSearchParams(location.search);
+const embed = embedParams.get('embed') === '1'
+  ? {
+      agency: embedParams.get('site'),
+      focus: embedParams.get('foco'),
+      // the site's listing page; only on this same origin
+      page: (() => {
+        try {
+          const u = new URL(embedParams.get('pagina') ?? '', location.href);
+          return u.origin === location.origin && u.href.includes('__ID__') ? u.href : null;
+        } catch {
+          return null;
+        }
+      })(),
+    }
+  : null;
+if (embed) {
+  document.body.classList.add('embed');
+  const cor = embedParams.get('cor');
+  if (cor && /^[0-9a-f]{6}$/i.test(cor)) {
+    document.documentElement.style.setProperty('--accent', `#${cor}`);
+    document.documentElement.style.setProperty('--accent-strong', `#${cor}`);
+  }
+}
+
 async function main() {
   status.textContent = 'Carregando o mapa…';
   const data = await loadData();
   const [lon, lat] = data.meta.center; // centre of the region, see scripts/extract-region.py
   const agencies = [...data.listings.agencies];
   // demo listings (listings.json); a client's site can hide them with VITE_DEMO_LISTINGS=false
-  const baseListings = import.meta.env.VITE_DEMO_LISTINGS === 'false' ? [] : data.listings.listings;
+  const ofSite = (list: Listing[]) => (embed?.agency ? list.filter((l) => l.agency === embed.agency) : list);
+  const baseListings = ofSite(import.meta.env.VITE_DEMO_LISTINGS === 'false' ? [] : data.listings.listings);
   // With a back end (Supabase), listings come from it; without one, "Anunciar" keeps them in this browser.
   let remote: RemoteBackend | null = null;
   let remoteListings: Listing[] = [];
@@ -79,7 +109,7 @@ async function main() {
     try {
       remote = await RemoteBackend.connect(backendConfig.url, backendConfig.key);
       const r = await remote.loadListings();
-      remoteListings = r.listings;
+      remoteListings = ofSite(r.listings);
       mergeAgencies(r.agencies);
     } catch (err) {
       console.error(err);
@@ -91,7 +121,8 @@ async function main() {
   }
   let userListings = remote ? [] : loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
   let listings = [...baseListings, ...remoteListings, ...userListings];
-  const developments = data.developments;
+  // the sales charts are a demo of a developer: not inside an agency's site
+  const developments = embed ? [] : data.developments;
   const known = {
     agencyIds: new Set(agencies.map((a) => a.id)),
     listingIds: new Set(listings.map((l) => l.id)),
@@ -215,8 +246,9 @@ async function main() {
           },
     );
     if (syncingFromUrl) return;
-    // A new entry when the drawer opens, so the browser's back button closes it.
-    if (wasOpen) replaceUrl();
+    // A new entry when the drawer opens, so the browser's back button closes it. Not inside a site: the frame's
+    // history would mix with the site's.
+    if (wasOpen || embed) replaceUrl();
     else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
   }
 
@@ -276,7 +308,7 @@ async function main() {
     if (!remote) return;
     const r = await remote.loadListings();
     mergeAgencies(r.agencies);
-    remoteListings = r.listings;
+    remoteListings = ofSite(r.listings);
     listingsChanged();
   }
 
@@ -423,8 +455,13 @@ async function main() {
     };
     account.openListing = (id) => openListing(id, true);
   }
+  if (embed?.page) {
+    const page = embed.page;
+    drawer.pageInSite = true;
+    drawer.pageFor = (id) => page.replace('__ID__', encodeURIComponent(id));
+  }
   // pages built at publish time (scripts/prerender.mjs): link to share, with a preview
-  fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
+  if (!embed) fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
     .then((r) => (r.ok ? r.json() : {}))
     .then((pages: Record<string, string>) => {
       drawer.pageFor = (id) => (pages[id] ? new URL(`${import.meta.env.BASE_URL}${pages[id]}`, location.href).href : null);
@@ -556,6 +593,30 @@ async function main() {
   status.textContent = '';
   document.body.dataset.ready = 'true';
 
+  if (embed) {
+    // the site's search results: only those stay lit, and the camera frames them
+    window.addEventListener('message', (e) => {
+      const msg = e.data as { type?: string; ids?: unknown; rent?: unknown };
+      if (e.origin !== location.origin || e.source !== window.parent || msg?.type !== 'site-results' || !Array.isArray(msg.ids)) return;
+      const rent = msg.rent === true;
+      if ((store.getApplied().transaction === 'rent') !== rent) {
+        store.setPending({ ...EMPTY_CRITERIA, transaction: rent ? 'rent' : null });
+        store.apply();
+      }
+      const ids = new Set(msg.ids.filter((x): x is string => typeof x === 'string'));
+      currentList = sortListings(listings.filter((l) => ids.has(l.id)), sort, rent);
+      scene.setMatched(ids);
+      if (drawer.currentId && !ids.has(drawer.currentId)) drawer.close();
+      if (currentList.length) scene.fitToListings(currentList);
+    });
+    const focus = embed.focus ? listings.find((l) => l.id === embed.focus) : undefined;
+    if (focus) {
+      scene.flyToListing(focus);
+      scene.select(focus.id);
+    }
+    if (window.parent !== window) window.parent.postMessage({ type: 'map-ready' }, location.origin);
+  }
+
   // Hook for automated browser checks (scripts/e2e-check.mjs). Read-only helpers.
   (window as unknown as { __demo: unknown }).__demo = {
     map: scene.map,
@@ -564,6 +625,7 @@ async function main() {
     },
     project: (id: string) => scene.projectListing(id),
     isHighlighted: (id: string) => scene.isHighlighted(id),
+    isMatched: (id: string) => scene.isMatched(id),
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     developmentIds: developments.map((d) => d.id),
   };

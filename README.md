@@ -83,6 +83,7 @@ recentes**.
 ```bash
 npm run validate:data   # valida listings.json contra os GeoJSON do OSM
 npm run build && npm run verify:e2e   # Playwright: abre o app, testa interações e salva screenshots em docs/screenshots/
+npm run build && npm run verify:site  # Playwright: o site das imobiliárias (busca, favoritos, comparar, mapa embutido, editor)
 ```
 
 O `verify:e2e` usa o Chromium indicado em `CHROMIUM_PATH` ou, se existir, `/opt/pw-browsers/chromium`. Caso
@@ -107,6 +108,21 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
 
 Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
 `npm run db:start`, `npm run test:backend` e `npm run verify:backend`.
+
+## Site de cada imobiliária (white label)
+
+`site.html` monta o site completo de uma imobiliária a partir da configuração dela (marca, cores, fontes, contatos,
+menu, textos, seções da página inicial e jeito da busca), com cinco modelos prontos inspirados no que o mercado de
+Joinville usa. Tem página inicial com busca rápida, busca com filtros (lateral ou no topo), chips, "Apenas com
+desconto", grade, lista ou **mapa 3D** (o mapa deste projeto embutido, só com os imóveis da imobiliária e aceso
+conforme a busca), ficha do imóvel com o prédio no mapa, favoritos, comparação, Sobre, Contato e Anunciar imóvel
+(captação de proprietários). O dono edita tudo em **Personalizar site**, com pré-visualização ao vivo.
+
+- Demonstração: `site.html` (Exemplo A, modelo *Leve*) e `site.html?imobiliaria=exemplo-b` (modelo *Escuro*),
+  configurados em `public/data/sites.json`. Na demonstração, a personalização fica salva só no navegador.
+- Com backend: `site.html?imobiliaria=<slug>` ou o domínio próprio do cliente; configuração em
+  `organizations.branding`.
+- Código em `src/site/`; decisões e comparação com o mercado no item 12 de [`docs/backend.md`](docs/backend.md).
 
 ## Empreendimentos: espelho de vendas 3D
 
@@ -262,12 +278,13 @@ tamanho do `.pmtiles` cresce, mas o que cada visitante baixa continua sendo só 
 scripts/        download-osm, extract-region.py, build-tiles, generate-listings, generate-developments,
                 validate-listings, add-listings, e2e-check; lib/ (altura, residencial, gravador PMTiles)
 scripts/data/   região (bairros) e empreendimentos
-public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json
+public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json + sites.json (sites de demonstração)
 src/data/       tipos, validação em tempo de carga, carregamento
 src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
                 anúncios salvos no navegador (userListings)
 src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação (suncalc)
 src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
+src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, páginas, editor
 src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
 scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)
 docs/           screenshots e análise da concorrência (docs/analise-concorrencia.md)

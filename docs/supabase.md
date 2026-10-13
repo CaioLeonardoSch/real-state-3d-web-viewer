@@ -134,9 +134,25 @@ Observações: o GitHub desliga as execuções agendadas de repositórios sem at
 No endereço do GitHub Pages de projeto, o `robots.txt` não fica na raiz do domínio, então o Google não o lê; com
 domínio próprio passa a valer.
 
+## 8. Site da imobiliária
+
+Cada imobiliária tem um site com a marca dela em `site.html?imobiliaria=<slug>` (o slug é o do cadastro). Para
+personalizar: entre como dono ou administrador e use **Minha conta → Personalizar o site** (ou abra o site com
+`&editar=1`). As alterações aparecem na hora para quem editar e, depois de **Publicar alterações**, para todos.
+Logo e fotos vão para o bucket `site-assets`.
+
+**Domínio próprio:** o suporte grava o domínio em `organizations.custom_domain` (sem `www.`, por exemplo
+`suaimobiliaria.com.br`) e o cliente aponta o DNS para a hospedagem. O site reconhece o cliente pelo domínio.
+O GitHub Pages atende um domínio só; para vários clientes, ver o item 12 de [`backend.md`](backend.md).
+
+Os formulários "Contato" e "Anunciar imóvel" do site chegam em Minha conta → Contatos (para os administradores) e
+por e-mail, como os contatos dos anúncios.
+
 ## O que o banco garante (testado)
 
 - Só a equipe de suporte cadastra imobiliárias; ninguém se coloca na equipe pelo site.
+- Só dono e administradores mudam o site da imobiliária (configuração de até 64 KB); endereço e domínio, só o
+  suporte. Imagens do site só na pasta do próprio cliente, sem SVG.
 - Corretores entram só por convite, e o convite só vale para o e-mail convidado, uma vez, por 14 dias. Corretor não
   convida; administrador não cria dono; a imobiliária nunca fica sem dono.
 - Cada imobiliária vê e edita só os próprios anúncios; o corretor edita os dele, o dono/administrador edita todos.

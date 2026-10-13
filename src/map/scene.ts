@@ -641,6 +641,11 @@ export class Scene {
   }
 
   /** Current hover state of a listing (used by automated checks). */
+  /** Lit by the current search (not dimmed). */
+  isMatched(listingId: string): boolean {
+    return this.listingFeatures.some((f) => f.properties.listingId === listingId && f.properties.matched);
+  }
+
   isHighlighted(listingId: string): boolean {
     const id = this.featureIdByListing.get(listingId);
     return id !== undefined && this.hoveredId === id;

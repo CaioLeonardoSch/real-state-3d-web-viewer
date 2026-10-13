@@ -24,7 +24,8 @@
     "db:start": "supabase start -x realtime,studio,imgproxy,logflare,vector,supavisor,postgres-meta,mailpit",
     "db:reset": "supabase db reset",
     "verify:backend": "node scripts/e2e-backend.mjs",
-    "import:xml": "node scripts/import-xml.mjs"
+    "import:xml": "node scripts/import-xml.mjs",
+    "verify:site": "node scripts/e2e-site.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

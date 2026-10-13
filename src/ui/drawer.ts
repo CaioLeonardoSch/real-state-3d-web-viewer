@@ -43,6 +43,8 @@ export class Drawer {
   contact: ContactHandlers | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
+  /** Inside a client's site (map embedded): the link opens the site's own listing page in the same tab. */
+  pageInSite = false;
   private openId: string | null = null;
   private nav: DrawerNav | null = null;
   private swipeStartY: number | null = null;
@@ -219,7 +221,10 @@ export class Drawer {
       ${address ? `<p class="drawer-address">📍 ${escapeHtml(address)}</p>` : ''}
       ${(() => {
         const page = this.pageFor(l.id);
-        return page ? `<p class="page-link"><a href="${escapeHtml(page)}" target="_blank" rel="noopener">Página do anúncio (para compartilhar) ↗</a></p>` : '';
+        if (!page) return '';
+        return this.pageInSite
+          ? `<p class="page-link"><a class="btn-primary site-page-link" href="${escapeHtml(page)}" target="_top">Ver fotos e detalhes</a></p>`
+          : `<p class="page-link"><a href="${escapeHtml(page)}" target="_blank" rel="noopener">Página do anúncio (para compartilhar) ↗</a></p>`;
       })()}
       </div>
       ${

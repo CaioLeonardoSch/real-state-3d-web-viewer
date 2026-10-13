@@ -235,7 +235,15 @@ export class AccountPanel {
   private renderLeads(body: HTMLElement, leads: Lead[], members: Member[]): void {
     const admin = this.org!.role === 'owner' || this.org!.role === 'admin';
     const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const form = leads.filter((l) => l.source === 'form');
+    // messages (on a listing or through the site); WhatsApp clicks are only counted
+    const form = leads.filter((l) => l.source !== 'whatsapp');
+    const DETAIL_LABELS: Record<string, string> = { finalidade: 'Quer', tipo: 'Tipo', bairro: 'Bairro', valor: 'Valor pretendido', area: 'Área', quartos: 'Quartos', assunto: 'Assunto' };
+    const origin = (l: Lead) =>
+      l.source === 'owner'
+        ? '<span class="lead-origin">Quer anunciar um imóvel (pelo site)</span>'
+        : l.source === 'contact'
+          ? '<span class="lead-origin">Contato pelo site</span>'
+          : `<button type="button" class="link-btn lead-listing" data-open="${l.listingId ?? ''}" ${l.listingId ? '' : 'disabled'}>${escapeHtml(l.listingTitle ?? 'anúncio removido')}</button>`;
     const clicks = leads.length - form.length;
     const statusOptions = (cur: LeadStatus) =>
       (Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${LEAD_STATUS_LABELS[k]}</option>`).join('');
@@ -247,10 +255,19 @@ export class AccountPanel {
         form.length
           ? `<ul class="lead-list">${form
               .map((l) => {
-                const wa = l.phone ? whatsappLink(l.phone, `Olá, ${l.name?.split(' ')[0] ?? ''}! Aqui é da ${this.org!.name}, sobre "${l.listingTitle ?? 'o imóvel'}".`) : null;
+                const wa = l.phone ? whatsappLink(l.phone, `Olá, ${l.name?.split(' ')[0] ?? ''}! Aqui é da ${this.org!.name}, sobre ${
+                  l.source === 'owner' ? 'o imóvel que você quer anunciar' : l.source === 'contact' ? 'sua mensagem pelo site' : `"${l.listingTitle ?? 'o imóvel'}"`
+                }.`) : null;
                 return `<li class="lead-item status-${l.status}" data-lead="${l.id}">
                   <div class="lead-head"><strong>${escapeHtml(l.name ?? 'Sem nome')}</strong><time>${when(l.createdAt)}</time></div>
-                  <button type="button" class="link-btn lead-listing" data-open="${l.listingId ?? ''}" ${l.listingId ? '' : 'disabled'}>${escapeHtml(l.listingTitle ?? 'anúncio removido')}</button>
+                  ${origin(l)}
+                  ${
+                    l.details && Object.keys(l.details).length
+                      ? `<dl class="lead-details">${Object.entries(l.details)
+                          .map(([k, v]) => `<div><dt>${escapeHtml(DETAIL_LABELS[k] ?? k)}</dt><dd>${escapeHtml(String(v))}</dd></div>`)
+                          .join('')}</dl>`
+                      : ''
+                  }
                   ${l.message ? `<p class="lead-msg">${escapeHtml(l.message)}</p>` : ''}
                   <p class="lead-contact">
                     ${wa ? `<a href="${escapeHtml(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
@@ -272,7 +289,7 @@ export class AccountPanel {
                 </li>`;
               })
               .join('')}</ul>`
-          : '<p class="muted small">Nenhuma mensagem ainda. Os contatos enviados pelos anúncios aparecem aqui e chegam por e-mail ao corretor.</p>'
+          : '<p class="muted small">Nenhuma mensagem ainda. Os contatos enviados pelos anúncios e pelo site aparecem aqui e chegam por e-mail.</p>'
       }`;
     const save = async (li: HTMLElement, patch: Parameters<RemoteBackend['updateLead']>[1]) => {
       try {
@@ -297,7 +314,7 @@ export class AccountPanel {
       );
       const notes = li.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')!;
       notes.addEventListener('change', () => save(li, { notes: notes.value }));
-      li.querySelector<HTMLButtonElement>('[data-open]')!.addEventListener('click', (e) => {
+      li.querySelector<HTMLButtonElement>('[data-open]')?.addEventListener('click', (e) => {
         const id = (e.currentTarget as HTMLButtonElement).dataset.open;
         if (id) {
           this.close();
@@ -440,7 +457,20 @@ export class AccountPanel {
         }</label>
       <p class="a-hint">${
         this.staff ? 'Você está no modo suporte: as alterações ficam registradas como feitas pelo suporte.' : `Você é ${ROLE_LABELS[org.role]}.`
-      } Os anúncios criados ficam no nome desta imobiliária.</p></section>`;
+      } Os anúncios criados ficam no nome desta imobiliária.</p>
+      <p class="a-hint"><a href="${escapeHtml(this.siteUrl(org.slug, false))}" target="_blank" rel="noopener">Ver o site da imobiliária ↗</a>${
+        org.role === 'owner' || org.role === 'admin'
+          ? ` · <a href="${escapeHtml(this.siteUrl(org.slug, true))}" target="_blank" rel="noopener" data-action="customize">Personalizar o site ↗</a>`
+          : ''
+      }</p></section>`;
+  }
+
+  /** The client's site (site.html), optionally with the "Personalizar site" editor open. */
+  private siteUrl(slug: string, edit: boolean): string {
+    const u = new URL(`${import.meta.env.BASE_URL}site.html`, location.href);
+    u.searchParams.set('imobiliaria', slug);
+    if (edit) u.searchParams.set('editar', '1');
+    return u.href;
   }
 
   private teamHtml(members: Member[], invites: Invitation[]): string {

@@ -1806,3 +1806,47 @@ button.dev-row-label {
     left: 8px;
   }
 }
+
+/* map embedded in a client's site (?embed=1): only the map, its listing card and the lighting control */
+body.embed .topbar,
+body.embed .results,
+body.embed .skip-link,
+body.embed .add-panel {
+  display: none !important;
+}
+body.embed .site-page-link {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* answers of the site forms in Minha conta → Contatos */
+.lead-origin {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+.lead-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 2px 12px;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.lead-details div {
+  display: flex;
+  gap: 4px;
+}
+.lead-details dt {
+  color: var(--muted);
+}
+.lead-details dt::after {
+  content: ':';
+}
+.lead-details dd {
+  margin: 0;
+}

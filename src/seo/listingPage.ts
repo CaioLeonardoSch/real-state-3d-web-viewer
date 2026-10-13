@@ -44,7 +44,7 @@ function shownAddress(l: Listing): { line: string | null; street?: string; local
   return { line, street, locality, region: 'SC', ...(display === 'full' && a.cep ? { postal: a.cep } : {}) };
 }
 
-function description(l: Listing, agency: string): string {
+export function description(l: Listing, agency: string): string {
   const parts = [TYPE_LABELS[l.type], area(l.areaM2)];
   if (l.type !== 'land') parts.push(`${l.bedrooms} ${l.bedrooms === 1 ? 'quarto' : 'quartos'}`);
   if (l.parkingSpots) parts.push(`${l.parkingSpots} ${l.parkingSpots === 1 ? 'vaga' : 'vagas'}`);
@@ -55,7 +55,7 @@ function description(l: Listing, agency: string): string {
 }
 
 /** schema.org data (RealEstateListing + Offer) that search engines read. */
-function structuredData(l: Listing, ctx: PageContext, url: string): object {
+export function structuredData(l: Listing, ctx: PageContext, url: string): object {
   const addr = shownAddress(l);
   const kind = l.type === 'apartment' ? 'Apartment' : l.type === 'land' ? 'Place' : 'SingleFamilyResidence';
   const rent = l.transaction === 'rent';
