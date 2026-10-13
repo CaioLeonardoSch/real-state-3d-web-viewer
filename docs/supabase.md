@@ -101,6 +101,39 @@ Sem configuração, os contatos já aparecem em **Minha conta → Contatos**. Pa
 O e-mail traz o nome, o telefone (com link para responder no WhatsApp), o e-mail (responder ao e-mail responde ao
 visitante) e o link do anúncio. Cada contato gera um aviso só.
 
+## 5. E-mails de convite e de confirmação de conta
+
+Com o Resend configurado (seção 4), publique também a função dos convites:
+```bash
+npx supabase functions deploy send-invite
+```
+Cada convite criado em **Minha conta** (pelo suporte ou pelo dono) passa a ser enviado por e-mail, com o link; o
+link continua aparecendo na tela para mandar também pelo WhatsApp.
+
+Os e-mails de **confirmação de conta** e de troca de senha são do próprio Supabase. Para saírem pelo mesmo domínio
+(e sem o limite baixo do plano gratuito), em **Authentication → Emails → SMTP Settings** use o SMTP do Resend:
+servidor `smtp.resend.com`, porta 465, usuário `resend`, senha = a chave do Resend.
+
+## 6. Importação dos anúncios por XML
+
+Ver [`importacao-xml.md`](importacao-xml.md).
+
+## 7. Páginas para o Google
+
+A cada publicação, o site gera uma página para cada anúncio real (`/imovel/<titulo>-<codigo>/`), com título, preço,
+fotos, descrição, endereço só até onde o anunciante permitiu e os dados estruturados que o Google lê
+(`RealEstateListing`), além do `sitemap.xml`. Com o backend configurado, o GitHub Pages republica **de hora em
+hora**, então anúncios novos ganham página em até uma hora. Os imóveis fictícios da demonstração têm página, mas
+marcada para não ser indexada, e ficam fora do sitemap.
+
+Para o Google conhecer o site: no [Google Search Console](https://search.google.com/search-console), adicione a
+propriedade do site e envie o `sitemap.xml`. Com domínio próprio (por exemplo `imoveis.suaimobiliaria.com.br`),
+defina a variável `SITE_URL` no GitHub com esse endereço, para as páginas apontarem para ele.
+
+Observações: o GitHub desliga as execuções agendadas de repositórios sem atividade por 60 dias (um push reativa).
+No endereço do GitHub Pages de projeto, o `robots.txt` não fica na raiz do domínio, então o Google não o lê; com
+domínio próprio passa a valer.
+
 ## O que o banco garante (testado)
 
 - Só a equipe de suporte cadastra imobiliárias; ninguém se coloca na equipe pelo site.
@@ -127,11 +160,11 @@ visitante) e o link do anúncio. Cada contato gera um aviso só.
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 27 testes: permissões, convites, auditoria, lixeira, contatos (com o aviso por e-mail
-                        # num provedor falso), privacidade, preço e storage
+npm run test:backend    # 31 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
+                        # por e-mail num provedor falso), privacidade, preço, storage e importação do XML
 npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
                         # corretor anuncia com fotos → visitante → preço → edição completa → lixeira e
-                        # restauração → excluir de vez → histórico, e o contato do visitante até o corretor (21 checagens)
+                        # restauração → excluir de vez → histórico, contato do visitante e convites por e-mail (22 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

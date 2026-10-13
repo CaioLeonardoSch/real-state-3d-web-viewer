@@ -41,6 +41,8 @@ export interface ContactHandlers {
 export class Drawer {
   /** Set when a back end is configured. */
   contact: ContactHandlers | null = null;
+  /** Static page of a listing (built at publish time), when there is one. */
+  pageFor: (id: string) => string | null = () => null;
   private openId: string | null = null;
   private nav: DrawerNav | null = null;
   private swipeStartY: number | null = null;
@@ -215,6 +217,10 @@ export class Drawer {
       ${tags.trim() ? `<p class="drawer-tags">${tags}</p>` : ''}
       ${priceBlock}
       ${address ? `<p class="drawer-address">📍 ${escapeHtml(address)}</p>` : ''}
+      ${(() => {
+        const page = this.pageFor(l.id);
+        return page ? `<p class="page-link"><a href="${escapeHtml(page)}" target="_blank" rel="noopener">Página do anúncio (para compartilhar) ↗</a></p>` : '';
+      })()}
       </div>
       ${
         slides.length

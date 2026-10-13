@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Feed VRSync de exemplo, com dados FICTÍCIOS, para os testes da importação. __FOTOS__ é trocado pelo endereço
+     de um servidor de imagens de teste. -->
+<ListingDataFeed xmlns="http://www.vivareal.com/schemas/1.0/VRSync" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Header>
+    <Provider>CRM Exemplo</Provider>
+    <Email>contato@imobiliaria-exemplo.com.br</Email>
+    <ContactName>Imobiliária Exemplo</ContactName>
+    <Telephone>(47) 3000-0000</Telephone>
+  </Header>
+  <Listings>
+    <Listing>
+      <ListingID>AP-1001</ListingID>
+      <Title>Apartamento 3 quartos no Bom Retiro</Title>
+      <TransactionType>For Sale</TransactionType>
+      <PublicationType>PREMIUM</PublicationType>
+      <Media>
+        <Item medium="image" caption="Sala">__FOTOS__/ap-sala.jpg</Item>
+        <Item medium="image" caption="Fachada" primary="true">__FOTOS__/ap-fachada.jpg</Item>
+        <Item medium="image" caption="Planta">__FOTOS__/ap-planta.jpg</Item>
+        <Item medium="video">https://www.youtube.com/watch?v=dQw4w9WgXcQ</Item>
+      </Media>
+      <Details>
+        <PropertyType>Residential / Apartment</PropertyType>
+        <Description><![CDATA[<p>Apartamento <b>amplo</b>, sol da manhã.</p><p>Aceita financiamento.</p>]]></Description>
+        <ListPrice currency="BRL">780000</ListPrice>
+        <PropertyAdministrationFee currency="BRL">650</PropertyAdministrationFee>
+        <YearlyTax currency="BRL">1800</YearlyTax>
+        <LivingArea unit="square metres">92</LivingArea>
+        <TotalArea unit="square metres">120</TotalArea>
+        <Bedrooms>3</Bedrooms>
+        <Bathrooms>2</Bathrooms>
+        <Suites>1</Suites>
+        <Garage type="Parking Space">2</Garage>
+        <UnitFloor>6</UnitFloor>
+        <Floors>12</Floors>
+        <YearBuilt>2018</YearBuilt>
+        <Features>
+          <Feature>Pool</Feature>
+          <Feature>BBQ</Feature>
+          <Feature>Elevator</Feature>
+          <Feature>Sauna</Feature>
+        </Features>
+      </Details>
+      <Location displayAddress="All">
+        <Country abbreviation="BR">Brasil</Country>
+        <State abbreviation="SC">Santa Catarina</State>
+        <City>Joinville</City>
+        <Neighborhood>Bom Retiro</Neighborhood>
+        <Address>Rua Exemplo</Address>
+        <StreetNumber>100</StreetNumber>
+        <Complement>Apto 601</Complement>
+        <PostalCode>89223000</PostalCode>
+        <Latitude>-26.267007</Latitude>
+        <Longitude>-48.846063</Longitude>
+      </Location>
+      <ContactInfo>
+        <Name>Corretor Exemplo</Name>
+        <Email>__CORRETOR__</Email>
+        <Telephone>(47) 99999-1111</Telephone>
+      </ContactInfo>
+    </Listing>
+    <Listing>
+      <ListingID>CA-2002</ListingID>
+      <Title>Casa com quintal</Title>
+      <TransactionType>Sale/Rent</TransactionType>
+      <Media>
+        <Item medium="image">__FOTOS__/casa-1.jpg</Item>
+      </Media>
+      <Details>
+        <PropertyType>Residential / Home</PropertyType>
+        <Description>Casa térrea com quintal.</Description>
+        <ListPrice currency="BRL">650.000,00</ListPrice>
+        <RentalPrice currency="BRL" period="Monthly">3.200,00</RentalPrice>
+        <LivingArea unit="square metres">140</LivingArea>
+        <LotArea unit="square metres">360</LotArea>
+        <Bedrooms>3</Bedrooms>
+        <Bathrooms>2</Bathrooms>
+        <Garage type="Parking Space">2</Garage>
+        <Features><Feature>Pets Allowed</Feature></Features>
+      </Details>
+      <Location displayAddress="Neighborhood">
+        <City>Joinville</City>
+        <Neighborhood>Centro</Neighborhood>
+        <Address>Rua Sem Coordenada</Address>
+      </Location>
+    </Listing>
+    <Listing>
+      <ListingID>TE-3003</ListingID>
+      <Title>Terreno plano no Saguaçu</Title>
+      <TransactionType>For Sale</TransactionType>
+      <Details>
+        <PropertyType>Residential / Land Lot</PropertyType>
+        <Description>Terreno plano, pronto para construir.</Description>
+        <ListPrice currency="BRL">420000</ListPrice>
+        <LotArea unit="square metres">360</LotArea>
+      </Details>
+      <Location displayAddress="Street">
+        <City>Joinville</City>
+        <Neighborhood>Saguaçu</Neighborhood>
+        <Address>Rua do Terreno</Address>
+        <Latitude>-26.274791</Latitude>
+        <Longitude>-48.840821</Longitude>
+      </Location>
+    </Listing>
+    <Listing>
+      <ListingID>SL-4004</ListingID>
+      <Title>Sala comercial</Title>
+      <TransactionType>For Rent</TransactionType>
+      <Details>
+        <PropertyType>Commercial / Office</PropertyType>
+        <RentalPrice currency="BRL">2000</RentalPrice>
+        <LivingArea unit="square metres">40</LivingArea>
+      </Details>
+      <Location><City>Joinville</City></Location>
+    </Listing>
+    <Listing>
+      <ListingID>AP-5005</ListingID>
+      <Title>Apartamento sem preço</Title>
+      <TransactionType>For Sale</TransactionType>
+      <Details>
+        <PropertyType>Residential / Apartment</PropertyType>
+        <LivingArea unit="square metres">50</LivingArea>
+      </Details>
+      <Location><City>Joinville</City></Location>
+    </Listing>
+  </Listings>
+</ListingDataFeed>

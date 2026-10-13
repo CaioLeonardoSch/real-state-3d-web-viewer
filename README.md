@@ -99,7 +99,11 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   cadastra as imobiliárias e convida o dono; o dono convida os corretores (link de convite); quem é da imobiliária
   anuncia e edita. O anúncio vai para o banco, as fotos para o storage, e todos passam a ver. Excluir manda para
   uma lixeira (30 dias para restaurar), e os administradores leem o histórico de alterações em frases. O visitante
-  manda mensagem pelo anúncio (com a autorização da LGPD); o contato chega ao corretor na conta e por e-mail.
+  manda mensagem pelo anúncio (com a autorização da LGPD); o contato chega ao corretor na conta e por e-mail. Os
+  convites vão por e-mail, e a equipe de suporte importa os anúncios do CRM do cliente pelo XML (VRSync), ver
+  [`docs/importacao-xml.md`](docs/importacao-xml.md).
+- **Páginas para o Google:** `npm run build` gera uma página estática por anúncio (`dist/imovel/…/`), o
+  `sitemap.xml` e a prévia com foto para links compartilhados (`scripts/prerender.mjs`).
 
 Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
 `npm run db:start`, `npm run test:backend` e `npm run verify:backend`.
@@ -502,7 +506,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 80 testes (mais 27 do backend em `npm run test:backend`): conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 89 testes (mais 31 do backend em `npm run test:backend`): conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
@@ -514,7 +518,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 69 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 70 checagens:
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;

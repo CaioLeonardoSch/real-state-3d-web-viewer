@@ -576,12 +576,15 @@ export class AccountPanel {
       const email = String(fd.get('email') ?? '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.');
       const token = await this.backend.invite(this.org!.id, email, fd.get('role') as Role);
+      const emailed = await this.backend.emailInvitation(token);
       this.note = '';
       await this.render();
       this.showLink(
         this.el.querySelector<HTMLElement>('.invite-result')!,
         token,
-        `Convite criado para ${email}. Envie este link (vale por 14 dias); a pessoa entra com esse e-mail e aceita.`,
+        emailed
+          ? `Convite enviado por e-mail para ${email} (vale por 14 dias). Se quiser, mande também o link pelo WhatsApp.`
+          : `Convite criado para ${email}. Envie este link (vale por 14 dias); a pessoa entra com esse e-mail e aceita.`,
       );
     });
     const name = el.querySelector<HTMLInputElement>('input[name="orgName"]');
@@ -598,6 +601,7 @@ export class AccountPanel {
       if (!s) throw new Error('Informe o endereço do site (letras, números e hífen).');
       if (!/^\S+@\S+\.\S+$/.test(owner)) throw new Error('Informe o e-mail do dono da imobiliária.');
       const { org, inviteToken } = await this.backend.createOrg(n, s, owner);
+      const emailed = inviteToken ? await this.backend.emailInvitation(inviteToken) : false;
       this.note = '';
       await this.refresh(false);
       await this.render();
@@ -605,7 +609,9 @@ export class AccountPanel {
         this.showLink(
           this.el.querySelector<HTMLElement>('.org-result')!,
           inviteToken,
-          `"${org.name}" cadastrada. Envie este link para ${owner}: ao entrar com esse e-mail, a pessoa vira dona da imobiliária.`,
+          emailed
+            ? `"${org.name}" cadastrada. O convite foi enviado por e-mail para ${owner}; o link também está aqui.`
+            : `"${org.name}" cadastrada. Envie este link para ${owner}: ao entrar com esse e-mail, a pessoa vira dona da imobiliária.`,
         );
     });
   }

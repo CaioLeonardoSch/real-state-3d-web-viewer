@@ -871,6 +871,13 @@ body[data-tod='night'] .price {
   font-size: 13px;
   color: var(--muted);
 }
+.page-link {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.page-link a {
+  color: var(--accent-strong);
+}
 .gallery {
   position: relative;
   margin: 10px 0;

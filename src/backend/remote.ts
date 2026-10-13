@@ -207,6 +207,16 @@ export class RemoteBackend {
     return data!.token as string;
   }
 
+  /** E-mails the invitation link (edge function send-invite); false when e-mail is not configured or failed. */
+  async emailInvitation(token: string): Promise<boolean> {
+    try {
+      const { data } = await this.sb.functions.invoke('send-invite', { body: { token } });
+      return data?.sent === true;
+    } catch {
+      return false;
+    }
+  }
+
   async cancelInvitation(id: string): Promise<void> {
     fail((await this.sb.from('invitations').delete().eq('id', id)).error, 'Não foi possível cancelar o convite');
   }

@@ -7,7 +7,8 @@ Este documento lista o que precisa ir para um backend e como manter tudo rodando
 imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imobiliárias cadastradas só pelo
 suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
 com PostGIS; edição completa em 12/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
-automático dos convites por e-mail e os itens 5 a 13. Lixeira e histórico de alterações pela tela: 12/10/2026.
+dos itens 5 em diante: o 6 (páginas para o Google), o 8 (importação do XML) e o envio dos convites por e-mail
+ficaram prontos em 13/10/2026. Lixeira e histórico de alterações pela tela: 12/10/2026.
 
 ## 1. O que precisa estar no backend
 
@@ -25,12 +26,14 @@ automático dos convites por e-mail e os itens 5 a 13. Lixeira e histórico de a
    por WhatsApp fica para depois, exige a API paga do WhatsApp Business).
 5. **Espelho de vendas.** Unidades por empreendimento com situação (disponível, reservado, vendido) e preço, editados
    pela incorporadora. O ideal é integrar com o sistema de vendas dela.
-6. **Página própria de cada imóvel,** que o Google consiga indexar. Hoje o app é um mapa só, invisível para busca.
+6. **Página própria de cada imóvel,** que o Google consiga indexar. **Feito em 13/10/2026**: páginas estáticas geradas
+   a cada publicação (de hora em hora com o backend), com dados estruturados e sitemap.
 7. **Termos de uso, política de privacidade e CRECI** nos anúncios de corretores e imobiliárias.
 
 ### Logo depois
 
-8. **Importação dos anúncios** do sistema que a imobiliária já usa. Elas mandam o mesmo cadastro para ZAP e VivaReal
+8. **Importação dos anúncios** do sistema que a imobiliária já usa (**feito em 13/10/2026**, formato VRSync, ver
+   [`importacao-xml.md`](importacao-xml.md)). Elas mandam o mesmo cadastro para ZAP e VivaReal
    em XML; ler esse arquivo evita cadastro duplicado e é o que faz uma imobiliária adotar o produto.
 9. **Favoritos, buscas salvas e alertas** de novos imóveis (e-mail ou push).
 10. **Moderação:** fila de aprovação, denúncias, histórico de alterações.

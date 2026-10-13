@@ -816,6 +816,14 @@ async function main() {
       sharedState.title !== null && sharedState.header?.startsWith(`${LANDS.length} `) && sharedState.chip && sharedState.search === `?imovel=${sharedId}&tipo=terreno`,
       JSON.stringify(sharedState));
     await shared.page.screenshot({ path: path.join(SHOTS, 'desktop-shared-link.png') });
+    // static page of the open listing (scripts/prerender.mjs): linked from the panel, demo marked noindex
+    const pageHref = await shared.page.getAttribute('#drawer .page-link a', 'href');
+    const pageHtml = pageHref ? await (await fetch(pageHref)).text() : '';
+    const sitemap = await (await fetch(`${URL_}sitemap.xml`)).text();
+    check('listing panel links to the static listing page (title, structured data; demo is noindex and out of the sitemap)',
+      /\/imovel\/terreno-plano-15x30-m-land-100\/$/.test(pageHref ?? '') && pageHtml.includes('<h1>Terreno plano 15×30 m</h1>') &&
+        pageHtml.includes('"@type":"RealEstateListing"') && pageHtml.includes('content="noindex"') && !sitemap.includes('/imovel/'),
+      pageHref ?? 'sem link');
     check('no console errors (shared link)', shared.errors.length === 0, shared.errors.join(' | '));
     await shared.ctx.close();
     const bad = await openPage(browser, { width: 1440, height: 900 }, 'bad-link', '?imovel=nao-existe&tipo=castelo&precoMax=abc');

@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # de hora em hora: as páginas dos anúncios novos do backend (para o Google) entram na publicação seguinte
+  schedule:
+    - cron: '23 * * * *'
 
 permissions:
   contents: read
@@ -19,6 +22,8 @@ concurrency:
 
 jobs:
   build:
+    # a execução de hora em hora só faz sentido com o backend configurado
+    if: github.event_name != 'schedule' || vars.VITE_SUPABASE_URL != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +36,7 @@ jobs:
           # o Playwright só é usado no verify:e2e, que não roda aqui
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: npm test
-      # inclui tsc --noEmit; os dados já estão em public/data (o .pmtiles é lido por range requests, que o Pages aceita)
+      # inclui tsc --noEmit e as páginas estáticas dos anúncios (scripts/prerender.mjs); os dados já estão em public/data (o .pmtiles é lido por range requests, que o Pages aceita)
       - run: npm run build
         env:
           # Backend (Supabase): definidos em Settings → Secrets and variables → Actions → Variables.
@@ -40,6 +45,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_DEMO_LISTINGS: ${{ vars.VITE_DEMO_LISTINGS }}
+          # endereço do site nas páginas e no sitemap (padrão: o do GitHub Pages; troque ao usar domínio próprio)
+          SITE_URL: ${{ vars.SITE_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -7,3 +7,4 @@ dist-backend
 .env.*.local
 supabase/.temp
 supabase/.branches
+dist-seo

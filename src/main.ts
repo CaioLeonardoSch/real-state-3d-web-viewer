@@ -423,6 +423,13 @@ async function main() {
     };
     account.openListing = (id) => openListing(id, true);
   }
+  // pages built at publish time (scripts/prerender.mjs): link to share, with a preview
+  fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((pages: Record<string, string>) => {
+      drawer.pageFor = (id) => (pages[id] ? new URL(`${import.meta.env.BASE_URL}${pages[id]}`, location.href).href : null);
+    })
+    .catch(() => {});
   await account?.refresh();
   // opened from an invitation link (?convite=…): show it right away
   await account?.openFromLink();

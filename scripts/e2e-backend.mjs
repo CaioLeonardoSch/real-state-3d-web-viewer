@@ -131,6 +131,14 @@ try {
   await owner.page.screenshot({ path: path.join(SHOTS, 'backend-equipe.png') });
   const pendingShown = await owner.page.evaluate((e) => [...document.querySelectorAll('#account-panel .account-list li')].some((li) => li.textContent.includes(e)), brokerEmail);
   check('o dono convida um corretor pela tela', /\?convite=/.test(brokerLink) && pendingShown, brokerLink);
+  const inviteNote = await owner.page.textContent('#account-panel .invite-result .a-hint');
+  const mailFor = (to) => fns?.mails().find((m) => m.to?.[0] === to && /Convite/.test(m.subject));
+  const ownerMail = mailFor(ownerEmail);
+  const brokerMail = mailFor(brokerEmail);
+  check('os convites (do dono e do corretor) chegam por e-mail, com o mesmo link (provedor falso)',
+    !!fns && /enviado por e-mail/.test(inviteNote ?? '') && ownerMail?.text.includes(ownerLink) && brokerMail?.text.includes(brokerLink) &&
+      /Dona Teste convidou você para a equipe da Imobiliária Teste Ação, como corretor/.test(brokerMail?.text ?? ''),
+    JSON.stringify({ inviteNote, owner: ownerMail?.subject, broker: brokerMail?.text?.split('\n')[0] }));
 
   // ---- the broker joins through the link and announces
   const { page, errors } = await open(browser, brokerLink);

@@ -272,6 +272,32 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     }, 30_000); // the first call boots the function
   });
 
+  it.skipIf(!env.MAIL_LOG)('convite por e-mail: só quem administra o cliente pede; vai uma vez, com o link', async () => {
+    const { readFileSync } = await import(/* @vite-ignore */ 'node:fs' as string);
+    const email = `convidado-email-${tag}@teste.local`;
+    const inv = await ana.client.from('invitations').insert({ org_id: orgA, email, role: 'agent' }).select('token').single();
+    const token = inv.data!.token;
+    const send = async (u: User | null) =>
+      fetch(`${URL_}/functions/v1/send-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON,
+          ...(u ? { Authorization: `Bearer ${(await u.client.auth.getSession()).data.session!.access_token}` } : {}),
+        },
+        body: JSON.stringify({ token }),
+      });
+    expect((await send(null)).status).toBe(401);
+    expect((await send(carla)).status).toBe(404); // outra imobiliária não enxerga o convite
+    expect((await send(bruno)).status).toBe(404); // corretor também não
+    expect(await (await send(ana)).json()).toEqual({ sent: true });
+    expect(await (await send(ana)).json()).toMatchObject({ sent: false, reason: 'já enviado' });
+    const mail = readFileSync(env.MAIL_LOG, 'utf8').trim().split('\n').map((l: string) => JSON.parse(l)).find((m: { to: string[] }) => m.to[0] === email);
+    expect(mail.subject).toBe('Convite: equipe da Imobiliária A');
+    expect(mail.text).toContain(`?convite=${token}`);
+    expect(mail.text).toMatch(/como corretor\(a\)/);
+  }, 30_000);
+
   it('ninguém se coloca na equipe da plataforma', async () => {
     const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
     expect(r.error).not.toBeNull();
