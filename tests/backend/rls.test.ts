@@ -188,6 +188,90 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await carla.client.rpc('org_audit', { p_org: orgA })).data).toHaveLength(0);
   });
 
+  describe('contatos (leads)', () => {
+    const consent = 'Concordo em compartilhar meus dados com a Imobiliária A.';
+    const lead = (listing: string, extra: Record<string, unknown> = {}) => ({
+      p_listing: listing, p_source: 'form', p_name: 'Visitante', p_email: `visitante-${Math.random().toString(36).slice(2)}@x.com`,
+      p_phone: `(47) 9${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`, p_message: 'Tenho interesse', p_consent: true, p_consent_text: consent, ...extra,
+    });
+    let listingId: string;
+    beforeAll(async () => {
+      listingId = (await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single()).data!.id;
+    });
+
+    it('visitante envia; o contato vai para o corretor do anúncio, com o consentimento registrado', async () => {
+      const r = await anon().rpc('submit_lead', lead(listingId, { p_phone: '(47) 98888-7777' }));
+      expect(r.error).toBeNull();
+      const mine = await bruno.client.from('leads').select('*').eq('id', r.data).single();
+      expect(mine.data).toMatchObject({ assigned_to: bruno.id, status: 'new', listing_title: 'Apartamento de teste', consent_text: consent, phone: '47988887777' });
+      expect(mine.data!.consented_at).not.toBeNull();
+      expect((await ana.client.from('leads').select('id').eq('id', r.data)).data).toHaveLength(1); // admin vê
+      expect((await carla.client.from('leads').select('id').eq('id', r.data)).data).toHaveLength(0);
+      expect((await anon().from('leads').select('id').eq('id', r.data)).data ?? []).toHaveLength(0);
+      expect((await bruno.client.rpc('my_new_leads', { p_org: orgA })).data).toBeGreaterThanOrEqual(1);
+    });
+
+    it('sem consentimento, sem nome ou sem contato é recusado; robô é descartado em silêncio', async () => {
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_consent: false }))).error?.message).toMatch(/concordar/);
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_name: ' ' }))).error?.message).toMatch(/nome/);
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_email: null, p_phone: '123' }))).error?.message).toMatch(/e-mail ou um telefone/);
+      const bot = await anon().rpc('submit_lead', lead(listingId, { p_trap: 'http://spam', p_name: 'Robô' }));
+      expect(bot.error).toBeNull();
+      expect((await ana.client.from('leads').select('id').eq('name', 'Robô')).data).toHaveLength(0);
+      const draft = (await ana.client.from('listings').insert(listingRow(orgA, { published: false })).select('id').single()).data!.id;
+      expect((await anon().rpc('submit_lead', lead(draft))).error?.message).toMatch(/não encontrado/);
+    });
+
+    it('o corretor muda situação e anotações, mas não os dados do visitante nem o responsável', async () => {
+      const id = (await anon().rpc('submit_lead', lead(listingId))).data;
+      const upd = await bruno.client.from('leads').update({ status: 'contacted', notes: 'Ligar sexta', name: 'Outro', assigned_to: ana.id }).eq('id', id).select('*').single();
+      expect(upd.data).toMatchObject({ status: 'contacted', notes: 'Ligar sexta', name: 'Visitante', assigned_to: bruno.id });
+      const reassign = await ana.client.from('leads').update({ assigned_to: ana.id }).eq('id', id).select('assigned_to').single();
+      expect(reassign.data!.assigned_to).toBe(ana.id);
+      expect((await bruno.client.from('leads').select('id').eq('id', id)).data).toHaveLength(0); // não é mais dele
+      expect((await ana.client.from('leads').update({ assigned_to: carla.id }).eq('id', id)).error?.message).toMatch(/equipe/);
+      expect((await bruno.client.from('leads').delete().eq('id', id).select('id')).data ?? []).toHaveLength(0);
+      expect((await ana.client.from('leads').delete().eq('id', id).select('id')).data).toHaveLength(1); // pedido LGPD
+    });
+
+    it('clique no WhatsApp vira contato sem dados pessoais; contatos não vão para o registro de auditoria', async () => {
+      const id = (await anon().rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp', p_name: 'Ignorado', p_email: 'x@y.com' })).data;
+      const w = (await bruno.client.from('leads').select('source, name, email, phone').eq('id', id).single()).data!;
+      expect(w).toEqual({ source: 'whatsapp', name: null, email: null, phone: null });
+      expect((await ana.client.from('audit_log').select('id').eq('table_name', 'leads')).data).toHaveLength(0);
+    });
+
+    it('limite: a mesma pessoa no mesmo anúncio, 3 por dia', async () => {
+      const same = lead(listingId, { p_email: `repetido-${tag}@x.com`, p_phone: null });
+      // origem compartilhada pelos testes: limpa os recentes para não bater no limite de 5 em 10 minutos
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      for (let i = 0; i < 3; i++) expect((await anon().rpc('submit_lead', same)).error).toBeNull();
+      expect((await anon().rpc('submit_lead', same)).error?.message).toMatch(/já enviou/);
+    });
+
+    it('limite: 5 envios em 10 minutos pela mesma origem', async () => {
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      for (let i = 0; i < 5; i++) expect((await anon().rpc('submit_lead', lead(listingId))).error).toBeNull();
+      expect((await anon().rpc('submit_lead', lead(listingId))).error?.message).toMatch(/muitos envios/);
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+    });
+
+    it.skipIf(!env.MAIL_LOG)('aviso por e-mail ao corretor, uma vez só, com resposta direta ao visitante', async () => {
+      const { readFileSync } = await import(/* @vite-ignore */ 'node:fs' as string);
+      const id = (await anon().rpc('submit_lead', lead(listingId, { p_name: 'Maria Compradora', p_message: 'Posso visitar sábado?', p_phone: '(47) 98888-7777' }))).data;
+      const call = () => fetch(`${URL_}/functions/v1/notify-lead`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: id }) }).then((r) => r.json());
+      expect(await call()).toEqual({ sent: true, to: 1 });
+      expect(await call()).toMatchObject({ sent: false }); // não repete
+      const sent = readFileSync(env.MAIL_LOG, 'utf8').trim().split('\n').map((l: string) => JSON.parse(l)).find((m: { text: string }) => m.text.includes('Maria Compradora'));
+      expect(sent.to).toEqual([bruno.email]);
+      expect(sent.subject).toBe('Novo contato: Apartamento de teste');
+      expect(sent.reply_to).toMatch(/^visitante-/);
+      expect(sent.text).toMatch(/Posso visitar sábado\?/);
+      expect(sent.text).toMatch(/wa\.me\/5547988887777/);
+      expect((await bruno.client.from('leads').select('notified_at').eq('id', id).single()).data!.notified_at).not.toBeNull();
+    }, 30_000); // the first call boots the function
+  });
+
   it('ninguém se coloca na equipe da plataforma', async () => {
     const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
     expect(r.error).not.toBeNull();

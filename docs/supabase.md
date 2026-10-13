@@ -73,12 +73,33 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
    quando e o título que o anúncio tinha no momento ("Corretor X alterou "Casa com quintal": preço de R$ 900.000
    para R$ 850.000").
 
+9. **Contatos (leads):** no anúncio, o visitante usa **Enviar mensagem** (nome, e-mail ou telefone, mensagem e a
+   autorização da LGPD) ou o botão do WhatsApp. O contato vai para o corretor que criou o anúncio (sem ele, para os
+   administradores), aparece em **Minha conta → Contatos** com um contador no topo, e o corretor registra a
+   situação (novo, em atendimento, visita, proposta, fechado, perdido) e anotações. Cliques no WhatsApp são contados,
+   sem dados pessoais. Administradores trocam o responsável e excluem contatos a pedido do cliente (LGPD).
+
 O suporte escolhe em **Atendendo** qual imobiliária está atendendo e pode corrigir anúncios e equipe de qualquer
 uma. Tudo o que muda (anúncios, equipe, convites, fotos) fica no registro de auditoria (`audit_log`), com quem fez,
 quando, o que mudou e se foi o suporte; os administradores de cada imobiliária leem o registro dela.
 
 Os e-mails de convite ainda não são enviados pelo sistema: quem convida manda o link. O envio automático entra
 junto com o e-mail próprio (SMTP) e uma função no servidor.
+
+## 4. Aviso de contato por e-mail (opcional)
+
+Sem configuração, os contatos já aparecem em **Minha conta → Contatos**. Para o corretor receber cada um por e-mail:
+
+1. Crie uma conta no [Resend](https://resend.com) (o plano gratuito envia algumas milhares de mensagens por mês),
+   verifique o domínio de envio (por exemplo `seudominio.com.br`) e gere uma chave de API.
+2. Publique a função e configure as chaves (uma vez):
+   ```bash
+   npx supabase functions deploy notify-lead
+   npx supabase secrets set RESEND_API_KEY=re_... LEAD_EMAIL_FROM="Contatos <contatos@seudominio.com.br>" \
+     SITE_URL=https://caioleonardosch.github.io/real-state-3d-web-viewer/
+   ```
+O e-mail traz o nome, o telefone (com link para responder no WhatsApp), o e-mail (responder ao e-mail responde ao
+visitante) e o link do anúncio. Cada contato gera um aviso só.
 
 ## O que o banco garante (testado)
 
@@ -95,6 +116,10 @@ junto com o e-mail próprio (SMTP) e uma função no servidor.
   chave de serviço).
 - Fotos: qualquer um vê as de anúncios publicados; só membros da imobiliária gravam na pasta dela.
 - Rascunhos (`published = false`) não aparecem para o público.
+- Contatos: o visitante só envia para anúncio publicado, com autorização (o texto aceito fica guardado) e com
+  e-mail ou telefone; robôs que preenchem o campo-armadilha são descartados; no máximo 5 envios em 10 minutos por
+  origem (guardada só como hash) e 3 por dia da mesma pessoa no mesmo anúncio. O corretor vê só os contatos dos
+  anúncios dele e não altera os dados do visitante; contatos não entram no registro de auditoria (dados pessoais).
 - Editar um anúncio sem mudá-lo de lugar mantém o mesmo círculo aproximado (sortear um novo a cada edição permitiria
   estimar o endereço escondido comparando os círculos).
 
@@ -102,10 +127,11 @@ junto com o e-mail próprio (SMTP) e uma função no servidor.
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 20 testes: permissões, convites, auditoria, lixeira, privacidade, preço e storage
+npm run test:backend    # 27 testes: permissões, convites, auditoria, lixeira, contatos (com o aviso por e-mail
+                        # num provedor falso), privacidade, preço e storage
 npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
                         # corretor anuncia com fotos → visitante → preço → edição completa → lixeira e
-                        # restauração → excluir de vez → histórico (18 checagens)
+                        # restauração → excluir de vez → histórico, e o contato do visitante até o corretor (21 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

@@ -408,6 +408,21 @@ async function main() {
         void reloadRemote().catch((err) => console.error(err));
       })
     : null;
+  if (remote && account) {
+    const backend = remote;
+    drawer.contact = {
+      submit: async (l, input) => {
+        try {
+          await backend.submitLead(l.id, input);
+          return null;
+        } catch (err) {
+          return (err as Error).message.replace(/^Não foi possível enviar: /, '');
+        }
+      },
+      whatsapp: (l) => backend.whatsappClick(l.id),
+    };
+    account.openListing = (id) => openListing(id, true);
+  }
   await account?.refresh();
   // opened from an invitation link (?convite=…): show it right away
   await account?.openFromLink();

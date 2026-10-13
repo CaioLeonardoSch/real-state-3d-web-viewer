@@ -5,9 +5,9 @@ name: Backend
 on:
   push:
     branches: [main]
-    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'package*.json', '.github/workflows/backend.yml']
+    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'scripts/lib/local-functions.mjs', 'package*.json', '.github/workflows/backend.yml']
   pull_request:
-    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'package*.json', '.github/workflows/backend.yml']
+    paths: ['supabase/**', 'src/backend/**', 'tests/backend/**', 'scripts/test-backend.mjs', 'scripts/lib/local-functions.mjs', 'package*.json', '.github/workflows/backend.yml']
   workflow_dispatch:
 
 permissions:

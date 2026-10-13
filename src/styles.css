@@ -275,8 +275,10 @@ body[data-tod='night'] .f-pending {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.account-panel {
+.add-panel.account-panel {
   width: min(380px, 100%);
+  /* opaque: it opens over the listing panel */
+  background: var(--panel-solid);
 }
 .account-note {
   margin: 8px 0;
@@ -363,6 +365,91 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   display: block;
   font-size: 11px;
   color: var(--muted);
+}
+.lead-badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #d92d20;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  vertical-align: 1px;
+}
+.lead-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lead-item {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #d92d20;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+.lead-item.status-contacted,
+.lead-item.status-visit,
+.lead-item.status-proposal {
+  border-left-color: var(--accent);
+}
+.lead-item.status-won {
+  border-left-color: #0f8a4b;
+}
+.lead-item.status-lost {
+  border-left-color: var(--line);
+  opacity: 0.75;
+}
+.lead-item.saved {
+  background: var(--accent-soft);
+}
+.lead-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lead-head time {
+  color: var(--muted);
+  font-size: 11px;
+}
+.lead-listing {
+  margin: 2px 0 0;
+  padding: 0;
+  text-align: left;
+}
+.lead-msg {
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+.lead-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 8px;
+}
+.lead-contact a {
+  color: var(--accent-strong);
+}
+.lead-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.lead-item select,
+.lead-item textarea {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
 }
 .account-empty {
   font-size: 14px;
@@ -867,6 +954,44 @@ body[data-tod='night'] .price {
   margin: 12px 0 6px;
   font-size: 12px;
   color: var(--muted);
+}
+.lead-box {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.lead-box > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.lead-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lead-form[hidden] {
+  display: none;
+}
+.lead-form .a-check span {
+  font-size: 12px;
+}
+.lead-form .a-error[hidden] {
+  display: none;
+}
+/* honeypot: invisible to people, filled by bots */
+.lead-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.lead-done {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #0f8a4b;
 }
 .btn-whatsapp {
   display: block;

@@ -21,7 +21,7 @@
     "listings:add": "node scripts/add-listings.mjs",
     "verify:e2e": "node scripts/e2e-check.mjs",
     "test:backend": "node scripts/test-backend.mjs",
-    "db:start": "supabase start -x realtime,studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit",
+    "db:start": "supabase start -x realtime,studio,imgproxy,logflare,vector,supavisor,postgres-meta,mailpit",
     "db:reset": "supabase db reset",
     "verify:backend": "node scripts/e2e-backend.mjs"
   },

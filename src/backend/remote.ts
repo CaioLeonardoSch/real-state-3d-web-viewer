@@ -30,6 +30,42 @@ export interface Invitation {
   expiresAt: string;
 }
 
+export type LeadStatus = 'new' | 'contacted' | 'visit' | 'proposal' | 'won' | 'lost';
+export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
+  new: 'Novo',
+  contacted: 'Em atendimento',
+  visit: 'Visita agendada',
+  proposal: 'Proposta',
+  won: 'Fechado',
+  lost: 'Perdido',
+};
+
+export interface Lead {
+  id: string;
+  listingId: string | null;
+  listingTitle: string | null;
+  assignedTo: string | null;
+  source: 'form' | 'whatsapp';
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  message: string | null;
+  status: LeadStatus;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface LeadInput {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  /** Consent sentence shown next to the checkbox (stored with the lead, LGPD). */
+  consentText: string;
+  /** Honeypot field: filled only by bots. */
+  trap: string;
+}
+
 export interface TrashItem {
   id: string;
   title: string;
@@ -392,6 +428,73 @@ export class RemoteBackend {
     const { data, error } = await this.sb.rpc('org_audit', { p_org: orgId, p_before: before ?? null, p_limit: 30 });
     fail(error, 'Não foi possível ler o histórico');
     return (data ?? []) as AuditEntry[];
+  }
+
+  // ---------------------------------------------------------------- leads
+
+  /** Visitor's message from the listing panel; the broker is told by e-mail (edge function notify-lead). */
+  async submitLead(listingId: string, l: LeadInput): Promise<void> {
+    const { data, error } = await this.sb.rpc('submit_lead', {
+      p_listing: listingId,
+      p_source: 'form',
+      p_name: l.name,
+      p_email: l.email || null,
+      p_phone: l.phone || null,
+      p_message: l.message,
+      p_consent: true,
+      p_consent_text: l.consentText,
+      p_trap: l.trap || null,
+    });
+    fail(error, 'Não foi possível enviar');
+    // the e-mail is a bonus: the lead is already saved and shows up in Minha conta → Contatos
+    void this.sb.functions.invoke('notify-lead', { body: { lead_id: data } }).catch(() => {});
+  }
+
+  /** Records a click on "Conversar no WhatsApp" (no personal data: the conversation happens in WhatsApp). */
+  whatsappClick(listingId: string): void {
+    void this.sb.rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp' }).then(() => {}, () => {});
+  }
+
+  async leads(orgId: string): Promise<Lead[]> {
+    const { data, error } = await this.sb.from('leads').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(200);
+    fail(error, 'Não foi possível ler os contatos');
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      listingId: r.listing_id,
+      listingTitle: r.listing_title,
+      assignedTo: r.assigned_to,
+      source: r.source,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      message: r.message,
+      status: r.status,
+      notes: r.notes,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async updateLead(id: string, patch: { status?: LeadStatus; notes?: string; assignedTo?: string | null }): Promise<void> {
+    const row: Record<string, unknown> = {};
+    if (patch.status) row.status = patch.status;
+    if (patch.notes !== undefined) row.notes = patch.notes;
+    if (patch.assignedTo !== undefined) row.assigned_to = patch.assignedTo;
+    const { data, error } = await this.sb.from('leads').update(row).eq('id', id).select('id');
+    fail(error, 'Não foi possível salvar o contato');
+    if (!data?.length) throw new Error('Não foi possível salvar o contato: sem permissão.');
+  }
+
+  /** Deletes a lead for good (a visitor's request to erase their data, LGPD); administrators only. */
+  async deleteLead(id: string): Promise<void> {
+    const { data, error } = await this.sb.from('leads').delete().eq('id', id).select('id');
+    fail(error, 'Não foi possível excluir o contato');
+    if (!data?.length) throw new Error('Só administradores excluem contatos.');
+  }
+
+  /** Form leads waiting for the user (theirs, or unassigned for admins). */
+  async newLeadsCount(orgId: string): Promise<number> {
+    const { data } = await this.sb.rpc('my_new_leads', { p_org: orgId });
+    return typeof data === 'number' ? data : 0;
   }
 
   async userId(): Promise<string | null> {

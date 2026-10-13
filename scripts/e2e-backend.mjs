@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import { startLocalFunctions } from './lib/local-functions.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'dist-backend';
@@ -51,6 +52,8 @@ async function open(browser, url = URL_) {
   return { ctx, page, errors };
 }
 
+// edge functions with a fake e-mail provider (lead notifications)
+const fns = await startLocalFunctions(status.API_URL, URL_);
 const server = spawn('npx', ['vite', 'preview', '--outDir', OUT, '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
 const browser = await chromium.launch({ executablePath: EXEC, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
@@ -226,6 +229,55 @@ try {
   check('o visitante vê o anúncio publicado, sem ferramentas de gestão', pub.has && pub.rows === before + 1 && /Rua do Teste, 123/.test(pubDrawer.address ?? '') &&
     !pubDrawer.mine && !pubDrawer.manage && pubDrawer.whatsapp, JSON.stringify({ ...pub, ...pubDrawer }));
 
+  // ---- the visitor sends a message and clicks WhatsApp; the broker gets it
+  // every local run comes from the same origin: age earlier test leads so the 5-per-10-minutes limit does not apply
+  await svc.from('leads').update({ created_at: '2020-01-01T00:00:00Z' }).gt('created_at', '2020-01-02');
+  await visitor.page.click('#drawer .lead-box summary');
+  await visitor.page.fill('#drawer .lead-form input[name="name"]', 'Maria Compradora');
+  await visitor.page.fill('#drawer .lead-form input[name="phone"]', '(47) 98888-7777');
+  await visitor.page.click('#drawer .lead-form button[type="submit"]');
+  const refused = await visitor.page.textContent('#drawer .lead-form .a-error');
+  await visitor.page.check('#drawer .lead-form input[name="consent"]');
+  await visitor.page.click('#drawer .lead-form button[type="submit"]');
+  await visitor.page.waitForSelector('#drawer .lead-done:not([hidden])', { timeout: 15000 });
+  const done = await visitor.page.textContent('#drawer .lead-done');
+  await visitor.page.screenshot({ path: path.join(SHOTS, 'backend-contato-enviado.png') });
+  const [popup] = await Promise.all([visitor.ctx.waitForEvent('page'), visitor.page.click('#drawer .btn-whatsapp')]);
+  await popup.close();
+  check('o visitante envia a mensagem (só com a autorização da LGPD) e clica no WhatsApp',
+    /autorização/.test(refused ?? '') && /Mensagem enviada, Maria!/.test(done ?? ''), `${refused} / ${done}`);
+  let mail;
+  for (let i = 0; i < 30 && !mail; i++) {
+    mail = fns?.mails().find((m) => m.text?.includes('Maria Compradora'));
+    if (!mail) await sleep(500);
+  }
+  check('o corretor recebe o aviso por e-mail (provedor falso), com WhatsApp do visitante e link do anúncio',
+    !!fns && mail?.to?.[0] === brokerEmail && /wa\.me\/5547988887777/.test(mail?.text ?? '') && mail?.text?.includes(`?imovel=${id}`),
+    JSON.stringify(mail ? { to: mail.to, subject: mail.subject } : { fns: !!fns }));
+  await page.reload();
+  await page.waitForSelector('body[data-ready="true"]');
+  await page.waitForSelector('.account-toggle .lead-badge', { timeout: 15000 });
+  const badge = await page.textContent('.account-toggle .lead-badge');
+  await page.click('.account-toggle');
+  await page.click('#account-panel details[data-section="leads"] summary');
+  await page.waitForSelector('#account-panel .lead-item', { timeout: 15000 });
+  const leadUi = await page.evaluate(() => ({
+    items: document.querySelectorAll('#account-panel .lead-item').length,
+    name: document.querySelector('#account-panel .lead-item strong')?.textContent,
+    wa: document.querySelector('#account-panel .lead-contact a')?.getAttribute('href') ?? '',
+    clicks: document.querySelector('#account-panel details[data-section="leads"] .a-hint')?.textContent ?? '',
+  }));
+  await page.screenshot({ path: path.join(SHOTS, 'backend-contatos.png') });
+  await page.selectOption('#account-panel .lead-item select[name="status"]', 'contacted');
+  await page.waitForFunction(() => !document.querySelector('.account-toggle .lead-badge'), null, { timeout: 15000 });
+  check('o corretor vê o contato na conta (contador no topo), responde pelo WhatsApp e muda a situação',
+    badge === '1' && leadUi.items === 1 && leadUi.name === 'Maria Compradora' && leadUi.wa.startsWith('https://wa.me/5547988887777') &&
+      /1 clique no WhatsApp/.test(leadUi.clicks),
+    JSON.stringify({ badge, ...leadUi }));
+  await page.keyboard.press('Escape');
+  await page.click(`#results button[data-id="${id}"]`);
+  await sleep(600);
+
   // ---- lower the price (server records the history and the reduction)
   await page.fill('#drawer .manage-form input[name="price"]', '800000');
   await page.click('#drawer .manage-form button[type="submit"]');
@@ -342,6 +394,7 @@ try {
 } finally {
   await browser.close();
   server.kill();
+  fns?.stop();
 }
 const failed = results.filter((r) => !r).length;
 console.log(`${results.length - failed}/${results.length} checks passed`);

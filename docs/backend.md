@@ -3,11 +3,11 @@
 Anotações de 09/10/2026. O protótipo começou 100% estático (arquivos em `public/data/` e anúncios no `localStorage`).
 Este documento lista o que precisa ir para um backend e como manter tudo rodando para vários clientes.
 
-**Situação (12/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
+**Situação (13/10/2026):** iniciado no Supabase, ver [`supabase.md`](supabase.md). Prontos: itens 1 (contas,
 imobiliárias e papéis dono/administrador/corretor, com isolamento por RLS; imobiliárias cadastradas só pelo
 suporte; corretores por convite; registro de auditoria), 2 (criar, alterar situação e preço, excluir; busca por área
-com PostGIS; edição completa em 13/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
-automático dos convites por e-mail e os itens 4 a 13. Lixeira e histórico de alterações pela tela: 14/10/2026.
+com PostGIS; edição completa em 12/10/2026) e 3 (fotos com miniatura e planta no storage). Faltam: envio
+automático dos convites por e-mail e os itens 5 a 13. Lixeira e histórico de alterações pela tela: 12/10/2026.
 
 ## 1. O que precisa estar no backend
 
@@ -21,7 +21,8 @@ automático dos convites por e-mail e os itens 4 a 13. Lixeira e histórico de a
    mapa usa PostGIS.
 3. **Fotos e vídeos.** Upload, redimensionamento (miniaturas e WebP), armazenamento em object storage com CDN.
 4. **Contatos (leads).** Formulário e botão de WhatsApp com mensagem pronta, gravados e avisados ao corretor (e-mail
-   e/ou WhatsApp). Exige consentimento conforme a LGPD.
+   e/ou WhatsApp). Exige consentimento conforme a LGPD. **Feito em 13/10/2026** (aviso por e-mail via Resend; aviso
+   por WhatsApp fica para depois, exige a API paga do WhatsApp Business).
 5. **Espelho de vendas.** Unidades por empreendimento com situação (disponível, reservado, vendido) e preço, editados
    pela incorporadora. O ideal é integrar com o sistema de vendas dela.
 6. **Página própria de cada imóvel,** que o Google consiga indexar. Hoje o app é um mapa só, invisível para busca.
@@ -250,11 +251,12 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
    entram por convite (válido só para o e-mail convidado, uma vez, por 14 dias).
 2. ~~**Papel de suporte da plataforma** com registro de auditoria.~~ Feito em 12/10/2026 (`platform_staff`,
    `audit_log`).
-3. ~~**Lixeira em vez de exclusão definitiva**~~ feita em 14/10/2026 (30 dias para restaurar). Falta ativar os
+3. ~~**Lixeira em vez de exclusão definitiva**~~ feita em 12/10/2026 (30 dias para restaurar). Falta ativar os
    backups com restauração a um ponto no tempo (plano Pro).
 4. **Contas:** CAPTCHA no login e no cadastro (o Supabase integra hCaptcha e Turnstile), verificação em duas etapas
    para administradores, recusa de senhas vazadas (recurso do plano Pro).
-5. **Limites contra abuso** quando houver formulário de contato público: limite de envios por IP e CAPTCHA.
+5. **Limites contra abuso** no formulário de contato: ~~limite de envios por origem e campo-armadilha~~ feitos em
+   13/10/2026; falta o CAPTCHA (Turnstile) se aparecer spam.
 6. **Fotos sem localização:** fotos de celular carregam as coordenadas GPS de onde foram tiradas, o que revelaria o
    endereço de quem escolheu escondê-lo. O site já remove esses dados ao redimensionar a foto; a importação por XML
    precisa fazer o mesmo no servidor.

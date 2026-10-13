@@ -32,7 +32,15 @@ export interface DrawerNav {
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
 const SWIPE_PX = 30;
 
+/** Contact from the listing panel (back end only): the visitor's message, and WhatsApp clicks. */
+export interface ContactHandlers {
+  submit: (l: Listing, input: { name: string; email: string; phone: string; message: string; consentText: string; trap: string }) => Promise<string | null>;
+  whatsapp: (l: Listing) => void;
+}
+
 export class Drawer {
+  /** Set when a back end is configured. */
+  contact: ContactHandlers | null = null;
   private openId: string | null = null;
   private nav: DrawerNav | null = null;
   private swipeStartY: number | null = null;
@@ -239,6 +247,7 @@ export class Drawer {
           ? `<a class="btn-primary btn-whatsapp" href="${escapeHtml(contact)}" target="_blank" rel="noopener">Conversar no WhatsApp${l.advertiser?.contactName ? ` com ${escapeHtml(l.advertiser.contactName)}` : ''}</a>`
           : ''
       }
+      ${this.leadFormHtml(l, agency)}
       ${
         l.approximateLocation
           ? `<p class="notice-approx">📍 Localização aproximada: a posição exata não é exibida; o círculo indica um raio de ~${l.approxRadiusM ?? 150} m.</p>`
@@ -319,6 +328,10 @@ export class Drawer {
       if (error) window.alert(error);
     });
     this.bindGallery(l);
+    this.bindLeadForm(l);
+    this.el.querySelector('.btn-whatsapp')?.addEventListener('click', () => {
+      if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
+    });
     this.el.querySelector('[data-action="edit"]')?.addEventListener('click', () => this.onEdit(l));
     this.el.querySelector<HTMLFormElement>('.manage-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -333,6 +346,65 @@ export class Drawer {
     this.el.setAttribute('aria-hidden', 'false');
     this.el.scrollTop = 0;
     this.el.focus({ preventScroll: true });
+  }
+
+  /** "Enviar mensagem": real listings of other advertisers, with the back end. */
+  private leadFormHtml(l: Listing, agency: string): string {
+    if (!this.contact || !l.remote) return '';
+    if (l.userAdded) return '<p class="a-hint lead-own">Os contatos deste anúncio aparecem em Minha conta → Contatos.</p>';
+    const consent = `Concordo em compartilhar meus dados com ${agency} para receber contato sobre este imóvel.`;
+    return `<details class="lead-box">
+      <summary>Enviar mensagem para ${escapeHtml(agency)}</summary>
+      <form class="lead-form" novalidate>
+        <label class="a-field">Seu nome<input name="name" autocomplete="name" maxlength="120" required></label>
+        <label class="a-field">E-mail<input name="email" type="email" autocomplete="email" maxlength="120"></label>
+        <label class="a-field">Telefone ou WhatsApp<input name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="(47) 99999-0000"></label>
+        <label class="a-field">Mensagem<textarea name="message" rows="3" maxlength="2000">Olá! Tenho interesse em "${escapeHtml(l.title)}"${l.referenceCode ? ` (código ${escapeHtml(l.referenceCode)})` : ''}. Gostaria de mais informações.</textarea></label>
+        <label class="lead-trap" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
+        <label class="a-check"><input type="checkbox" name="consent"> <span>${escapeHtml(consent)}</span></label>
+        <p class="a-error" role="alert" hidden></p>
+        <button type="submit" class="btn-primary">Enviar mensagem</button>
+      </form>
+      <p class="lead-done" role="status" hidden></p>
+    </details>`;
+  }
+
+  private bindLeadForm(l: Listing): void {
+    const form = this.el.querySelector<HTMLFormElement>('.lead-form');
+    if (!form || !this.contact) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const v = (k: string) => String(fd.get(k) ?? '').trim();
+      const err = form.querySelector<HTMLElement>('.a-error')!;
+      const show = (msg: string) => {
+        err.hidden = false;
+        err.textContent = msg;
+      };
+      err.hidden = true;
+      if (!v('name')) return show('Informe seu nome.');
+      if (!v('email') && v('phone').replace(/\D/g, '').length < 10) return show('Informe um e-mail ou um telefone com DDD, para a imobiliária responder.');
+      if (v('email') && !/^\S+@\S+\.\S+$/.test(v('email'))) return show('Confira o e-mail.');
+      if (!fd.get('consent')) return show('Marque a autorização para compartilhar seus dados com a imobiliária.');
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      const error = await this.contact!.submit(l, {
+        name: v('name'),
+        email: v('email'),
+        phone: v('phone'),
+        message: v('message'),
+        consentText: form.querySelector('.a-check span')!.textContent!,
+        trap: v('website'),
+      });
+      btn.disabled = false;
+      btn.textContent = 'Enviar mensagem';
+      if (error) return show(error);
+      form.hidden = true;
+      const done = this.el.querySelector<HTMLElement>('.lead-done')!;
+      done.hidden = false;
+      done.textContent = `Mensagem enviada, ${v('name').split(' ')[0]}! A imobiliária vai responder pelo contato que você deixou.`;
+    });
   }
 
   /** Photos (cover first), then the floor plan sent by the advertiser. */

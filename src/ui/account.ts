@@ -1,4 +1,5 @@
-import type { Invitation, Member, Org, PendingInvitation, RemoteBackend, Role, TrashItem } from '../backend/remote';
+import { LEAD_STATUS_LABELS, type Invitation, type Lead, type LeadStatus, type Member, type Org, type PendingInvitation, type RemoteBackend, type Role, type TrashItem } from '../backend/remote';
+import { whatsappLink } from '../data/listingText';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
 import { escapeHtml } from '../utils/format';
 
@@ -40,6 +41,11 @@ export class AccountPanel {
   private linkToken: string | null = new URLSearchParams(location.search).get('convite');
   private linkInfo: Awaited<ReturnType<RemoteBackend['invitationInfo']>> = null;
   private mode: 'signin' | 'signup' = 'signin';
+  /** Form leads waiting for the user (shown on the account button). */
+  private newLeads = 0;
+  private leadTimer: number | null = null;
+  /** Opens a listing on the map (from a lead). */
+  openListing: (id: string) => void = () => {};
   private note = '';
   private isOpen = false;
 
@@ -82,11 +88,39 @@ export class AccountPanel {
       // storage blocked: the first client is used
     }
     this.org = this.orgs.find((o) => o.id === saved) ?? this.orgs[0] ?? null;
-    this.toggle.textContent = this.email ? (this.org?.name ?? 'Minha conta') : 'Entrar';
+    this.newLeads = this.org ? await this.backend.newLeadsCount(this.org.id) : 0;
+    if (!this.org && this.leadTimer !== null) {
+      clearInterval(this.leadTimer);
+      this.leadTimer = null;
+    }
+    this.renderToggle();
+    // new leads every minute while logged in
+    if (this.org && this.leadTimer === null)
+      this.leadTimer = window.setInterval(async () => {
+        if (!this.org) return;
+        const n = await this.backend.newLeadsCount(this.org.id);
+        if (n !== this.newLeads) {
+          this.newLeads = n;
+          this.renderToggle();
+          if (this.isOpen && this.openSections.has('leads')) void this.loadSection('leads');
+        }
+      }, 60_000);
     // files of listings the daily clean-up removed (the database cannot delete from storage)
     if (this.org) void this.backend.cleanupOrphans(this.org.id).catch(() => {});
     if (this.isOpen) await this.render();
     if (notify && before !== `${this.email}|${this.org?.id}`) this.onChange();
+  }
+
+  private renderToggle(): void {
+    const label = this.email ? (this.org?.name ?? 'Minha conta') : 'Entrar';
+    this.toggle.textContent = label;
+    if (this.newLeads > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'lead-badge';
+      badge.textContent = String(this.newLeads);
+      badge.setAttribute('aria-label', `${this.newLeads} ${this.newLeads === 1 ? 'contato novo' : 'contatos novos'}`);
+      this.toggle.append(' ', badge);
+    }
   }
 
   /** Opens the panel by itself when the page was opened from an invitation link. */
@@ -145,6 +179,7 @@ export class AccountPanel {
       ${this.org ? this.orgHtml() : offers.length ? '' : `<p class="account-empty">Sua conta ainda não está ligada a nenhuma imobiliária.
         Peça o link de convite ao administrador da sua imobiliária.</p>`}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
+      ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
       ${this.staff ? this.staffHtml() : ''}
@@ -182,6 +217,11 @@ export class AccountPanel {
     if (!body || !this.org) return;
     try {
       if (key === 'trash') this.renderTrash(body, await this.backend.trash(this.org.id));
+      else if (key === 'leads') {
+        const admin = this.org.role === 'owner' || this.org.role === 'admin';
+        const [leads, members] = await Promise.all([this.backend.leads(this.org.id), admin ? this.backend.members(this.org.id) : Promise.resolve([])]);
+        this.renderLeads(body, leads, members);
+      }
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -190,6 +230,90 @@ export class AccountPanel {
     } catch (ex) {
       body.innerHTML = `<p class="a-error">${escapeHtml((ex as Error).message)}</p>`;
     }
+  }
+
+  private renderLeads(body: HTMLElement, leads: Lead[], members: Member[]): void {
+    const admin = this.org!.role === 'owner' || this.org!.role === 'admin';
+    const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const form = leads.filter((l) => l.source === 'form');
+    const clicks = leads.length - form.length;
+    const statusOptions = (cur: LeadStatus) =>
+      (Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${LEAD_STATUS_LABELS[k]}</option>`).join('');
+    body.innerHTML = `${
+      admin ? '<p class="a-hint">Você vê os contatos de todos os corretores. Cada corretor vê os dos próprios anúncios.</p>' : ''
+    }
+      ${clicks ? `<p class="a-hint">${clicks} ${clicks === 1 ? 'clique' : 'cliques'} no WhatsApp dos anúncios (a conversa segue no WhatsApp).</p>` : ''}
+      ${
+        form.length
+          ? `<ul class="lead-list">${form
+              .map((l) => {
+                const wa = l.phone ? whatsappLink(l.phone, `Olá, ${l.name?.split(' ')[0] ?? ''}! Aqui é da ${this.org!.name}, sobre "${l.listingTitle ?? 'o imóvel'}".`) : null;
+                return `<li class="lead-item status-${l.status}" data-lead="${l.id}">
+                  <div class="lead-head"><strong>${escapeHtml(l.name ?? 'Sem nome')}</strong><time>${when(l.createdAt)}</time></div>
+                  <button type="button" class="link-btn lead-listing" data-open="${l.listingId ?? ''}" ${l.listingId ? '' : 'disabled'}>${escapeHtml(l.listingTitle ?? 'anúncio removido')}</button>
+                  ${l.message ? `<p class="lead-msg">${escapeHtml(l.message)}</p>` : ''}
+                  <p class="lead-contact">
+                    ${wa ? `<a href="${escapeHtml(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+                    ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}">${escapeHtml(l.phone)}</a>` : ''}
+                    ${l.email ? `<a href="mailto:${escapeHtml(l.email)}">${escapeHtml(l.email)}</a>` : ''}
+                  </p>
+                  <div class="lead-controls">
+                    <label class="a-field">Situação<select name="status">${statusOptions(l.status)}</select></label>
+                    ${
+                      admin
+                        ? `<label class="a-field">Responsável<select name="assigned"><option value="">—</option>${members
+                            .map((m) => `<option value="${m.userId}" ${m.userId === l.assignedTo ? 'selected' : ''}>${escapeHtml(m.name || m.email || '')}</option>`)
+                            .join('')}</select></label>`
+                        : ''
+                    }
+                  </div>
+                  <label class="a-field">Anotações<textarea name="notes" rows="2" maxlength="4000" placeholder="Retornar, visita marcada…">${escapeHtml(l.notes ?? '')}</textarea></label>
+                  ${admin ? `<button type="button" class="link-btn btn-danger-text" data-delete-lead="${l.id}">Excluir (pedido do cliente, LGPD)</button>` : ''}
+                </li>`;
+              })
+              .join('')}</ul>`
+          : '<p class="muted small">Nenhuma mensagem ainda. Os contatos enviados pelos anúncios aparecem aqui e chegam por e-mail ao corretor.</p>'
+      }`;
+    const save = async (li: HTMLElement, patch: Parameters<RemoteBackend['updateLead']>[1]) => {
+      try {
+        await this.backend.updateLead(li.dataset.lead!, patch);
+        li.classList.add('saved');
+        setTimeout(() => li.classList.remove('saved'), 1200);
+        if (patch.status) {
+          li.className = li.className.replace(/status-\w+/, `status-${patch.status}`);
+          this.newLeads = await this.backend.newLeadsCount(this.org!.id);
+          this.renderToggle();
+        }
+      } catch (ex) {
+        window.alert((ex as Error).message);
+      }
+    };
+    body.querySelectorAll<HTMLElement>('li[data-lead]').forEach((li) => {
+      li.querySelector<HTMLSelectElement>('select[name="status"]')!.addEventListener('change', (e) =>
+        save(li, { status: (e.target as HTMLSelectElement).value as LeadStatus }),
+      );
+      li.querySelector<HTMLSelectElement>('select[name="assigned"]')?.addEventListener('change', (e) =>
+        save(li, { assignedTo: (e.target as HTMLSelectElement).value || null }),
+      );
+      const notes = li.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')!;
+      notes.addEventListener('change', () => save(li, { notes: notes.value }));
+      li.querySelector<HTMLButtonElement>('[data-open]')!.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLButtonElement).dataset.open;
+        if (id) {
+          this.close();
+          this.openListing(id);
+        }
+      });
+      li.querySelector<HTMLButtonElement>('[data-delete-lead]')?.addEventListener('click', async () => {
+        if (!window.confirm('Excluir este contato e os dados do cliente? Use quando a pessoa pedir a exclusão (LGPD).')) return;
+        try {
+          await this.backend.deleteLead(li.dataset.lead!);
+          li.remove();
+        } catch (ex) {
+          window.alert((ex as Error).message);
+        }
+      });
+    });
   }
 
   private renderTrash(body: HTMLElement, items: TrashItem[]): void {
