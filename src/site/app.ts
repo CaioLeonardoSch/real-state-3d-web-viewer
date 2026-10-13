@@ -140,8 +140,7 @@ export class SiteApp {
       <main id="conteudo" tabindex="-1" class="page page-${this.route}"></main>
       ${this.footerHtml()}
       ${c.whatsappButton.enabled && c.contacts.whatsapp ? `<a class="wa-float" data-contact href="${escapeHtml(whatsappHref(c.contacts.whatsapp, c.whatsappButton.message))}" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">${ICONS.whatsapp}</a>` : ''}
-      <div class="compare-bar" hidden></div>
-      <div class="toast" role="status" aria-live="polite" hidden></div>`;
+      <div class="compare-bar" hidden></div>`;
     const main = $<HTMLElement>(this.root, 'main');
     const pages: Record<Route, (el: HTMLElement) => void> = {
       inicio: (el) => this.home(el),
@@ -313,13 +312,21 @@ export class SiteApp {
     </footer>`;
   }
 
+  /** Short notice; lives outside the page, so a re-render (editor preview) does not erase it. */
   toast(text: string): void {
-    const t = this.root.querySelector<HTMLElement>('.toast');
-    if (!t) return;
+    let t = document.querySelector<HTMLElement>('body > .toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      t.setAttribute('role', 'status');
+      t.setAttribute('aria-live', 'polite');
+      document.body.append(t);
+    }
     t.textContent = text;
     t.hidden = false;
     clearTimeout(Number(t.dataset.timer));
-    t.dataset.timer = String(setTimeout(() => (t.hidden = true), 4500));
+    const el = t;
+    t.dataset.timer = String(setTimeout(() => (el.hidden = true), 4500));
   }
 
   // ---------------------------------------------------------------- favourites and compare
