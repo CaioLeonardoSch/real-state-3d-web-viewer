@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { startLocalFunctions } from './lib/local-functions.mjs';
+import { freshTotp } from './lib/totp.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'dist-backend';
@@ -17,6 +18,8 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Authenticator-app codes already typed: the next one waits for a new code (Supabase may refuse a repeat). */
+const usedCodes = new Set();
 
 const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
 if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(status.API_URL)) throw new Error(`${status.API_URL} não é o Supabase local`);
@@ -98,7 +101,20 @@ try {
   await staff.page.fill('#account-panel input[name="email"]', staffEmail);
   await staff.page.fill('#account-panel input[name="password"]', PASSWORD);
   await staff.page.click('#account-panel button[type="submit"]');
+  // support powers need two-step verification: the staff member turns it on with an authenticator app first
+  await staff.page.waitForSelector('#account-panel [data-action="mfa-on"]', { timeout: 15000 });
+  const staffNote = await staff.page.textContent('#account-panel .account-note');
+  const orgFormBefore = await staff.page.isVisible('#account-panel form[data-form="org"]');
+  await staff.page.click('#account-panel [data-action="mfa-on"]');
+  await staff.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 15000 });
+  const staffSecret = await staff.page.inputValue('#account-panel input[name="totp-secret"]');
+  const qr = (await staff.page.getAttribute('#account-panel .mfa-setup img', 'src')) ?? '';
+  await staff.page.fill('#account-panel form[data-form="mfa-confirm"] input[name="code"]', await freshTotp(staffSecret, usedCodes));
+  await staff.page.click('#account-panel form[data-form="mfa-confirm"] button[type="submit"]');
   await staff.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 15000 });
+  check('suporte: sem a verificação em duas etapas não atende; ativa pelo QR code (ou pela chave) e passa a atender',
+    /obrigatória/.test(staffNote ?? '') && !orgFormBefore && qr.startsWith('data:image/svg+xml') && /^[A-Z2-7]{16,}$/.test(staffSecret),
+    JSON.stringify({ staffNote, orgFormBefore, qr: qr.slice(0, 30) }));
   const ownerEmail = `dona-${tag}@teste.local`;
   await staff.page.fill('#account-panel input[name="orgName"]', 'Imobiliária Teste Ação');
   const slug = await staff.page.inputValue('#account-panel input[name="orgSlug"]');
@@ -381,6 +397,23 @@ try {
   check('a sessão continua após recarregar, e "Excluir de vez" apaga o anúncio e as fotos do storage',
     stillIn === 'Imobiliária Teste Ação' && (await rows()) === before && left.data?.length === 0, `${stillIn}; ${left.data?.length} arquivos`);
 
+  // ---- the support staff logs in again: after the password, the code of the authenticator app
+  const staff2 = await open(browser);
+  await staff2.page.click('.account-toggle');
+  await staff2.page.fill('#account-panel input[name="email"]', staffEmail);
+  await staff2.page.fill('#account-panel input[name="password"]', PASSWORD);
+  await staff2.page.click('#account-panel button[type="submit"]');
+  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"]', { timeout: 15000 });
+  await staff2.page.fill('#account-panel form[data-form="mfa"] input[name="code"]', '000000');
+  await staff2.page.click('#account-panel form[data-form="mfa"] button[type="submit"]');
+  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"] .a-error:not([hidden])', { timeout: 15000 });
+  const wrongCode = await staff2.page.textContent('#account-panel form[data-form="mfa"] .a-error');
+  await staff2.page.fill('#account-panel form[data-form="mfa"] input[name="code"]', await freshTotp(staffSecret, usedCodes));
+  await staff2.page.click('#account-panel form[data-form="mfa"] button[type="submit"]');
+  await staff2.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 15000 });
+  check('suporte: ao entrar de novo, o código errado é recusado e o certo libera o atendimento', /Código incorreto/.test(wrongCode ?? ''), wrongCode);
+  await staff2.ctx.close();
+
   // ---- the owner reads the history
   const owner2 = await open(browser);
   await owner2.page.click('.account-toggle');
@@ -457,7 +490,25 @@ try {
   const siteLink = await owner3.page.getAttribute('#account-panel [data-action=customize]', 'href');
   check('a oferta de imóvel chega em Minha conta → Contatos, com as respostas; o dono tem o link "Personalizar o site"',
     /anunciar/.test(offer.origin ?? '') && /Casa/.test(offer.details ?? '') && /Glória/.test(offer.details ?? '') && siteLink.includes('editar=1'), JSON.stringify(offer));
+  // ---- the owner turns two-step verification on; the site editor then asks for the code after the password
+  await owner3.page.click('#account-panel [data-action="mfa-on"]');
+  await owner3.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 15000 });
+  const ownerSecret = await owner3.page.inputValue('#account-panel input[name="totp-secret"]');
+  await owner3.page.fill('#account-panel form[data-form="mfa-confirm"] input[name="code"]', await freshTotp(ownerSecret, usedCodes));
+  await owner3.page.click('#account-panel form[data-form="mfa-confirm"] button[type="submit"]');
+  await owner3.page.waitForSelector('#account-panel [data-action="mfa-off"]', { timeout: 15000 });
   await owner3.ctx.close();
+  const ed2 = await siteOpen(`${siteUrl}&editar=1`);
+  await ed2.p.fill('.editor [name=email]', ownerEmail);
+  await ed2.p.fill('.editor [name=password]', PASSWORD);
+  await ed2.p.click('.editor .ed-login button');
+  await ed2.p.waitForSelector('.editor .ed-login [name=code]', { timeout: 15000 });
+  const editorBeforeCode = await ed2.p.isVisible('.editor .ed-body');
+  await ed2.p.fill('.editor .ed-login [name=code]', await freshTotp(ownerSecret, usedCodes));
+  await ed2.p.click('.editor .ed-login button');
+  await ed2.p.waitForSelector('.editor .ed-body', { timeout: 15000 });
+  check('dono: ativa a verificação em duas etapas em Minha conta; o editor do site pede o código depois da senha', !editorBeforeCode, String(editorBeforeCode));
+  await ed2.ctx.close();
   check('sem erros no console', errors.length === 0 && visitor.errors.length === 0, [...errors, ...visitor.errors].join(' | '));
   await visitor.ctx.close();
 } finally {

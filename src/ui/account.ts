@@ -1,4 +1,17 @@
-import { LEAD_STATUS_LABELS, type Invitation, type Lead, type LeadStatus, type Member, type Org, type PendingInvitation, type RemoteBackend, type Role, type TrashItem } from '../backend/remote';
+import {
+  LEAD_STATUS_LABELS,
+  type Invitation,
+  type Lead,
+  type LeadStatus,
+  type Member,
+  type MfaState,
+  type Org,
+  type PendingInvitation,
+  type RemoteBackend,
+  type Role,
+  type TotpSetup,
+  type TrashItem,
+} from '../backend/remote';
 import { whatsappLink } from '../data/listingText';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
 import { escapeHtml } from '../utils/format';
@@ -33,7 +46,13 @@ export class AccountPanel {
   private org: Org | null = null;
   private email: string | null = null;
   private userId: string | null = null;
+  /** Support powers (on the team, in a session confirmed with the second factor). */
   private staff = false;
+  /** On the support team, whether or not this session has the powers. */
+  private staffMember = false;
+  private mfa: MfaState = { enabled: false, pending: false, factorId: null };
+  /** Authenticator app being set up: QR code shown, waiting for its first code. */
+  private totpSetup: TotpSetup | null = null;
   /** Collapsible sections the user left open (kept across re-renders). */
   private openSections = new Set<string>();
   private pending: PendingInvitation[] = [];
@@ -77,9 +96,13 @@ export class AccountPanel {
     const before = `${this.email}|${this.org?.id}`;
     this.email = session?.user.email ?? null;
     this.userId = session?.user.id ?? null;
-    [this.orgs, this.staff, this.pending] = this.email
-      ? await Promise.all([this.backend.myOrgs(), this.backend.isStaff(), this.backend.myInvitations()])
-      : [[], false, []];
+    this.mfa = this.email ? await this.backend.mfa() : { enabled: false, pending: false, factorId: null };
+    if (!this.email) this.totpSetup = null;
+    // password only, with two-step verification on: nothing of the account until the code (the database agrees)
+    [this.orgs, this.staff, this.pending, this.staffMember] =
+      this.email && !this.mfa.pending
+        ? await Promise.all([this.backend.myOrgs(), this.backend.isStaff(), this.backend.myInvitations(), this.backend.staffMember()])
+        : [[], false, [], false];
     if (this.linkToken && !this.linkInfo) this.linkInfo = await this.backend.invitationInfo(this.linkToken);
     let saved: string | null = null;
     try {
@@ -163,6 +186,7 @@ export class AccountPanel {
       <button type="button" class="icon-btn" data-action="close" aria-label="Fechar">×</button></div>
       ${this.note ? `<p class="account-note" role="status">${escapeHtml(this.note)}</p>` : ''}`;
     if (!this.email) return this.renderLogin(head);
+    if (this.mfa.pending) return this.renderCode(head);
 
     const canManage = this.org?.role === 'owner' || this.org?.role === 'admin';
     const [members, invites] = this.org && canManage
@@ -175,6 +199,11 @@ export class AccountPanel {
 
     this.el.innerHTML = `${head}
       <p class="muted small">Conectado como ${escapeHtml(this.email)}${this.staff ? ' · <strong>suporte da plataforma</strong>' : ''}</p>
+      ${
+        this.staffMember && !this.staff
+          ? '<p class="account-note" role="status">Você é da equipe de suporte da plataforma. Para atender as imobiliárias, ative a verificação em duas etapas abaixo: ela é obrigatória para a equipe.</p>'
+          : ''
+      }
       ${offers.length ? this.offersHtml(offers) : ''}
       ${this.org ? this.orgHtml() : offers.length ? '' : `<p class="account-empty">Sua conta ainda não está ligada a nenhuma imobiliária.
         Peça o link de convite ao administrador da sua imobiliária.</p>`}
@@ -183,10 +212,98 @@ export class AccountPanel {
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
       ${this.staff ? this.staffHtml() : ''}
+      ${canManage || this.staffMember || this.mfa.enabled ? this.mfaHtml() : ''}
       <div class="a-actions account-signout"><button type="button" class="btn-secondary" data-action="signout">Sair</button></div>`;
     this.bindClose();
     this.bindLoggedIn(members);
+    this.bindMfa();
     this.bindSections();
+  }
+
+  /** Second step of the login, for accounts with two-step verification: the code of the authenticator app. */
+  private renderCode(head: string): void {
+    this.el.innerHTML = `${head}
+      <form class="add-form account-form" data-form="mfa" novalidate>
+        <p class="a-hint a-wide">Verificação em duas etapas de ${escapeHtml(this.email!)}: digite o código de 6 dígitos que aparece agora no aplicativo autenticador.</p>
+        <label class="a-field a-wide">Código<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>
+        <p class="a-error a-wide" role="alert" hidden></p>
+        <div class="a-actions a-wide">
+          <button type="submit" class="btn-primary">Confirmar</button>
+          <button type="button" class="link-btn" data-action="signout">Sair</button>
+        </div>
+      </form>`;
+    this.bindClose();
+    this.el.querySelector('[data-action="signout"]')!.addEventListener('click', () => void this.signOut());
+    this.bindForm('mfa', async (fd) => {
+      const code = String(fd.get('code') ?? '').replace(/\D/g, '');
+      if (code.length !== 6) throw new Error('O código tem 6 dígitos.');
+      await this.backend.verifyMfa(code);
+      this.note = '';
+      await this.refresh(true);
+    });
+  }
+
+  /** Two-step verification: required for the support team, optional for owners and admins. */
+  private mfaHtml(): string {
+    const setup = this.totpSetup;
+    const body = this.mfa.enabled
+      ? `<p class="a-hint">Ativada: ao entrar, além da senha, a conta pede o código do aplicativo autenticador.</p>
+        <button type="button" class="link-btn btn-danger-text" data-action="mfa-off">Desativar</button>`
+      : setup
+        ? `<p class="a-hint">No aplicativo autenticador do celular (Google Authenticator, Microsoft Authenticator, 1Password…), leia o QR code ou digite a chave. Depois, digite o código de 6 dígitos que ele mostrar.</p>
+          <div class="mfa-setup"><img src="${escapeHtml(setup.qrCode)}" alt="QR code para o aplicativo autenticador" width="168" height="168">
+            <label class="a-field">Chave<input name="totp-secret" readonly value="${escapeHtml(setup.secret)}" aria-label="Chave para digitar no aplicativo"></label></div>
+          <form class="add-form account-form" data-form="mfa-confirm" novalidate>
+            <label class="a-field">Código do aplicativo<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>
+            <p class="a-error a-wide" role="alert" hidden></p>
+            <div class="a-actions a-wide">
+              <button type="submit" class="btn-primary">Confirmar e ativar</button>
+              <button type="button" class="link-btn" data-action="mfa-cancel">Cancelar</button>
+            </div>
+          </form>`
+        : `<p class="a-hint">Protege a conta mesmo se a senha vazar: ao entrar, além dela, a conta pede um código de 6 dígitos de um aplicativo autenticador no celular.</p>
+          <button type="button" class="btn-secondary" data-action="mfa-on">Ativar</button>`;
+    return `<section class="account-section" data-section-mfa><h3>Verificação em duas etapas</h3>${body}</section>`;
+  }
+
+  private bindMfa(): void {
+    const el = this.el;
+    el.querySelector<HTMLButtonElement>('[data-action="mfa-on"]')?.addEventListener('click', (e) =>
+      this.act(e.currentTarget as HTMLButtonElement, async () => {
+        this.totpSetup = await this.backend.enrollTotp();
+        this.note = '';
+        await this.render();
+        this.el.querySelector<HTMLInputElement>('form[data-form="mfa-confirm"] input[name="code"]')?.focus();
+      }),
+    );
+    el.querySelector('[data-action="mfa-cancel"]')?.addEventListener('click', () => {
+      this.totpSetup = null;
+      void this.render();
+    });
+    this.bindForm('mfa-confirm', async (fd) => {
+      const code = String(fd.get('code') ?? '').replace(/\D/g, '');
+      if (code.length !== 6) throw new Error('O código tem 6 dígitos.');
+      await this.backend.confirmTotp(this.totpSetup!.factorId, code);
+      this.totpSetup = null;
+      this.note = 'Verificação em duas etapas ativada. Nas próximas vezes, a conta vai pedir o código do aplicativo ao entrar.';
+      await this.refresh(true);
+    });
+    el.querySelector<HTMLButtonElement>('[data-action="mfa-off"]')?.addEventListener('click', (e) => {
+      const warn = this.staffMember ? ' Na equipe de suporte, os poderes de suporte deixam de valer.' : '';
+      if (!window.confirm(`Desativar a verificação em duas etapas? A conta volta a entrar só com a senha.${warn}`)) return;
+      void this.act(e.currentTarget as HTMLButtonElement, async () => {
+        await this.backend.removeTotp(this.mfa.factorId!);
+        this.note = 'Verificação em duas etapas desativada.';
+        await this.refresh(true);
+      });
+    });
+  }
+
+  private async signOut(): Promise<void> {
+    await this.backend.signOut();
+    this.note = '';
+    this.totpSetup = null;
+    await this.refresh(true);
   }
 
   /** Re-reads the trash after a listing was moved there from the listing panel. */
@@ -421,6 +538,7 @@ export class AccountPanel {
         this.mode = 'signin';
         this.note = needsConfirm ? `Enviamos um link de confirmação para ${email}. Depois de confirmar, entre aqui.` : '';
       } else {
+        // with two-step verification on, refresh() shows the step of the code next
         await this.backend.signIn(email, password);
         this.note = '';
       }
@@ -542,11 +660,7 @@ export class AccountPanel {
 
   private bindLoggedIn(members: Member[]): void {
     const el = this.el;
-    el.querySelector('[data-action="signout"]')!.addEventListener('click', async () => {
-      await this.backend.signOut();
-      this.note = '';
-      await this.refresh(true);
-    });
+    el.querySelector('[data-action="signout"]')!.addEventListener('click', () => void this.signOut());
     el.querySelector<HTMLSelectElement>('select[name="org"]')?.addEventListener('change', (e) => {
       try {
         localStorage.setItem(ORG_KEY, (e.target as HTMLSelectElement).value);

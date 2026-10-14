@@ -40,6 +40,8 @@ export class SiteEditor {
   private canSave = false;
   /** Set when the page reloads on purpose ("Voltar ao original"): no "leave the site?" prompt. */
   private leaving = false;
+  /** Login of an account with two-step verification: after the password, the code of the authenticator app. */
+  private codeStep = false;
 
   constructor(private app: SiteApp) {
     this.draft = structuredClone(app.config);
@@ -61,6 +63,8 @@ export class SiteEditor {
     document.body.classList.add('editing');
     const { remote, demo } = this.app.data;
     this.canSave = demo || (!!remote && (await remote.canEditSite(this.app.data.agencyId)));
+    // already logged in with the password only: the code is still missing
+    if (!this.canSave && remote) this.codeStep = (await remote.mfa()).pending;
     this.render();
   }
 
@@ -81,11 +85,16 @@ export class SiteEditor {
     if (!this.canSave) {
       this.el.innerHTML = `<div class="ed-head"><h2>Personalizar site</h2><button type="button" class="icon-btn" data-close aria-label="Fechar">${ICONS.close}</button></div>
         <form class="ed-login">
-          <p>Entre com a conta de dono ou administrador da ${escapeHtml(this.app.data.orgName)} para editar o site.</p>
+          ${
+            this.codeStep
+              ? `<p>Verificação em duas etapas: digite o código de 6 dígitos que aparece agora no aplicativo autenticador.</p>
+          <label class="fld"><span>Código</span><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>`
+              : `<p>Entre com a conta de dono ou administrador da ${escapeHtml(this.app.data.orgName)} para editar o site.</p>
           <label class="fld"><span>E-mail</span><input name="email" type="email" autocomplete="username" required></label>
-          <label class="fld"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>
+          <label class="fld"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>`
+          }
           <p class="form-msg" role="status"></p>
-          <button class="btn btn-primary btn-block">Entrar</button>
+          <button class="btn btn-primary btn-block">${this.codeStep ? 'Confirmar' : 'Entrar'}</button>
         </form>`;
       this.el.querySelector('[data-close]')!.addEventListener('click', () => this.close());
       const form = this.el.querySelector<HTMLFormElement>('form')!;
@@ -93,9 +102,15 @@ export class SiteEditor {
         e.preventDefault();
         const msg = form.querySelector('.form-msg')!;
         const fd = new FormData(form);
+        const remote = this.app.data.remote!;
         try {
-          await this.app.data.remote!.signIn(String(fd.get('email')), String(fd.get('password')));
-          this.canSave = await this.app.data.remote!.canEditSite(this.app.data.agencyId);
+          if (this.codeStep) await remote.verifyMfa(String(fd.get('code') ?? ''));
+          else if (await remote.signIn(String(fd.get('email')), String(fd.get('password')))) {
+            this.codeStep = true;
+            return this.render();
+          }
+          this.codeStep = false;
+          this.canSave = await remote.canEditSite(this.app.data.agencyId);
           if (!this.canSave) msg.textContent = 'Esta conta não é dona nem administradora desta imobiliária.';
           else this.render();
         } catch (err) {

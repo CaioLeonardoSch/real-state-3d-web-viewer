@@ -294,15 +294,17 @@ message_service_sid = ""
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 
-# Multi-factor-authentication is available to Supabase Pro plan.
+# Multi-factor authentication. The app authenticator (TOTP) is free on every plan; phone MFA is a paid add-on.
 [auth.mfa]
 # Control how many MFA factors can be enrolled at once per user.
 max_enrolled_factors = 10
 
-# Control MFA via App Authenticator (TOTP)
+# Control MFA via App Authenticator (TOTP). Verificação em duas etapas: obrigatória para a equipe da plataforma e
+# opcional para donos e administradores (supabase/migrations/20261020000001_mfa.sql). No projeto do Supabase, confira
+# em Authentication → Multi-Factor que o TOTP está ligado (é o padrão).
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

@@ -486,6 +486,27 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   font-size: 15px;
   color: var(--text);
 }
+/* two-step verification: QR code and the same key as text */
+.mfa-setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.mfa-setup img {
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+}
+.mfa-setup .a-field {
+  flex: 1;
+  min-width: 160px;
+}
+.mfa-setup input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
 
 /* ---------------- map stage ---------------- */
 .stage {

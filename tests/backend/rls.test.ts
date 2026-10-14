@@ -2,6 +2,7 @@
 // Skipped by plain `npm test` when SUPABASE_URL is not set.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { freshTotp } from '../../scripts/lib/totp.mjs';
 
 // tests run in Node; the project's tsconfig has only browser types
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
@@ -31,6 +32,26 @@ async function userClient(name: string): Promise<User> {
   const { error: e2 } = await client.auth.signInWithPassword({ email, password });
   if (e2) throw e2;
   return { client, id: data.user.id, email };
+}
+
+/** Codes already used in this run: a second verification waits for the next code (Supabase may refuse a repeat). */
+const usedCodes = new Set<string>();
+
+/** Turns two-step verification on for `u` (authenticator app) and confirms its session (aal2); returns the secret. */
+async function enableTotp(u: User): Promise<string> {
+  const { data, error } = await u.client.auth.mfa.enroll({ factorType: 'totp' });
+  if (error) throw error;
+  const v = await u.client.auth.mfa.challengeAndVerify({ factorId: data.id, code: await freshTotp(data.totp.secret, usedCodes) });
+  if (v.error) throw v.error;
+  return data.totp.secret;
+}
+
+/** Another session of `u`, with the password only (aal1). */
+async function passwordOnly(u: User): Promise<SupabaseClient> {
+  const client = anon();
+  const { error } = await client.auth.signInWithPassword({ email: u.email, password: 'senha-de-teste-123' });
+  if (error) throw error;
+  return client;
 }
 
 /** Accepts an invitation as `u`; fails the test on error. */
@@ -66,11 +87,13 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
   let carla: User; // dona da imobiliária B
   let orgA: string;
   let orgB: string;
+  let staffSecret: string;
 
   beforeAll(async () => {
     [staff, ana, bruno, carla] = await Promise.all(['suporte', 'ana', 'bruno', 'carla'].map(userClient));
-    // a equipe só entra pelo painel (chave de serviço)
+    // a equipe só entra pelo painel (chave de serviço), e os poderes de suporte exigem a verificação em duas etapas
     expect((await service().from('platform_staff').insert({ user_id: staff.id })).error).toBeNull();
+    staffSecret = await enableTotp(staff);
     const a = await staff.client.rpc('create_organization', { p_name: 'Imobiliária A', p_slug: `imob-a-${tag}`, p_owner_email: ana.email });
     const b = await staff.client.rpc('create_organization', { p_name: 'Imobiliária B', p_slug: `imob-b-${tag}`, p_owner_email: carla.email.toUpperCase() });
     expect(a.error).toBeNull();
@@ -82,6 +105,48 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: bruno.email, role: 'agent' }).select('token').single();
     expect(inv.error).toBeNull();
     await accept(bruno, inv.data!.token);
+  });
+
+  it('suporte sem a verificação em duas etapas na sessão é usuário comum; com o código, atende todos os clientes', async () => {
+    // na equipe, mas sem segundo fator nenhum
+    const novato = await userClient('suporte-sem-2fa');
+    expect((await service().from('platform_staff').insert({ user_id: novato.id })).error).toBeNull();
+    expect((await novato.client.rpc('is_staff')).data).toBe(false);
+    expect((await novato.client.rpc('create_organization', { p_name: 'Sem 2FA', p_slug: `sem-2fa-${tag}` })).error?.message).toMatch(/verificação em duas etapas/);
+    // com o segundo fator ativado, mas numa sessão só com a senha (aal1)
+    const plain = await passwordOnly(staff);
+    const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
+    expect((await plain.rpc('is_staff')).data).toBe(false);
+    expect((await plain.rpc('my_organizations')).data).toHaveLength(0);
+    expect((await plain.rpc('create_organization', { p_name: 'Sem 2FA', p_slug: `sem-2fa-${tag}` })).error?.message).toMatch(/verificação em duas etapas/);
+    expect((await plain.from('listings').update({ title: 'Sem o código' }).eq('id', l.data!.id).select('id')).data ?? []).toHaveLength(0);
+    expect((await plain.from('my_listings').select('id').eq('id', l.data!.id)).data ?? []).toHaveLength(0);
+    expect((await plain.rpc('org_audit', { p_org: orgA })).data ?? []).toHaveLength(0);
+    expect((await plain.rpc('org_members', { p_org: orgA })).data ?? []).toHaveLength(0);
+    // a mesma sessão, depois do código: poderes de suporte
+    const factor = (await plain.auth.mfa.listFactors()).data!.totp[0];
+    expect((await plain.auth.mfa.challengeAndVerify({ factorId: factor.id, code: await freshTotp(staffSecret, usedCodes) })).error).toBeNull();
+    expect((await plain.rpc('is_staff')).data).toBe(true);
+    expect((await plain.from('listings').update({ title: 'Com o código' }).eq('id', l.data!.id).select('id')).data).toHaveLength(1);
+    expect((await plain.rpc('my_organizations')).data.map((o: { id: string }) => o.id)).toEqual(expect.arrayContaining([orgA, orgB]));
+  }, 60_000); // a second code may take up to 30 s
+
+  it('dona com a verificação em duas etapas: só a senha não basta para agir na imobiliária', async () => {
+    await enableTotp(ana); // ana.client passa a ser uma sessão confirmada (aal2)
+    try {
+      const plain = await passwordOnly(ana);
+      expect((await plain.rpc('my_organizations')).data).toHaveLength(0);
+      expect((await plain.from('my_listings').select('id').eq('org_id', orgA)).data ?? []).toHaveLength(0);
+      expect((await plain.from('organizations').update({ creci: 'invasor' }).eq('id', orgA).select('id')).data ?? []).toHaveLength(0);
+      expect((await plain.from('invitations').insert({ org_id: orgA, email: `invasor-${tag}@teste.local`, role: 'admin' })).error).not.toBeNull();
+      expect((await plain.from('leads').select('id').eq('org_id', orgA)).data ?? []).toHaveLength(0);
+      expect((await plain.rpc('org_members', { p_org: orgA })).data ?? []).toHaveLength(0);
+      // a sessão confirmada continua valendo
+      expect((await ana.client.rpc('my_organizations')).data.map((o: { id: string }) => o.id)).toContain(orgA);
+    } finally {
+      const factor = (await ana.client.auth.mfa.listFactors()).data!.totp[0];
+      expect((await ana.client.auth.mfa.unenroll({ factorId: factor.id })).error).toBeNull();
+    }
   });
 
   it('só a equipe da plataforma cadastra imobiliárias', async () => {

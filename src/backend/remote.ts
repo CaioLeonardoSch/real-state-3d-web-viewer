@@ -90,6 +90,28 @@ export interface PricePoint {
   price: number;
 }
 
+/** Two-step verification (authenticator app) of the logged-in account. */
+export interface MfaState {
+  /** The account has a confirmed authenticator app. */
+  enabled: boolean;
+  /** This session has only the password so far: the 6-digit code is still needed (verifyMfa). */
+  pending: boolean;
+  factorId: string | null;
+}
+
+/** A new authenticator app being set up: QR code (image URL) and the same secret as text. */
+export interface TotpSetup {
+  factorId: string;
+  qrCode: string;
+  secret: string;
+}
+
+const NO_MFA: MfaState = { enabled: false, pending: false, factorId: null };
+
+/** Message for a wrong or expired code. */
+const codeError = (message: string) =>
+  /invalid|expired|code|challenge/i.test(message) ? 'Código incorreto ou vencido. Confira o aplicativo e digite o código atual.' : message;
+
 const PHOTOS = 'listing-photos';
 const SITE_ASSETS = 'site-assets';
 
@@ -135,9 +157,62 @@ export class RemoteBackend {
     this.sb.auth.onAuthStateChange((_event, session) => fn(session));
   }
 
-  async signIn(email: string, password: string): Promise<void> {
+  /** Password login. Returns true when the account has two-step verification: the code comes next (verifyMfa). */
+  async signIn(email: string, password: string): Promise<boolean> {
     const { error } = await this.sb.auth.signInWithPassword({ email, password });
     if (error) throw new Error(/invalid/i.test(error.message) ? 'E-mail ou senha incorretos.' : error.message);
+    return (await this.mfa()).pending;
+  }
+
+  /** Two-step verification of the logged-in account (the database ignores a membership until it is confirmed). */
+  async mfa(): Promise<MfaState> {
+    if (!(await this.session())) return NO_MFA;
+    const [aal, factors] = await Promise.all([this.sb.auth.mfa.getAuthenticatorAssuranceLevel(), this.sb.auth.mfa.listFactors()]);
+    // listFactors().totp has only confirmed factors
+    const factor = factors.data?.totp[0];
+    if (!factor) return NO_MFA;
+    return { enabled: true, pending: aal.data?.currentLevel !== 'aal2', factorId: factor.id };
+  }
+
+  /** Second step of the login: the current 6-digit code of the authenticator app. */
+  async verifyMfa(code: string): Promise<void> {
+    const { factorId } = await this.mfa();
+    if (!factorId) throw new Error('Esta conta não tem a verificação em duas etapas ativada.');
+    const { error } = await this.sb.auth.mfa.challengeAndVerify({ factorId, code: code.replace(/\D/g, '') });
+    if (error) throw new Error(codeError(error.message));
+  }
+
+  /** Starts turning two-step verification on: a new authenticator app, confirmed next by confirmTotp. */
+  async enrollTotp(): Promise<TotpSetup> {
+    // a set-up abandoned half-way leaves an unconfirmed factor behind: replaced by the new one
+    const { data: list } = await this.sb.auth.mfa.listFactors();
+    for (const f of list?.all ?? []) if (f.factor_type === 'totp' && f.status === 'unverified') await this.sb.auth.mfa.unenroll({ factorId: f.id });
+    const { data, error } = await this.sb.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) throw new Error(`Não foi possível ativar a verificação em duas etapas: ${error.message}`);
+    // the SVG comes as "data:image/svg+xml;utf-8,<svg…>": encoded again, so characters such as "#" survive in the URL
+    const svg = data.totp.qr_code.replace(/^data:image\/svg\+xml;utf-8,/, '');
+    return { factorId: data.id, qrCode: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, secret: data.totp.secret };
+  }
+
+  /** Confirms the new authenticator app with its first code; the session is then confirmed too (aal2). */
+  async confirmTotp(factorId: string, code: string): Promise<void> {
+    const { error } = await this.sb.auth.mfa.challengeAndVerify({ factorId, code: code.replace(/\D/g, '') });
+    if (error) throw new Error(codeError(error.message));
+  }
+
+  /** Turns two-step verification off (Supabase Auth requires a session confirmed with the code). */
+  async removeTotp(factorId: string): Promise<void> {
+    const { error } = await this.sb.auth.mfa.unenroll({ factorId });
+    if (error) throw new Error(`Não foi possível desativar: ${error.message}`);
+    await this.sb.auth.refreshSession();
+  }
+
+  /** On the platform's support team (its powers also need the second factor: see isStaff). */
+  async staffMember(): Promise<boolean> {
+    const uid = await this.userId();
+    if (!uid) return false;
+    const { data } = await this.sb.from('platform_staff').select('user_id').eq('user_id', uid);
+    return !!data?.length;
   }
 
   /** Returns true when the account still needs e-mail confirmation. */
@@ -163,6 +238,7 @@ export class RemoteBackend {
     return (data ?? []) as Org[];
   }
 
+  /** Support powers: on the team and in a session confirmed with the second factor. */
   async isStaff(): Promise<boolean> {
     if (!(await this.session())) return false;
     const { data } = await this.sb.rpc('is_staff');
