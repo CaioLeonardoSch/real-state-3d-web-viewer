@@ -7,8 +7,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
+import { LISTING_PAGE_CSS, pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
 import { rowToListing } from '../src/backend/mapping.ts';
+import { listingCsp, styleHash } from './lib/csp.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, process.env.OUT_DIR || "dist");
@@ -43,11 +44,13 @@ if (url && key) {
   }
 }
 
+// the same policy goes into dist/_headers (vite.config.ts); the <meta> copy covers hosts without headers
+const csp = listingCsp({ supabaseUrl: url, styleHashes: [styleHash(LISTING_PAGE_CSS)], meta: true });
 const index = {};
 const sitemap = [{ loc: SITE_URL }];
 for (const l of pages) {
   const rel = pagePath(l);
-  const html = renderListingPage(l, { siteUrl: SITE_URL, agencyName: agencyName.get(l.agency) ?? '', siteName: SITE_NAME });
+  const html = renderListingPage(l, { siteUrl: SITE_URL, agencyName: agencyName.get(l.agency) ?? '', siteName: SITE_NAME, csp });
   await mkdir(path.join(DIST, rel), { recursive: true });
   await writeFile(path.join(DIST, rel, 'index.html'), html);
   index[l.id] = rel;

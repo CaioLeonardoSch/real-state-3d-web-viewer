@@ -1,0 +1,20 @@
+# Cabeçalhos de segurança para hospedagens que leem este arquivo (Cloudflare Pages, Netlify). O GitHub Pages não lê:
+# lá valem só as políticas das tags <meta> das páginas, que não cobrem frame-ancestors nem HSTS (ver docs/backend.md,
+# seção 10). As linhas Content-Security-Policy são preenchidas no build (vite.config.ts, scripts/lib/csp.mjs) com os
+# endereços do Supabase, do Turnstile e dos blocos do mapa daquele build.
+# HSTS sem includeSubDomains: o mesmo site atende os domínios dos clientes, e um subdomínio antigo deles sem HTTPS
+# deixaria de abrir.
+
+/*
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), magnetometer=(), gyroscope=(), accelerometer=(), display-capture=()
+  X-Frame-Options: SAMEORIGIN
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: __CSP_APP__
+
+# Páginas estáticas dos anúncios: sem JavaScript, e nunca dentro de outro site. Onde as duas regras valem juntas
+# (Cloudflare e Netlify somam os cabeçalhos), o navegador aplica as duas políticas, e a página atende a ambas.
+/imovel/*
+  Content-Security-Policy: __CSP_LISTING__
