@@ -62,7 +62,7 @@
   ],
   "source": "santa-catarina-latest.osm.pbf",
   "osmTimestamp": "2026-10-13T01:05:00Z",
-  "extractedAt": "2026-10-14T00:09:05Z",
+  "extractedAt": "2026-10-14T14:37:22Z",
   "center": [
     -48.9020204,
     -26.2998263
@@ -88,6 +88,12 @@
     "treesFromOsm": 1071,
     "lamps": 41012,
     "lampsFromOsm": 416,
+    "roofs": {
+      "gable": 66819,
+      "hip": 60794,
+      "tank": 925,
+      "flat": 36134
+    },
     "roadKmBySurface": {
       "a": 1459,
       "?": 640.2,
@@ -97,6 +103,7 @@
     }
   },
   "tiles": "joinville.pmtiles",
+  "detailTiles": "joinville-detalhe.pmtiles",
   "tileZooms": {
     "buildings": {
       "minzoom": 10,
@@ -120,6 +127,10 @@
     },
     "canopy": {
       "minzoom": 14,
+      "maxzoom": 15
+    },
+    "roofs": {
+      "minzoom": 15,
       "maxzoom": 15
     },
     "trees": {

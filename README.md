@@ -171,23 +171,30 @@ Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Oper
 
 ## Mapa em blocos (PMTiles) e 3D só de perto
 
-O mapa base é **um único arquivo** `public/data/joinville.pmtiles` (≈20 MB, 164.672 prédios) com blocos vetoriais (vector tiles)
-dos prédios, vias (com o tipo de pavimento), água, áreas verdes, limites de bairro e, de perto, a paisagem: copa das
-matas, árvores, postes e a luz dos postes. O navegador **não baixa o arquivo inteiro**: o protocolo
+O mapa base são **dois arquivos** de blocos vetoriais (vector tiles):
+
+- `public/data/joinville.pmtiles` (≈14 MB, 164.672 prédios): prédios, vias (com o tipo de pavimento), água, áreas
+  verdes, limites de bairro e a copa das matas;
+- `public/data/joinville-detalhe.pmtiles` (≈10 MB, só o zoom 15 da área urbana): telhados, árvores, postes e a luz dos
+  postes. Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto.
+
+O navegador **não baixa os arquivos inteiros**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
 (range). Não há servidor de mapas: qualquer hospedagem estática que aceite `Range` serve (GitHub Pages, S3, Cloudflare,
 o `vite preview`).
 
 | Zoom | Conteúdo dos blocos | Tamanho (comprimido) |
 |---|---|---|
-| 10 | vias, água, verde, bairros + prédios ≥ 1.500 m², só o contorno | até 156 KB por bloco |
-| 11 | + prédios ≥ 600 m², só o contorno | até 154 KB |
-| 12 | + prédios ≥ 250 m², só o contorno | até 252 KB |
-| 13 | + prédios ≥ 120 m², só o contorno | até 265 KB |
-| 14–15 | todos os prédios, com altura e marca de residencial; copa das matas | até 214 KB (z14) |
-| 15 | + árvores, postes e luzes (low poly, em 3D) | até 89 KB |
+| 10 | vias principais, rios, verde e água ≥ 5 ha / 2 ha, bairros + prédios ≥ 1.500 m², só o contorno | até 71 KB por bloco |
+| 11 | + ruas residenciais, verde ≥ 2 ha, água ≥ 0,5 ha; prédios ≥ 600 m² | até 117 KB |
+| 12 | + verde ≥ 0,5 ha, água ≥ 0,1 ha, córregos; prédios ≥ 250 m² | até 168 KB |
+| 13 | + vias de serviço e estradas rurais, verde ≥ 0,1 ha; prédios ≥ 120 m² | até 201 KB |
+| 14–15 | todos os prédios, com altura e marca de residencial; calçadas e caminhos; copa das matas | até 214 KB (z14) e 75 KB (z15) |
+| 15 (detalhe) | telhados, árvores, postes e luzes (low poly, em 3D) | até 113 KB |
 
-São 2.532 blocos. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
+São 2.532 blocos no arquivo base e 456 no de detalhe. De longe, cada camada leva só o que se enxerga naquele zoom
+(e com a geometria simplificada): a primeira tela no celular, que usa os blocos 10 e 11, ficou com menos da metade
+dos bytes. Vias apenas planejadas, em obra, plataformas e corredores internos não entram no mapa. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
 algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 58 MB só de prédios.
 
 **3D só de perto, sem ficar "chapado" de longe:**
@@ -210,6 +217,15 @@ Low poly, como os prédios: o objetivo é dar vida e escala ao bairro, não real
 (`scripts/lib/scenery.mjs`), de forma determinística: os mesmos dados geram a mesma paisagem, e uma rua editada no OSM
 não muda as árvores do resto da cidade.
 
+- **Telhados** (`scripts/lib/roofs.mjs`): quase todos os prédios de Joinville no OSM são só um contorno
+  (`building=yes`), então o telhado é estimado pelo formato, pelos andares e pelo uso; a tag `roof:shape`, quando existe,
+  manda.
+  - casas alongadas ganham **duas águas** e as quadradas **quatro águas** (um quarto troca, para as ruas não parecerem
+    carimbadas), desenhados em degraus, com beiral e três cores (cerâmica, fibrocimento, telha escura);
+  - torres de 5 andares ou mais ganham laje com a **caixa d'água e a casa de máquinas**;
+  - contornos complexos (em L, com pátio), galpões grandes e prédios de 4 andares ficam com laje;
+  - na última geração: 66.819 de duas águas, 60.794 de quatro águas, 925 torres com caixa d'água e 36.134 lajes;
+  - o prédio de um anúncio não ganha telhado do mapa base (ele é desenhado pelo anúncio, inclusive na obra).
 - **Pavimento** pela tag `surface` do OSM:
   - classes: asfalto, calçamento (lajota, paralelepípedo, paver), outro pavimento e estrada de chão; caminhos rurais
     (`track`) sem a tag contam como chão;
@@ -230,6 +246,7 @@ não muda as árvores do resto da cidade.
   lisa, que pesa menos na primeira tela. Rios e canais aparecem como linhas.
 - **Onde aparece:** só de perto:
   - a copa das matas sobe junto com os prédios, a partir do zoom 14;
+  - os telhados sobem com os prédios, a partir do zoom 15;
   - as árvores crescem do zoom 15 ao 16;
   - os postes aparecem no 16;
   - as luzes, no 15,5.
@@ -630,7 +647,8 @@ Extrato OSM de 13/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 14/10/
 | Postes no mapa (416 do OSM, o resto ilustrativo) | 41.012 |
 
 - Joinville e Araquari, 53 bairros com nome no OSM; bbox −49,200842, −26,599012, −48,650741, −26,074239 (W, S, E, N).
-- `joinville.pmtiles`: 2.532 blocos, zooms 10 a 15, ≈20 MB.
+- `joinville.pmtiles`: 2.532 blocos, zooms 10 a 15, ≈14 MB; `joinville-detalhe.pmtiles`: 456 blocos, zoom 15, ≈10 MB.
+- Telhados: 66.819 de duas águas, 60.794 de quatro águas, 925 torres com caixa d'água, 36.134 lajes.
 - Ruas de carro por pavimento: 1.459 km de asfalto, 377 km de calçamento, 1.427 km de chão, 44 km de outro
   pavimento e 640 km sem informação.
 

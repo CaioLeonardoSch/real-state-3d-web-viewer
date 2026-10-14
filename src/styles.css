@@ -131,6 +131,13 @@ select {
   gap: 2px;
   min-width: 170px;
 }
+/* the page's heading, sized like the rest of the bar */
+.brand-name {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
 .demo-banner {
   font-size: 12px;
   color: var(--accent-strong);
@@ -1113,7 +1120,8 @@ body[data-tod='night'] .price {
   font-size: 11px;
   font-weight: 700;
   color: #fff;
-  background: #0f8a4b;
+  /* 5.4:1 with the white text */
+  background: #0b7a42;
   border-radius: 4px;
   padding: 0 5px;
   vertical-align: 1px;
@@ -1450,10 +1458,11 @@ body[data-tod='night'] .bairro-label.kind-distrito {
 
 /* ---------------- developments ("espelho de vendas 3D") ---------------- */
 :root {
-  --st-available: #2e9d5b;
+  /* unit status; the cells carry text: white on green and blue, dark on amber and grey (WCAG AA) */
+  --st-available: #1e7a44;
   --st-reserved: #e0a526;
   --st-sold: #c3c7ce;
-  --st-selected: #2f7de1;
+  --st-selected: #1f66c2;
   --dev: #7a5af8;
 }
 .dev-marker {
@@ -1615,6 +1624,7 @@ button.dev-row-label {
 }
 .unit.st-reserved {
   background: var(--st-reserved);
+  color: #1f2328;
 }
 .unit.st-sold {
   color: #4b5058;

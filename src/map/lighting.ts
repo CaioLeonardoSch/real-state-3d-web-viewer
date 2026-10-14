@@ -84,6 +84,8 @@ export interface Scenery {
   lum: string;
   /** Tower cranes of buildings under construction. */
   crane: string;
+  /** Roofs (scripts/lib/roofs.mjs): clay tiles, fibre cement, dark tiles, concrete (water tank and lift room). */
+  roofs: [string, string, string, string];
   /** Pool of light under each lamp (night only). */
   glow: string;
   glowOpacity: number;
@@ -112,6 +114,7 @@ const DAY_SCENERY: Scenery = {
   pole: '#7c838d',
   lum: '#dfe3e8',
   crane: '#f0b429',
+  roofs: ['#c48d72', '#a7acb2', '#8f6f62', '#c6c6c1'],
   glow: '#ffd27a',
   glowOpacity: 0,
 };
@@ -161,6 +164,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
           pole: '#3e4555',
           lum: '#fff1c2',
           crane: '#b98a2a',
+          roofs: ['#4c3c48', '#3f4659', '#3b3242', '#454b5d'],
           glow: '#ffd37e',
           glowOpacity: 0.85,
         },

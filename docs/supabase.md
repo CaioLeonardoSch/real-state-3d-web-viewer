@@ -37,7 +37,7 @@ No GitHub: **Settings → Secrets and variables → Actions → Variables → Ne
 |---|---|
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | a chave publishable/anon |
-| `VITE_DEMO_LISTINGS` | `false` para esconder os 100 imóveis fictícios (opcional; padrão: mostrar) |
+| `VITE_DEMO_LISTINGS` | `false` no produto: build sem a demonstração (sem os imóveis fictícios, sem o espelho de vendas de exemplo, sem o título e a faixa "demonstração"; os arquivos de exemplo nem são publicados). Padrão: demonstração |
 
 Depois rode de novo **Actions → Publicar no GitHub Pages → Run workflow** (ou faça um push). O botão **Entrar**
 aparece no topo.
