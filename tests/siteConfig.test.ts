@@ -52,6 +52,8 @@ describe('configuração do site do cliente', () => {
     expect(safeImage('http://127.0.0.1:54321/storage/v1/logo.png')).toBe('http://127.0.0.1:54321/storage/v1/logo.png');
     expect(safeImage('data:image/png;base64,iVBORw0KGgo=')).toBe('data:image/png;base64,iVBORw0KGgo=');
     expect(safeImage('data:text/html;base64,PHNjcmlwdD4=')).toBe('');
+    // SVG can carry scripts
+    expect(safeImage('data:image/svg+xml;base64,PHN2Zz4=')).toBe('');
     expect(safeImage('javascript:alert(1)')).toBe('');
   });
 
@@ -82,6 +84,10 @@ describe('configuração do site do cliente', () => {
     const c = normalizeSiteConfig({ colors: { primary: '#f7f3a0' } });
     expect(colorWarnings(c).length).toBeGreaterThan(0);
     expect(colorWarnings(defaultSiteConfig())).toEqual([]);
+    // destaque amarelo-claro: avisa, e o preço reduzido usa a cor escurecida
+    const y = normalizeSiteConfig({ colors: { accent: '#ffee00' } });
+    expect(colorWarnings(y).map((w) => w.field)).toContain('accent');
+    expect(contrast(themeVars(y)['--s-accent-text'], '#ffffff')).toBeGreaterThanOrEqual(4.5);
     const v = themeVars(c);
     expect(contrast(v['--s-primary-text'], v['--s-bg'])).toBeGreaterThanOrEqual(4.5);
   });

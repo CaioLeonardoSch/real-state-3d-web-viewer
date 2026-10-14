@@ -171,16 +171,25 @@ por e-mail, como os contatos dos anúncios.
   anúncios dele e não altera os dados do visitante; contatos não entram no registro de auditoria (dados pessoais).
 - Editar um anúncio sem mudá-lo de lugar mantém o mesmo círculo aproximado (sortear um novo a cada edição permitiria
   estimar o endereço escondido comparando os círculos).
+- Obra em andamento (`floors_built`, `construction_month`, `construction_source`; migração
+  `20261019000001_construction_progress.sql`):
+  - só vale para anúncio "em construção" e nunca passa do número de andares;
+  - quem anuncia só registra como "anunciante" ("vistoria" e "imagem" ficam para a equipe e para o serviço mensal,
+    com a chave de serviço);
+  - cada mês fica em `construction_history`, visível ao público para anúncios publicados e à imobiliária para os
+    dela.
 
 ## Testes
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 31 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
-                        # por e-mail num provedor falso), privacidade, preço, storage e importação do XML
+npm run test:backend    # 39 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
+                        # por e-mail num provedor falso), privacidade, preço, obra em andamento, site da
+                        # imobiliária, storage e importação do XML
 npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
                         # corretor anuncia com fotos → visitante → preço → edição completa → lixeira e
-                        # restauração → excluir de vez → histórico, contato do visitante e convites por e-mail (22 checagens)
+                        # restauração → excluir de vez → histórico, contato do visitante, convites por e-mail e
+                        # site da imobiliária personalizado pelo dono (27 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

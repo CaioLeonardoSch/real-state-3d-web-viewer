@@ -1,4 +1,5 @@
 import type { MultiPolygon, Polygon } from 'geojson';
+import { parseProgress, type ConstructionProgress } from './construction.ts';
 
 export const LISTING_TYPES = ['apartment', 'house', 'semi_detached', 'land'] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
@@ -199,6 +200,8 @@ export interface Listing {
   highlight?: Highlight;
   /** Prices recorded by the platform, oldest first. A reduction is shown only from this history. */
   priceHistory?: PricePoint[];
+  /** Under construction: floors already built (the map shows the rest translucent). */
+  construction?: ConstructionProgress;
 }
 
 export const transactionOf = (l: Listing): Transaction => l.transaction ?? 'sale';
@@ -329,6 +332,7 @@ export function validateListingsFile(raw: unknown): ListingsFile {
       (!Array.isArray(l.priceHistory) || l.priceHistory.some((p) => !isObj(p) || !isInt(p.price) || !/^\d{4}-\d{2}-\d{2}$/.test(String(p.date))))
     )
       errors.push(`${at}.priceHistory invalid`);
+    if (l.construction !== undefined && !parseProgress(l.construction)) errors.push(`${at}.construction invalid`);
     if (l.approximateLocation === true) {
       if (!isLonLat(l.approxCenter)) errors.push(`${at}.approxCenter missing`);
       if (!isNum(l.approxRadiusM)) errors.push(`${at}.approxRadiusM missing`);

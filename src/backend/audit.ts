@@ -38,6 +38,8 @@ const FIELDS: Record<string, string> = {
   floors: 'andares',
   year_built: 'ano de construção',
   status: 'obra',
+  floors_built: 'andamento da obra',
+  construction_month: 'andamento da obra',
   features: 'comodidades',
   transaction: 'tipo de negócio',
   address: 'endereço',
@@ -54,7 +56,7 @@ const FIELDS: Record<string, string> = {
   type: 'tipo',
 };
 /** Columns kept by the server, never shown as a change. */
-const HIDDEN = new Set(['previous_price', 'price_reduced_at', 'approx_radius_m', 'deleted_by', 'exclusive_verified', 'created_by', 'org_id', 'id']);
+const HIDDEN = new Set(['previous_price', 'price_reduced_at', 'approx_radius_m', 'deleted_by', 'exclusive_verified', 'created_by', 'org_id', 'id', 'construction_source']);
 
 const brl = (v: unknown) => (typeof v === 'number' ? `R$ ${v.toLocaleString('pt-BR')}` : '—');
 const q = (s: string | null) => (s ? `"${s}"` : 'um anúncio');

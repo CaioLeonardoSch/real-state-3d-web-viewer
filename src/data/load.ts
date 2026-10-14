@@ -38,6 +38,17 @@ async function getJson<T>(name: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Neighbourhood areas (simplified polygons, scripts/build-tiles.mjs), loaded only when a "bairro" filter is used. */
+export type BairroAreas = FeatureCollection<Polygon | MultiPolygon, { name: string; grown?: Polygon | MultiPolygon }>;
+let bairroAreas: Promise<BairroAreas> | null = null;
+export function loadBairroAreas(): Promise<BairroAreas> {
+  bairroAreas ??= getJson<BairroAreas>('bairros-areas.geojson').catch((err: Error) => {
+    bairroAreas = null;
+    throw err;
+  });
+  return bairroAreas;
+}
+
 export async function loadData(): Promise<AppData> {
   const [meta, boundary, bairros, rawListings] = await Promise.all([
     getJson<DataMeta>('meta.json'),
@@ -53,5 +64,7 @@ export async function loadData(): Promise<AppData> {
       console.warn(`Empreendimentos indisponíveis: ${err.message}`);
       return [];
     });
-  return { meta, boundary, bairros, tilesUrl: dataUrl(meta.tiles), listings, developments };
+  // the tiles can live elsewhere (object storage, one file per monthly version): an absolute URL in meta.json
+  const tilesUrl = /^https:\/\//.test(meta.tiles) ? meta.tiles : dataUrl(meta.tiles);
+  return { meta, boundary, bairros, tilesUrl, listings, developments };
 }

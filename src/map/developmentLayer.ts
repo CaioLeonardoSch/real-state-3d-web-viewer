@@ -5,6 +5,7 @@ import turfCentroid from '@turf/centroid';
 import turfDestination from '@turf/destination';
 import { point } from '@turf/helpers';
 import { countByStatus, type Development, type Level, type Unit } from '../data/developments';
+import { craneParts } from './crane';
 
 /**
  * Developments on the map. Closed: one violet tower per development, with a label.
@@ -29,7 +30,9 @@ export const DEV_COLORS = {
 const MARKER_MIN_ZOOM = 13.5;
 /** Gap between stacked levels, so floors read as slabs. */
 const LEVEL_GAP_M = 0.35;
-const TOWER_LAYERS = ['dev-towers'];
+const TOWER_LAYERS = ['dev-towers', 'dev-towers-ghost'];
+/** Feature ids in the towers source: built part i + 1, part still to build GHOST_ID + i + 1. */
+const GHOST_ID = 1000;
 const BLOCK_LAYERS = ['dev-blocks'];
 
 interface BlockProps {
@@ -78,16 +81,39 @@ export class DevelopmentLayer {
       over,
       base,
     ];
+    // closed: the tower (built part solid, floors still to build translucent) and, during works, a crane
+    for (const [id, part, opacity] of [
+      ['dev-towers', 'solid', 0.95],
+      ['dev-towers-ghost', 'ghost', 0.25],
+    ] as const) {
+      map.addLayer(
+        {
+          id,
+          type: 'fill-extrusion',
+          source: 'dev-towers',
+          filter: ['all', ['==', ['get', 'open'], false], ['==', ['get', 'part'], part]],
+          paint: {
+            'fill-extrusion-color': hover(DEV_COLORS.tower, DEV_COLORS.towerHover),
+            'fill-extrusion-base': ['get', 'base'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-opacity': opacity,
+            'fill-extrusion-vertical-gradient': false,
+          },
+        },
+        beforeLayer,
+      );
+    }
     map.addLayer(
       {
-        id: 'dev-towers',
+        id: 'dev-cranes',
         type: 'fill-extrusion',
         source: 'dev-towers',
-        filter: ['==', ['get', 'open'], false],
+        filter: ['==', ['get', 'part'], 'crane'],
         paint: {
-          'fill-extrusion-color': hover(DEV_COLORS.tower, DEV_COLORS.towerHover),
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-opacity': 0.95,
+          // counterweight in concrete grey (a colour per part also shares the shader of the towers)
+          'fill-extrusion-color': ['match', ['get', 'p'], 'weight', '#8a9099', '#f0b429'],
+          'fill-extrusion-base': ['get', 'b'],
+          'fill-extrusion-height': ['get', 'h'],
           'fill-extrusion-vertical-gradient': false,
         },
       },
@@ -138,16 +164,37 @@ export class DevelopmentLayer {
 
   // ---------------------------------------------------------------- data
 
+  /** Top (m) of the levels already built, or null when the development has no works under way. */
+  private builtTop(d: Development): number | null {
+    if (!d.progress) return null;
+    const n = Math.min(d.progress.floorsBuilt, d.levels.length);
+    return n > 0 ? d.levels[n - 1].top : 0;
+  }
+
   private towerCollection(): FeatureCollection {
-    return {
-      type: 'FeatureCollection',
-      features: this.developments.map((d, i) => ({
+    const features: Feature[] = [];
+    this.developments.forEach((d, i) => {
+      const top = d.levels.at(-1)!.top;
+      const built = this.builtTop(d);
+      const open = d.id === this.openId;
+      features.push({
         type: 'Feature',
         id: i + 1,
-        properties: { devId: d.id, height: d.levels.at(-1)!.top, open: d.id === this.openId },
+        properties: { devId: d.id, part: 'solid', base: 0, height: built ?? top, open },
         geometry: d.footprint,
-      })),
-    };
+      });
+      if (built === null) return;
+      if (built < top)
+        features.push({
+          type: 'Feature',
+          id: GHOST_ID + i + 1,
+          properties: { devId: d.id, part: 'ghost', base: built, height: top, open },
+          geometry: d.footprint,
+        });
+      const [w, s, e, n] = turfBbox(d.footprint);
+      features.push(...craneParts([w + (e - w) * 0.85, s + (n - s) * 0.15], top, ((i * 97) % 360) * (Math.PI / 180), { part: 'crane', devId: d.id }));
+    });
+    return { type: 'FeatureCollection', features };
   }
 
   private blockCollection(): FeatureCollection<Polygon, BlockProps> {
@@ -157,6 +204,7 @@ export class DevelopmentLayer {
     const features: Feature<Polygon, BlockProps>[] = [];
     let id = 0;
     const chosen = this.floor === null ? null : d.levels.find((l) => l.level === this.floor);
+    // (open, every unit stays solid and clickable: units on floors not built yet are sold "na planta")
     for (const l of d.levels) {
       const above = chosen !== null && chosen !== undefined && l.level > chosen.level;
       const props = { devId: d.id, level: l.level, base: l.base, top: l.top - LEVEL_GAP_M };
@@ -216,6 +264,11 @@ export class DevelopmentLayer {
       this.markers.forEach((m) => m.getElement().classList.toggle('is-far', this.map.getZoom() < MARKER_MIN_ZOOM));
     this.map.on('zoomend', update);
     update();
+  }
+
+  /** Hides the labels of these developments (outside the neighbourhood the map is cut to). */
+  setHidden(ids: ReadonlySet<string>): void {
+    this.markers.forEach((m, i) => m.getElement().classList.toggle('is-hidden', ids.has(this.developments[i].id)));
   }
 
   // ---------------------------------------------------------------- state
@@ -362,11 +415,16 @@ export class DevelopmentLayer {
       const block = this.map
         .queryRenderedFeatures(e.point, { layers: BLOCK_LAYERS })
         .find((f) => f.properties.kind === 'unit');
-      const towerId = tower ? (tower.id as number) : null;
+      // the built part and the part still to build light up together
+      const towerId = tower ? ((tower.id as number) > GHOST_ID ? (tower.id as number) - GHOST_ID : (tower.id as number)) : null;
       if (this.hoverTower !== towerId) {
-        if (this.hoverTower !== null) this.map.setFeatureState({ source: 'dev-towers', id: this.hoverTower }, { hover: false });
+        const state = (id: number, hover: boolean) => {
+          this.map.setFeatureState({ source: 'dev-towers', id }, { hover });
+          this.map.setFeatureState({ source: 'dev-towers', id: id + GHOST_ID }, { hover });
+        };
+        if (this.hoverTower !== null) state(this.hoverTower, false);
         this.hoverTower = towerId;
-        if (towerId !== null) this.map.setFeatureState({ source: 'dev-towers', id: towerId }, { hover: true });
+        if (towerId !== null) state(towerId, true);
       }
       this.setBlockHover(block ? (block.id as number) : null);
       if (tower || block) canvas.style.cursor = 'pointer';

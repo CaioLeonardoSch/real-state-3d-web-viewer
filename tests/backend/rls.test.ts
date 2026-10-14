@@ -384,6 +384,38 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     }, 30_000);
   });
 
+  describe('obra em andamento', () => {
+    it('o anunciante informa os andares construídos; o público vê; a origem não pode ser forjada; o histórico guarda o mês', async () => {
+      const ins = await bruno.client
+        .from('listings')
+        .insert(listingRow(orgA, { status: 'under_construction', floors: 10, floors_built: 4, construction_month: '2026-09-01', construction_source: 'vistoria' }))
+        .select('id, floors_built, construction_month, construction_source')
+        .single();
+      expect(ins.error).toBeNull();
+      expect(ins.data).toMatchObject({ floors_built: 4, construction_month: '2026-09-01', construction_source: 'anunciante' });
+      const id = ins.data!.id;
+      const pub = await anon().from('public_listings').select('floors_built, construction_month, construction_source').eq('id', id).single();
+      expect(pub.data).toEqual({ floors_built: 4, construction_month: '2026-09-01', construction_source: 'anunciante' });
+      // novo mês: o histórico guarda os dois
+      expect((await bruno.client.from('listings').update({ floors_built: 6, construction_month: '2026-10-01' }).eq('id', id)).error).toBeNull();
+      const hist = await anon().from('construction_history').select('month, floors_built').eq('listing_id', id).order('month');
+      expect(hist.data).toEqual([{ month: '2026-09-01', floors_built: 4 }, { month: '2026-10-01', floors_built: 6 }]);
+      // mais andares construídos que o prédio tem: recusado
+      expect((await bruno.client.from('listings').update({ floors_built: 11 }).eq('id', id)).error).not.toBeNull();
+      // a equipe registra uma vistoria
+      const staffSet = await staff.client.from('listings').update({ floors_built: 7, construction_source: 'vistoria' }).eq('id', id).select('construction_source').single();
+      expect(staffSet.data!.construction_source).toBe('vistoria');
+      // obra pronta: o andamento sai do anúncio (o histórico fica)
+      const done = await ana.client.from('listings').update({ status: 'ready' }).eq('id', id).select('floors_built, construction_month, construction_source').single();
+      expect(done.data).toEqual({ floors_built: null, construction_month: null, construction_source: null });
+      expect((await anon().from('construction_history').select('month').eq('listing_id', id)).data!.length).toBe(2);
+      // outra imobiliária não vê o histórico de um rascunho
+      const draft = await bruno.client.from('listings').insert(listingRow(orgA, { published: false, status: 'under_construction', floors: 5, floors_built: 1 })).select('id').single();
+      expect((await carla.client.from('construction_history').select('month').eq('listing_id', draft.data!.id)).data ?? []).toHaveLength(0);
+      expect((await bruno.client.from('construction_history').select('month').eq('listing_id', draft.data!.id)).data).toHaveLength(1);
+    });
+  });
+
   it('ninguém se coloca na equipe da plataforma', async () => {
     const r = await ana.client.from('platform_staff').insert({ user_id: ana.id });
     expect(r.error).not.toBeNull();

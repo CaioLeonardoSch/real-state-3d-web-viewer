@@ -43,9 +43,9 @@ imobiliária (white label, item 12): 13/10/2026.
 
 ### Dados do mapa (rotina, não servidor)
 
-13. **Atualização periódica** do OSM, do cadastro da Prefeitura, das alturas e do `.pmtiles`. Hoje é
-    `npm run data`; em produção vira um job agendado (mensal, por exemplo) que publica o arquivo novo no storage.
-    O mapa base não precisa de servidor: é um arquivo estático lido por intervalos.
+13. **Atualização periódica** do OSM, do cadastro da Prefeitura, das alturas e do `.pmtiles`: feita pelo workflow
+    mensal, que abre um pull request com o relatório de mudanças (item 13 abaixo). O mapa base não precisa de
+    servidor: é um arquivo estático lido por intervalos.
 
 ### Esforço estimado
 
@@ -354,8 +354,10 @@ a partir de uma **configuração** (dados, não código), guardada em `organizat
 1. **Mapa 3D da cidade** dentro do site do cliente, filtrando junto com a busca, e o prédio do imóvel na ficha.
 2. **Desconto confiável:** "Apenas com desconto" e o preço riscado vêm do histórico registrado pela plataforma,
    não de um "de/por" digitado.
-3. **Velocidade:** o site carrega cerca de 80 KB de código (menos de 30 KB compactado); o mapa 3D (1,2 MB) só
-   baixa quando o visitante abre a vista de mapa ou a ficha do imóvel. As páginas mudam sem recarregar.
+3. **Velocidade:** o código do site tem 27 KB compactados na demonstração. Com o backend somam-se o acesso ao
+   backend (11 KB) e o cliente do Supabase (55 KB), cerca de 93 KB ao todo, que dá para reduzir (avaliação de
+   outubro, I9). O mapa 3D (345 KB compactados) só baixa quando o visitante abre a vista de mapa ou chega ao mapa
+   na ficha do imóvel. As páginas mudam sem recarregar.
 4. **O cliente muda o próprio site** e vê na hora, sem abrir chamado.
 5. **Acessibilidade:** contraste garantido, navegação por teclado, textos para leitores de tela.
 6. Captação de proprietários, contatos e WhatsApp no mesmo lugar (Minha conta → Contatos).
@@ -381,3 +383,67 @@ converte SVG em PNG).
    alerta de imóvel novo por e-mail para a busca salva.
 
 *Anotado por Claude (assistente de IA), 13/10/2026, para consulta na manutenção.*
+
+## 13. Mapa: bairro, paisagem, obras e serviço mensal (conversa de 14/10/2026)
+
+**Pedido.** Filtro por bairro que mostre só o bairro e as ruas até 100 m das divisas, e mais vida no mapa sem
+perder o estilo low poly:
+
+- postes de luz;
+- estrada de chão, calçamento e asfalto diferentes;
+- árvores e lagoas mais bonitas.
+
+Atualizar alturas e telhados por imagem de satélite, num serviço à parte que rode uma vez por mês. Nas obras,
+mostrar o estado atual de forma translúcida.
+
+**O que foi feito.** Os detalhes estão no README (seções "Paisagem", "Filtro por bairro", "Obras em andamento" e
+"Serviço mensal do mapa"). Em resumo:
+
+- **Recorte por bairro:**
+  - a expressão `distance` do MapLibre filtra cada camada;
+  - uma máscara, calculada no navegador com `polygon-clipping`, cobre o chão de fora;
+  - as áreas crescidas 100 m vêm prontas em `bairros-areas.geojson`, carregado só quando se usa o filtro;
+  - os empreendimentos fora do recorte também somem.
+- **Paisagem** gerada junto com os blocos (`scripts/lib/scenery.mjs`), determinística:
+  - pavimento pela tag `surface` do OSM;
+  - 41 mil postes (416 do OSM, o resto ilustrativo) com luz à noite;
+  - 212 mil árvores (1.071 do OSM);
+  - copa facetada nas matas;
+  - água facetada.
+- **Obras:**
+  - andares prontos sólidos, o resto translúcido, e uma grua;
+  - colunas novas no banco e histórico mensal (`construction_history`);
+  - o anunciante informa pelo formulário; vistoria e imagem ficam para a equipe.
+- **Serviço mensal:**
+  - `.github/workflows/mapa-mensal.yml` refaz o mapa e abre um PR com o relatório (`scripts/map-changes.mjs`);
+  - **ninguém publica sem ler o relatório**;
+  - o primeiro teste já pegou um erro real: uma casa estimada com 29 andares. A regra das torres agora exige 70% do
+    contorno dentro do lote.
+- **Custo no celular:**
+  - a primeira versão da paisagem dobrou o tempo de bloqueio do mapa no Lighthouse;
+  - textura e shaders foram ajustados até voltar ao nível anterior;
+  - a regra para o futuro: **cada camada nova que aparece de longe custa um shader na primeira tela**; prefira
+    reaproveitar as expressões das camadas existentes.
+
+**Por que não satélite todo mês** (detalhes e preços em [`avaliacao-2026-10.md`](avaliacao-2026-10.md)):
+
+- um estéreo mensal custaria R$ 30 mil a 103 mil;
+- o verão de Joinville é nublado;
+- a estimativa pelo cadastro já acerta as casas;
+- as licenças de Google, Bing, Mapbox e Airbus impedem usar o derivado como queremos.
+
+**O caminho é:**
+
+- pedir o LiDAR da Prefeitura (2007 e 2010) e uma autorização formal;
+- usar o modelo de superfície do Estado para as torres;
+- fazer um estéreo único (cerca de R$ 18 mil) do núcleo vertical a cada 1–2 anos;
+- **trazer as construtoras como fonte do andamento das obras**.
+
+**Quando o histórico do git pesar** (cerca de 20 MB por mês):
+
+- publicar o `.pmtiles` num armazenamento de objetos, com nome por versão (`joinville-2026-11.pmtiles`), e pôr a
+  URL completa em `tiles` no `meta.json` (o app aceita endereço `https://`);
+- Cloudflare R2 ou Supabase Storage servem, desde que aceitem `Range` e liberem CORS para o domínio do site;
+- o PR mensal passa a levar só o `meta.json` e o relatório.
+
+*Anotado por Claude (assistente de IA), 14/10/2026, para consulta na manutenção.*

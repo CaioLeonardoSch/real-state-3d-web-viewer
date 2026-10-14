@@ -5,7 +5,9 @@ import { Protocol } from 'pmtiles';
 // that file must be emitted explicitly and its URL handed to MapLibre.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './styles.css';
-import { loadData } from './data/load';
+import { loadBairroAreas, loadData } from './data/load';
+import type { MultiPolygon, Polygon } from 'geojson';
+import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import type { Listing } from './data/types';
 import { Scene } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
@@ -14,6 +16,7 @@ import {
   FilterStore,
   filterListings,
   isEmptyCriteria,
+  normalizeName,
   suggestRelaxations,
   withoutCriterion,
 } from './state/filters';
@@ -124,6 +127,7 @@ async function main() {
   // the sales charts are a demo of a developer: not inside an agency's site
   const developments = embed ? [] : data.developments;
   const known = {
+    bairros: data.meta.bairros,
     agencyIds: new Set(agencies.map((a) => a.id)),
     listingIds: new Set(listings.map((l) => l.id)),
     developments: new Map(developments.map((d) => [d.id, new Set(d.levels.flatMap((l) => l.units.map((u) => u.id)))])),
@@ -170,14 +174,21 @@ async function main() {
   let closingForSearch = false;
 
   // ------------------------------------------------------------ URL / history
-  const urlFor = (listingId: string | null) =>
-    `${location.pathname}${stateToSearch({
+  // embedded in a client's site, the frame's own URL keeps the embed parameters (reloading the frame stays embedded)
+  const embedQuery = embed ? ['embed', 'site', 'cor', 'pagina', 'foco'].flatMap((k) => (embedParams.has(k) ? [[k, embedParams.get(k)!]] : [])) : [];
+  const urlFor = (listingId: string | null) => {
+    const search = stateToSearch({
       criteria: store.getApplied(),
       listingId,
       sort,
       developmentId: devPanel.currentId,
       unitId: devPanel.selectedUnitId,
-    })}${location.hash}`;
+    });
+    if (!embedQuery.length) return `${location.pathname}${search}${location.hash}`;
+    const p = new URLSearchParams(embedQuery);
+    for (const [k, v] of new URLSearchParams(search)) p.append(k, v);
+    return `${location.pathname}?${p}${location.hash}`;
+  };
   const historyState = () => (history.state ?? {}) as HistoryState;
 
   /** Updates the current entry (filters changed, or browsing between listings). */
@@ -252,7 +263,58 @@ async function main() {
     else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
   }
 
-  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies);
+  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies, data.meta.bairros);
+
+  // developments on the map (created once the map has loaded, see below)
+  let devLayer: DevelopmentLayer | null = null;
+  let clipRequest = 0;
+  /** Area the map is cut to (developments outside it are hidden too). */
+  let clipArea: Polygon | MultiPolygon | null = null;
+  const inClip = (d: (typeof developments)[number]) => !clipArea || turfBooleanPointInPolygon(d.center, clipArea);
+  function setClipArea(area: Polygon | MultiPolygon | null, names: string[] = [], mask: Polygon | MultiPolygon | null = null) {
+    clipArea = area;
+    scene.setClip(area, names, mask);
+    devLayer?.setHidden(new Set(developments.filter((d) => !inClip(d)).map((d) => d.id)));
+    showResults();
+  }
+  /**
+   * "Bairro" filter: the map is cut to the chosen neighbourhoods plus 100 m around them (the rest of the city
+   * disappears) and the camera frames them. Returns whether the map is cut.
+   */
+  async function applyBairroClip(names: readonly string[], frame: boolean): Promise<boolean> {
+    const request = ++clipRequest;
+    if (!names.length) {
+      if (clipArea) setClipArea(null);
+      return false;
+    }
+    try {
+      const areas = await loadBairroAreas();
+      if (request !== clipRequest) return false;
+      const chosen = areas.features.filter((f) => names.some((n) => normalizeName(n) === normalizeName(f.properties.name)));
+      if (!chosen.length) {
+        setClipArea(null);
+        return false;
+      }
+      const polys = (g: Polygon | MultiPolygon) => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates);
+      const polygons = chosen.flatMap((f) => polys(f.geometry));
+      const area: Polygon | MultiPolygon = polygons.length === 1 ? { type: 'Polygon', coordinates: polygons[0] } : { type: 'MultiPolygon', coordinates: polygons };
+      // mask: everything except the neighbourhoods grown by 100 m (union, so neighbouring ones merge)
+      const { default: clipping } = await import('polygon-clipping');
+      const [w, s, e, n] = data.meta.boundaryBbox;
+      const world: [number, number][][] = [[[w - 1, s - 1], [e + 1, s - 1], [e + 1, n + 1], [w - 1, n + 1], [w - 1, s - 1]]];
+      const grown = chosen.flatMap((f) => polys(f.properties.grown ?? f.geometry)) as [number, number][][][];
+      const maskCoords = clipping.difference(world, ...grown);
+      const mask: MultiPolygon = { type: 'MultiPolygon', coordinates: maskCoords };
+      if (request !== clipRequest) return false;
+      await scene.ready;
+      setClipArea(area, chosen.map((f) => f.properties.name), mask);
+      if (frame) scene.fitToClip();
+      return true;
+    } catch (err) {
+      console.warn(`Recorte do bairro indisponível: ${(err as Error).message}`);
+      return false;
+    }
+  }
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
     const rent = store.getApplied().transaction === 'rent';
@@ -265,7 +327,7 @@ async function main() {
       sort,
       filtered,
       suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
-      developments: developments.map((d) => ({
+      developments: developments.filter(inClip).map((d) => ({
         id: d.id,
         name: d.name,
         developer: d.developer,
@@ -286,7 +348,12 @@ async function main() {
       drawer.close();
       closingForSearch = false;
     }
-    if (matched.length > 0) scene.fitToListings(matched);
+    // with a neighbourhood filter the camera frames the neighbourhood (even without results); otherwise the results
+    if (criteria.bairros.length) void applyBairroClip(criteria.bairros, true);
+    else {
+      void applyBairroClip([], false);
+      if (matched.length > 0) scene.fitToListings(matched);
+    }
     document.body.classList.remove('filters-open');
     $('.filters-toggle').setAttribute('aria-expanded', 'false');
     if (!syncingFromUrl) replaceUrl({ ...historyState(), pristine: false });
@@ -487,7 +554,6 @@ async function main() {
   });
 
   // ------------------------------------------------------------ developments ("espelho de vendas 3D")
-  let devLayer: DevelopmentLayer | null = null;
   // True while another view (a listing) closes the development panel.
   let leavingDevelopment = false;
   const devPanel = new DevelopmentPanel($('#dev-panel'), {
@@ -587,6 +653,7 @@ async function main() {
     },
     'listing-pins-dimmed',
   );
+  if (clipArea) devLayer.setHidden(new Set(developments.filter((d) => !inClip(d)).map((d) => d.id)));
   // Shared link: restore filters and the open listing, then normalise the URL (drops invalid params).
   applyUrl();
   history.replaceState(historyState(), '', urlFor(drawer.currentId));
@@ -596,7 +663,7 @@ async function main() {
   if (embed) {
     // the site's search results: only those stay lit, and the camera frames them
     window.addEventListener('message', (e) => {
-      const msg = e.data as { type?: string; ids?: unknown; rent?: unknown };
+      const msg = e.data as { type?: string; ids?: unknown; rent?: unknown; bairros?: unknown };
       if (e.origin !== location.origin || e.source !== window.parent || msg?.type !== 'site-results' || !Array.isArray(msg.ids)) return;
       const rent = msg.rent === true;
       if ((store.getApplied().transaction === 'rent') !== rent) {
@@ -607,7 +674,10 @@ async function main() {
       currentList = sortListings(listings.filter((l) => ids.has(l.id)), sort, rent);
       scene.setMatched(ids);
       if (drawer.currentId && !ids.has(drawer.currentId)) drawer.close();
-      if (currentList.length) scene.fitToListings(currentList);
+      const bairros = Array.isArray(msg.bairros) ? msg.bairros.filter((b): b is string => typeof b === 'string').slice(0, 20) : [];
+      void applyBairroClip(bairros, true).then((cut) => {
+        if (!cut && currentList.length) scene.fitToListings(currentList);
+      });
     });
     const focus = embed.focus ? listings.find((l) => l.id === embed.focus) : undefined;
     if (focus) {
@@ -626,6 +696,9 @@ async function main() {
     project: (id: string) => scene.projectListing(id),
     isHighlighted: (id: string) => scene.isHighlighted(id),
     isMatched: (id: string) => scene.isMatched(id),
+    get clipped() {
+      return scene.clipped;
+    },
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     developmentIds: developments.map((d) => d.id),
   };

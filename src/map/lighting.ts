@@ -48,7 +48,73 @@ export interface Theme {
   dimmed: string;
   light: { color: string; intensity: number; position: [number, number, number] };
   sky: { sky: string; horizon: string };
+  scenery: Scenery;
 }
+
+export type GreenKind = 'park' | 'grass' | 'wood' | 'scrub' | 'wetland' | 'farm';
+
+/** Colours of the low-poly scenery: pavement, green areas, water, trees and street lamps. */
+export interface Scenery {
+  asphalt: string;
+  /** Paving stones ("calçamento"): stone and joint colours of the texture. */
+  paving: string;
+  pavingJoint: string;
+  /** Other paved surfaces (concrete). */
+  paved: string;
+  /** Dirt roads ("estrada de chão"): ground and specks of the texture. */
+  unpaved: string;
+  unpavedSpot: string;
+  sidewalk: string;
+  laneMark: string;
+  greens: Record<GreenKind, string>;
+  /** Canopy mass of woods (faceted texture in three greens). */
+  canopy: string;
+  canopyLight: string;
+  canopyDark: string;
+  waterLight: string;
+  waterDeep: string;
+  waterShore: string;
+  /** Three shades of tree crowns, and of their lighter tops. */
+  crowns: [string, string, string];
+  tops: [string, string, string];
+  trunk: string;
+  bush: string;
+  pole: string;
+  /** Luminaire of the street lamps (bright at night). */
+  lum: string;
+  /** Tower cranes of buildings under construction. */
+  crane: string;
+  /** Pool of light under each lamp (night only). */
+  glow: string;
+  glowOpacity: number;
+}
+
+const DAY_SCENERY: Scenery = {
+  asphalt: '#b8bbbf',
+  paving: '#d6cab6',
+  pavingJoint: '#bdb09a',
+  paved: '#cacac6',
+  unpaved: '#ddcaa4',
+  unpavedSpot: '#c2ab7e',
+  sidewalk: '#f2f1ec',
+  laneMark: '#f7f6f0',
+  greens: { park: '#cde0bc', grass: '#d6e3c5', wood: '#b4cca1', scrub: '#c8d7ae', wetland: '#c2dad1', farm: '#e3e4c3' },
+  canopy: '#86ab72',
+  canopyLight: '#98bd83',
+  canopyDark: '#74995f',
+  waterLight: '#c4d9e2',
+  waterDeep: '#adc6d2',
+  waterShore: '#e4eef2',
+  crowns: ['#8cb679', '#7ba96b', '#9bc285'],
+  tops: ['#a2c98e', '#91bd7f', '#aed098'],
+  trunk: '#8b6c52',
+  bush: '#9fbf83',
+  pole: '#7c838d',
+  lum: '#dfe3e8',
+  crane: '#f0b429',
+  glow: '#ffd27a',
+  glowOpacity: 0,
+};
 
 export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: Theme; sun: SunInfo } {
   const sun = sunPosition(tod, lat, lon);
@@ -71,6 +137,33 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         // Sun is below the horizon: a dim, cool, top-down "moonlight" so volumes stay legible.
         light: { color: '#9fb4ff', intensity: 0.35, position: [1.5, 210, 30] },
         sky: { sky: '#0b1020', horizon: '#1d2740' },
+        // street lamps light up: luminaires bright, warm pools of light on the street
+        scenery: {
+          asphalt: '#262d3d',
+          paving: '#363744',
+          pavingJoint: '#2a2b37',
+          paved: '#2b3242',
+          unpaved: '#3b3529',
+          unpavedSpot: '#2f2a21',
+          sidewalk: '#20283a',
+          laneMark: '#4c556b',
+          greens: { park: '#1d2c27', grass: '#1f2d27', wood: '#1a2a24', scrub: '#1e2b25', wetland: '#1b2b2e', farm: '#232a22' },
+          canopy: '#1f3529',
+          canopyLight: '#25402f',
+          canopyDark: '#192c22',
+          waterLight: '#253755',
+          waterDeep: '#17233a',
+          waterShore: '#2d3f5e',
+          crowns: ['#24402f', '#203a2b', '#2a4734'],
+          tops: ['#2c4b38', '#284534', '#315240'],
+          trunk: '#2c2622',
+          bush: '#253f2f',
+          pole: '#3e4555',
+          lum: '#fff1c2',
+          crane: '#b98a2a',
+          glow: '#ffd37e',
+          glowOpacity: 0.85,
+        },
       },
     };
   }
@@ -96,6 +189,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         position: sunToLightPosition(sun),
       },
       sky: warm ? { sky: '#a9c9e8', horizon: '#f2dcc0' } : { sky: '#9cc8f0', horizon: '#e4eef6' },
+      scenery: warm ? { ...DAY_SCENERY, sidewalk: '#f4efe6', asphalt: '#b9b8b6' } : DAY_SCENERY,
     },
   };
 }

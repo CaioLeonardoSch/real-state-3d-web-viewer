@@ -38,6 +38,8 @@ export class SiteEditor {
   private draft: SiteConfig;
   private saved: string;
   private canSave = false;
+  /** Set when the page reloads on purpose ("Voltar ao original"): no "leave the site?" prompt. */
+  private leaving = false;
 
   constructor(private app: SiteApp) {
     this.draft = structuredClone(app.config);
@@ -47,7 +49,7 @@ export class SiteEditor {
     this.el.setAttribute('aria-label', 'Personalizar site');
     document.body.append(this.el);
     window.addEventListener('beforeunload', (e) => {
-      if (this.dirty) e.preventDefault();
+      if (this.dirty && !this.leaving) e.preventDefault();
     });
   }
 
@@ -310,7 +312,7 @@ export class SiteEditor {
       } catch {
         /* blocked */
       }
-      this.saved = '';
+      this.leaving = true;
       location.reload();
     });
   }

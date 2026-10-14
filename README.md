@@ -171,8 +171,9 @@ Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Oper
 
 ## Mapa em blocos (PMTiles) e 3D só de perto
 
-O mapa base é **um único arquivo** `public/data/joinville.pmtiles` (≈14 MB, 164.679 prédios) com blocos vetoriais (vector tiles)
-dos prédios, vias, água, áreas verdes e limites de bairro. O navegador **não baixa o arquivo inteiro**: o protocolo
+O mapa base é **um único arquivo** `public/data/joinville.pmtiles` (≈20 MB, 164.672 prédios) com blocos vetoriais (vector tiles)
+dos prédios, vias (com o tipo de pavimento), água, áreas verdes, limites de bairro e, de perto, a paisagem: copa das
+matas, árvores, postes e a luz dos postes. O navegador **não baixa o arquivo inteiro**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
 (range). Não há servidor de mapas: qualquer hospedagem estática que aceite `Range` serve (GitHub Pages, S3, Cloudflare,
 o `vite preview`).
@@ -183,9 +184,10 @@ o `vite preview`).
 | 11 | + prédios ≥ 600 m², só o contorno | até 154 KB |
 | 12 | + prédios ≥ 250 m², só o contorno | até 252 KB |
 | 13 | + prédios ≥ 120 m², só o contorno | até 265 KB |
-| 14–15 | todos os prédios, com altura e marca de residencial | até 214 KB (z14) e 75 KB (z15) |
+| 14–15 | todos os prédios, com altura e marca de residencial; copa das matas | até 214 KB (z14) |
+| 15 | + árvores, postes e luzes (low poly, em 3D) | até 89 KB |
 
-São 2.511 blocos. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
+São 2.532 blocos. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
 algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 58 MB só de prédios.
 
 **3D só de perto, sem ficar "chapado" de longe:**
@@ -202,14 +204,88 @@ algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 5
 Uma "bolha" 3D exatamente circular em volta do centro não existe no MapLibre (as expressões de estilo não sabem a
 distância até o centro da tela); exigiria uma camada customizada (Three.js). O efeito acima chega perto disso.
 
+## Paisagem: pavimento, postes, árvores e água
+
+Low poly, como os prédios: o objetivo é dar vida e escala ao bairro, não realismo. Tudo é gerado junto com os blocos
+(`scripts/lib/scenery.mjs`), de forma determinística: os mesmos dados geram a mesma paisagem, e uma rua editada no OSM
+não muda as árvores do resto da cidade.
+
+- **Pavimento** pela tag `surface` do OSM:
+  - classes: asfalto, calçamento (lajota, paralelepípedo, paver), outro pavimento e estrada de chão; caminhos rurais
+    (`track`) sem a tag contam como chão;
+  - de perto: largura real das ruas, textura própria para o calçamento e o chão, calçadas nas ruas da cidade e faixas
+    nas principais;
+  - em km de rua de carro: 1.459 de asfalto, 377 de calçamento, 1.427 de chão, 44 de outro pavimento e 640 sem
+    informação (cor neutra) (`meta.json`, `roadKmBySurface`).
+- **Postes**:
+  - 416 mapeados no OSM, mais um a cada 38 m nas ruas pavimentadas da área urbana, do lado direito (41.012 ao todo);
+  - não entram em túneis, pontes, ruas de chão e onde o OSM diz `lit=no`;
+  - à noite, cada um projeta uma mancha de luz no chão;
+  - **os postes ilustrativos não são as posições reais.**
+- **Árvores**: 212.298, das quais 1.071 do OSM (árvores e fileiras):
+  - o resto é ilustrativo, espalhado em praças, gramados e bordas de mata da área urbana, em três formatos e três tons;
+  - as matas grandes viram uma copa facetada, recuada 6 m, com árvores na borda, em vez de árvores soltas: com elas
+    eram quase 1 milhão de árvores, e a geração dos blocos estourava a memória.
+- **Água**: de perto (zoom 13), textura facetada em tons claros e escuros e uma margem mais clara; de longe, cor
+  lisa, que pesa menos na primeira tela. Rios e canais aparecem como linhas.
+- **Onde aparece:** só de perto:
+  - a copa das matas sobe junto com os prédios, a partir do zoom 14;
+  - as árvores crescem do zoom 15 ao 16;
+  - os postes aparecem no 16;
+  - as luzes, no 15,5.
+
+## Filtro por bairro
+
+No filtro "Bairro" (ou `?bairro=Glória&bairro=Centro` no endereço, com ou sem acento), o mapa mostra **só os bairros
+escolhidos e as ruas até 100 m das divisas**:
+
+- prédios, vias, verde e água de fora somem;
+- uma máscara cobre o chão de fora;
+- os contornos dos outros bairros saem;
+- o mapa enquadra a área.
+
+Assim dá para ver o que está à venda nos limites do bairro sem a cidade inteira em volta.
+
+- **Imóveis e empreendimentos:**
+  - entram os imóveis com aquele bairro no endereço;
+  - os empreendimentos fora do recorte somem do mapa e da lista.
+- **Como funciona:**
+  - a área de cada bairro, já crescida 100 m, vem pronta em `public/data/bairros-areas.geojson` (238 KB, 63 KB
+    compactado, carregado só quando se escolhe um bairro);
+  - o mapa filtra cada camada com a expressão `distance` do MapLibre;
+  - a máscara é o mundo menos a união das áreas (`polygon-clipping`, também carregado sob demanda).
+- **Limites:**
+  - os bairros são os do OSM, e Araquari tem só parte deles mapeados;
+  - um imóvel sem bairro no endereço não entra no filtro.
+
+## Obras em andamento
+
+Num prédio em construção, o mapa mostra **os andares prontos sólidos e o resto translúcido**, com uma grua low poly.
+Vale para os anúncios "Em construção" e para os empreendimentos.
+
+- **O que o anúncio mostra:**
+  - a ficha e o site mostram "12 de 20 andares (60%)", com uma barra, o mês da informação e quem informou: o
+    anunciante, uma vistoria da equipe ou uma imagem aérea;
+  - uma informação com mais de 3 meses é marcada como antiga.
+- **Quem atualiza:**
+  - o anunciante, todo mês, pelo formulário do anúncio ("Andares já construídos" e "Andamento informado em");
+  - no banco (migração `20261019000001_construction_progress.sql`):
+    - quem anuncia só registra como "anunciante"; "vistoria" e "imagem" ficam para a equipe e para o serviço mensal;
+    - cada mês fica em `construction_history`, para a linha do tempo da obra.
+- **Na demonstração**, o andamento das 26 obras e dos empreendimentos Cora e Landhaus é ilustrativo
+  (`scripts/lib/construction-demo.mjs`).
+- A construtora é a fonte viável do andamento: a Lei 4.591/64, art. 31-D, já obriga um demonstrativo trimestral da
+  obra quando há patrimônio de afetação. Por que não usamos imagem de satélite mensal:
+  [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md).
+
 ## Altura dos prédios: cadastro da Prefeitura
 
 No OpenStreetMap, quase todos os prédios da região não têm altura. Agora a altura vem, em ordem de prioridade, de:
 
 1. tag `height` do OSM (61 prédios);
 2. `building:levels` do OSM × 3 m (2.543);
-3. **pavimentos estimados pelo cadastro imobiliário da Prefeitura de Joinville** × 3 m (**153.283 prédios, 93,1%**);
-4. 6 m, quando nada disso existe (8.792, 5,3%). Inclui **Araquari**, cujo cadastro não está no servidor de
+3. **pavimentos estimados pelo cadastro imobiliário da Prefeitura de Joinville** × 3 m (**153.274 prédios, 93,1%**);
+4. 6 m, quando nada disso existe (8.794, 5,3%). Inclui **Araquari**, cujo cadastro não está no servidor de
    Joinville, e áreas rurais.
 
 **Como a estimativa é feita** (`scripts/estimate-heights.mjs`, regra em `scripts/lib/cadastre-floors.mjs`):
@@ -223,9 +299,11 @@ No OpenStreetMap, quase todos os prédios da região não têm altura. Agora a a
 - **Descartes** (o prédio fica com o padrão):
   - razão < 0,2 ou > 32;
   - mais de 4 pavimentos num contorno menor que 150 m² (quase sempre a torre não está desenhada no OSM e só a
-    guarita ou a garagem aparece).
+    guarita ou a garagem aparece);
+  - mais de 4 pavimentos com menos de 70% do contorno dentro do lote: o ponto interno caiu num lote vizinho, e a
+    área construída é a dele. O relatório mensal achou assim uma casa de Pirabeiraba com 29 andares.
 
-  São 2.586 prédios nessa situação.
+  São 2.590 prédios nessa situação.
 - A outorga onerosa, quando existe, limita a altura. Hoje não limitou nenhum prédio.
 - Os apartamentos fictícios passaram a ocupar **prédios reais de 4 pavimentos ou mais** pelo cadastro, com esse
   número de pavimentos (antes: 8 a 14 inventados). As casas vão para prédios de até 2 pavimentos.
@@ -253,10 +331,13 @@ NODE_USE_ENV_PROXY=1 npm run data
    `scripts/data/region.json` (polígonos `admin_level=10` dentro do município de Joinville; nomes repetidos em cidades
    vizinhas são descartados) e grava GeoJSON em `.cache/region/` (≈22 MB, **não versionado**). Um prédio entra se o
    seu ponto interno estiver na região; vias, rios e áreas verdes entram se tocarem a região (+60 m).
+   Também extrai as árvores e os postes mapeados, a copa das matas (recuada 6 m) e a área de cada bairro crescida
+   100 m (para o filtro por bairro).
 3. `npm run data:tiles` (`scripts/build-tiles.mjs`): gera os blocos com `geojson-vt` + `vt-pbf`, comprime cada
    bloco com gzip e grava o `.pmtiles` com um gravador próprio (`scripts/lib/pmtiles-writer.mjs`, especificação v3:
-   diretório raiz, diretórios-folha quando necessário, blocos repetidos guardados uma vez). Também grava
-   `boundary.geojson`, `bairros.geojson` (pontos dos rótulos) e `meta.json`.
+   diretório raiz, diretórios-folha quando necessário, blocos repetidos guardados uma vez), com a paisagem
+   (`scripts/lib/scenery.mjs`). Também grava `boundary.geojson`, `bairros.geojson` (pontos dos rótulos),
+   `bairros-areas.geojson` (filtro por bairro) e `meta.json`. Leva menos de 1 minuto e usa até ~4,3 GB de memória.
 4. `npm run data:listings` (`scripts/generate-listings.mjs`): imóveis fictícios de forma determinística
    (seed `20261007`), espalhados pela região. Aceita `--count N` (padrão 60). Cada imóvel em prédio leva o contorno
    (`footprint`) e a altura do prédio do OSM, porque o app não tem mais o arquivo de prédios inteiro. As comodidades
@@ -267,6 +348,39 @@ NODE_USE_ENV_PROXY=1 npm run data
 Entre os passos 2 e 3 rodam `npm run data:cadastre` (cadastro da Prefeitura, em `.cache/cadastre/`) e
 `npm run data:heights` (pavimentos por prédio, em `.cache/region/heights.json`). Sem eles, os blocos e os imóveis
 usam só as alturas do OSM e o padrão de 6 m, e os apartamentos voltam a ter pavimentos fictícios.
+
+**Relatório de mudanças:** `npm run map:changes -- --old <mapa-anterior.pmtiles> --old-meta <meta-anterior.json>`
+compara o mapa novo (`public/data/`) com um anterior. Ele lista:
+
+- prédios novos, removidos e redesenhados (mesmo lugar, id novo no OSM);
+- alturas que mudaram 3 m ou mais, por bairro;
+- quilômetros de rua por pavimento, árvores, postes e a origem das alturas;
+- os anúncios cujo prédio mudou.
+
+Aceita `--out relatorio.md` e `--json resumo.json`. Lê os 164 mil prédios em cerca de 4 segundos.
+
+### Serviço mensal do mapa
+
+O workflow `.github/workflows/mapa-mensal.yml` refaz o mapa **no dia 3 de cada mês**, ou quando rodado à mão em
+Actions → Mapa mensal → Run workflow:
+
+1. baixa o OSM e o cadastro;
+2. recalcula as alturas e gera os blocos;
+3. roda os testes;
+4. abre um pull request com o relatório de mudanças no corpo.
+
+**O mapa novo só vai ao ar quando alguém aprova o PR.** Antes, confira no relatório:
+
+- as alturas que mudaram 15 m ou mais, que podem ser erro de edição no OSM;
+- se alguma fonte de altura caiu de repente;
+- os anúncios afetados.
+
+Se o servidor da Prefeitura estiver fora do ar, o job falha antes de mexer em qualquer coisa: sem o cadastro, as
+alturas cairiam para 6 m.
+
+Na primeira vez, marque em Settings → Actions → General → Workflow permissions a opção "Allow GitHub Actions to
+create and approve pull requests". Cada mês acrescenta ~20 MB ao histórico do git. Quando pesar, publique o
+`.pmtiles` num armazenamento de objetos com nome por versão (veja `docs/backend.md`, item 13).
 
 **Para mudar a região**, edite a lista de bairros em `scripts/data/region.json` e rode `npm run data:region`,
 `data:tiles` e, se quiser imóveis nos novos bairros, `data:listings`. A cidade inteira funciona do mesmo jeito: o
@@ -441,6 +555,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 ## Limitações conhecidas
 
 - O MapLibre não projeta sombras. A "direção do sol" aparece só no sombreamento das faces dos prédios.
+- **Postes e a maior parte das árvores são ilustrativos:** o OSM tem só 416 postes e cerca de mil árvores na região.
+  As posições não são as reais; servem para dar escala e vida à rua.
+- O filtro por bairro usa os bairros do OSM. Araquari tem só parte dos bairros mapeados, e um imóvel sem bairro no
+  endereço não entra no filtro.
 - Muitos prédios do OSM não têm altura nem número de pavimentos e usam a altura padrão de 6 m. Veja as contagens abaixo.
 - A qualidade do mapeamento de prédios no OSM varia. Pode haver quadras sem prédios mapeados ou com contornos
   desatualizados.
@@ -488,24 +606,33 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - Espelho de vendas com dados reais da incorporadora (planta do pavimento-tipo, tabela de unidades e de preços),
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
+- Mapa (ver [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md)):
+  - pavimento da Secretaria de Infraestrutura para completar os 640 km sem informação;
+  - LiDAR da Prefeitura e um estéreo único do núcleo vertical para as torres;
+  - classificador de telhado (plano, duas águas, quatro águas);
+  - cadastro real da iluminação pública.
 
 ## Dados (contagens da última execução)
 
-Extrato OSM de 07/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 08/10/2026 (`public/data/meta.json`):
+Extrato OSM de 13/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 14/10/2026 (`public/data/meta.json`):
 
 | Camada | Feições |
 |---|---|
-| Prédios (`building`) | 164.679 |
+| Prédios (`building`) | 164.672 |
 | ↳ altura pela tag `height` | 61 |
 | ↳ altura por `building:levels × 3 m` | 2.543 |
-| ↳ altura estimada pelo cadastro da Prefeitura | 153.283 |
-| ↳ altura padrão de 6 m | 8.792 |
-| Vias (`highway`) | 18.887 |
+| ↳ altura estimada pelo cadastro da Prefeitura | 153.274 |
+| ↳ altura padrão de 6 m | 8.794 |
+| Vias (`highway`) | 19.090 |
 | Água (`natural=water`, `waterway`) | 2.099 |
-| Áreas verdes (`leisure=park`, `landuse=grass/forest`, `natural=wood`) | 2.140 |
+| Áreas verdes (parques, gramados, matas, mangue, campos) | 2.730 |
+| Árvores no mapa (1.071 do OSM, o resto ilustrativo) | 212.298 |
+| Postes no mapa (416 do OSM, o resto ilustrativo) | 41.012 |
 
 - Joinville e Araquari, 53 bairros com nome no OSM; bbox −49,200842, −26,599012, −48,650741, −26,074239 (W, S, E, N).
-- `joinville.pmtiles`: 2.511 blocos, zooms 10 a 15, ≈14 MB.
+- `joinville.pmtiles`: 2.532 blocos, zooms 10 a 15, ≈20 MB.
+- Ruas de carro por pavimento: 1.459 km de asfalto, 377 km de calçamento, 1.427 km de chão, 44 km de outro
+  pavimento e 640 km sem informação.
 
 Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área urbana.
 
@@ -518,12 +645,16 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 
 - 19 com preço reduzido; 3 com localização aproximada: `house-35`, `semi-61` e `land-81`.
 - 14 também para alugar; 12 reservados; 9 com destaque e 4 com super destaque.
+- 26 em construção, com andamento ilustrativo (15% a 90% dos andares).
 - Prédios residenciais elegíveis (área urbana): 151.944.
 
 ## Verificação realizada
 
 - `npm run build` (inclui `tsc --noEmit`): sem erros. Há só o aviso de chunk > 500 kB, por causa do MapLibre.
-- `npm test`: 89 testes (mais 31 do backend em `npm run test:backend`): conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
+- `npm test`: 125 testes (mais 39 do backend em `npm run test:backend`): obra em andamento (mês, andamento e grua),
+  relatório mensal do mapa (lê os 164 mil prédios do mapa publicado; novos, removidos, redesenhados e alturas),
+  paisagem (pavimento, árvores, postes, simplificação), filtro por bairro na busca e na URL, regra da torre fora do
+  lote, conversão banco ↔ site, vídeo embutido (só YouTube/Vimeo), endereço conforme a exibição escolhida, link de WhatsApp, venda × aluguel (filtro, ordenação, link), destaques primeiro, preço reduzido (filtro, link, percentual), estimativa de pavimentos pelo cadastro, gravador de PMTiles (conferido pela leitura com a biblioteca `pmtiles`, com e sem
   diretórios-folha), renderHeight, filtros + FilterStore, filtros avançados e comodidades, sugestões para busca
   vazia, ordenação e resumo de preço, leitura/escrita da URL com os novos parâmetros, simulação de pagamento,
   geometria de lotes e localização aproximada de novos anúncios, regra de prédio residencial, empreendimentos:
@@ -535,7 +666,11 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 70 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 76 checagens:
+  - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
+    resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
+  - de perto: árvores, postes e ruas por pavimento (asfalto e calçamento); de dia sem luzes; ao trocar para a
+    noite já perto da rua, os postes acendem;
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
   - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
@@ -567,6 +702,12 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
     fecha; link compartilhado abre o empreendimento com a unidade; no celular, o painel abre pela metade;
   - em 390×844: sem rolagem horizontal, filtros recolhíveis, lista recolhida que expande e se recolhe ao abrir um
     imóvel, painel abre recolhido, expande pela alça e responde a arrastar para cima/baixo.
+- `npm run verify:site` (site das imobiliárias), 29 checagens: busca com chips e URL, bairro sem acento, favoritos,
+  comparação, ficha com preço, contato e disponibilidade, mapa só quando aparece, formulários, mapa embutido (só os
+  imóveis da imobiliária, mantendo `embed` e `site` no endereço), editor, outra imobiliária e celular.
+- `npm run verify:backend` (Supabase local), 27 checagens: do suporte criando a imobiliária até o site personalizado
+  pelo dono. Na rodada de 14/10 passou na segunda execução; na primeira, a criação da imobiliária estourou o
+  limite de 15 s logo no início, com o Supabase recém-acionado.
 - Screenshots em `docs/screenshots/`.
 
 ## Licenças e atribuição

@@ -9,6 +9,7 @@
 //   - ratio < 0.2 or > 32 → cadastre and OSM disagree (unmapped buildings, outline covering several lots…): skip;
 //   - one main building (≥ 70% of F): the rest count as one floor, the main one gets the remaining area;
 //     more than 4 floors on a footprint under 150 m² means the tower itself is not mapped in OSM: skip;
+//     more than 4 floors with under 70% of the outline inside the lot: matched to the wrong lot, skip;
 //   - several similar buildings (e.g. a condominium of houses): all get round(ratio) floors, at most 4;
 //   - at most 32 floors (Joinville's tallest have ~30); where the lot has a granted height (OODC), height ≤ it.
 // Skipped buildings keep the default height of the map (6 m).
@@ -20,7 +21,7 @@ import turfBbox from '@turf/bbox';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import turfPointOnFeature from '@turf/point-on-feature';
 import { METERS_PER_LEVEL, parseOsmNumber } from './lib/height.mjs';
-import { floorsForLot } from './lib/cadastre-floors.mjs';
+import { TOWER_FLOORS, TOWER_MIN_INSIDE, floorsForLot, shareInside } from './lib/cadastre-floors.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = async (...p) => JSON.parse(await readFile(path.join(ROOT, '.cache', ...p), 'utf8'));
@@ -56,7 +57,7 @@ const lotAt = ([x, y]) =>
   );
 
 // ---- buildings without an OSM height, grouped by lot
-const stats = { osmHeight: 0, noLot: 0, noBuiltArea: 0, inconsistent: 0, estimated: 0, capped: 0 };
+const stats = { osmHeight: 0, noLot: 0, noBuiltArea: 0, inconsistent: 0, straddling: 0, estimated: 0, capped: 0 };
 const byLot = new Map();
 for (const b of buildings.features) {
   const p = b.properties;
@@ -97,6 +98,10 @@ for (const { lot, items } of byLot.values()) {
   }
   for (const [k, i] of items.entries()) {
     let floors = floorsList[k];
+    if (floors > TOWER_FLOORS && shareInside(i.b.geometry, lot.geometry) < TOWER_MIN_INSIDE) {
+      stats.straddling++;
+      continue;
+    }
     const limit = grantAt(i.at);
     const capped = limit !== undefined && floors * METERS_PER_LEVEL > limit;
     if (capped) {
@@ -114,5 +119,5 @@ const total = buildings.features.length;
 console.log(`Prédios: ${total}`);
 console.log(`  altura do OSM: ${stats.osmHeight}`);
 console.log(`  estimada pelo cadastro: ${stats.estimated} (${((100 * stats.estimated) / total).toFixed(1)}%), ${stats.capped} limitados pela outorga`);
-console.log(`  sem lote: ${stats.noLot} · lote sem área construída: ${stats.noBuiltArea} · cadastro × OSM inconsistentes: ${stats.inconsistent}`);
+console.log(`  sem lote: ${stats.noLot} · lote sem área construída: ${stats.noBuiltArea} · cadastro × OSM inconsistentes: ${stats.inconsistent} · torre fora do lote: ${stats.straddling}`);
 console.log(`  pavimentos: ${Object.entries(floorsHist).map(([f, n]) => `${f}: ${n}`).join(' · ')}`);

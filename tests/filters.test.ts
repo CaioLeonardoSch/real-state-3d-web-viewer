@@ -167,3 +167,14 @@ describe('suggestRelaxations', () => {
     expect(suggestRelaxations(data, c)).toEqual([]);
   });
 });
+
+describe('bairro', () => {
+  it('compara sem acento e sem maiúsculas; vazio = todos', async () => {
+    const { matchesCriteria, EMPTY_CRITERIA } = await import('../src/state/filters');
+    const l = { id: 'x', type: 'house', title: '', agency: 'a', price: 1, areaM2: 1, bedrooms: 1, bathrooms: 1, parkingSpots: 0, status: 'ready', features: [], approximateLocation: false, description: '', address: { bairro: 'Glória' } } as const;
+    expect(matchesCriteria(l as never, { ...EMPTY_CRITERIA, bairros: ['gloria'] })).toBe(true);
+    expect(matchesCriteria(l as never, { ...EMPTY_CRITERIA, bairros: ['Centro', 'GLÓRIA'] })).toBe(true);
+    expect(matchesCriteria(l as never, { ...EMPTY_CRITERIA, bairros: ['Centro'] })).toBe(false);
+    expect(matchesCriteria({ ...l, address: undefined } as never, { ...EMPTY_CRITERIA, bairros: ['Glória'] })).toBe(false);
+  });
+});

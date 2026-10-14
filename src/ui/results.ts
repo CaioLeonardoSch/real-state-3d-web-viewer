@@ -39,6 +39,7 @@ export interface ResultsView {
 const FIELD_LABELS: Record<RelaxableField, string> = {
   transaction: 'a busca por aluguel',
   types: 'o filtro de tipo',
+  bairros: 'o filtro de bairro',
   priceMin: 'o preço mínimo',
   priceMax: 'o preço máximo',
   bedroomsMin: 'o mínimo de quartos',

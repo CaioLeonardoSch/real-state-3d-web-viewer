@@ -88,3 +88,16 @@ describe('URL state', () => {
     expect(sameCriteria({ ...EMPTY_CRITERIA, statuses: ['ready'] }, EMPTY_CRITERIA)).toBe(false);
   });
 });
+
+describe('bairro na URL', () => {
+  it('repete o parâmetro; nomes sem acento viram o nome certo; desconhecidos saem', async () => {
+    const { stateToSearch, searchToState } = await import('../src/state/url');
+    const { EMPTY_CRITERIA } = await import('../src/state/filters');
+    const known = { agencyIds: new Set<string>(), listingIds: new Set<string>(), bairros: ['Glória', 'Centro', 'América'] };
+    const s = searchToState('?bairro=gloria&bairro=Atlantida&bairro=CENTRO&bairro=Glória', known);
+    expect(s.criteria.bairros).toEqual(['Glória', 'Centro']);
+    expect(stateToSearch({ criteria: { ...EMPTY_CRITERIA, bairros: ['Glória', 'Centro'] }, listingId: null, sort: 'price-asc' })).toBe(
+      '?bairro=Gl%C3%B3ria&bairro=Centro',
+    );
+  });
+});

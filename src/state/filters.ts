@@ -5,6 +5,8 @@ export interface FilterCriteria {
   transaction: 'rent' | null;
   /** Empty = all types. */
   types: ListingType[];
+  /** Neighbourhoods (any of them; empty = all). The map is cut to them plus 100 m around. */
+  bairros: string[];
   priceMin: number | null;
   priceMax: number | null;
   bedroomsMin: number | null;
@@ -27,6 +29,7 @@ export interface FilterCriteria {
 export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   transaction: null,
   types: [],
+  bairros: [],
   priceMin: null,
   priceMax: null,
   bedroomsMin: null,
@@ -55,12 +58,24 @@ export const ADVANCED_FIELDS = [
 
 /** Price the criteria compare: sale price, or monthly rent when searching for rentals. */
 const priceFor = (l: Listing, c: Pick<FilterCriteria, 'transaction'>) => priceIn(l, c.transaction === 'rent') ?? l.price;
+
+/** Neighbourhood names compared without accents or case ("Gloria" = "Glória"). */
+export const normalizeName = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 export const pricePerM2 = (l: Listing, rent = false) => (priceIn(l, rent) ?? l.price) / l.areaM2;
 
 export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
   if (priceIn(l, c.transaction === 'rent') === null) return false;
   const price = priceFor(l, c);
   if (c.types.length > 0 && !c.types.includes(l.type)) return false;
+  if (c.bairros.length > 0) {
+    const b = l.address?.bairro;
+    if (!b || !c.bairros.some((x) => normalizeName(x) === normalizeName(b))) return false;
+  }
   if (c.priceMin !== null && price < c.priceMin) return false;
   if (c.priceMax !== null && price > c.priceMax) return false;
   if (c.bedroomsMin !== null && l.bedrooms < c.bedroomsMin) return false;
@@ -125,12 +140,12 @@ export class FilterStore {
 }
 
 export function cloneCriteria(c: FilterCriteria): FilterCriteria {
-  return { ...c, types: [...c.types], statuses: [...c.statuses], features: [...c.features] };
+  return { ...c, types: [...c.types], bairros: [...c.bairros], statuses: [...c.statuses], features: [...c.features] };
 }
 
 export type RelaxableField = keyof FilterCriteria;
 export const RELAXABLE_FIELDS: readonly RelaxableField[] = Object.keys(EMPTY_CRITERIA) as RelaxableField[];
-const LIST_FIELDS = new Set<RelaxableField>(['types', 'statuses', 'features']);
+const LIST_FIELDS = new Set<RelaxableField>(['types', 'bairros', 'statuses', 'features']);
 
 export interface RelaxSuggestion {
   field: RelaxableField;

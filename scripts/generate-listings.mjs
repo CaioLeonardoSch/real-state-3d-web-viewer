@@ -20,6 +20,7 @@ import turfNearestPointOnLine from '@turf/nearest-point-on-line';
 import turfBearing from '@turf/bearing';
 import { point, lineString, polygon } from '@turf/helpers';
 import { isResidentialBuilding } from './lib/residential.mjs';
+import { demoFloors, demoProgress } from './lib/construction-demo.mjs';
 import { computeRenderHeight, loadCadastreFloors, METERS_PER_LEVEL } from './lib/height.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -469,6 +470,8 @@ for (const type of plan) {
     ? turfCentroid(polygon(listing.lotPolygon.coordinates)).geometry.coordinates
     : turfCentroid({ type: 'Feature', properties: {}, geometry: listing.footprint }).geometry.coordinates;
   Object.assign(listing, detailsFor(listing, center));
+  // under construction: illustrative progress (floors built), drawn solid with the rest translucent
+  if (listing.status === 'under_construction' && listing.type !== 'land') listing.construction = demoProgress(listing.id, demoFloors(listing));
   listing.fictional = true;
   listings.push(listing);
 }

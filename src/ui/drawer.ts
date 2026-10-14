@@ -20,6 +20,7 @@ import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink }
 import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
+import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
 
 /** Position of the open listing inside the current list, for previous/next navigation. */
 export interface DrawerNav {
@@ -43,6 +44,20 @@ export class Drawer {
   contact: ContactHandlers | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
+
+  /** Works under way: floors built (the map shows the rest of the building translucent), month and source. */
+  private progressHtml(l: Listing): string {
+    const p = l.construction;
+    if (!p || l.status !== 'under_construction' || l.type === 'land') return '';
+    const total = l.floors ?? Math.max(1, Math.round((l.buildingHeightM ?? 6) / 3));
+    const pct = Math.round(builtShare(p, total) * 100);
+    const old = monthsOld(p) > 3 ? ' <strong>(informação antiga)</strong>' : '';
+    return `<div class="obra">
+      <p class="obra-head">Obra: ${escapeHtml(progressLabel(p, total))}</p>
+      <div class="obra-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Andamento da obra"><span style="width:${pct}%"></span></div>
+      <p class="obra-note">${escapeHtml(formatMonth(p.updatedAt))} · ${escapeHtml(CONSTRUCTION_SOURCE_LABELS[p.source])}${old}. No mapa, o que falta construir aparece translúcido.</p>
+    </div>`;
+  }
   /** Inside a client's site (map embedded): the link opens the site's own listing page in the same tab. */
   pageInSite = false;
   private openId: string | null = null;
@@ -264,6 +279,7 @@ export class Drawer {
           ? `<p class="notice-approx">📍 Localização aproximada: a posição exata não é exibida; o círculo indica um raio de ~${l.approxRadiusM ?? 150} m.</p>`
           : ''
       }
+      ${this.progressHtml(l)}
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
       ${
         l.features.length

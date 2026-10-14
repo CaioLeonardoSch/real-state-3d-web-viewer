@@ -1674,7 +1674,12 @@
       }
      ]
     }
-   ]
+   ],
+   "progress": {
+    "floorsBuilt": 11,
+    "updatedAt": "2026-09",
+    "source": "ilustrativo"
+   }
   },
   {
    "id": "morada-de-gaia",
@@ -3995,7 +4000,12 @@
       }
      ]
     }
-   ]
+   ],
+   "progress": {
+    "floorsBuilt": 8,
+    "updatedAt": "2026-09",
+    "source": "ilustrativo"
+   }
   },
   {
    "id": "aman",

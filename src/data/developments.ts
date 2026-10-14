@@ -1,4 +1,5 @@
 import type { Polygon } from 'geojson';
+import { parseProgress, type ConstructionProgress } from './construction';
 
 /** Developments with their units ("espelho de vendas 3D"), from public/data/developments.json. */
 
@@ -58,6 +59,8 @@ export interface Development {
   /** OSM buildings on the plot (assumed demolished for the tower). */
   hiddenBuildingIds: string[];
   levels: Level[];
+  /** Works under way: levels already built, counted from the ground (the rest of the tower is drawn translucent). */
+  progress?: ConstructionProgress;
 }
 
 export interface DevelopmentsFile {
@@ -122,6 +125,7 @@ export function validateDevelopmentsFile(raw: unknown): DevelopmentsFile {
     if (!d.id || !d.footprint || !Array.isArray(d.levels) || !Array.isArray(d.shapes))
       throw new Error(`developments.json: invalid development ${d.id ?? '?'}`);
     for (const u of allUnits(d)) if (!d.shapes[u.shape]) throw new Error(`developments.json: ${u.id} has no shape`);
+    if (d.progress !== undefined && !parseProgress(d.progress)) throw new Error(`developments.json: ${d.id} has an invalid progress`);
   }
   return f;
 }

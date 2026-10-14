@@ -19,7 +19,7 @@ const defaults = { sort: 'relevance' as const, view: 'grade' as const };
 describe('busca do site', () => {
   it('filtra por bairro (sem acento e maiúsculas), código e suítes', () => {
     const s = emptySearch('price-asc');
-    expect(runSearch(list, { ...s, bairros: ['gloria'] }).map((l) => l.id)).toEqual(['a', 'c']);
+    expect(runSearch(list, { ...s, criteria: { ...EMPTY_CRITERIA, bairros: ['gloria'] } }).map((l) => l.id)).toEqual(['a', 'c']);
     expect(runSearch(list, { ...s, code: 'ca-2' }).map((l) => l.id)).toEqual(['b']);
     expect(runSearch(list, { ...s, suitesMin: 2 }).map((l) => l.id)).toEqual(['b']);
     expect(runSearch(list, { ...s, criteria: { ...EMPTY_CRITERIA, reducedOnly: true } }).map((l) => l.id)).toEqual(['b']);
@@ -27,8 +27,8 @@ describe('busca do site', () => {
   });
 
   it('a URL guarda a busca e volta igual', () => {
-    const s = { ...emptySearch('relevance'), bairros: ['Glória', 'América'], code: 'AP', suitesMin: 1, page: 2, view: 'mapa' as const, sort: 'price-desc' as const };
-    s.criteria = { ...s.criteria, types: ['apartment'], priceMax: 800000, statuses: ['under_construction'], reducedOnly: true };
+    const s = { ...emptySearch('relevance'), code: 'AP', suitesMin: 1, page: 2, view: 'mapa' as const, sort: 'price-desc' as const };
+    s.criteria = { ...s.criteria, types: ['apartment'], bairros: ['Glória', 'América'], priceMax: 800000, statuses: ['under_construction'], reducedOnly: true };
     const q = searchToQuery(s, defaults);
     expect(q.getAll('bairro')).toEqual(['Glória', 'América']);
     expect(q.get('vista')).toBe('mapa');
@@ -42,19 +42,19 @@ describe('busca do site', () => {
   });
 
   it('chips removíveis, um por critério', () => {
-    const s = { ...emptySearch(), bairros: ['Glória'], suitesMin: 2 };
-    s.criteria = { ...s.criteria, types: ['house', 'apartment'], priceMax: 800000 };
+    const s = { ...emptySearch(), suitesMin: 2 };
+    s.criteria = { ...s.criteria, types: ['house', 'apartment'], bairros: ['Glória'], priceMax: 800000 };
     const chips = chipsOf(s);
     expect(chips.map((c) => c.label)).toEqual(['Casa', 'Apartamento', 'Glória', 'Até R$ 800 mil', '2+ suítes']);
     expect(chips[0].without.criteria.types).toEqual(['apartment']);
-    expect(chips[2].without.bairros).toEqual([]);
+    expect(chips[2].without.criteria.bairros).toEqual([]);
   });
 
   it('bairros mais procurados, paginação e título', () => {
     expect(bairroCounts(list, false)).toEqual([{ name: 'Glória', count: 2 }, { name: 'América', count: 1 }]);
     expect(pageOf([1, 2, 3, 4, 5], 9, 2)).toEqual({ items: [5], page: 3, pages: 3 });
-    const s = { ...emptySearch(), bairros: ['Glória'] };
-    s.criteria = { ...s.criteria, types: ['apartment'] };
+    const s = emptySearch();
+    s.criteria = { ...s.criteria, types: ['apartment'], bairros: ['Glória'] };
     expect(resultsTitle(2, s)).toBe('2 apartamentos à venda em Glória');
     expect(resultsTitle(1, emptySearch())).toBe('1 imóvel à venda');
     expect(resultsTitle(0, emptySearch())).toBe('Nenhum imóvel encontrado');

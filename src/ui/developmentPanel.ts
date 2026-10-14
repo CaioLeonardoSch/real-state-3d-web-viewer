@@ -10,6 +10,7 @@ import {
   type Unit,
 } from '../data/developments';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
+import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, progressLabel } from '../data/construction';
 
 export interface DevelopmentPanelHandlers {
   onClose: () => void;
@@ -115,6 +116,15 @@ export class DevelopmentPanel {
       <h2 id="dev-title">${escapeHtml(d.name)}</h2>
       <p class="dev-sub">${escapeHtml(d.developer)} · ${STAGE_LABELS[d.stage]} · entrega ${escapeHtml(d.delivery)}<br>
         <span class="muted">${escapeHtml(d.address)}</span></p>
+      ${
+        d.progress
+          ? `<div class="obra">
+              <p class="obra-head">Obra: ${escapeHtml(progressLabel(d.progress, d.levels.length).replace('andares', 'níveis').replace('andar ', 'nível '))}</p>
+              <div class="obra-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(builtShare(d.progress, d.levels.length) * 100)}" aria-label="Andamento da obra"><span style="width:${Math.round(builtShare(d.progress, d.levels.length) * 100)}%"></span></div>
+              <p class="obra-note">${escapeHtml(formatMonth(d.progress.updatedAt))} · ${escapeHtml(CONSTRUCTION_SOURCE_LABELS[d.progress.source])}. Fechado, o mapa mostra translúcido o que falta construir.</p>
+            </div>`
+          : ''
+      }
       <p class="dev-counts">
         <span class="st st-available">${plural(c.available, 'disponível', 'disponíveis')}</span>
         <span class="st st-reserved">${plural(c.reserved, 'reservado', 'reservados')}</span>

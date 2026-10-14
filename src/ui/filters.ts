@@ -1,6 +1,6 @@
 import type { Agency, Amenity, ListingStatus, ListingType } from '../data/types';
 import { AMENITIES, AMENITY_LABELS, LISTING_STATUSES, LISTING_TYPES, STATUS_LABELS, TYPE_LABELS } from '../data/types';
-import { ADVANCED_FIELDS, EMPTY_CRITERIA, countActive, type FilterCriteria, type FilterStore } from '../state/filters';
+import { ADVANCED_FIELDS, EMPTY_CRITERIA, countActive, normalizeName, type FilterCriteria, type FilterStore } from '../state/filters';
 import { sameCriteria } from '../state/url';
 import { escapeHtml, parseNumberInput } from '../utils/format';
 
@@ -45,6 +45,7 @@ export function mountFilters(
   form: HTMLFormElement,
   store: FilterStore,
   agencies: Agency[],
+  bairros: readonly string[] = [],
 ): { setForm: (c: FilterCriteria) => void } {
   form.innerHTML = `
     <fieldset class="f-chips f-deal">
@@ -55,6 +56,14 @@ export function mountFilters(
       </div>
     </fieldset>
     ${chips('type', 'Tipo', LISTING_TYPES, TYPE_LABELS)}
+    <div class="f-field f-bairro">
+      <label for="f-bairro-input">Bairro</label>
+      <div class="f-bairro-box">
+        <span class="f-bairro-chips"></span>
+        <input id="f-bairro-input" list="f-bairro-list" placeholder="${bairros.length ? 'Todos' : ''}" autocomplete="off">
+      </div>
+      <datalist id="f-bairro-list">${bairros.map((b) => `<option value="${escapeHtml(b)}">`).join('')}</datalist>
+    </div>
     ${numberInput('priceMin')}
     ${numberInput('priceMax')}
     ${minSelect('bedroomsMin')}
@@ -95,6 +104,7 @@ export function mountFilters(
     return {
       transaction: fd.get('transaction') === 'rent' ? 'rent' : null,
       types: fd.getAll('type').map(String) as ListingType[],
+      bairros: fd.getAll('bairro').map(String),
       priceMin: parseNumberInput(str('priceMin')),
       priceMax: parseNumberInput(str('priceMax')),
       bedroomsMin: int('bedroomsMin'),
@@ -120,7 +130,42 @@ export function mountFilters(
     for (const k of [...Object.keys(NUMBER_INPUTS), ...Object.keys(MIN_SELECTS)] as (NumberInput | MinSelect)[])
       field<HTMLInputElement>(k).value = c[k]?.toString() ?? '';
     field<HTMLSelectElement>('agency').value = c.agency ?? '';
+    renderBairros(c.bairros);
   };
+  // neighbourhoods: chosen from the list, shown as removable chips (hidden inputs named "bairro")
+  const bairroInput = form.querySelector<HTMLInputElement>('#f-bairro-input')!;
+  const bairroChips = form.querySelector<HTMLElement>('.f-bairro-chips')!;
+  const renderBairros = (list: readonly string[]) => {
+    bairroChips.innerHTML = list
+      .map(
+        (b) => `<span class="f-bairro-chip">${escapeHtml(b)}<input type="hidden" name="bairro" value="${escapeHtml(b)}">
+          <button type="button" data-remove-bairro="${escapeHtml(b)}" aria-label="Tirar o bairro ${escapeHtml(b)}">×</button></span>`,
+      )
+      .join('');
+    bairroInput.placeholder = list.length ? '+ bairro' : bairros.length ? 'Todos' : '';
+  };
+  const addBairro = () => {
+    const match = bairros.find((b) => normalizeName(b) === normalizeName(bairroInput.value));
+    if (!match) return false;
+    bairroInput.value = '';
+    const current = [...form.querySelectorAll<HTMLInputElement>('input[name="bairro"]')].map((i) => i.value);
+    if (!current.includes(match)) renderBairros([...current, match]);
+    store.setPending(readForm());
+    refreshHint();
+    return true;
+  };
+  bairroInput.addEventListener('input', () => void addBairro());
+  bairroInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && addBairro()) e.preventDefault();
+  });
+  bairroChips.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-remove-bairro]');
+    if (!btn) return;
+    renderBairros([...form.querySelectorAll<HTMLInputElement>('input[name="bairro"]')].map((i) => i.value).filter((b) => b !== btn.dataset.removeBairro));
+    store.setPending(readForm());
+    refreshHint();
+    bairroInput.focus();
+  });
   const setMoreOpen = (open: boolean) => {
     more.hidden = !open;
     moreToggle.setAttribute('aria-expanded', String(open));

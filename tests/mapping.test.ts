@@ -41,6 +41,14 @@ describe('rowToListing', () => {
     expect(l).toMatchObject({ approximateLocation: true, approxCenter: [-48.85, -26.3], approxRadiusM: 150 });
     expect(l.footprint).toBeUndefined();
   });
+  it('obra em andamento: andares prontos, mês e origem (só com a obra em andamento)', () => {
+    const obra = { floors_built: 7, construction_month: '2026-09-01', construction_source: 'vistoria' };
+    expect(rowToListing(row({ status: 'under_construction', ...obra }), [], String, false).construction).toEqual({
+      floorsBuilt: 7, updatedAt: '2026-09', source: 'vistoria',
+    });
+    expect(rowToListing(row({ status: 'ready', ...obra }), [], String, false).construction).toBeUndefined();
+    expect(rowToListing(row({ status: 'under_construction' }), [], String, false).construction).toBeUndefined();
+  });
   it("the user's own rows are editable and keep the exact geometry", () => {
     const mine = row({ published: false, location: undefined, location_geojson: { type: 'Point', coordinates: [1, 2] },
       footprint: undefined, footprint_geojson: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } });
@@ -64,6 +72,15 @@ describe('writing', () => {
     expect(r).toMatchObject({ org_id: 'org-1', lot: 'SRID=4326;POLYGON((0 0,1 0,1 1,0 0))', location: 'SRID=4326;POINT(-48.8 -26.3)', transaction: 'sale' });
     expect(r).not.toHaveProperty('previous_price');
     expect(r).not.toHaveProperty('id');
+  });
+  it('writes the construction progress only for buildings under construction', () => {
+    const base = { id: 'x', type: 'apartment', title: 'Apto', agency: 'o', price: 1, areaM2: 50, bedrooms: 1, bathrooms: 1,
+      parkingSpots: 0, features: [], approximateLocation: false, description: '', floors: 20,
+      construction: { floorsBuilt: 8, updatedAt: '2026-10', source: 'anunciante' } } as unknown as Listing;
+    expect(listingToRow({ ...base, status: 'under_construction' }, 'o', [0, 0])).toMatchObject({
+      floors_built: 8, construction_month: '2026-10-01', construction_source: 'anunciante',
+    });
+    expect(listingToRow({ ...base, status: 'ready' }, 'o', [0, 0])).toMatchObject({ floors_built: null, construction_month: null });
   });
   it('decodes data URLs for upload', async () => {
     const b = dataUrlToBlob('data:image/png;base64,iVBORw0KGgo=');

@@ -13,6 +13,7 @@ import turfDestination from '@turf/destination';
 import turfNearestPointOnLine from '@turf/nearest-point-on-line';
 import { lineString, point, polygon } from '@turf/helpers';
 import { DEVELOPMENTS } from './data/developments.mjs';
+import { demoProgress } from './lib/construction-demo.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'public', 'data');
@@ -218,6 +219,8 @@ for (const dev of DEVELOPMENTS) {
     shapes,
     hiddenBuildingIds,
     levels,
+    // works under way: illustrative progress (the developer would inform it every month)
+    ...(dev.stage === 'construction' ? { progress: demoProgress(dev.id, levels.length) } : {}),
   });
   const n = (s) => levels.flatMap((l) => l.units).filter((u) => u.status === s).length;
   console.log(

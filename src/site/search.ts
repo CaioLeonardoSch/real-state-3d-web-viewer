@@ -1,7 +1,7 @@
-// Search of a client's site: the map's criteria (src/state/filters.ts) plus neighbourhoods, reference code and
-// suites, with page and view. Kept in the address bar so any search can be shared or bookmarked.
+// Search of a client's site: the map's criteria (src/state/filters.ts, neighbourhoods included) plus reference code
+// and suites, with page and view. Kept in the address bar so any search can be shared or bookmarked.
 import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, type Listing } from '../data/types';
-import { EMPTY_CRITERIA, cloneCriteria, filterListings, type FilterCriteria } from '../state/filters';
+import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName, type FilterCriteria } from '../state/filters';
 import { DEFAULT_SORT, sortListings, type SortKey } from '../state/sort';
 import { searchToState, stateToSearch } from '../state/url';
 import { formatArea, formatBRLCompact } from '../utils/format';
@@ -9,7 +9,6 @@ import type { SearchView } from './config';
 
 export interface SiteSearch {
   criteria: FilterCriteria;
-  bairros: string[];
   /** Reference code (or part of it), case-insensitive. */
   code: string | null;
   suitesMin: number | null;
@@ -21,7 +20,6 @@ export interface SiteSearch {
 
 export const emptySearch = (sort: SortKey = DEFAULT_SORT, view: SearchView = 'grade'): SiteSearch => ({
   criteria: cloneCriteria(EMPTY_CRITERIA),
-  bairros: [],
   code: null,
   suitesMin: null,
   sort,
@@ -29,21 +27,10 @@ export const emptySearch = (sort: SortKey = DEFAULT_SORT, view: SearchView = 'gr
   view,
 });
 
-const norm = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
-
 export const bairroOf = (l: Listing) => l.address?.bairro ?? null;
 
 export function matchesSite(l: Listing, s: SiteSearch): boolean {
-  if (s.bairros.length) {
-    const b = bairroOf(l);
-    if (!b || !s.bairros.some((x) => norm(x) === norm(b))) return false;
-  }
-  if (s.code && !norm(l.referenceCode ?? l.id).includes(norm(s.code))) return false;
+  if (s.code && !normalizeName(l.referenceCode ?? l.id).includes(normalizeName(s.code))) return false;
   if (s.suitesMin !== null && (l.suites ?? 0) < s.suitesMin) return false;
   return true;
 }
@@ -69,7 +56,6 @@ export function searchToQuery(s: SiteSearch, defaults: { sort: SortKey; view: Se
   p.delete('ordem');
   const ordem = new URLSearchParams(stateToSearch({ criteria: EMPTY_CRITERIA, listingId: null, sort: s.sort })).get('ordem');
   if (s.sort !== defaults.sort) p.set('ordem', ordem ?? 'menor-preco');
-  for (const b of s.bairros) p.append('bairro', b);
   if (s.code) p.set('codigo', s.code);
   if (s.suitesMin !== null) p.set('suites', String(s.suitesMin));
   if (s.page > 1) p.set('pagina', String(s.page));
@@ -87,7 +73,6 @@ export function queryToSearch(query: string, defaults: { sort: SortKey; view: Se
   const view = p.get('vista');
   return {
     criteria: state.criteria,
-    bairros: [...new Set(p.getAll('bairro').map((b) => b.trim().slice(0, 60)).filter(Boolean))].slice(0, 20),
     code: p.get('codigo')?.trim().slice(0, 30) || null,
     suitesMin: n(p.get('suites')),
     sort: p.has('ordem') ? state.sort : defaults.sort,
@@ -118,7 +103,7 @@ export function chipsOf(s: SiteSearch): Chip[] {
   const money = (v: number) => (rent ? `R$ ${v.toLocaleString('pt-BR')}` : formatBRLCompact(v));
   const out: Chip[] = [];
   for (const t of c.types) out.push({ label: TYPE_LABELS[t], without: reset(s, {}, { types: c.types.filter((x) => x !== t) }) });
-  for (const b of s.bairros) out.push({ label: b, without: reset(s, { bairros: s.bairros.filter((x) => x !== b) }) });
+  for (const b of c.bairros) out.push({ label: b, without: reset(s, {}, { bairros: c.bairros.filter((x) => x !== b) }) });
   if (c.priceMin !== null) out.push({ label: `A partir de ${money(c.priceMin)}`, without: reset(s, {}, { priceMin: null }) });
   if (c.priceMax !== null) out.push({ label: `Até ${money(c.priceMax)}`, without: reset(s, {}, { priceMax: null }) });
   if (c.areaMin !== null) out.push({ label: `A partir de ${formatArea(c.areaMin)}`, without: reset(s, {}, { areaMin: null }) });
@@ -153,7 +138,7 @@ export function resultsTitle(count: number, s: SiteSearch): string {
       ? { apartment: plural(count, 'apartamento', 'apartamentos'), house: plural(count, 'casa', 'casas'), semi_detached: plural(count, 'geminado', 'geminados'), land: plural(count, 'terreno', 'terrenos') }[s.criteria.types[0]]
       : plural(count, 'imóvel', 'imóveis');
   const launch = s.criteria.statuses.length === 1 && s.criteria.statuses[0] === 'under_construction' ? ' em lançamento' : '';
-  const place = s.bairros.length === 1 ? ` em ${s.bairros[0]}` : '';
+  const place = s.criteria.bairros.length === 1 ? ` em ${s.criteria.bairros[0]}` : '';
   const deal = rent ? ' para alugar' : ' à venda';
   if (count === 0) return `Nenhum imóvel encontrado${place}`;
   return `${count.toLocaleString('pt-BR')} ${kind}${launch}${deal}${place}`;

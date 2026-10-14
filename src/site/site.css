@@ -402,6 +402,9 @@ img {
 .site-header a {
   color: inherit;
 }
+.site-header .btn-wa {
+  color: #0b3d1f;
+}
 .strip {
   font-size: 13px;
   border-bottom: 1px solid color-mix(in srgb, var(--s-header-ink) 14%, transparent);
@@ -509,6 +512,33 @@ img {
 }
 .nav-toggle {
   display: none;
+}
+/* collapsed menu: narrow screens, or a long menu that does not fit (measured in src/site/app.ts) */
+.site-header.compact .bar {
+  gap: 12px;
+}
+.site-header.compact .nav-toggle {
+  display: inline-grid;
+  order: 3;
+}
+.site-header.compact .bar-actions {
+  order: 2;
+}
+.site-header.compact .nav {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--s-header);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  padding: 8px 16px 16px;
+}
+.site-header.compact.nav-open .nav {
+  display: block;
+}
+.site-header.compact .nav ul {
+  flex-direction: column;
 }
 @media (max-width: 1180px) {
   .bar {
@@ -630,7 +660,8 @@ img {
   flex: 1 1 220px;
 }
 .q-count {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--s-primary-ink);
+  color: var(--s-primary);
   border-radius: 999px;
   padding: 3px 8px;
   font-size: 12px;
@@ -1022,7 +1053,7 @@ img {
   gap: 2px;
   font-size: 13px;
   font-weight: 700;
-  color: color-mix(in srgb, var(--s-accent) 80%, var(--s-text));
+  color: var(--s-accent-text);
 }
 .p-red .ico {
   width: 14px;
@@ -1108,6 +1139,10 @@ img {
 }
 .f-panel[hidden] {
   display: none !important;
+}
+/* boxes keep their own height in the filter grid (buttons must not stretch) */
+.f-panel > * {
+  align-self: start;
 }
 .f-panel {
   display: grid;
@@ -1944,4 +1979,74 @@ body.editing .wa-float {
   padding: 18px;
   display: grid;
   gap: 12px;
+}
+
+/* works under way (listing page) */
+.d-obra {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius);
+}
+.d-obra p {
+  margin: 0 0 6px;
+}
+.obra-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--s-line);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.obra-bar span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(-45deg, #f0b429, #f0b429 6px, #e0a21a 6px, #e0a21a 12px);
+}
+
+/* listing page: availability, price under the title and contact bar on phones */
+.d-avail {
+  background: var(--s-surface);
+  border-left: 4px solid var(--s-accent);
+  padding: 8px 12px;
+  border-radius: var(--s-radius);
+}
+.d-price-mobile,
+.d-cta {
+  display: none;
+}
+.map-frame[data-src] {
+  display: grid;
+  place-items: center;
+}
+@media (max-width: 960px) {
+  .d-price-mobile {
+    display: block;
+    margin: 4px 0 12px;
+  }
+  .d-price-mobile .price strong {
+    font-size: 24px;
+  }
+  .d-cta {
+    display: flex;
+    gap: 8px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 48;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--s-card);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  }
+  .d-cta .btn {
+    flex: 1;
+  }
+  .page-imovel {
+    padding-bottom: 80px;
+  }
+  /* the bar replaces the floating WhatsApp button on this page */
+  body:has(.d-cta) .wa-float {
+    display: none;
+  }
 }

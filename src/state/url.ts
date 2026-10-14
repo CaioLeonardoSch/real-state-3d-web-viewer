@@ -1,5 +1,5 @@
 import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types';
-import { EMPTY_CRITERIA, RELAXABLE_FIELDS, type FilterCriteria } from './filters';
+import { EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters';
 import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort';
 
 /** What the address bar stores: applied filters and the open listing. */
@@ -18,6 +18,8 @@ export interface KnownIds {
   listingIds: Set<string>;
   /** Development id → its unit ids. */
   developments?: Map<string, Set<string>>;
+  /** Known neighbourhood names (the URL may spell them without accents); absent = any name. */
+  bairros?: readonly string[];
 }
 
 const SORT_SLUGS: Record<SortKey, string> = {
@@ -91,6 +93,7 @@ export function stateToSearch(state: UrlState): string {
     if (state.unitId) p.set('unidade', state.unitId.slice(state.developmentId.length + 1));
   }
   if (c.types.length) p.set('tipo', c.types.map((t) => TYPE_SLUGS[t]).join(','));
+  for (const b of c.bairros) p.append('bairro', b);
   for (const [field, param] of NUMBER_PARAMS) if (c[field] !== null) p.set(param, String(c[field]));
   if (c.statuses.length) p.set('situacao', c.statuses.map((s) => STATUS_SLUGS[s]).join(','));
   if (c.features.length) p.set('comodidades', c.features.map((f) => AMENITY_SLUGS[f]).join(','));
@@ -119,6 +122,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     ...EMPTY_CRITERIA,
     transaction: p.get('negocio') === 'alugar' ? 'rent' : null,
     types: parseList(p.get('tipo'), SLUG_TO_TYPE),
+    bairros: parseBairros(p.getAll('bairro'), known.bairros),
     statuses: parseList(p.get('situacao'), SLUG_TO_STATUS),
     features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),
     agency: agency && known.agencyIds.has(agency) ? agency : null,
@@ -139,6 +143,17 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     developmentId: units ? dev : null,
     unitId: unitId && units!.has(unitId) ? unitId : null,
   };
+}
+
+/** Neighbourhoods from the URL: known names (with their accents) when a list is given, at most 20, no repeats. */
+function parseBairros(raw: string[], known?: readonly string[]): string[] {
+  const byKey = known ? new Map(known.map((b) => [normalizeName(b), b])) : null;
+  const out = raw
+    .map((b) => b.trim().slice(0, 60))
+    .filter(Boolean)
+    .map((b) => (byKey ? byKey.get(normalizeName(b)) : b))
+    .filter((b): b is string => !!b);
+  return [...new Set(out)].slice(0, 20);
 }
 
 /** Equal criteria, ignoring the order of list values. */

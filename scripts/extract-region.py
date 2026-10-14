@@ -9,7 +9,8 @@ https://download.openstreetmap.fr/extracts/south-america/brazil/south/santa-cata
 (see `npm run data:download`).
 
 Writes GeoJSON to .cache/region/ (not versioned: tens of MB): bairros, boundary (union of the chosen
-neighbourhoods), buildings, roads, water, green, plus meta.json. scripts/build-tiles.mjs turns them into
+neighbourhoods), buildings, roads (with surface and lighting tags), water, green (with its kind), trees and street
+lamps mapped in OSM, plus meta.json. scripts/build-tiles.mjs turns them into
 public/data/*.pmtiles; the listing/development generators read them directly.
 
 Requires: pip install osmium shapely
@@ -20,8 +21,8 @@ import sys
 from datetime import datetime, timezone
 
 import osmium
-from shapely.geometry import mapping, shape
-from shapely.ops import unary_union
+from shapely.geometry import Point, mapping, shape
+from shapely.ops import transform, unary_union
 from shapely.prepared import prep
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -32,7 +33,13 @@ OUT = os.path.join(ROOT, '.cache', 'region')
 # Tags kept on buildings: height rule (scripts/lib/height.mjs) and residential rule (scripts/lib/residential.mjs)
 BUILDING_TAGS = ['building', 'building:levels', 'height', 'name', 'amenity', 'shop', 'office', 'healthcare',
                  'craft', 'tourism', 'leisure', 'religion', 'denomination', 'industrial']
-GREEN = {('leisure', 'park'), ('landuse', 'grass'), ('landuse', 'forest'), ('natural', 'wood')}
+# green areas and the kind kept for the style (parks, grass, woods, scrub, wetlands, fields)
+GREEN = {
+    ('leisure', 'park'): 'park', ('leisure', 'garden'): 'park', ('landuse', 'grass'): 'grass',
+    ('landuse', 'meadow'): 'grass', ('natural', 'grassland'): 'grass', ('landuse', 'forest'): 'wood',
+    ('natural', 'wood'): 'wood', ('natural', 'scrub'): 'scrub', ('natural', 'wetland'): 'wetland',
+    ('landuse', 'farmland'): 'farm', ('landuse', 'orchard'): 'farm',
+}
 WATERWAYS = {'river', 'stream', 'canal'}
 # ~ 60 m around the region, so streets and rivers on its edge are complete
 MARGIN_DEG = 0.0006
@@ -109,11 +116,21 @@ def in_bbox(g):
 
 
 # ---------------------------------------------------------------- 2. features
-buildings, roads, water, green = [], [], [], []
+buildings, roads, water, green, trees, lamps = [], [], [], [], [], []
 keys = ('building', 'highway', 'natural', 'waterway', 'leisure', 'landuse')
 fp = osmium.FileProcessor(SRC).with_areas(osmium.filter.KeyFilter(*keys)).with_filter(osmium.filter.KeyFilter(*keys))
 for o in fp:
     t = o.tags
+    if o.is_node():
+        # mapped trees and street lamps (few in OSM; the tile builder adds illustrative ones)
+        kind = 'tree' if t.get('natural') == 'tree' else 'lamp' if t.get('highway') == 'street_lamp' else None
+        if kind:
+            x, y = o.location.lon, o.location.lat
+            if minx <= x <= maxx and miny <= y <= maxy and region_buf.contains(Point(x, y)):
+                (trees if kind == 'tree' else lamps).append(
+                    {'type': 'Feature', 'properties': {'osmId': f'node/{o.id}'},
+                     'geometry': {'type': 'Point', 'coordinates': [round(x, 7), round(y, 7)]}})
+        continue
     if o.is_area():
         a = o
         try:
@@ -133,10 +150,21 @@ for o in fp:
             buildings.append({'type': 'Feature', 'properties': props, 'geometry': rounded(g)})
         elif t.get('natural') == 'water' or t.get('waterway') == 'riverbank':
             if region_buf.intersects(g):
-                water.append({'type': 'Feature', 'properties': {'osmId': area_id(a)}, 'geometry': rounded(g)})
-        elif any((k, t.get(k)) in GREEN for k in ('leisure', 'landuse', 'natural')):
-            if region_buf.intersects(g):
-                green.append({'type': 'Feature', 'properties': {'osmId': area_id(a)}, 'geometry': rounded(g)})
+                kind = 'river' if t.get('waterway') == 'riverbank' else t.get('water', 'water')
+                water.append({'type': 'Feature', 'properties': {'osmId': area_id(a), 'water': kind},
+                              'geometry': rounded(g)})
+        else:
+            kind = next((GREEN[(k, t.get(k))] for k in ('leisure', 'landuse', 'natural') if (k, t.get(k)) in GREEN), None)
+            if kind and region_buf.intersects(g):
+                green.append({'type': 'Feature', 'properties': {'osmId': area_id(a), 'kind': kind},
+                              'geometry': rounded(g)})
+    elif o.is_way() and t.get('natural') == 'tree_row':
+        try:
+            g = shape(json.loads(factory.create_linestring(o)))
+        except Exception:
+            continue
+        if in_bbox(g) and region_buf.intersects(g):
+            trees.append({'type': 'Feature', 'properties': {'osmId': f'way/{o.id}', 'row': True}, 'geometry': rounded(g)})
     elif o.is_way() and ('highway' in t or t.get('waterway') in WATERWAYS):
         try:
             g = shape(json.loads(factory.create_linestring(o)))
@@ -146,12 +174,44 @@ for o in fp:
             continue
         if 'highway' in t:
             props = {'osmId': f'way/{o.id}', 'highway': t['highway']}
-            if 'name' in t:
-                props['name'] = t['name']
+            # pavement (asphalt, paving stones, dirt…) and street lighting, when mapped
+            for k in ('name', 'surface', 'lit', 'bridge', 'tunnel', 'layer'):
+                if k in t:
+                    props[k] = t[k]
             roads.append({'type': 'Feature', 'properties': props, 'geometry': rounded(g)})
         else:
             water.append({'type': 'Feature', 'properties': {'osmId': f'way/{o.id}', 'waterway': t['waterway']},
                           'geometry': rounded(g)})
+
+# ---------------------------------------------------------------- 2b. canopy of woods
+# The map draws woods as a low canopy mass with trees along the edge. The mass is the wood shrunk by
+# CANOPY_INSET_M (so the edge trees stand in front of it) and simplified (≈ 2 m): small in the tiles.
+CANOPY_INSET_M = 6
+lat0 = (miny + maxy) / 2
+KX = 111320 * __import__('math').cos(__import__('math').radians(lat0))
+KY = 110540
+to_m = lambda x, y, z=None: (x * KX, y * KY)
+to_deg = lambda x, y, z=None: (x / KX, y / KY)
+canopy = []
+for f in green:
+    if f['properties']['kind'] != 'wood':
+        continue
+    g = transform(to_m, shape(f['geometry']))
+    inner = g.buffer(-CANOPY_INSET_M).simplify(2)
+    if inner.is_empty or inner.area < 150:
+        continue
+    canopy.append({'type': 'Feature', 'properties': {'osmId': f['properties']['osmId']},
+                   'geometry': rounded(transform(to_deg, inner))})
+
+# ---------------------------------------------------------------- 2c. neighbourhoods plus 100 m
+# The "bairro" filter cuts the map to a neighbourhood and BAIRRO_MARGIN_M around it (the rest is masked).
+BAIRRO_MARGIN_M = 100
+bairro_buffers = []
+for n, kind, i, g in labels:
+    if kind != 'bairro':
+        continue
+    grown = transform(to_deg, transform(to_m, g).buffer(BAIRRO_MARGIN_M).simplify(4))
+    bairro_buffers.append({'type': 'Feature', 'properties': {'name': n}, 'geometry': rounded(grown)})
 
 # ---------------------------------------------------------------- 3. write
 os.makedirs(OUT, exist_ok=True)
@@ -172,6 +232,10 @@ write('buildings.geojson', buildings)
 write('roads.geojson', roads)
 write('water.geojson', water)
 write('green.geojson', green)
+write('trees.geojson', trees)
+write('canopy.geojson', canopy)
+write('bairros-buffer.geojson', bairro_buffers)
+write('lamps.geojson', lamps)
 header_ts = osmium.io.Reader(SRC, osmium.osm.osm_entity_bits.NOTHING).header().get('osmosis_replication_timestamp', '')
 c = region.centroid
 meta = {
@@ -184,7 +248,8 @@ meta = {
     'extractedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'center': [round(c.x, 7), round(c.y, 7)],
     'boundaryBbox': [round(v, 6) for v in region.bounds],
-    'counts': {'buildings': len(buildings), 'roads': len(roads), 'water': len(water), 'green': len(green)},
+    'counts': {'buildings': len(buildings), 'roads': len(roads), 'water': len(water), 'green': len(green),
+               'osmTrees': len(trees), 'osmLamps': len(lamps)},
 }
 json.dump(meta, open(os.path.join(OUT, 'meta.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print(json.dumps(meta['counts']))

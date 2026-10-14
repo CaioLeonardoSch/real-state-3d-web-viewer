@@ -61,8 +61,8 @@
     "Zona Industrial Tupy"
   ],
   "source": "santa-catarina-latest.osm.pbf",
-  "osmTimestamp": "2026-10-07T01:04:20Z",
-  "extractedAt": "2026-10-09T02:24:49Z",
+  "osmTimestamp": "2026-10-13T01:05:00Z",
+  "extractedAt": "2026-10-14T00:09:05Z",
   "center": [
     -48.9020204,
     -26.2998263
@@ -74,14 +74,27 @@
     -26.074239
   ],
   "counts": {
-    "buildings": 164679,
-    "roads": 18887,
+    "buildings": 164672,
+    "roads": 19090,
     "water": 2099,
-    "green": 2140,
+    "green": 2730,
+    "osmTrees": 869,
+    "osmLamps": 416,
     "heightFromTag": 61,
     "heightFromLevels": 2543,
-    "heightFromCadastre": 153283,
-    "heightDefault": 8792
+    "heightFromCadastre": 153274,
+    "heightDefault": 8794,
+    "trees": 212298,
+    "treesFromOsm": 1071,
+    "lamps": 41012,
+    "lampsFromOsm": 416,
+    "roadKmBySurface": {
+      "a": 1459,
+      "?": 640.2,
+      "c": 377.4,
+      "u": 1426.8,
+      "p": 43.9
+    }
   },
   "tiles": "joinville.pmtiles",
   "tileZooms": {
@@ -103,6 +116,22 @@
     },
     "bairros": {
       "minzoom": 10,
+      "maxzoom": 15
+    },
+    "canopy": {
+      "minzoom": 14,
+      "maxzoom": 15
+    },
+    "trees": {
+      "minzoom": 15,
+      "maxzoom": 15
+    },
+    "lamps": {
+      "minzoom": 15,
+      "maxzoom": 15
+    },
+    "lights": {
+      "minzoom": 15,
       "maxzoom": 15
     }
   },

@@ -147,6 +147,9 @@ export class AddListingPanel {
     for (const k of ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking', 'unitFloor', 'floors', 'towers', 'yearBuilt'] as const)
       set(k, l[k]);
     set('status', l.status);
+    set('floorsBuilt', l.construction?.floorsBuilt);
+    set('constructionMonth', l.construction?.updatedAt);
+    this.refreshObra();
     set('description', l.description);
     for (const k of ['cep', 'street', 'number', 'complement', 'bairro', 'city'] as const) set(k, l.address?.[k] ?? (k === 'city' ? '' : undefined));
     set('addressDisplay', l.addressDisplay ?? (l.approximateLocation ? 'neighborhood' : 'full'));
@@ -256,6 +259,10 @@ export class AddListingPanel {
           ${field('Torres', num('towers', '1'), 'data-for="apartment"')}
           ${field('Ano de construção', num('yearBuilt', 'ou de entrega'), buildingOnly)}
           ${field('Obra', `<select name="status">${options(LISTING_STATUSES, STATUS_LABELS)}</select>`, buildingOnly)}
+          ${field('Andares já construídos', num('floorsBuilt', 'ex.: 6'), 'data-obra hidden')}
+          ${field('Andamento informado em', `<input name="constructionMonth" type="month">`, 'data-obra hidden')}
+          <p class="a-hint a-wide" data-obra hidden>Atualize todo mês: no mapa, os andares já construídos aparecem sólidos e o
+            restante do prédio translúcido, com uma grua. O visitante vê a data da informação.</p>
           <fieldset class="f-chips a-wide">
             <legend>Comodidades</legend>
             ${chips('feature', AMENITIES.filter((a) => a !== 'financing' && a !== 'exchange'), AMENITY_LABELS)}
@@ -335,6 +342,7 @@ export class AddListingPanel {
     input('transaction').addEventListener('change', () => this.onTransactionChange());
     input('areaM2').addEventListener('change', () => this.onAreaChange());
     input('floors').addEventListener('change', () => this.refreshPreview());
+    (form.elements.namedItem('status') as HTMLSelectElement).addEventListener('change', () => this.refreshObra());
     input('cep').addEventListener('input', () => this.onCepInput());
     input('photos').addEventListener('change', () => void this.addPhotos());
     input('floorPlan').addEventListener('change', () => void this.setFloorPlan());
@@ -473,11 +481,18 @@ export class AddListingPanel {
     return this.value('type') as ListingType;
   }
 
+  /** "Andares já construídos" only for buildings under construction. */
+  private refreshObra(): void {
+    const show = this.type !== 'land' && this.value('status') === 'under_construction';
+    this.form.querySelectorAll<HTMLElement>('[data-obra]').forEach((el) => (el.hidden = !show));
+  }
+
   private onTypeChange(): void {
     const type = this.type;
     this.form.querySelectorAll<HTMLElement>('[data-for]').forEach((el) => {
       el.hidden = !el.dataset.for!.split(' ').includes(type);
     });
+    this.refreshObra();
     this.el.querySelector('[data-area-label]')!.textContent = type === 'land' ? 'Área do lote (m²) *' : 'Área útil (m²) *';
     // a lot and a building are picked differently: switching between them asks for a new place
     if (this.place && (this.place.kind === 'land') !== (type === 'land')) this.setPlace(null);
@@ -623,6 +638,9 @@ export class AddListingPanel {
     const unitFloor = type === 'apartment' ? num('unitFloor') : null;
     const towers = type === 'apartment' ? num('towers') : null;
     const yearBuilt = building ? num('yearBuilt') : null;
+    const underConstruction = building && this.value('status') === 'under_construction';
+    const floorsBuilt = underConstruction ? num('floorsBuilt') : null;
+    const month = this.value('constructionMonth');
     const [bedrooms, suites, bathrooms, parkingSpots, coveredParking] = building
       ? ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking'].map(count)
       : [0, 0, 0, 0, 0];
@@ -652,6 +670,9 @@ export class AddListingPanel {
     if (unitFloor !== null && (!Number.isInteger(unitFloor) || unitFloor > (floors ?? 40))) problems.push('o andar da unidade passa do número de andares');
     if (towers !== null && (!Number.isInteger(towers) || towers < 1 || towers > 20)) problems.push('torres vão de 1 a 20');
     if (yearBuilt !== null && (!Number.isInteger(yearBuilt) || yearBuilt < 1850 || yearBuilt > year + 6)) problems.push('ano de construção inválido');
+    if (floorsBuilt !== null && (!Number.isInteger(floorsBuilt) || floorsBuilt < 0 || floorsBuilt > (floors ?? 40)))
+      problems.push('os andares construídos passam do número de andares');
+    if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) problems.push('mês do andamento da obra inválido');
     if (!address.bairro) problems.push('informe o bairro');
     if (display !== 'neighborhood' && !address.street) problems.push('informe a rua (ou mostre só o bairro)');
     if (display === 'full' && !address.number) problems.push('informe o número (ou não mostre o endereço completo)');
@@ -701,6 +722,8 @@ export class AddListingPanel {
       ...opt('yearBuilt', yearBuilt),
       usage: this.value('usage') as Usage,
       status: building ? (this.value('status') as ListingStatus) : 'ready',
+      // works under way: floors built, as informed by the advertiser (the map draws the rest translucent)
+      ...(floorsBuilt !== null ? { construction: { floorsBuilt, updatedAt: month || date.slice(0, 7), source: 'anunciante' as const } } : {}),
       features,
       ...(place.kind === 'land'
         ? { lotPolygon: place.lot }

@@ -169,7 +169,7 @@ async function main() {
       red: document.querySelector('.d-red')?.textContent ?? '',
       title: document.title,
       wa: document.querySelector('.side-card .btn-wa')?.getAttribute('href') ?? '',
-      map: document.querySelector('.map-frame iframe')?.getAttribute('src') ?? '',
+      map: document.querySelector('.map-frame[data-src]')?.dataset.src ?? '',
     }));
     check('página do imóvel: título, dados para o Google (JSON-LD), redução com o preço anterior, WhatsApp com o código, mapa 3D focado',
       det.h1 === red.title && det.ld?.['@type'] === 'RealEstateListing' && det.red.includes(`${Math.round((100 * (red.previousPrice - red.price)) / red.previousPrice)}%`) &&
@@ -211,6 +211,11 @@ async function main() {
     const notLaunch = houses.filter((l) => l.status !== 'under_construction').map((l) => l.id);
     await frame.waitForFunction(([on, off]) => on.every((id) => window.__demo.isMatched(id)) && off.every((id) => !window.__demo.isMatched(id)), [launches, notLaunch], { timeout: 10000 });
     check('mudar a busca atualiza o mapa sem recarregar', (await page.locator('.map-frame iframe').count()) === 1);
+    // the map rewrites its own address as it is used: it must keep the embed parameters, or reloading only the frame
+    // would show the whole portal inside the client's site
+    const frameUrl = new URL(frame.url());
+    check('o endereço do mapa embutido mantém embed e site depois de usar a busca',
+      frameUrl.searchParams.get('embed') === '1' && frameUrl.searchParams.has('site'), frame.url());
     await sleep(1500);
     await page.screenshot({ path: path.join(SHOTS, 'site-mapa.png') });
 
@@ -240,11 +245,20 @@ async function main() {
     await page.waitForSelector('body[data-ready="true"]');
     const kept = await page.evaluate(() => ({ t: document.documentElement.dataset.template, h1: document.querySelector('.hero h1').textContent }));
     check('salvar (demonstração: neste navegador) mantém a personalização ao recarregar', kept.t === 'lateral' && kept.h1 === 'Título novo da capa', JSON.stringify(kept));
-    page.once('dialog', (d) => d.accept());
+    // the confirmation is the only dialog: no "leave the site?" prompt while reloading
+    const dialogs = [];
+    const onDialog = (d) => {
+      dialogs.push(d.type());
+      void d.accept();
+    };
+    page.on('dialog', onDialog);
     await page.click('.editor [data-reset]');
+    await page.waitForFunction(() => document.documentElement.dataset.template === 'leve', null, { timeout: 20000 });
     await page.waitForSelector('body[data-ready="true"]');
-    await page.waitForFunction(() => document.documentElement.dataset.template === 'leve');
-    check('"Voltar ao original" desfaz a personalização', true);
+    page.off('dialog', onDialog);
+    const resetState = await page.evaluate(() => ({ t: document.documentElement.dataset.template, h1: document.querySelector('.hero h1')?.textContent }));
+    check('"Voltar ao original" desfaz a personalização, sem perguntar se quer sair do site',
+      resetState.t === 'leve' && resetState.h1 === 'Imóveis com desconto de verdade' && dialogs.join() === 'confirm', JSON.stringify({ ...resetState, dialogs }));
     check('sem erros no console (computador)', h.errors.length === 0, h.errors.join(' | '));
     await h.ctx.close();
 

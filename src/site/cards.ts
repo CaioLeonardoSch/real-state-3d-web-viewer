@@ -64,7 +64,8 @@ function badges(l: Listing): string {
 export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista' = 'grade'): string {
   const c = ctx.config;
   const photos = photosOf(l, c);
-  const href = ctx.href('imovel', { id: l.id });
+  // searching for rentals: the listing page opens in rent mode too
+  const href = ctx.href('imovel', { id: l.id, ...(ctx.rent && isForRent(l) ? { negocio: 'alugar' } : {}) });
   const fav = ctx.isFavorite(l.id);
   const cmp = ctx.isCompared(l.id);
   const title = escapeHtml(l.title);

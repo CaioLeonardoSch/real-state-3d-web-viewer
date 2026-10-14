@@ -8,7 +8,10 @@
   --muted: #646b73;
   --line: #dcdcd8;
   --accent: #f28c18;
-  --accent-strong: #c8650a;
+  /* WCAG AA orange: text on the panels (5.5:1 on white, 5:1 on --accent-soft) and filled controls with white
+     text (4.9:1); the bright --accent stays for borders, markers and the map */
+  --accent-strong: #a85000;
+  --accent-fill: #b35600;
   --accent-soft: #fff1df;
   --radius: 12px;
   --shadow: 0 8px 28px rgba(20, 24, 31, 0.16);
@@ -26,6 +29,7 @@ body[data-tod='night'] {
   --muted: #a6aec0;
   --line: #3a4258;
   --accent-soft: #3d2c16;
+  --accent-strong: #ffb15c;
   --bg: #141b2d;
 }
 
@@ -53,7 +57,7 @@ body[data-tod='night'] {
   cursor: pointer;
 }
 .segmented input:checked + span {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 .segmented input:focus-visible + span {
@@ -205,8 +209,8 @@ body[data-tod='night'] .demo-banner {
   color: var(--text);
 }
 .chip input:checked + span {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   color: #fff;
 }
 .chip input:focus-visible + span {
@@ -227,7 +231,8 @@ body[data-tod='night'] .demo-banner {
   border: 1px solid var(--accent);
 }
 .btn-primary {
-  background: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   color: #fff;
   font-weight: 600;
 }
@@ -535,7 +540,7 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   font-size: 13px;
 }
 .time-of-day button[aria-checked='true'] {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 
@@ -594,7 +599,7 @@ body[data-tod='night'] .link-btn {
   z-index: 10;
   padding: 8px 12px;
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-weight: 600;
   text-decoration: none;
@@ -1163,7 +1168,7 @@ body[data-tod='night'] .btn-danger {
 }
 .r-tag.tag-featured,
 .r-tag.tag-super {
-  background: var(--accent-strong);
+  background: var(--accent-fill);
 }
 .r-tag.tag-reserved {
   background: #8a6d00;
@@ -1474,6 +1479,9 @@ body[data-tod='night'] .bairro-label.kind-distrito {
 }
 .dev-marker span {
   color: var(--muted);
+}
+.dev-marker.is-hidden {
+  display: none;
 }
 .dev-marker.is-far {
   display: none;
@@ -1818,7 +1826,7 @@ body.embed .site-page-link {
   display: inline-block;
   padding: 8px 14px;
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-weight: 600;
   text-decoration: none;
@@ -1849,4 +1857,80 @@ body.embed .site-page-link {
 }
 .lead-details dd {
   margin: 0;
+}
+
+/* "Bairro" filter: chosen neighbourhoods as chips inside the field */
+.f-bairro-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 150px;
+  max-width: 260px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.f-bairro-box:focus-within {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 1px;
+}
+.f-field .f-bairro-box input {
+  flex: 1 1 70px;
+  width: auto;
+  min-width: 70px;
+  border: 0;
+  padding: 4px 2px;
+  outline: none;
+}
+.f-bairro-chips {
+  display: contents;
+}
+.f-bairro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: #fff;
+  font-size: 12px;
+}
+.f-bairro-chip button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+/* works under way (listing panel) */
+.obra {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.obra-head {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.obra-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+.obra-bar span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(-45deg, #f0b429, #f0b429 6px, #e0a21a 6px, #e0a21a 12px);
+}
+.obra-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
 }

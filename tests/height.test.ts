@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeRenderHeight, parseOsmNumber } from '../scripts/lib/height.mjs';
-import { floorsForLot } from '../scripts/lib/cadastre-floors.mjs';
+import { floorsForLot, shareInside } from '../scripts/lib/cadastre-floors.mjs';
 
 describe('computeRenderHeight', () => {
   it('uses the height tag when present', () => {
@@ -50,5 +50,26 @@ describe('floorsForLot (cadastre built area ÷ OSM footprint)', () => {
     expect(floorsForLot(5000, [100])).toBeNull(); // 50 floors on 100 m²
     expect(floorsForLot(1200, [120])).toBeNull(); // 10 floors on a 120 m² outline: tower not mapped in OSM
     expect(floorsForLot(3000, [100, 100, 100])).toBeNull(); // "10-floor houses"
+  });
+});
+
+describe('shareInside', () => {
+  // a 20 m × 20 m building at Joinville's latitude, in degrees
+  const dx = 20 / (111320 * Math.cos((26.3 * Math.PI) / 180));
+  const dy = 20 / 110540;
+  const square = (x0: number, y0: number, w: number, h: number) => ({
+    type: 'Polygon' as const,
+    coordinates: [[[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h], [x0, y0]]],
+  });
+  const building = square(-48.85, -26.3, dx, dy);
+  it('is 1 for a building inside the lot', () => {
+    expect(shareInside(building, square(-48.85 - dx, -26.3 - dy, 3 * dx, 3 * dy))).toBeCloseTo(1, 3);
+  });
+  it('is the share of the outline inside a lot it straddles', () => {
+    // the lot covers the west half of the building (a tower estimate needs at least 70% inside)
+    expect(shareInside(building, square(-48.85 - dx, -26.3 - dy, 1.5 * dx, 3 * dy))).toBeCloseTo(0.5, 2);
+  });
+  it('is 0 for a lot elsewhere', () => {
+    expect(shareInside(building, square(-48.8, -26.3, dx, dy))).toBe(0);
   });
 });

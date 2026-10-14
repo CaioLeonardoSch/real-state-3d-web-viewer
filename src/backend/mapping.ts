@@ -1,5 +1,6 @@
 // Conversion between database rows (supabase/migrations) and the app's Listing. Pure functions, unit-tested.
 import type { MultiPolygon, Point, Polygon, Position } from 'geojson';
+import { parseProgress } from '../data/construction.ts';
 import type { Listing, Photo } from '../data/types';
 
 /** Row of public.public_listings or public.my_listings (geometries already as GeoJSON). */
@@ -29,6 +30,10 @@ export interface ListingRow {
   floors: number | null;
   towers: number | null;
   year_built: number | null;
+  /** Works under way (20261019000001_construction_progress.sql). */
+  floors_built?: number | null;
+  construction_month?: string | null;
+  construction_source?: string | null;
   usage: NonNullable<Listing['usage']>;
   status: Listing['status'];
   features: Listing['features'];
@@ -124,6 +129,11 @@ export function rowToListing(r: ListingRow, photos: PhotoRow[], photoUrl: (path:
     ...opt('coveredParking', r.covered_parking),
     ...opt('totalAreaM2', num(r.total_area_m2)),
     ...opt('yearBuilt', r.year_built),
+    ...(() => {
+      // works under way: floors built and the month of the information
+      const p = parseProgress({ floorsBuilt: r.floors_built, updatedAt: r.construction_month?.slice(0, 7), source: r.construction_source });
+      return p && r.status === 'under_construction' ? { construction: p } : {};
+    })(),
     usage: r.usage,
     ...(gallery.length ? { photos: gallery } : {}),
     ...(plan ? { floorPlanImage: photoUrl(plan.path) } : {}),
@@ -181,6 +191,9 @@ export function listingToRow(l: Listing, orgId: string, location: [number, numbe
     floors: l.floors ?? null,
     towers: l.towers ?? null,
     year_built: l.yearBuilt ?? null,
+    floors_built: l.status === 'under_construction' ? (l.construction?.floorsBuilt ?? null) : null,
+    construction_month: l.status === 'under_construction' && l.construction ? `${l.construction.updatedAt}-01` : null,
+    construction_source: l.status === 'under_construction' && l.construction ? l.construction.source : null,
     usage: l.usage ?? 'residential',
     status: l.status,
     features: l.features,

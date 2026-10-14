@@ -193,7 +193,8 @@ const list = <T extends string>(v: unknown, options: readonly T[], fallback: T[]
 export function safeImage(v: unknown): string {
   if (typeof v !== 'string') return '';
   const s = v.trim();
-  if (/^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[a-z0-9+/=]+$/i.test(s) && s.length <= 1_500_000) return s;
+  // no SVG: it can carry scripts (the editor converts SVG logos to PNG before upload)
+  if (/^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(s) && s.length <= 1_500_000) return s;
   try {
     const u = new URL(s);
     if (u.protocol === 'https:' || (u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) return u.href;
@@ -346,10 +347,20 @@ export function colorWarnings(c: SiteConfig): ColorWarning[] {
   if (contrast(c.colors.primary, bg) < 3)
     out.push({ field: 'primary', message: 'A cor principal tem pouco contraste com o fundo; nos textos ela será escurecida (ou clareada) para continuar legível.' });
   if (contrast(c.colors.primary, inkOn(c.colors.primary)) < 4.5)
-    out.push({ field: 'primary', message: 'O texto dos botões fica difícil de ler nessa cor.' });
+    out.push({ field: 'primary', message: 'Com texto em cima (botões), a cor principal fica um pouco mais escura (ou clara) para dar leitura.' });
+  // where the accent carries text (badges, reduced price) it is darkened or lightened automatically
+  // (themeVars); warn only when it nearly vanishes on the background, so that change is large
+  if (contrast(c.colors.accent, bg) < 1.8)
+    out.push({ field: 'accent', message: 'A cor de destaque quase some no fundo: nos selos e no preço reduzido ela fica bem mais escura (ou clara) para continuar legível.' });
   if (c.theme === 'dark' && contrast(c.colors.header, bg) < 1.15)
     out.push({ field: 'header', message: 'O cabeçalho se confunde com o fundo escuro.' });
   return out;
+}
+
+/** A colour that carries text: the brand colour, darkened (or lightened) just enough for 4.5:1 with its ink. */
+function solid(color: string): { bg: string; ink: string } {
+  const ink = inkOn(color);
+  return { bg: readableOn(color, ink, 4.5), ink };
 }
 
 /** CSS custom properties of the theme (applied on <html>). */
@@ -359,6 +370,10 @@ export function themeVars(c: SiteConfig): Record<string, string> {
   const surface = dark ? '#1b1e23' : '#f5f6f8';
   const text = dark ? '#eceef1' : '#1d2127';
   const radius = { retos: '2px', suaves: '8px', redondos: '16px' }[c.corners];
+  // every text on a coloured background reaches WCAG AA (4.5:1): buttons, badges, header links
+  const primary = solid(c.colors.primary);
+  const accent = solid(c.colors.accent);
+  const headerInk = inkOn(c.colors.header);
   return {
     '--s-bg': bg,
     '--s-surface': surface,
@@ -366,15 +381,16 @@ export function themeVars(c: SiteConfig): Record<string, string> {
     '--s-text': text,
     '--s-muted': dark ? '#a4abb6' : '#5d6570',
     '--s-line': dark ? '#30353d' : '#e2e5ea',
-    '--s-primary': c.colors.primary,
-    '--s-primary-ink': inkOn(c.colors.primary),
+    '--s-primary': primary.bg,
+    '--s-primary-ink': primary.ink,
     '--s-primary-text': readableOn(c.colors.primary, bg),
     '--s-primary-soft': mix(c.colors.primary, bg, 0.88),
-    '--s-accent': c.colors.accent,
-    '--s-accent-ink': inkOn(c.colors.accent),
+    '--s-accent': accent.bg,
+    '--s-accent-ink': accent.ink,
+    '--s-accent-text': readableOn(c.colors.accent, bg),
     '--s-header': c.colors.header,
-    '--s-header-ink': inkOn(c.colors.header),
-    '--s-header-muted': mix(inkOn(c.colors.header), c.colors.header, 0.3),
+    '--s-header-ink': headerInk,
+    '--s-header-muted': readableOn(mix(headerInk, c.colors.header, 0.3), c.colors.header),
     '--s-radius': radius,
     '--s-radius-lg': { retos: '4px', suaves: '14px', redondos: '24px' }[c.corners],
     '--s-font': FONTS[c.font].css,
@@ -395,6 +411,9 @@ export function formatPhone(d: string): string {
   if (n.length === 10) return `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`;
   return d;
 }
+
+/** tel: link (Brazilian numbers get the country code once). */
+export const telHref = (d: string) => `tel:+${d.length <= 11 ? `55${d}` : d}`;
 
 /** wa.me link (Brazilian numbers get the country code). */
 export function whatsappHref(d: string, text = ''): string {

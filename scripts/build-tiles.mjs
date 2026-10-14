@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Turns the region GeoJSON (.cache/region/, from scripts/extract-region.py) into the files the app loads:
-//   public/data/<region>.pmtiles   vector tiles: buildings, roads, water, green, bairros
+//   public/data/<region>.pmtiles   vector tiles: buildings, roads (with pavement class), water, green, bairros, and
+//                                  up close (z15) low-poly trees, street lamps and their lights (scripts/lib/scenery.mjs)
+//   public/data/bairros-areas.geojson  simplified neighbourhood polygons (the "bairro" filter cuts the map to them)
 //   public/data/boundary.geojson   outline of the region (small; the app tests points against it)
 //   public/data/bairros.geojson    neighbourhood outlines and names (labels)
 //   public/data/meta.json          centre, bounds, counts
@@ -17,6 +19,7 @@ import turfArea from '@turf/area';
 import { computeRenderHeight, loadCadastreFloors } from './lib/height.mjs';
 import { isResidentialBuilding } from './lib/residential.mjs';
 import { writePmtiles } from './lib/pmtiles-writer.mjs';
+import { frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeShapes, urbanMask } from './lib/scenery.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, '.cache', 'region');
@@ -33,6 +36,12 @@ const LAYERS = {
   water: { minzoom: 10, maxzoom: 15 },
   green: { minzoom: 10, maxzoom: 15 },
   bairros: { minzoom: 10, maxzoom: 15 },
+  // canopy mass of woods (woods shrunk by 6 m, scripts/extract-region.py), shown in 3D from zoom 14
+  canopy: { minzoom: 14, maxzoom: 15 },
+  // scenery: only in the closest tiles (the map shows them from zoom ~15.5, overzooming z15)
+  trees: { minzoom: 15, maxzoom: 15 },
+  lamps: { minzoom: 15, maxzoom: 15 },
+  lights: { minzoom: 15, maxzoom: 15 },
 };
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 15;
@@ -42,6 +51,30 @@ const meta = await read('meta.json');
 const [buildings, roads, water, green, bairros, boundary] = await Promise.all(
   ['buildings', 'roads', 'water', 'green', 'bairros', 'boundary'].map((n) => read(`${n}.geojson`)),
 );
+const EMPTY = { type: 'FeatureCollection', features: [] };
+// trees and lamps mapped in OSM (older extractions do not have these files)
+const [osmTrees, osmLamps, canopy] = await Promise.all(['trees', 'lamps', 'canopy'].map((n) => read(`${n}.geojson`).catch(() => EMPTY)));
+for (const f of canopy.features) f.properties = {};
+
+// ---- scenery (before trimming the road properties: lamps need surface and lighting tags)
+const lat0 = meta.center?.[1] ?? -26.3;
+// where the city is: cells with buildings, grown ~200 m
+const mask = urbanMask(buildings.features.map((f) => (f.geometry.type === 'Polygon' ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0])), 100, 2, lat0);
+const treeList = sampleTrees(green.features, osmTrees.features, mask, { lat0 });
+const trees = { type: 'FeatureCollection', features: treeList.flatMap((t) => treeShapes(t, lat0)) };
+const lampList = lampPositions(roads.features, osmLamps.features, mask, lat0);
+const lampParts = lampList.map((l) => lampShapes(l, lat0));
+const lamps = { type: 'FeatureCollection', features: lampParts.flatMap((l) => l.shapes) };
+const lights = { type: 'FeatureCollection', features: lampParts.map((l) => l.light) };
+// kilometres of street for cars by pavement class (meta.json; the monthly report compares them)
+const CAR_ROADS = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service', 'track']);
+const { kx, ky } = frame(lat0);
+const lengthM = (g) =>
+  (g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : []).reduce(
+    (m, line) => line.reduce((acc, c, i) => (i ? acc + Math.hypot((c[0] - line[i - 1][0]) * kx, (c[1] - line[i - 1][1]) * ky) : acc), m),
+    0,
+  );
+const surfaceKm = {};
 
 // ---- properties kept in the tiles (small: only what the style and the app read)
 // heights: OSM tags, else floors estimated from the city cadastre (scripts/estimate-heights.mjs), else 6 m
@@ -52,15 +85,20 @@ for (const f of buildings.features) {
   heightCounts[source]++;
   f.properties = { osmId: f.properties.osmId, height: renderHeight, residential: isResidentialBuilding(f.properties) };
 }
-for (const f of roads.features) f.properties = { highway: f.properties.highway };
-for (const f of water.features) f.properties = { waterway: f.properties.waterway ?? 'area' };
-for (const f of green.features) f.properties = {};
+for (const f of roads.features) {
+  const sc = surfaceClass(f.properties.highway, f.properties.surface);
+  if (CAR_ROADS.has(f.properties.highway.replace(/_link$/, ''))) surfaceKm[sc || '?'] = (surfaceKm[sc || '?'] ?? 0) + lengthM(f.geometry) / 1000;
+  // s: pavement class ('a' asphalt, 'c' paving stones, 'p' other paved, 'u' unpaved, '' unknown)
+  f.properties = { highway: f.properties.highway, s: sc };
+}
+for (const f of water.features) f.properties = { waterway: f.properties.waterway ?? 'area', k: f.properties.water ?? '' };
+for (const f of green.features) f.properties = { k: f.properties.kind ?? 'park' };
 // outlines in the tiles: neighbourhoods only (cities and districts are labels, their outline is the region's)
 bairros.features = bairros.features.filter((f) => (f.properties.kind ?? 'bairro') === 'bairro');
 
 const vt = (fc, maxZoom) => geojsonvt(fc, { maxZoom, indexMaxZoom: 5, indexMaxPoints: 100000, tolerance: 2, extent: 4096, buffer: 96 });
 const indexes = Object.fromEntries(
-  Object.entries({ buildings, roads, water, green, bairros }).map(([name, fc]) => [name, vt(fc, LAYERS[name].maxzoom)]),
+  Object.entries({ buildings, roads, water, green, bairros, canopy, trees, lamps, lights }).map(([name, fc]) => [name, vt(fc, LAYERS[name].maxzoom)]),
 );
 const areas = new Map(buildings.features.map((f) => [f, turfArea(f)]));
 const overviewBuildings = Object.fromEntries(
@@ -134,6 +172,20 @@ const labels = {
   })),
 };
 await writeFile(path.join(OUT, 'bairros.geojson'), JSON.stringify(labels));
+// neighbourhood areas for the "bairro" filter, simplified to ≈ 3 m, each with its area grown by 100 m
+// (scripts/extract-region.py): the map shows the grown area and masks the rest
+const grown = new Map((await read('bairros-buffer.geojson').catch(() => EMPTY)).features.map((f) => [f.properties.name, f.geometry]));
+const areas3m = {
+  type: 'FeatureCollection',
+  features: (await read('bairros.geojson')).features
+    .filter((f) => (f.properties.kind ?? 'bairro') === 'bairro')
+    .map((f) => ({
+      type: 'Feature',
+      properties: { name: f.properties.name, ...(grown.has(f.properties.name) ? { grown: roundGeometry(grown.get(f.properties.name)) } : {}) },
+      geometry: roundGeometry(simplifyGeometry(f.geometry, 0.00003)),
+    })),
+};
+await writeFile(path.join(OUT, 'bairros-areas.geojson'), JSON.stringify(areas3m));
 const outMeta = {
   ...meta,
   tiles: file,
@@ -145,6 +197,12 @@ const outMeta = {
     heightFromLevels: heightCounts.levels,
     heightFromCadastre: heightCounts.cadastre,
     heightDefault: heightCounts.default,
+    trees: treeList.length,
+    treesFromOsm: treeList.filter((t) => t.mapped).length,
+    lamps: lampList.length,
+    lampsFromOsm: lampList.filter((l) => l.mapped).length,
+    // 'a' asphalt, 'c' paving stones, 'p' other paved, 'u' unpaved, '?' not mapped
+    roadKmBySurface: Object.fromEntries(Object.entries(surfaceKm).map(([k, v]) => [k, Math.round(v * 10) / 10])),
   },
   heightSources: heightCounts.cadastre
     ? ['OpenStreetMap', 'Cadastro imobiliário da Prefeitura de Joinville (SIMGeo): área construída por lote']
@@ -153,6 +211,13 @@ const outMeta = {
 await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + '\n');
 
 const kb = (b) => `${(b / 1024).toFixed(0)} KB`;
+console.log(`Cenário: ${treeList.length} árvores (${outMeta.counts.treesFromOsm} do OSM), ${lampList.length} postes (${outMeta.counts.lampsFromOsm} do OSM), máscara urbana ${mask.size} células de 100 m`);
 console.log(`${file}: ${tiles.length} tiles, ${kb((await stat(path.join(OUT, file))).size)}`);
 for (const [z, v] of Object.entries(perZoom)) console.log(`  z${z}: ${v.tiles} tiles, ${kb(v.bytes)} (maior ${kb(v.max)})`);
 console.log(`Alturas: ${JSON.stringify(heightCounts)}`);
+
+/** Coordinates rounded to 6 decimals (≈ 0.1 m): smaller file, same shape. */
+function roundGeometry(g) {
+  const r = (c) => (typeof c[0] === 'number' ? [Math.round(c[0] * 1e6) / 1e6, Math.round(c[1] * 1e6) / 1e6] : c.map(r));
+  return { type: g.type, coordinates: r(g.coordinates) };
+}

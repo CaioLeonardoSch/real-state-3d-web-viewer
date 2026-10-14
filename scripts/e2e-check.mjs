@@ -846,6 +846,63 @@ async function main() {
       JSON.stringify(devLinkState) + devLink.errors.join(' | '));
     await devLink.ctx.close();
 
+    // ------------------------------------------------ neighbourhood cut ("bairro" filter)
+    const BAIRRO = 'Glória';
+    const inBairro = DATA.filter((l) => l.address?.bairro === BAIRRO && (l.transaction ?? 'sale') !== 'rent');
+    const cut = await openPage(browser, { width: 1440, height: 900 }, 'bairro', `?bairro=${encodeURIComponent('Gloria')}`);
+    await cut.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+    await waitIdle(cut.page);
+    const cutState = await cut.page.evaluate(() => {
+      const m = window.__demo.map;
+      return {
+        header: document.querySelector('#results .results-title')?.textContent ?? '',
+        chips: [...document.querySelectorAll('.f-bairro-chip')].map((c) => c.firstChild.textContent.trim()),
+        search: location.search,
+        filter: JSON.stringify(m.getFilter('context-buildings')),
+        mask: m.querySourceFeatures('clip-mask').length,
+        outline: m.getLayoutProperty('bairros-line', 'visibility'),
+        devMarkers: [...document.querySelectorAll('.dev-marker:not(.is-hidden)')].length,
+      };
+    });
+    check('bairro filter: link without accent finds the neighbourhood, lists only its listings and cuts the map (100 m around, rest masked)',
+      cutState.header.startsWith(`${inBairro.length} `) && cutState.chips.join() === BAIRRO && cutState.search === `?bairro=${encodeURIComponent(BAIRRO)}` &&
+        cutState.filter.includes('"distance"') && cutState.mask > 0 && cutState.outline === 'none' && cutState.devMarkers === 0,
+      JSON.stringify({ ...cutState, filter: cutState.filter.slice(0, 60) }));
+    await cut.page.screenshot({ path: path.join(SHOTS, 'desktop-bairro.png') });
+    await cut.page.click('.f-bairro-chip button');
+    await cut.page.click('#filters button[type="submit"]');
+    await cut.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 20000 });
+    check('removing the neighbourhood shows the whole city again',
+      (await cut.page.evaluate(() => JSON.stringify(window.__demo.map.getFilter('context-buildings')))).includes('distance') === false &&
+        (await cut.page.textContent('#results .results-title')).startsWith(`${TOTAL} `));
+    check('no console errors (bairro)', cut.errors.length === 0, cut.errors.join(' | '));
+    await cut.ctx.close();
+
+    // ------------------------------------------------ scenery up close: pavement, trees, lamps, night lights
+    const sc = await openPage(browser, { width: 1440, height: 900 }, 'scenery');
+    await sc.page.evaluate(() => window.__demo.map.jumpTo({ center: [-48.8457, -26.3035], zoom: 17.6, pitch: 60, bearing: -25 }));
+    await waitIdle(sc.page);
+    const scDay = await sc.page.evaluate(() => {
+      const m = window.__demo.map;
+      const n = (layers) => m.queryRenderedFeatures({ layers }).length;
+      const surfaces = new Set(m.querySourceFeatures('osm', { sourceLayer: 'roads' }).map((f) => f.properties.s));
+      return { trees: n(['trees']), lamps: n(['lamps']), paving: n(['roads-paving']), surfaces: [...surfaces].sort().join(','), glow: m.getPaintProperty('lamp-glow', 'circle-opacity') };
+    });
+    check('up close: low-poly trees, street lamps and roads by pavement (asphalt, paving stones…); no night lights by day',
+      scDay.trees > 0 && scDay.lamps > 0 && scDay.surfaces.includes('a') && scDay.surfaces.includes('c') && scDay.glow === 0, JSON.stringify(scDay));
+    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery.png') });
+    await sc.page.click('.time-of-day button:has-text("Noite")');
+    await waitIdle(sc.page);
+    // switched to night already up close (tiles loaded by day): the lights must appear without moving the map
+    const scNight = await sc.page.evaluate(() => ({
+      lights: window.__demo.map.queryRenderedFeatures({ layers: ['lamp-glow'] }).length,
+      opacity: window.__demo.map.getPaintProperty('lamp-glow', 'circle-opacity'),
+    }));
+    check('at night the street lamps light up the street', scNight.lights > 0 && scNight.opacity > 0, JSON.stringify(scNight));
+    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery-night.png') });
+    check('no console errors (scenery)', sc.errors.length === 0, sc.errors.join(' | '));
+    await sc.ctx.close();
+
     // ------------------------------------------------ mobile
     const m = await openPage(browser, { width: 390, height: 844 }, 'mobile');
     const mp = m.page;

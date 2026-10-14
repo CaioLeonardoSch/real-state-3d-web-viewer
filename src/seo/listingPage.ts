@@ -73,7 +73,12 @@ export function structuredData(l: Listing, ctx: PageContext, url: string): objec
       price: rent ? (l.rentPrice ?? l.price) : l.price,
       priceCurrency: 'BRL',
       ...(rent ? { priceSpecification: { '@type': 'UnitPriceSpecification', price: l.rentPrice ?? l.price, priceCurrency: 'BRL', unitCode: 'MON' } } : {}),
-      availability: l.availability === 'sold' ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      availability:
+        l.availability === 'sold'
+          ? 'https://schema.org/SoldOut'
+          : l.availability === 'reserved'
+            ? 'https://schema.org/LimitedAvailability'
+            : 'https://schema.org/InStock',
       seller: { '@type': 'RealEstateAgent', name: ctx.agencyName },
     },
     about: {
@@ -158,7 +163,7 @@ h1{font-size:26px;margin:8px 0 4px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
 .gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:#ddd}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
-.btn{display:inline-block;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;color:#fff;background:#f28c18}
+.btn{display:inline-block;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;color:#fff;background:#b35600}
 .btn.wa{background:#1f9d55}
 dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:16px 0}
 dt{font-size:12px;color:#666}dd{margin:0;font-weight:600}

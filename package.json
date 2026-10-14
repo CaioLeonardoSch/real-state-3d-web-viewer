@@ -14,7 +14,8 @@
     "data:region": "python3 scripts/extract-region.py",
     "data:cadastre": "node scripts/download-cadastre.mjs",
     "data:heights": "node scripts/estimate-heights.mjs",
-    "data:tiles": "node scripts/build-tiles.mjs",
+    "data:tiles": "node --max-old-space-size=6144 scripts/build-tiles.mjs",
+    "map:changes": "node scripts/map-changes.mjs",
     "data:listings": "node scripts/generate-listings.mjs",
     "data:developments": "node scripts/generate-developments.mjs",
     "validate:data": "node scripts/validate-listings.mjs",
@@ -43,6 +44,7 @@
     "@turf/transform-rotate": "^7.4.0",
     "maplibre-gl": "^6.13.0",
     "pmtiles": "^4.5.0",
+    "polygon-clipping": "^0.15.7",
     "suncalc": "^2.1.1"
   },
   "devDependencies": {
