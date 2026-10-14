@@ -236,9 +236,11 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     const purged = await service().rpc('purge_trash');
     expect(purged.data).toBeGreaterThanOrEqual(1);
     expect((await service().from('listings').select('id').eq('id', id)).data).toHaveLength(0);
-    const orphans = await bruno.client.from('storage_orphans').select('path').like('path', `%/${id}/%`);
+    const orphans = await ana.client.from('storage_orphans').select('path').like('path', `%/${id}/%`);
     expect(orphans.data!.map((o) => o.path).sort()).toEqual([path, `${orgA}/${id}/velha-mini.jpg`].sort());
     expect((await carla.client.from('storage_orphans').select('id').like('path', `%/${id}/%`)).data).toHaveLength(0);
+    // só administradores limpam (o corretor não apagaria os arquivos)
+    expect((await bruno.client.from('storage_orphans').select('id').like('path', `%/${id}/%`)).data).toHaveLength(0);
   });
 
   it('registro pela tela: administradores leem com nomes e títulos; corretor e outra imobiliária não', async () => {
@@ -675,6 +677,23 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       .from('listing_photos')
       .insert({ listing_id: l.data!.id, org_id: orgA, path: `${orgA}/${l.data!.id}/x.jpg` });
     expect(badRow.error).not.toBeNull();
+  });
+
+  it('fotos no storage: o corretor mexe só nos arquivos dos próprios anúncios; o administrador, em todos', async () => {
+    const jpg = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' });
+    const anas = (await ana.client.from('listings').insert(listingRow(orgA)).select('id').single()).data!.id;
+    const brunos = (await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single()).data!.id;
+    const photo = `${orgA}/${anas}/capa-${tag}.jpg`;
+    expect((await ana.client.storage.from('listing-photos').upload(photo, jpg)).error).toBeNull();
+    // o corretor não apaga, não sobrescreve e não envia no anúncio da dona
+    expect((await bruno.client.storage.from('listing-photos').remove([photo])).data ?? []).toHaveLength(0);
+    expect((await bruno.client.storage.from('listing-photos').upload(photo, jpg, { upsert: true })).error).not.toBeNull();
+    expect((await bruno.client.storage.from('listing-photos').upload(`${orgA}/${anas}/intruso.jpg`, jpg)).error).not.toBeNull();
+    expect((await ana.client.storage.from('listing-photos').list(`${orgA}/${anas}`)).data!.map((f) => f.name)).toEqual([`capa-${tag}.jpg`]);
+    // no próprio anúncio, sim; e a dona (administradora) também mexe no dele
+    const own = `${orgA}/${brunos}/minha-${tag}.jpg`;
+    expect((await bruno.client.storage.from('listing-photos').upload(own, jpg)).error).toBeNull();
+    expect((await ana.client.storage.from('listing-photos').remove([own])).data).toHaveLength(1);
   });
 
   it('corretor não se promove nem inclui pessoas', async () => {

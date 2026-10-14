@@ -6,6 +6,7 @@ import turfDestination from '@turf/destination';
 import { point } from '@turf/helpers';
 import { countByStatus, type Development, type Level, type Unit } from '../data/developments';
 import { craneParts } from './crane';
+import { escapeHtml } from '../utils/format';
 
 /**
  * Developments on the map. Closed: one violet tower per development, with a label.
@@ -251,7 +252,7 @@ export class DevelopmentLayer {
       el.type = 'button';
       el.className = 'dev-marker';
       const n = countByStatus(d).available;
-      el.innerHTML = `<strong>${d.name}</strong><span>${d.developer} · ${n === 1 ? '1 disponível' : `${n} disponíveis`}</span>`;
+      el.innerHTML = `<strong>${escapeHtml(d.name)}</strong><span>${escapeHtml(d.developer)} · ${n === 1 ? '1 disponível' : `${n} disponíveis`}</span>`;
       el.setAttribute('aria-label', `Abrir o espelho de vendas do ${d.name} (${d.developer})`);
       el.addEventListener('click', (e) => {
         e.stopPropagation();

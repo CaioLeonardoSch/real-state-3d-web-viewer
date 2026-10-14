@@ -129,8 +129,8 @@ export class AccountPanel {
           if (this.isOpen && this.openSections.has('leads')) void this.loadSection('leads');
         }
       }, 60_000);
-    // files of listings the daily clean-up removed (the database cannot delete from storage)
-    if (this.org) void this.backend.cleanupOrphans(this.org.id).catch(() => {});
+    // files of listings the daily clean-up removed (the database cannot delete from storage); administrators only
+    if (this.org?.role === 'owner' || this.org?.role === 'admin') void this.backend.cleanupOrphans(this.org.id).catch(() => {});
     if (this.isOpen) await this.render();
     if (notify && before !== `${this.email}|${this.org?.id}`) this.onChange();
   }
