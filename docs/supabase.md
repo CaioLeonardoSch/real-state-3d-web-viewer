@@ -38,6 +38,7 @@ No GitHub: **Settings → Secrets and variables → Actions → Variables → Ne
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | a chave publishable/anon |
 | `VITE_DEMO_LISTINGS` | `false` para esconder os 100 imóveis fictícios (opcional; padrão: mostrar) |
+| `VITE_TURNSTILE_SITE_KEY` | Site Key do CAPTCHA (opcional; ver a seção 9) |
 
 Depois rode de novo **Actions → Publicar no GitHub Pages → Run workflow** (ou faça um push). O botão **Entrar**
 aparece no topo.
@@ -52,7 +53,10 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
    insert into public.platform_staff (user_id)
    select id from auth.users where email = 'seu-email@exemplo.com';
    ```
-   Ao entrar de novo, a sua conta mostra "suporte da plataforma".
+   Ao entrar de novo, a conta pede a **verificação em duas etapas**, obrigatória para o suporte: em **Minha conta →
+   Verificação em duas etapas → Ativar**, leia o QR code com um aplicativo autenticador (Google Authenticator,
+   Microsoft Authenticator, 1Password…) e digite o código de 6 dígitos. Só então a conta mostra "suporte da
+   plataforma"; dali em diante, cada entrada pede a senha e o código do aplicativo (ver a seção 9).
 2. **Cadastrar um cliente:** em **Minha conta → Suporte: nova imobiliária**, informe o nome, o endereço do site e o
    e-mail do dono. Aparece um **link de convite**: copie ou mande por WhatsApp. Só a equipe de suporte cadastra
    imobiliárias; uma conta comum não consegue.
@@ -99,7 +103,9 @@ Sem configuração, os contatos já aparecem em **Minha conta → Contatos**. Pa
      SITE_URL=https://caioleonardosch.github.io/real-state-3d-web-viewer/
    ```
 O e-mail traz o nome, o telefone (com link para responder no WhatsApp), o e-mail (responder ao e-mail responde ao
-visitante) e o link do anúncio. Cada contato gera um aviso só.
+visitante) e o link do anúncio. Cada contato gera um aviso só, mesmo com duas chamadas ao mesmo tempo: a função
+reserva o contato numa atualização só (`notified_at` preenchido onde ainda está vazio) antes de enviar, e devolve a
+reserva se o envio falhar.
 
 ## 5. E-mails de convite e de confirmação de conta
 
@@ -148,8 +154,68 @@ O GitHub Pages atende um domínio só; para vários clientes, ver o item 12 de [
 Os formulários "Contato" e "Anunciar imóvel" do site chegam em Minha conta → Contatos (para os administradores) e
 por e-mail, como os contatos dos anúncios.
 
+## 9. Segurança: verificação em duas etapas, CAPTCHA e cabeçalhos
+
+**Verificação em duas etapas (TOTP).** Vem ligada no Supabase (confira em **Authentication → Multi-Factor**: "TOTP
+(App Authenticator)"; não tem custo). A equipe de suporte só tem os poderes de suporte numa sessão confirmada com o
+código; donos e administradores ativam se quiserem, em **Minha conta**, e a partir daí a senha sozinha não dá acesso
+aos dados da imobiliária. Quem perder o celular pede ao suporte, que remove o fator no **SQL Editor**:
+```sql
+delete from auth.mfa_factors where user_id = (select id from auth.users where email = 'pessoa@exemplo.com');
+```
+A conta volta a entrar só com a senha (no caso da equipe de suporte, sem os poderes de suporte) até a pessoa ativar
+a verificação de novo, com o celular novo.
+
+**CAPTCHA (Cloudflare Turnstile).** Pronto para ligar, desligado por padrão. Ligado, protege o login, o cadastro e
+os formulários de contato (anúncio, "Contato" e "Anunciar imóvel"). O campo-armadilha e os limites por origem
+continuam valendo. Para ligar, nesta ordem:
+1. No painel da Cloudflare, **Turnstile → Add widget**: nome, modo **Managed** e os domínios do site (o do GitHub
+   Pages e os dos clientes). Guarde a **Site Key** (pública) e a **Secret Key**.
+2. Publique a função dos contatos e grave a chave secreta:
+   ```bash
+   npx supabase functions deploy submit-lead
+   npx supabase secrets set TURNSTILE_SECRET_KEY=0x...
+   ```
+3. No GitHub, crie a variável `VITE_TURNSTILE_SITE_KEY` com a Site Key e publique o site de novo. Os formulários
+   passam a mostrar o widget (só aparece quando a Cloudflare pede um clique) e os contatos vão pela função
+   `submit-lead`, que confere o token antes de gravar.
+4. Com o site novo no ar, ligue as duas checagens do servidor:
+   - **login e cadastro:** no Supabase, **Authentication → Attack Protection → Enable Captcha protection**,
+     provedor Turnstile, com a Secret Key;
+   - **contatos:** no **SQL Editor**, `update public.private_settings set value = 'on' where key = 'lead_captcha';`.
+     A partir daí o banco recusa contatos que não passem pela função (o clique no WhatsApp, sem dados pessoais,
+     continua direto). Essa configuração não é lida nem alterada pelo site.
+
+Ligar o passo 4 antes do 3 bloqueia o login e os contatos de quem ainda está com o site antigo. Para desligar, faça o
+caminho inverso (`value = 'off'`). Num projeto de homologação dá para usar as chaves de teste da Cloudflare, que
+sempre aprovam: Site Key `1x00000000000000000000AA` e Secret Key `1x0000000000000000000000000000000AA`.
+
+**Cabeçalhos de segurança.** O build gera a política de conteúdo (CSP) a partir das variáveis do próprio build:
+endereço do Supabase, Turnstile e endereço dos blocos do mapa (`scripts/lib/csp.mjs`). No GitHub Pages vale só a
+cópia em `<meta>` de cada página, que não cobre `frame-ancestors` (proteção contra o site ser aberto dentro de outro)
+nem HSTS. Em Cloudflare Pages ou Netlify, o arquivo `dist/_headers`, gerado no build a partir de `public/_headers`,
+traz os cabeçalhos completos. Para conferir no ar: ferramentas do desenvolvedor do navegador (aba Rede, cabeçalhos da
+página) ou <https://securityheaders.com>. Um domínio novo de onde o site precise carregar algo (por exemplo, fotos
+em outro storage) tem de entrar em `scripts/lib/csp.mjs`; o teste `tests/csp.test.ts` e o console do navegador
+("Refused to load…") mostram o que ficou de fora.
+
+**Senhas.** O site exige 8 caracteres; no Supabase, ajuste o mínimo para 8 nas configurações de senha do Auth (o
+`supabase/config.toml` local já usa 8). A recusa de senhas vazadas é um recurso do plano Pro.
+
 ## O que o banco garante (testado)
 
+Os itens de 14/10/2026 (verificação em duas etapas, CAPTCHA dos contatos e arquivos no storage) foram conferidos com
+as migrações num PostgreSQL local, com o esquema `auth` simulado; os testes de backend correspondentes estão escritos,
+mas ainda não rodaram no Supabase local (estava parado).
+
+- A equipe da plataforma só tem os poderes de suporte numa sessão confirmada com a verificação em duas etapas
+  (`aal2` no token); sem ela, a conta da equipe é tratada como a de um usuário comum. Quem ativou a verificação só
+  age como membro da imobiliária numa sessão confirmada: a senha sozinha não lê nem altera nada da imobiliária
+  (migração `20261020000001_mfa.sql`).
+- Com o CAPTCHA dos contatos ligado (`private_settings.lead_captcha = 'on'`), visitantes e usuários logados não
+  gravam contatos direto: só a função `submit-lead`, depois de conferir o token. O IP informado pela função conta
+  para os limites só quando ela chama com a chave de serviço; ninguém escolhe o próprio IP pelo site
+  (`20261020000002_lead_captcha.sql`).
 - Só a equipe de suporte cadastra imobiliárias; ninguém se coloca na equipe pelo site.
 - Só dono e administradores mudam o site da imobiliária (configuração de até 64 KB); endereço e domínio, só o
   suporte. Imagens do site só na pasta do próprio cliente, sem SVG.
@@ -163,7 +229,9 @@ por e-mail, como os contatos dos anúncios.
   anterior". O histórico de preço é visível só para a imobiliária dona.
 - A marca "Exclusivo" só aparece depois que a equipe confere o documento (`exclusive_verified`, alterável só com a
   chave de serviço).
-- Fotos: qualquer um vê as de anúncios publicados; só membros da imobiliária gravam na pasta dela.
+- Fotos: qualquer um vê as de anúncios publicados; só quem edita o anúncio (o autor ou os administradores) envia,
+  troca ou apaga os arquivos dele (`20261020000003_listing_files.sql`). Os arquivos que sobram da limpeza da lixeira
+  são removidos por administradores.
 - Rascunhos (`published = false`) não aparecem para o público.
 - Contatos: o visitante só envia para anúncio publicado, com autorização (o texto aceito fica guardado) e com
   e-mail ou telefone; robôs que preenchem o campo-armadilha são descartados; no máximo 5 envios em 10 minutos por
@@ -183,15 +251,22 @@ por e-mail, como os contatos dos anúncios.
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 39 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
-                        # por e-mail num provedor falso), privacidade, preço, obra em andamento, site da
-                        # imobiliária, storage e importação do XML
-npm run verify:backend  # navegador: suporte cria a imobiliária → dono entra pelo link → convida o corretor →
-                        # corretor anuncia com fotos → visitante → preço → edição completa → lixeira e
-                        # restauração → excluir de vez → histórico, contato do visitante, convites por e-mail e
-                        # site da imobiliária personalizado pelo dono (27 checagens)
+npm run test:backend    # 44 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
+                        # por e-mail num provedor falso, inclusive chamadas simultâneas), CAPTCHA dos contatos
+                        # (verificador falso), verificação em duas etapas (suporte e dona), privacidade, preço,
+                        # obra em andamento, site da imobiliária, storage e importação do XML
+npm run verify:backend  # navegador: suporte ativa a verificação em duas etapas e cria a imobiliária → dono entra
+                        # pelo link → convida o corretor → corretor anuncia com fotos → visitante → preço →
+                        # edição completa → lixeira e restauração → excluir de vez → suporte entra de novo com o
+                        # código → histórico, contato do visitante, convites por e-mail, site da imobiliária
+                        # personalizado pelo dono, e o dono ativa a verificação e entra no editor com o código
+                        # (30 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
+
+Os testes geram os códigos do aplicativo autenticador com `scripts/lib/totp.mjs` (RFC 6238, sem dependências) e
+usam um verificador falso do Turnstile (só o token `token-valido` passa). Depois de mudar `supabase/config.toml` (por
+exemplo, ao ligar o TOTP), o Supabase local precisa ser reiniciado para ler a configuração nova.
 
 O workflow `.github/workflows/backend.yml` roda os testes do backend no GitHub a cada mudança no esquema.
 

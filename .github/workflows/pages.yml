@@ -45,6 +45,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_DEMO_LISTINGS: ${{ vars.VITE_DEMO_LISTINGS }}
+          # CAPTCHA (Cloudflare Turnstile), opcional: a Site Key é pública; ver docs/supabase.md, seção 9
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
           # endereço do site nas páginas e no sitemap (padrão: o do GitHub Pages; troque ao usar domínio próprio)
           SITE_URL: ${{ vars.SITE_URL }}
       - uses: actions/upload-pages-artifact@v3

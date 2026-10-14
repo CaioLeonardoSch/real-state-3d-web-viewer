@@ -257,10 +257,11 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
    `audit_log`).
 3. ~~**Lixeira em vez de exclusão definitiva**~~ feita em 12/10/2026 (30 dias para restaurar). Falta ativar os
    backups com restauração a um ponto no tempo (plano Pro).
-4. **Contas:** CAPTCHA no login e no cadastro (o Supabase integra hCaptcha e Turnstile), verificação em duas etapas
-   para administradores, recusa de senhas vazadas (recurso do plano Pro).
+4. **Contas:** ~~verificação em duas etapas~~ e ~~CAPTCHA no login e no cadastro~~ feitos em 14/10/2026 (ver abaixo).
+   Falta a recusa de senhas vazadas (recurso do plano Pro) e decidir se a verificação em duas etapas passa a ser
+   obrigatória também para donos e administradores.
 5. **Limites contra abuso** no formulário de contato: ~~limite de envios por origem e campo-armadilha~~ feitos em
-   13/10/2026; falta o CAPTCHA (Turnstile) se aparecer spam.
+   13/10/2026; ~~CAPTCHA (Turnstile)~~ pronto para ligar desde 14/10/2026.
 6. **Fotos sem localização:** fotos de celular carregam as coordenadas GPS de onde foram tiradas, o que revelaria o
    endereço de quem escolheu escondê-lo. O site já remove esses dados ao redimensionar a foto; a importação por XML
    precisa fazer o mesmo no servidor.
@@ -268,6 +269,62 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
    controladora dos dados dos clientes dela; nós somos operadores) e exclusão de dados a pedido.
 8. **Antes de lançar:** revisão de segurança por alguém de fora (teste de invasão), o "Security Advisor" do painel do
    Supabase sem alertas e monitoramento de erros (Sentry).
+9. **Hospedagem com cabeçalhos:** a política de conteúdo (CSP) já sai em cada página, mas no GitHub Pages só como
+   `<meta>`, sem `frame-ancestors` nem HSTS. Os cabeçalhos completos dependem da hospedagem com vários domínios
+   (Cloudflare Pages ou Netlify; avaliação de outubro, B3), que lê o `_headers` gerado no build.
+
+**O que entrou em 14/10/2026** (pedido: subir a nota de segurança de 6 para pelo menos 8):
+
+- **Política de conteúdo (CSP) e cabeçalhos.** O build gera a política a partir das próprias variáveis (Supabase,
+  Turnstile, blocos do mapa) em `scripts/lib/csp.mjs`: tag `<meta>` no mapa e no site e `dist/_headers` com HSTS,
+  `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` e `frame-ancestors` (o mapa só pode ser
+  embutido pelo próprio site; as páginas dos anúncios, por ninguém). Scripts só do próprio domínio: um código
+  injetado (`onerror`, `javascript:`, `<script>`) não roda, mesmo que um dia algum texto escape sem querer. Os
+  estilos embutidos continuam permitidos, porque os modelos de HTML usam atributos `style`. Conferido no Chromium:
+  nenhuma violação no mapa, no site (com o mapa embutido e o editor) e numa página de anúncio. O HSTS fica sem
+  `includeSubDomains` de propósito: o mesmo site atende os domínios dos clientes, e um subdomínio antigo deles sem
+  HTTPS deixaria de abrir.
+- **Verificação em duas etapas (TOTP).** Obrigatória para a equipe de suporte, que atende todos os clientes: no
+  banco, os poderes de suporte só valem numa sessão confirmada com o código (`aal2`); sem ela, a conta é a de um
+  usuário comum. Donos e administradores ativam em Minha conta (QR code ou chave), e a partir daí a senha sozinha
+  não dá acesso aos dados da imobiliária. O login do mapa e o do editor do site pedem o código.
+- **CAPTCHA (Turnstile), pronto para ligar.** Desligado, nada muda. Ligado, o login e o cadastro mandam o token ao
+  Supabase Auth, e os contatos passam pela função `submit-lead`, que confere o token no servidor; o banco recusa os
+  contatos que não vêm por ela (configuração que o site não lê nem altera). O passo a passo está em
+  [`supabase.md`](supabase.md), seção 9.
+- **Aviso de contato sem duplicar.** `notify-lead` reserva o contato numa atualização só antes de mandar o e-mail.
+- **Revisão do código** (injeção de HTML, CSS e URL; regras de acesso; storage; redirecionamentos; mensagens entre
+  o site e o mapa; segredos no repositório e no histórico; `npm audit`). Correções:
+  - um corretor apagava ou sobrescrevia no storage as fotos dos anúncios dos colegas (as linhas de
+    `listing_photos` eram protegidas; os arquivos, não): agora só quem edita o anúncio mexe nos arquivos dele;
+  - a limpeza dos arquivos órfãos da lixeira ficou só com administradores;
+  - os rótulos dos empreendimentos no mapa passam por `escapeHtml`;
+  - `.env` no `.gitignore`;
+  - senha mínima de 8 caracteres também no Supabase local.
+  Sem achados em: textos dos clientes (sempre escapados; a configuração do site é validada campo a campo), links
+  (`javascript:` recusado, vídeo só do YouTube/Vimeo, redes só no domínio da rede), o parâmetro `pagina` do mapa
+  (só endereços do mesmo site), as mensagens entre o site e o mapa (origem e remetente conferidos nos dois sentidos),
+  segredos (nenhum no repositório nem no histórico) e dependências (`npm audit`: 0 vulnerabilidades).
+
+**Deixado de lado, de propósito:**
+
+- **Sessão no `localStorage`.** Cookies `HttpOnly` exigiriam um servidor nosso entre o site e o Supabase;
+  `sessionStorage` não protege contra um script injetado e quebraria o "Personalizar o site" em outra aba. A defesa
+  é não deixar código injetado rodar (CSP), o token de acesso de 1 hora e a verificação em duas etapas.
+- **Proteção contra o site dentro de outro (clickjacking) no GitHub Pages:** só por cabeçalho, que o GitHub Pages não
+  manda. Os navegadores atuais isolam o armazenamento de um site aberto dentro de outro, então a sessão de quem está
+  logado não aparece ali; a proteção completa vem com a hospedagem nova.
+- **Administrador incluir uma conta existente direto na equipe** (sem convite): a tela usa só convites, mas o banco
+  aceita a inclusão direta por administradores. Dá acesso à pessoa incluída, não a quem inclui.
+- **Limite de envios por origem:** usa o IP que a Cloudflare do Supabase informa (`cf-connecting-ip`). Fora dela, o
+  primeiro endereço do `X-Forwarded-For` pode ser forjado; com o CAPTCHA ligado, cada contato exige um token novo.
+- **Ações do GitHub fixadas por versão (`@v4`), não pelo hash do commit:** risco baixo; fixar por hash dá mais
+  trabalho de manutenção.
+
+**Como ligar as chaves:** verificação em duas etapas, CAPTCHA (Cloudflare, Supabase, função `submit-lead` e variável
+`VITE_TURNSTILE_SITE_KEY` no GitHub) e cabeçalhos estão em [`supabase.md`](supabase.md), seção 9.
+
+*Anotado por Claude (assistente de IA), 14/10/2026, para consulta na manutenção.*
 
 ## 11. Cobrança e contrato (proposta de 12/10/2026)
 
