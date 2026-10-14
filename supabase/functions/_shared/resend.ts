@@ -56,5 +56,10 @@ export function rest(authorization?: string) {
       return r.ok ? ((await r.json()) as T) : null;
     },
     patch: (path: string, body: unknown) => fetch(`${base}/${path}`, { method: 'PATCH', headers, body: JSON.stringify(body) }),
+    /** PATCH returning the rows it changed: none when the filters no longer match (one atomic UPDATE … WHERE). */
+    async update<T>(path: string, body: unknown): Promise<T[]> {
+      const r = await fetch(`${base}/${path}`, { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify(body) });
+      return r.ok ? ((await r.json()) as T[]) : [];
+    },
   };
 }

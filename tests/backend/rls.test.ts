@@ -375,6 +375,18 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect(sent.text).toMatch(/wa\.me\/5547988887777/);
       expect((await bruno.client.from('leads').select('notified_at').eq('id', id).single()).data!.notified_at).not.toBeNull();
     }, 30_000); // the first call boots the function
+
+    it.skipIf(!env.MAIL_LOG)('aviso por e-mail: chamadas simultâneas mandam um e-mail só', async () => {
+      const { readFileSync } = await import(/* @vite-ignore */ 'node:fs' as string);
+      const name = `Simultâneo ${tag}`;
+      const id = (await anon().rpc('submit_lead', lead(listingId, { p_name: name }))).data;
+      const call = () =>
+        fetch(`${URL_}/functions/v1/notify-lead`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: id }) }).then((r) => r.json());
+      const results = await Promise.all(Array.from({ length: 5 }, call));
+      expect(results.filter((r: { sent: boolean }) => r.sent)).toHaveLength(1);
+      const mails = readFileSync(env.MAIL_LOG, 'utf8').trim().split('\n').map((l: string) => JSON.parse(l)).filter((m: { text: string }) => m.text.includes(name));
+      expect(mails).toHaveLength(1);
+    }, 30_000);
   });
 
   it.skipIf(!env.MAIL_LOG)('convite por e-mail: só quem administra o cliente pede; vai uma vez, com o link', async () => {
