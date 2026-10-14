@@ -85,8 +85,13 @@ export interface Address {
 export interface Photo {
   /** Image URL or data: URL (photos uploaded in this browser). */
   src: string;
-  /** Small version (~320 px) for lists and thumbnails; falls back to `src`. */
+  /** Small version (~320 px, 480 px for photos sent to the back end) for lists and thumbnails; falls back to `src`. */
   thumb?: string;
+  /**
+   * Large version (~1920 px) for the gallery on big or high-density screens. Only photos sent to the back end since
+   * it exists have it (then `src` is 1024 px and `thumb` 480 px: utils/images.ts, PHOTO_SIZES).
+   */
+  large?: string;
   caption?: string;
 }
 

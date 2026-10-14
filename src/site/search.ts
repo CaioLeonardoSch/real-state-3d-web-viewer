@@ -63,9 +63,10 @@ export function searchToQuery(s: SiteSearch, defaults: { sort: SortKey; view: Se
   return p;
 }
 
-export function queryToSearch(query: string, defaults: { sort: SortKey; view: SearchView }, agencyIds: Set<string>): SiteSearch {
+/** The search in an address. Neighbourhoods not in `knownBairros` (when given) are dropped. */
+export function queryToSearch(query: string, defaults: { sort: SortKey; view: SearchView }, agencyIds: Set<string>, knownBairros?: readonly string[]): SiteSearch {
   const p = new URLSearchParams(query);
-  const state = searchToState(query, { agencyIds, listingIds: new Set() });
+  const state = searchToState(query, { agencyIds, listingIds: new Set(), bairros: knownBairros });
   const n = (v: string | null) => {
     const x = Number(v);
     return v !== null && v !== '' && Number.isFinite(x) && x >= 0 ? Math.floor(x) : null;

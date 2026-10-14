@@ -19,6 +19,7 @@ import { withPriceChange } from '../state/priceChange';
 import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
 import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
 import { floorPlanSvg } from '../utils/floorplan';
+import { photoSrcset } from '../utils/images';
 import { simulatePayment } from '../utils/payment';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
 
@@ -31,6 +32,13 @@ export interface DrawerNav {
 }
 
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
+/** Width of the panel's photo for `sizes`: the whole screen on phones, the side panel on wider ones. */
+const PANEL_SIZES = '(max-width: 720px) 100vw, 420px';
+/** srcset of a photo stored in three sizes (up to the medium one: the panel is narrow). */
+const srcsetAttrs = (p: { src: string; thumb?: string; large?: string }) => {
+  const set = photoSrcset(p, 'src');
+  return set ? ` srcset="${escapeHtml(set)}" sizes="${PANEL_SIZES}"` : '';
+};
 const SWIPE_PX = 30;
 
 /** Contact from the listing panel (back end only): the visitor's message, and WhatsApp clicks. */
@@ -245,7 +253,7 @@ export class Drawer {
       ${
         slides.length
           ? `<figure class="gallery" data-index="0">
-              <img src="${escapeHtml(slides[0].src)}" alt="${escapeHtml(slides[0].caption ?? `Foto 1 de ${slides.length}`)}">
+              <img src="${escapeHtml(slides[0].src)}"${srcsetAttrs(slides[0])} alt="${escapeHtml(slides[0].caption ?? `Foto 1 de ${slides.length}`)}">
               ${slides.length > 1 ? `<button type="button" class="gal-btn gal-prev" aria-label="Foto anterior">‹</button><button type="button" class="gal-btn gal-next" aria-label="Próxima foto">›</button>` : ''}
               <figcaption><span class="gal-pos">1/${slides.length}</span> <span class="gal-caption">${escapeHtml(slides[0].caption ?? '')}</span></figcaption>
               ${
@@ -447,6 +455,11 @@ export class Drawer {
       const n = (i + photos.length) % photos.length;
       fig.dataset.index = String(n);
       const img = fig.querySelector('img')!;
+      const set = photoSrcset(photos[n], 'src');
+      if (set) {
+        img.srcset = set;
+        img.sizes = PANEL_SIZES;
+      } else img.removeAttribute('srcset');
       img.src = photos[n].src;
       img.alt = photos[n].caption ?? `Foto ${n + 1} de ${photos.length}`;
       fig.querySelector('.gal-pos')!.textContent = `${n + 1}/${photos.length}`;

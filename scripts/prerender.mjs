@@ -31,7 +31,7 @@ if (url && key) {
   try {
     const rows = await get('public_listings?select=*&limit=5000');
     const ids = rows.map((r) => r.id);
-    const photos = ids.length ? await get(`listing_photos?select=listing_id,path,thumb_path,caption,position,is_floor_plan&limit=50000`) : [];
+    const photos = ids.length ? await get(`listing_photos?select=listing_id,path,thumb_path,large_path,caption,position,is_floor_plan&limit=50000`) : [];
     const orgs = ids.length ? await get('organizations?select=id,name') : [];
     for (const o of orgs) agencyName.set(o.id, o.name);
     const photoUrl = (p) => `${url}/storage/v1/object/public/listing-photos/${p}`;

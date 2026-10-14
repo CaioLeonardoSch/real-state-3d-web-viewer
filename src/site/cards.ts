@@ -2,6 +2,7 @@
 // favourite and compare, type, neighbourhood, specs with icons and the price (with a verified reduction).
 import { AVAILABILITY_LABELS, TYPE_LABELS, isForRent, isForSale, priceIn, priceReduction, type Listing, type Photo } from '../data/types';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
+import { photoSrcset } from '../utils/images';
 import type { SiteConfig } from './config';
 import { ICONS } from './icons';
 import { placeholderPhoto } from './placeholder';
@@ -61,7 +62,14 @@ function badges(l: Listing): string {
   return out.length ? `<div class="badges">${out.join('')}</div>` : '';
 }
 
-export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista' = 'grade'): string {
+/** Width of a card's photo for `sizes`: the whole width on phones, a grid column on wider screens. */
+const CARD_SIZES = '(max-width: 600px) 100vw, 400px';
+
+/** A card's photo: the small version, or the one the screen needs among the small and the medium. */
+const cardPhoto = (p: Photo): [string, string | null] => [p.thumb ?? p.src, photoSrcset(p, 'src')];
+
+/** A listing card; `level` is its title's heading level (2 under a page's h1, 3 under a section's h2). */
+export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista' = 'grade', level: 2 | 3 = 3): string {
   const c = ctx.config;
   const photos = photosOf(l, c);
   // searching for rentals: the listing page opens in rent mode too
@@ -71,10 +79,12 @@ export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista'
   const title = escapeHtml(l.title);
   const priceOnPhoto = c.search.cardPrice === 'foto' && layout === 'grade';
   return `<article class="card card-${layout}" data-id="${escapeHtml(l.id)}">
-    <div class="card-media" data-index="0" data-photos="${escapeHtml(JSON.stringify(photos.slice(0, 8).map((p) => p.thumb ?? p.src)))}">
-      <a href="${escapeHtml(href)}" data-nav tabindex="-1" aria-hidden="true"><img src="${escapeHtml(photos[0].thumb ?? photos[0].src)}" alt="" loading="lazy" decoding="async"></a>
+    <div class="card-media" data-index="0" data-photos="${escapeHtml(JSON.stringify(photos.slice(0, 8).map(cardPhoto)))}">
+      <a href="${escapeHtml(href)}" data-nav tabindex="-1" aria-hidden="true"><img src="${escapeHtml(cardPhoto(photos[0])[0])}"${
+        cardPhoto(photos[0])[1] ? ` srcset="${escapeHtml(cardPhoto(photos[0])[1]!)}" sizes="${CARD_SIZES}"` : ''
+      } alt="" loading="lazy" decoding="async"></a>
       ${badges(l)}
-      <button type="button" class="icon-btn fav${fav ? ' on' : ''}" data-fav="${escapeHtml(l.id)}" aria-pressed="${fav}" aria-label="${fav ? 'Remover dos favoritos' : 'Salvar nos favoritos'}: ${title}">${ICONS.heart}</button>
+      <button type="button" class="icon-btn fav${fav ? ' on' : ''}" data-fav="${escapeHtml(l.id)}" aria-pressed="${fav}" aria-label="Favorito: ${title}">${ICONS.heart}</button>
       ${
         photos.length > 1
           ? `<button type="button" class="icon-btn car-btn car-prev" aria-label="Foto anterior">${ICONS.left}</button><button type="button" class="icon-btn car-btn car-next" aria-label="Próxima foto">${ICONS.right}</button><span class="car-dots" aria-hidden="true">${photos
@@ -90,13 +100,13 @@ export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista'
         <span class="card-type">${TYPE_LABELS[l.type]}</span>
         ${c.search.showCode ? `<span class="card-code">Cód. ${escapeHtml(codeOf(l))}</span>` : ''}
       </div>
-      <h3 class="card-title"><a href="${escapeHtml(href)}" data-nav>${title}</a></h3>
+      <h${level} class="card-title"><a href="${escapeHtml(href)}" data-nav>${title}</a></h${level}>
       <p class="card-place">${ICONS.pin}${escapeHtml(placeOf(l))}</p>
       ${layout === 'lista' ? `<p class="card-desc">${escapeHtml(l.description.slice(0, 220))}${l.description.length > 220 ? '…' : ''}</p>` : ''}
       ${specsHtml(l)}
       <div class="card-foot">
         ${priceOnPhoto ? `<span class="card-condo">${l.condoFee ? `Cond. ${formatBRL(l.condoFee)}` : ''}</span>` : priceHtml(l, ctx.rent)}
-        <label class="cmp"><input type="checkbox" data-cmp="${escapeHtml(l.id)}"${cmp ? ' checked' : ''}> Comparar</label>
+        <label class="cmp"><input type="checkbox" data-cmp="${escapeHtml(l.id)}"${cmp ? ' checked' : ''} aria-label="Comparar: ${title}"> Comparar</label>
       </div>
     </div>
   </article>`;
@@ -109,10 +119,16 @@ export function wireCarousels(root: HTMLElement): void {
     if (!btn) return;
     e.preventDefault();
     const media = btn.closest<HTMLElement>('.card-media')!;
-    const photos = JSON.parse(media.dataset.photos ?? '[]') as string[];
+    const photos = JSON.parse(media.dataset.photos ?? '[]') as [string, string | null][];
     const i = (Number(media.dataset.index) + (btn.classList.contains('car-next') ? 1 : -1) + photos.length) % photos.length;
     media.dataset.index = String(i);
-    media.querySelector('img')!.src = photos[i];
+    const img = media.querySelector('img')!;
+    const [src, set] = photos[i];
+    if (set) {
+      img.srcset = set;
+      img.sizes = CARD_SIZES;
+    } else img.removeAttribute('srcset');
+    img.src = src;
     media.querySelectorAll('.car-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
   });
 }

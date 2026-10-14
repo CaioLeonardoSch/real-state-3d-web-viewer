@@ -272,7 +272,7 @@ export class RemoteBackend {
     if (!ids.length) return [];
     const { data, error } = await this.sb
       .from('listing_photos')
-      .select('listing_id, path, thumb_path, caption, position, is_floor_plan')
+      .select('listing_id, path, thumb_path, large_path, caption, position, is_floor_plan')
       .in('listing_id', ids);
     fail(error, 'Não foi possível ler as fotos');
     return data ?? [];
@@ -350,7 +350,7 @@ export class RemoteBackend {
 
   /** Photos of a listing as the form left them (photos already stored are recognised by their public URL). */
   private async syncPhotos(id: string, orgId: string, photos: Photo[], floorPlan: string | null): Promise<void> {
-    const { data: rows, error } = await this.sb.from('listing_photos').select('id, path, thumb_path, is_floor_plan').eq('listing_id', id);
+    const { data: rows, error } = await this.sb.from('listing_photos').select('id, path, thumb_path, large_path, is_floor_plan').eq('listing_id', id);
     fail(error, 'Não foi possível ler as fotos');
     const byUrl = new Map((rows ?? []).map((r) => [this.photoUrl(r.path), r]));
     const kept = new Set<string>();
@@ -365,7 +365,8 @@ export class RemoteBackend {
         const base = name();
         const path = await this.upload(p.src, base);
         const thumb = p.thumb?.startsWith('data:') ? await this.upload(p.thumb, `${base}-mini`) : null;
-        inserts.push({ listing_id: id, org_id: orgId, path, thumb_path: thumb, caption: p.caption ?? null, position: i, is_floor_plan: false });
+        const large = p.large?.startsWith('data:') ? await this.upload(p.large, `${base}-grande`) : null;
+        inserts.push({ listing_id: id, org_id: orgId, path, thumb_path: thumb, large_path: large, caption: p.caption ?? null, position: i, is_floor_plan: false });
       }
     }
     if (floorPlan) {
@@ -378,7 +379,7 @@ export class RemoteBackend {
     const gone = (rows ?? []).filter((r) => !kept.has(r.id));
     if (gone.length) {
       fail((await this.sb.from('listing_photos').delete().in('id', gone.map((r) => r.id))).error, 'Não foi possível remover as fotos');
-      const rm = await this.sb.storage.from(PHOTOS).remove(gone.flatMap((r) => [r.path, ...(r.thumb_path ? [r.thumb_path] : [])]));
+      const rm = await this.sb.storage.from(PHOTOS).remove(gone.flatMap((r) => [r.path, r.thumb_path, r.large_path].filter((x): x is string => !!x)));
       // the listing is already right; a file left behind is only storage to clean up later
       if (rm.error) console.warn('Fotos removidas do anúncio, mas não do storage:', rm.error.message);
     }
@@ -609,8 +610,4 @@ export class RemoteBackend {
 }
 
 /** Back end configured for this build (environment variables at build time). */
-export const backendConfig = (() => {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  return url && key ? { url, key } : null;
-})();
+export { backendConfig } from './config';
