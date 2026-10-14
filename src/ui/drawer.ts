@@ -18,6 +18,7 @@ import {
 import { withPriceChange } from '../state/priceChange';
 import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
 import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
+import { captchaBox, formCaptcha } from '../backend/captcha';
 import { floorPlanSvg } from '../utils/floorplan';
 import { simulatePayment } from '../utils/payment';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
@@ -35,7 +36,10 @@ const SWIPE_PX = 30;
 
 /** Contact from the listing panel (back end only): the visitor's message, and WhatsApp clicks. */
 export interface ContactHandlers {
-  submit: (l: Listing, input: { name: string; email: string; phone: string; message: string; consentText: string; trap: string }) => Promise<string | null>;
+  submit: (
+    l: Listing,
+    input: { name: string; email: string; phone: string; message: string; consentText: string; trap: string; captchaToken?: string },
+  ) => Promise<string | null>;
   whatsapp: (l: Listing) => void;
 }
 
@@ -389,6 +393,7 @@ export class Drawer {
         <label class="a-field">Mensagem<textarea name="message" rows="3" maxlength="2000">Olá! Tenho interesse em "${escapeHtml(l.title)}"${l.referenceCode ? ` (código ${escapeHtml(l.referenceCode)})` : ''}. Gostaria de mais informações.</textarea></label>
         <label class="lead-trap" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
         <label class="a-check"><input type="checkbox" name="consent"> <span>${escapeHtml(consent)}</span></label>
+        ${captchaBox()}
         <p class="a-error" role="alert" hidden></p>
         <button type="submit" class="btn-primary">Enviar mensagem</button>
       </form>
@@ -399,6 +404,7 @@ export class Drawer {
   private bindLeadForm(l: Listing): void {
     const form = this.el.querySelector<HTMLFormElement>('.lead-form');
     if (!form || !this.contact) return;
+    const captcha = formCaptcha(form, 'lead');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
@@ -416,14 +422,21 @@ export class Drawer {
       const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
       btn.disabled = true;
       btn.textContent = 'Enviando…';
-      const error = await this.contact!.submit(l, {
-        name: v('name'),
-        email: v('email'),
-        phone: v('phone'),
-        message: v('message'),
-        consentText: form.querySelector('.a-check span')!.textContent!,
-        trap: v('website'),
-      });
+      const error = await (captcha ? captcha.getToken() : Promise.resolve(undefined))
+        .then((captchaToken) =>
+          this.contact!.submit(l, {
+            name: v('name'),
+            email: v('email'),
+            phone: v('phone'),
+            message: v('message'),
+            consentText: form.querySelector('.a-check span')!.textContent!,
+            trap: v('website'),
+            captchaToken,
+          }),
+        )
+        .catch((err: Error) => err.message);
+      // a token serves one submission
+      captcha?.reset();
       btn.disabled = false;
       btn.textContent = 'Enviar mensagem';
       if (error) return show(error);

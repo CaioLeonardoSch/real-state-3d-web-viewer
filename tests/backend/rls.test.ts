@@ -1,5 +1,6 @@
 // Backend tests against a running Supabase (local: `npx supabase start`, then `npm run test:backend`).
 // Skipped by plain `npm test` when SUPABASE_URL is not set.
+import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { freshTotp } from '../../scripts/lib/totp.mjs';
@@ -320,6 +321,45 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect((await anon().rpc('submit_lead', lead(listingId))).error?.message).toMatch(/muitos envios/);
       await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
     });
+
+    it.skipIf(!env.MAIL_LOG)('CAPTCHA ligado: só pela função, que confere o token e grava com o IP do visitante', async () => {
+      const setCaptcha = (value: string) => service().from('private_settings').upsert({ key: 'lead_captcha', value });
+      const salt = (await service().from('private_settings').select('value').eq('key', 'lead_salt').single()).data!.value;
+      const origin = (ip: string) => createHash('sha256').update(ip + salt).digest('hex');
+      const viaFunction = (token: string, args: Record<string, unknown>, fn = 'submit_lead') =>
+        fetch(`${URL_}/functions/v1/submit-lead`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.7' },
+          body: JSON.stringify({ fn, args, captcha_token: token }),
+        });
+      await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      // desligado (o padrão): o visitante não escolhe o IP que conta para o limite
+      const own = await anon().rpc('submit_lead', { ...lead(listingId), p_client_ip: '198.51.100.1' });
+      expect((await service().from('leads').select('origin_hash').eq('id', own.data).single()).data!.origin_hash).not.toBe(origin('198.51.100.1'));
+      expect((await setCaptcha('on')).error).toBeNull();
+      try {
+        expect((await anon().rpc('submit_lead', lead(listingId))).error?.message).toMatch(/verificação anti-robô/);
+        expect((await bruno.client.rpc('submit_lead', lead(listingId))).error?.message).toMatch(/verificação anti-robô/);
+        expect((await anon().rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp' })).error).toBeNull(); // clique, sem dados
+        expect((await viaFunction('token-invalido', lead(listingId))).status).toBe(403);
+        const ok = await viaFunction('token-valido', lead(listingId, { p_name: 'Com verificação' }));
+        expect(ok.status).toBe(200);
+        const { id } = await ok.json();
+        const row = (await service().from('leads').select('name, origin_hash, assigned_to').eq('id', id).single()).data!;
+        expect(row).toMatchObject({ name: 'Com verificação', origin_hash: origin('203.0.113.7'), assigned_to: bruno.id });
+        const refused = await viaFunction('token-valido', lead(listingId, { p_consent: false }));
+        expect(refused.status).toBe(400);
+        expect((await refused.json()).error).toMatch(/concordar/); // a mensagem do banco chega ao visitante
+        const siteArgs = { p_org: orgA, p_source: 'contact', p_name: 'Contato verificado', p_phone: '(47) 98888-1111', p_consent: true, p_consent_text: consent };
+        expect((await anon().rpc('submit_site_lead', siteArgs)).error?.message).toMatch(/verificação anti-robô/);
+        expect((await viaFunction('token-valido', siteArgs, 'submit_site_lead')).status).toBe(200);
+        expect((await viaFunction('token-valido', { p_listing: listingId, p_source: 'whatsapp' })).status).toBe(400);
+      } finally {
+        await setCaptcha('off');
+        await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      expect((await anon().rpc('submit_lead', lead(listingId))).error).toBeNull();
+    }, 30_000); // the first call boots the function
 
     it.skipIf(!env.MAIL_LOG)('aviso por e-mail ao corretor, uma vez só, com resposta direta ao visitante', async () => {
       const { readFileSync } = await import(/* @vite-ignore */ 'node:fs' as string);

@@ -1019,7 +1019,7 @@ export class SiteApp {
             ${c.contacts.whatsapp ? `<a class="btn btn-wa btn-block" data-contact data-listing="${escapeHtml(l.id)}" href="${escapeHtml(whatsappHref(c.contacts.whatsapp, waText))}" target="_blank" rel="noopener">${ICONS.whatsapp} Conversar no WhatsApp</a>` : ''}
             ${c.contacts.phone ? `<a class="btn btn-ghost btn-block" data-contact href="${escapeHtml(telHref(c.contacts.phone))}">${ICONS.phone} ${escapeHtml(formatPhone(c.contacts.phone))}</a>` : ''}
             <h2 class="side-title" id="contato-imovel">Quero saber mais</h2>
-            ${leadFormHtml({ orgName: c.name, message: `Olá! Tenho interesse no imóvel ${codeOf(l)}. Gostaria de mais informações.`, submitLabel: 'Enviar mensagem' })}
+            ${leadFormHtml({ orgName: c.name, message: `Olá! Tenho interesse no imóvel ${codeOf(l)}. Gostaria de mais informações.`, submitLabel: 'Enviar mensagem', captcha: !this.data.demo })}
           </div>
         </aside>
       </div>
@@ -1133,6 +1133,7 @@ export class SiteApp {
         ${leadFormHtml({
           orgName: c.name,
           submitLabel: 'Enviar',
+          captcha: !this.data.demo,
           extra: [{ name: 'assunto', label: 'Assunto', type: 'select', options: ['Quero comprar', 'Quero alugar', 'Quero vender ou alugar meu imóvel', 'Outro assunto'] }],
         })}
       </div>
@@ -1162,6 +1163,7 @@ export class SiteApp {
         ${leadFormHtml({
           orgName: c.name,
           submitLabel: 'Quero anunciar',
+          captcha: !this.data.demo,
           messageLabel: 'Algo mais que devemos saber?',
           extra: [
             { name: 'finalidade', label: 'Quero', type: 'select', options: ['Vender', 'Alugar', 'Vender ou alugar'] },

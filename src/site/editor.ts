@@ -1,6 +1,7 @@
 // "Personalizar site": the client's owner or admin changes brand, contacts, menu, texts and layout and sees the
 // site change while typing. Saves to the back end (organizations.branding) or, in the demo, to this browser.
 import { escapeHtml } from '../utils/format';
+import { captchaBox, formCaptcha } from '../backend/captcha';
 import { siteImage } from '../utils/images';
 import { SORT_KEYS, SORT_LABELS } from '../state/sort';
 import type { SiteApp } from './app';
@@ -91,13 +92,15 @@ export class SiteEditor {
           <label class="fld"><span>Código</span><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>`
               : `<p>Entre com a conta de dono ou administrador da ${escapeHtml(this.app.data.orgName)} para editar o site.</p>
           <label class="fld"><span>E-mail</span><input name="email" type="email" autocomplete="username" required></label>
-          <label class="fld"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>`
+          <label class="fld"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>
+          ${captchaBox()}`
           }
           <p class="form-msg" role="status"></p>
           <button class="btn btn-primary btn-block">${this.codeStep ? 'Confirmar' : 'Entrar'}</button>
         </form>`;
       this.el.querySelector('[data-close]')!.addEventListener('click', () => this.close());
       const form = this.el.querySelector<HTMLFormElement>('form')!;
+      const captcha = formCaptcha(form, 'login');
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const msg = form.querySelector('.form-msg')!;
@@ -105,9 +108,13 @@ export class SiteEditor {
         const remote = this.app.data.remote!;
         try {
           if (this.codeStep) await remote.verifyMfa(String(fd.get('code') ?? ''));
-          else if (await remote.signIn(String(fd.get('email')), String(fd.get('password')))) {
-            this.codeStep = true;
-            return this.render();
+          else {
+            const token = captcha ? await captcha.getToken() : undefined;
+            const needsCode = await remote.signIn(String(fd.get('email')), String(fd.get('password')), token).finally(() => captcha?.reset());
+            if (needsCode) {
+              this.codeStep = true;
+              return this.render();
+            }
           }
           this.codeStep = false;
           this.canSave = await remote.canEditSite(this.app.data.agencyId);

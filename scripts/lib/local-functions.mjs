@@ -1,5 +1,6 @@
-// Serves the edge functions of the local Supabase with a fake e-mail provider (Resend API), so the lead
-// notification can be tested end to end without sending anything. Used by test-backend and e2e-backend.
+// Serves the edge functions of the local Supabase with a fake e-mail provider (Resend API) and a fake anti-bot
+// verifier (Cloudflare Turnstile: only the token "token-valido" passes), so the lead notification and the captcha
+// path can be tested end to end without anything leaving the machine. Used by test-backend and e2e-backend.
 import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
@@ -16,6 +17,11 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
       let body = '';
       req.on('data', (c) => (body += c));
       req.on('end', () => {
+        if (req.url === '/siteverify') {
+          const ok = new URLSearchParams(body).get('response') === 'token-valido';
+          res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(ok ? { success: true, action: 'lead' } : { success: false, 'error-codes': ['invalid-input-response'] }));
+          return;
+        }
         appendFileSync(mailLog, body.replace(/\n/g, ' ') + '\n');
         res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"id":"teste"}');
       });
@@ -42,6 +48,8 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
       `RESEND_API_URL=http://${gateway}:${mock.address().port}/emails`,
       `SITE_URL=${siteUrl}`,
       'LEAD_EMAIL_FROM=Contatos <contatos@teste.local>',
+      'TURNSTILE_SECRET_KEY=teste',
+      `TURNSTILE_VERIFY_URL=http://${gateway}:${mock.address().port}/siteverify`,
     ].join('\n'),
   );
   const proc = spawn('npx', ['supabase', 'functions', 'serve', '--env-file', envFile], { stdio: 'ignore', detached: true });

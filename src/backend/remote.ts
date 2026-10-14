@@ -67,6 +67,8 @@ export interface LeadInput {
   consentText: string;
   /** Honeypot field: filled only by bots. */
   trap: string;
+  /** Anti-bot token (Turnstile), when the site has the check on: the message then goes through the submit-lead function. */
+  captchaToken?: string;
 }
 
 export interface TrashItem {
@@ -157,9 +159,12 @@ export class RemoteBackend {
     this.sb.auth.onAuthStateChange((_event, session) => fn(session));
   }
 
-  /** Password login. Returns true when the account has two-step verification: the code comes next (verifyMfa). */
-  async signIn(email: string, password: string): Promise<boolean> {
-    const { error } = await this.sb.auth.signInWithPassword({ email, password });
+  /**
+   * Password login (with the anti-bot token when the check is on). Returns true when the account has two-step
+   * verification: the code comes next (verifyMfa).
+   */
+  async signIn(email: string, password: string, captchaToken?: string): Promise<boolean> {
+    const { error } = await this.sb.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) throw new Error(/invalid/i.test(error.message) ? 'E-mail ou senha incorretos.' : error.message);
     return (await this.mfa()).pending;
   }
@@ -216,11 +221,11 @@ export class RemoteBackend {
   }
 
   /** Returns true when the account still needs e-mail confirmation. */
-  async signUp(email: string, password: string, fullName: string): Promise<boolean> {
+  async signUp(email: string, password: string, fullName: string, captchaToken?: string): Promise<boolean> {
     const { data, error } = await this.sb.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: location.href.split('?')[0] },
+      options: { data: { full_name: fullName }, emailRedirectTo: location.href.split('?')[0], captchaToken },
     });
     if (error) throw new Error(error.message);
     return !data.session;
@@ -535,20 +540,42 @@ export class RemoteBackend {
 
   /** Visitor's message from the listing panel; the broker is told by e-mail (edge function notify-lead). */
   async submitLead(listingId: string, l: LeadInput): Promise<void> {
-    const { data, error } = await this.sb.rpc('submit_lead', {
-      p_listing: listingId,
-      p_source: 'form',
-      p_name: l.name,
-      p_email: l.email || null,
-      p_phone: l.phone || null,
-      p_message: l.message,
-      p_consent: true,
-      p_consent_text: l.consentText,
-      p_trap: l.trap || null,
-    });
-    fail(error, 'Não foi possível enviar');
+    const id = await this.recordLead(
+      'submit_lead',
+      {
+        p_listing: listingId,
+        p_source: 'form',
+        p_name: l.name,
+        p_email: l.email || null,
+        p_phone: l.phone || null,
+        p_message: l.message,
+        p_consent: true,
+        p_consent_text: l.consentText,
+        p_trap: l.trap || null,
+      },
+      l.captchaToken,
+    );
     // the e-mail is a bonus: the lead is already saved and shows up in Minha conta → Contatos
-    void this.sb.functions.invoke('notify-lead', { body: { lead_id: data } }).catch(() => {});
+    void this.sb.functions.invoke('notify-lead', { body: { lead_id: id } }).catch(() => {});
+  }
+
+  /**
+   * Records a visitor's message: straight through the database function or, with the anti-bot check on, through the
+   * submit-lead edge function, which checks the token on the server first (the database then refuses direct calls).
+   */
+  private async recordLead(fn: 'submit_lead' | 'submit_site_lead', args: Record<string, unknown>, captchaToken?: string): Promise<string> {
+    if (!captchaToken) {
+      const { data, error } = await this.sb.rpc(fn, args);
+      fail(error, 'Não foi possível enviar');
+      return data as string;
+    }
+    const { data, error } = await this.sb.functions.invoke('submit-lead', { body: { fn, args, captcha_token: captchaToken } });
+    if (error) {
+      // the function answers {error: "<reason for the visitor>"}
+      const reason = await (error as { context?: Response }).context?.json?.().then((b: { error?: string }) => b.error, () => null);
+      throw new Error(`Não foi possível enviar: ${reason ?? 'tente de novo em instantes'}`);
+    }
+    return (data as { id: string }).id;
   }
 
   /** Records a click on "Conversar no WhatsApp" (no personal data: the conversation happens in WhatsApp). */
@@ -644,20 +671,23 @@ export class RemoteBackend {
 
   /** Contact page or "Anunciar imóvel" form of the site (no listing). */
   async submitSiteLead(orgId: string, source: 'contact' | 'owner', l: LeadInput, details: Record<string, string> = {}): Promise<void> {
-    const { data, error } = await this.sb.rpc('submit_site_lead', {
-      p_org: orgId,
-      p_source: source,
-      p_name: l.name,
-      p_email: l.email || null,
-      p_phone: l.phone || null,
-      p_message: l.message,
-      p_details: details,
-      p_consent: true,
-      p_consent_text: l.consentText,
-      p_trap: l.trap || null,
-    });
-    fail(error, 'Não foi possível enviar');
-    void this.sb.functions.invoke('notify-lead', { body: { lead_id: data } }).catch(() => {});
+    const id = await this.recordLead(
+      'submit_site_lead',
+      {
+        p_org: orgId,
+        p_source: source,
+        p_name: l.name,
+        p_email: l.email || null,
+        p_phone: l.phone || null,
+        p_message: l.message,
+        p_details: details,
+        p_consent: true,
+        p_consent_text: l.consentText,
+        p_trap: l.trap || null,
+      },
+      l.captchaToken,
+    );
+    void this.sb.functions.invoke('notify-lead', { body: { lead_id: id } }).catch(() => {});
   }
 
   /** Whether the logged-in user may edit this client's site (owner, admin or platform support). */

@@ -13,6 +13,7 @@ import {
   type TrashItem,
 } from '../backend/remote';
 import { whatsappLink } from '../data/listingText';
+import { captchaBox, formCaptcha } from '../backend/captcha';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
 import { escapeHtml } from '../utils/format';
 
@@ -518,6 +519,7 @@ export class AccountPanel {
         ${signup ? '<label class="a-field a-wide">Seu nome<input name="name" autocomplete="name" required></label>' : ''}
         <label class="a-field a-wide">E-mail<input name="email" type="email" autocomplete="email" required></label>
         <label class="a-field a-wide">Senha<input name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" minlength="8" required></label>
+        ${captchaBox('a-wide')}
         <p class="a-error a-wide" role="alert" hidden></p>
         <div class="a-actions a-wide">
           <button type="submit" class="btn-primary">${signup ? 'Criar conta' : 'Entrar'}</button>
@@ -526,21 +528,28 @@ export class AccountPanel {
       </form>`;
     this.bindClose();
     if (this.linkInfo) this.el.querySelector<HTMLInputElement>('input[name="email"]')!.value = this.linkInfo.email;
+    const captcha = formCaptcha(this.el.querySelector<HTMLElement>('form[data-form="login"]')!, signup ? 'signup' : 'login');
     this.bindForm('login', async (fd) => {
       const email = String(fd.get('email')).trim();
       const password = String(fd.get('password'));
       if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.');
       if (password.length < 8) throw new Error('A senha precisa ter pelo menos 8 caracteres.');
-      if (signup) {
-        const name = String(fd.get('name') ?? '').trim();
-        if (!name) throw new Error('Informe seu nome.');
-        const needsConfirm = await this.backend.signUp(email, password, name);
-        this.mode = 'signin';
-        this.note = needsConfirm ? `Enviamos um link de confirmação para ${email}. Depois de confirmar, entre aqui.` : '';
-      } else {
-        // with two-step verification on, refresh() shows the step of the code next
-        await this.backend.signIn(email, password);
-        this.note = '';
+      const name = String(fd.get('name') ?? '').trim();
+      if (signup && !name) throw new Error('Informe seu nome.');
+      // anti-bot token (only when the check is on); single use, so the widget is reset after each attempt
+      const token = captcha ? await captcha.getToken() : undefined;
+      try {
+        if (signup) {
+          const needsConfirm = await this.backend.signUp(email, password, name, token);
+          this.mode = 'signin';
+          this.note = needsConfirm ? `Enviamos um link de confirmação para ${email}. Depois de confirmar, entre aqui.` : '';
+        } else {
+          // with two-step verification on, refresh() shows the step of the code next
+          await this.backend.signIn(email, password, token);
+          this.note = '';
+        }
+      } finally {
+        captcha?.reset();
       }
       await this.refresh(true);
       if (this.isOpen) await this.render();

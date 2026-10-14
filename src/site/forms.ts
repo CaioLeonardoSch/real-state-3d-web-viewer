@@ -1,6 +1,7 @@
 // Contact forms of the site (listing, contact page, "Anunciar imóvel"): same fields, consent (LGPD) and the
 // honeypot field of the back end (submit_lead / submit_site_lead).
 import type { LeadInput } from '../backend/remote';
+import { captchaBox, formCaptcha } from '../backend/captcha';
 import { escapeHtml } from '../utils/format';
 
 export interface ExtraField {
@@ -14,7 +15,8 @@ export interface ExtraField {
 
 let seq = 0;
 
-export function leadFormHtml(opts: { orgName: string; message?: string; submitLabel: string; extra?: ExtraField[]; messageLabel?: string }): string {
+/** `captcha`: the form really sends (a client's site, not the demo), so it gets the anti-bot check when that is on. */
+export function leadFormHtml(opts: { orgName: string; message?: string; submitLabel: string; extra?: ExtraField[]; messageLabel?: string; captcha?: boolean }): string {
   const id = `lf${++seq}`;
   const field = (f: ExtraField) =>
     f.type === 'select'
@@ -32,6 +34,7 @@ export function leadFormHtml(opts: { orgName: string; message?: string; submitLa
     <label class="fld"><span>${escapeHtml(opts.messageLabel ?? 'Mensagem')}</span><textarea name="message" rows="3" maxlength="2000">${escapeHtml(opts.message ?? '')}</textarea></label>
     <label class="hp" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
     <label class="consent"><input type="checkbox" name="consent" id="${id}-c"> <span>Concordo em compartilhar meus dados com ${escapeHtml(opts.orgName)} para receber o atendimento.</span></label>
+    ${opts.captcha ? captchaBox() : ''}
     <p class="form-msg" role="status" aria-live="polite"></p>
     <button type="submit" class="btn btn-primary btn-block">${escapeHtml(opts.submitLabel)}</button>
   </form>`;
@@ -44,6 +47,7 @@ export function wireLeadForm(
   done: string,
 ): void {
   const msg = form.querySelector<HTMLElement>('.form-msg')!;
+  const captcha = formCaptcha(form, 'lead');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
@@ -67,17 +71,24 @@ export function wireLeadForm(
     const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
     btn.disabled = true;
     msg.textContent = 'Enviando…';
-    const result = await send(
-      {
-        name: get('name'),
-        email,
-        phone: get('phone'),
-        message: get('message'),
-        consentText: consent.nextElementSibling!.textContent!.trim(),
-        trap: get('website'),
-      },
-      details,
-    ).catch((err: Error) => err.message);
+    const result = await (captcha ? captcha.getToken() : Promise.resolve(undefined))
+      .then((captchaToken) =>
+        send(
+          {
+            name: get('name'),
+            email,
+            phone: get('phone'),
+            message: get('message'),
+            consentText: consent.nextElementSibling!.textContent!.trim(),
+            trap: get('website'),
+            captchaToken,
+          },
+          details,
+        ),
+      )
+      .catch((err: Error) => err.message);
+    // a token serves one submission
+    captcha?.reset();
     btn.disabled = false;
     if (result) {
       msg.textContent = result;

@@ -2050,3 +2050,11 @@ body.editing .wa-float {
     display: none;
   }
 }
+
+/* anti-bot check (Turnstile): takes room only when Cloudflare asks for a click */
+.captcha-box {
+  margin: 4px 0;
+}
+.captcha-box:empty {
+  display: none;
+}

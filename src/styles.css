@@ -1955,3 +1955,11 @@ body.embed .site-page-link {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* anti-bot check (Turnstile): takes room only when Cloudflare asks for a click */
+.captcha-box {
+  margin: 4px 0;
+}
+.captcha-box:empty {
+  display: none;
+}

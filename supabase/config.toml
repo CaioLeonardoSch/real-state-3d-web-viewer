@@ -212,10 +212,12 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
+# CAPTCHA no login e no cadastro (Cloudflare Turnstile): fica desligado aqui (os testes entram sem o widget). No
+# projeto do Supabase liga-se em Authentication → Attack Protection; ver docs/supabase.md.
 # [auth.captcha]
 # enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# provider = "turnstile"
+# secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -419,4 +421,8 @@ enabled = true
 # Aviso de contato: chamado pelo site logo após o envio (também por visitantes sem login). A função só age sobre
 # um contato recente ainda não avisado, uma vez.
 [functions.notify-lead]
+verify_jwt = false
+
+# Contato com CAPTCHA (Turnstile): visitantes sem login chamam; a função confere o token antes de gravar.
+[functions.submit-lead]
 verify_jwt = false
