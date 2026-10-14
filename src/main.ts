@@ -1,10 +1,8 @@
-import 'maplibre-gl/dist/maplibre-gl.css';
 import { addProtocol, setWorkerUrl, type AddProtocolAction } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 // MapLibre v6 loads its worker from a separate module next to the library file. After bundling,
 // that file must be emitted explicitly and its URL handed to MapLibre.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import './styles.css';
 import { loadBairroAreas, loadData } from './data/load';
 import type { MultiPolygon, Polygon } from 'geojson';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -104,7 +102,7 @@ async function main() {
   const agencies = [...data.listings.agencies];
   // demo listings (listings.json); a client's site can hide them with VITE_DEMO_LISTINGS=false
   const ofSite = (list: Listing[]) => (embed?.agency ? list.filter((l) => l.agency === embed.agency) : list);
-  const baseListings = ofSite(import.meta.env.VITE_DEMO_LISTINGS === 'false' ? [] : data.listings.listings);
+  const baseListings = ofSite(data.listings.listings);
   // With a back end (Supabase), listings come from it; without one, "Anunciar" keeps them in this browser.
   let remote: RemoteBackend | null = null;
   let remoteListings: Listing[] = [];

@@ -30,9 +30,10 @@ REGION = json.load(open(os.path.join(ROOT, 'scripts', 'data', 'region.json'), en
 SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, '.cache', 'osm-pbf', 'santa-catarina-latest.osm.pbf')
 OUT = os.path.join(ROOT, '.cache', 'region')
 
-# Tags kept on buildings: height rule (scripts/lib/height.mjs) and residential rule (scripts/lib/residential.mjs)
+# Tags kept on buildings: height rule (scripts/lib/height.mjs), residential rule (scripts/lib/residential.mjs) and
+# roof shape (scripts/lib/roofs.mjs)
 BUILDING_TAGS = ['building', 'building:levels', 'height', 'name', 'amenity', 'shop', 'office', 'healthcare',
-                 'craft', 'tourism', 'leisure', 'religion', 'denomination', 'industrial']
+                 'craft', 'tourism', 'leisure', 'religion', 'denomination', 'industrial', 'roof:shape']
 # green areas and the kind kept for the style (parks, grass, woods, scrub, wetlands, fields)
 GREEN = {
     ('leisure', 'park'): 'park', ('leisure', 'garden'): 'park', ('landuse', 'grass'): 'grass',

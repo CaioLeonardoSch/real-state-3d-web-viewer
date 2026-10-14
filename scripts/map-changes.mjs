@@ -262,6 +262,9 @@ export function report({ diffs, beforeMeta, afterMeta, bairroOf, listings = [], 
   push('| | Antes | Agora | Diferença |', '|---|---:|---:|---:|');
   row('Árvores no mapa', c0.trees, c1.trees);
   row('… mapeadas no OSM', c0.treesFromOsm, c1.treesFromOsm);
+  row('Telhados de duas águas', c0.roofs?.gable, c1.roofs?.gable);
+  row('Telhados de quatro águas', c0.roofs?.hip, c1.roofs?.hip);
+  row('Torres com caixa d\'água', c0.roofs?.tank, c1.roofs?.tank);
   row('Postes no mapa', c0.lamps, c1.lamps);
   row('… mapeados no OSM', c0.lampsFromOsm, c1.lampsFromOsm);
   row('Altura pela tag `height`', c0.heightFromTag, c1.heightFromTag);

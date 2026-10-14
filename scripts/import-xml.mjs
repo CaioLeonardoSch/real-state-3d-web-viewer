@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { parseVrsync } from '../src/import/vrsync.ts';
+import { PHOTO_SIZES } from '../src/utils/images.ts';
 import { toEwkt } from '../src/backend/mapping.ts';
 import { openBuildings } from './lib/building-at.mjs';
 
@@ -115,21 +116,31 @@ async function place(l) {
 }
 
 // ---------------------------------------------------------------- photos
-async function photoFiles(sourceUrl) {
+/**
+ * Photos in the three sizes the form makes (src/utils/images.ts, PHOTO_SIZES); `large` only when the original is
+ * bigger. Floor plans: one file, large enough to read the rooms.
+ */
+async function photoFiles(sourceUrl, plan) {
   const r = await fetch(sourceUrl, { signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   if (!/^image\//.test(r.headers.get('content-type') ?? 'image/')) throw new Error('não é imagem');
   const buf = Buffer.from(await r.arrayBuffer());
   if (buf.length > 15 * 1024 * 1024) throw new Error('maior que 15 MB');
   // rotate(): applies the camera orientation; output has no metadata (EXIF/GPS) since withMetadata() is not used
-  const main = await sharp(buf).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
-  const thumb = await sharp(buf).rotate().resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 70 }).toBuffer();
-  return { main, thumb };
+  const size = ([max, quality]) =>
+    sharp(buf).rotate().resize({ width: max, height: max, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: Math.round(quality * 100) }).toBuffer();
+  if (plan) return { main: await size([1600, 0.8]), thumb: null, large: null };
+  const { width = 0, height = 0 } = await sharp(buf).metadata();
+  return {
+    main: await size(PHOTO_SIZES.src),
+    thumb: await size(PHOTO_SIZES.thumb),
+    large: Math.max(width, height) > PHOTO_SIZES.src[0] ? await size(PHOTO_SIZES.large) : null,
+  };
 }
 
 /** Brings the listing's photos in line with the feed (by original URL): new ones uploaded, missing ones removed. */
 async function syncPhotos(listingId, l, report) {
-  const { data: rows } = await db.from('listing_photos').select('id, path, thumb_path, source_url').eq('listing_id', listingId);
+  const { data: rows } = await db.from('listing_photos').select('id, path, thumb_path, large_path, source_url').eq('listing_id', listingId);
   const bySource = new Map((rows ?? []).filter((r) => r.source_url).map((r) => [r.source_url, r]));
   const wanted = [...l.photos.map((p, i) => ({ ...p, position: i, plan: false })), ...l.floorPlans.map((u) => ({ url: u, caption: 'Planta', position: 999, plan: true }))];
   const kept = new Set();
@@ -142,16 +153,19 @@ async function syncPhotos(listingId, l, report) {
       continue;
     }
     try {
-      const { main, thumb } = await photoFiles(p.url);
+      const { main, thumb, large } = await photoFiles(p.url, p.plan);
       const base = `${org.id}/${listingId}/${crypto.randomUUID().slice(0, 8)}`;
-      const up1 = await db.storage.from(PHOTOS).upload(`${base}.jpg`, main, { contentType: 'image/jpeg' });
-      const up2 = p.plan ? { error: null } : await db.storage.from(PHOTOS).upload(`${base}-mini.jpg`, thumb, { contentType: 'image/jpeg' });
-      if (up1.error || up2.error) throw new Error((up1.error ?? up2.error).message);
+      const files = [[`${base}.jpg`, main], [`${base}-mini.jpg`, thumb], [`${base}-grande.jpg`, large]].filter(([, buf]) => buf);
+      for (const [file, buf] of files) {
+        const up = await db.storage.from(PHOTOS).upload(file, buf, { contentType: 'image/jpeg' });
+        if (up.error) throw new Error(up.error.message);
+      }
       const ins = await db.from('listing_photos').insert({
         listing_id: listingId,
         org_id: org.id,
         path: `${base}.jpg`,
-        thumb_path: p.plan ? null : `${base}-mini.jpg`,
+        thumb_path: thumb ? `${base}-mini.jpg` : null,
+        large_path: large ? `${base}-grande.jpg` : null,
         caption: p.caption,
         position: p.position,
         is_floor_plan: p.plan,
@@ -166,7 +180,7 @@ async function syncPhotos(listingId, l, report) {
   const gone = (rows ?? []).filter((r) => r.source_url && !kept.has(r.id));
   if (gone.length) {
     await db.from('listing_photos').delete().in('id', gone.map((r) => r.id));
-    await db.storage.from(PHOTOS).remove(gone.flatMap((r) => [r.path, ...(r.thumb_path ? [r.thumb_path] : [])]));
+    await db.storage.from(PHOTOS).remove(gone.flatMap((r) => [r.path, r.thumb_path, r.large_path].filter(Boolean)));
   }
   return { added, removed: gone.length };
 }

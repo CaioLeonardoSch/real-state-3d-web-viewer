@@ -1,6 +1,7 @@
 // Which client's site is open, its configuration and its listings: from the back end (by own domain or
 // ?imobiliaria=slug) or, without one, from the demo files (public/data/sites.json + listings.json).
 import { validateListingsFile, type Listing } from '../data/types';
+import { DEMO } from '../data/demo';
 import type { RemoteBackend } from '../backend/remote';
 import { normalizeSiteConfig, type SiteConfig } from './config';
 
@@ -21,6 +22,9 @@ interface DemoSite {
   slug: string;
   config: unknown;
 }
+
+/** No agency site at this address (unknown domain or slug): a neutral page, out of search engines. */
+export class SiteNotFoundError extends Error {}
 
 const dataUrl = (name: string) => new URL(`${import.meta.env.BASE_URL}data/${name}`, location.href).href;
 
@@ -65,19 +69,25 @@ async function demoSlugs(): Promise<string[]> {
   }
 }
 
+/**
+ * The site at this address. On a client's own domain the domain decides (a ?imobiliaria= link cannot show another
+ * client there); elsewhere (the platform's provisional address) ?imobiliaria=slug. The demo sites exist only in
+ * demonstration builds.
+ */
 export async function loadSite(params: URLSearchParams, backend: { url: string; key: string } | null): Promise<SiteData> {
   const slug = params.get('imobiliaria')?.trim().toLowerCase() || null;
-  if (backend && !(slug && (await demoSlugs()).includes(slug))) {
+  if (backend && !(DEMO && slug && (await demoSlugs()).includes(slug))) {
     const { RemoteBackend } = await import('../backend/remote');
     const remote = await RemoteBackend.connect(backend.url, backend.key);
-    const org = await remote.siteOrg(slug ? { slug } : { host: location.hostname });
+    const org = (await remote.siteOrg({ host: location.hostname })) ?? (slug ? await remote.siteOrg({ slug }) : null);
     if (org) {
       const listings = await remote.publicListingsOf(org.id);
       const config = normalizeSiteConfig(org.branding, org.name);
       if (!config.creci && org.creci) config.creci = org.creci;
       return { agencyId: org.id, slug: org.slug, orgName: org.name, config, listings, remote, demo: false };
     }
-    if (slug) throw new Error(`Imobiliária "${slug}" não encontrada.`);
+    if (slug || !DEMO) throw new SiteNotFoundError(slug ? `Não encontramos a imobiliária "${slug}".` : 'Este endereço não tem um site de imobiliária.');
   }
+  if (!DEMO) throw new SiteNotFoundError('Este endereço não tem um site de imobiliária.');
   return loadDemo(slug);
 }

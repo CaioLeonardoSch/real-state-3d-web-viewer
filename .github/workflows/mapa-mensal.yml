@@ -4,7 +4,7 @@
 # o relatório e aprovar o PR; o merge publica o mapa novo (workflow "Publicar no GitHub Pages").
 #
 # Na primeira vez: Settings → Actions → General → Workflow permissions → marque "Allow GitHub Actions to create and
-# approve pull requests". Cada mês acrescenta ~20 MB (o .pmtiles) ao histórico do git: quando pesar, mova o
+# approve pull requests". Cada mês acrescenta ~25 MB (os dois .pmtiles) ao histórico do git: quando pesar, mova o
 # arquivo para um armazenamento de objetos com nome por versão (docs/backend.md, "Serviço mensal do mapa").
 name: Mapa mensal
 
@@ -82,6 +82,7 @@ jobs:
           body-path: ${{ runner.temp }}/relatorio.md
           add-paths: |
             public/data/joinville.pmtiles
+            public/data/joinville-detalhe.pmtiles
             public/data/meta.json
             public/data/bairros.geojson
             public/data/bairros-areas.geojson

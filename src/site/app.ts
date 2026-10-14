@@ -10,9 +10,11 @@ import {
   TRANSACTION_LABELS,
   TYPE_LABELS,
   USAGE_LABELS,
+  priceIn,
   priceReduction,
   isForRent,
   type Listing,
+  type Photo,
 } from '../data/types';
 import { addressLabel, formatDate, safeUrl, videoEmbedUrl } from '../data/listingText';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, progressLabel } from '../data/construction';
@@ -20,6 +22,7 @@ import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName } from '..
 import { SORT_KEYS, SORT_LABELS } from '../state/sort';
 import { description as seoDescription, structuredData } from '../seo/listingPage';
 import { escapeHtml, formatArea, formatBRL, parseNumberInput } from '../utils/format';
+import { photoSrcset } from '../utils/images';
 import {
   MENU_LABELS,
   SOCIALS,
@@ -43,12 +46,28 @@ export const ROUTES = ['inicio', 'imoveis', 'imovel', 'sobre', 'contato', 'anunc
 export type Route = (typeof ROUTES)[number];
 
 const $ = <T extends HTMLElement>(root: ParentNode, sel: string) => root.querySelector<T>(sel)!;
+
+/**
+ * The gallery's photo: phones get up to the 1024 px version, wider screens up to the 1920 px one (photos stored in
+ * three sizes; others, the one they have).
+ */
+function galleryPhoto(p: Photo, alt: string): string {
+  const wide = photoSrcset(p);
+  const img = (set: string | null) => `<img src="${escapeHtml(p.src)}"${set ? ` srcset="${escapeHtml(set)}" sizes="100vw"` : ''} alt="${escapeHtml(alt)}">`;
+  return wide ? `<picture><source media="(min-width: 700px)" srcset="${escapeHtml(wide)}" sizes="(max-width: 1240px) 100vw, 1200px">${img(photoSrcset(p, 'src'))}</picture>` : img(null);
+}
 const plural = (n: number, one: string, many: string) => `${n.toLocaleString('pt-BR')} ${n === 1 ? one : many}`;
 
 export class SiteApp {
   config: SiteConfig;
   readonly saved: SavedLists;
   private route: Route = 'inicio';
+  /** The address names a page that does not exist (shown as "Página não encontrada", out of search engines). */
+  private notFound = false;
+  /** The last search was for rentals (the comparison opens in the same mode). */
+  private lastRent = false;
+  private liveTimer = 0;
+  private live = Object.assign(document.createElement('div'), { id: 'site-live', className: 'sr-only' });
   private params = new URLSearchParams();
   private search: SiteSearch;
   /** Map frame of the search page (kept while only the results change). */
@@ -65,6 +84,8 @@ export class SiteApp {
     readonly data: SiteData,
   ) {
     this.config = data.config;
+    this.live.setAttribute('aria-live', 'polite');
+    document.body.append(this.live);
     this.saved = new SavedLists(data.slug);
     this.saved.prune(new Set(data.listings.map((l) => l.id)));
     const first = new URLSearchParams(location.search);
@@ -72,6 +93,21 @@ export class SiteApp {
     this.search = emptySearch(this.config.search.sort, this.config.search.view);
     this.saved.onChange(() => this.refreshSavedUi());
     window.addEventListener('popstate', () => this.load());
+    // Esc closes the open panel: the phone menu, then the filters
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || document.body.classList.contains('editing')) return;
+      const toggle = this.root.querySelector<HTMLButtonElement>('.nav-toggle[aria-expanded="true"]');
+      if (toggle) {
+        this.setMenu(false);
+        toggle.focus();
+        return;
+      }
+      const filters = this.root.querySelector<HTMLButtonElement>('.filters-btn[aria-expanded="true"]');
+      if (filters) {
+        filters.click();
+        filters.focus();
+      }
+    });
     window.addEventListener('message', (e) => this.onMapMessage(e));
     // internal links: no reload
     document.addEventListener('click', (e) => {
@@ -125,13 +161,34 @@ export class SiteApp {
     this.load(!samePage);
   }
 
-  /** Renders the page the address bar points to. */
-  load(scrollTop = true): void {
+  /**
+   * Renders the page the address bar points to. After navigating to another page, the focus goes to its heading and
+   * screen readers hear the new title (a single-page site would otherwise leave them on the old link).
+   */
+  load(scrollTop = true, focus = scrollTop): void {
     this.params = new URLSearchParams(location.search);
     const p = this.params.get('p') as Route | null;
+    this.notFound = !!p && !ROUTES.includes(p);
     this.route = p && ROUTES.includes(p) ? p : 'inicio';
     this.render();
     if (scrollTop) window.scrollTo({ top: 0 });
+    if (focus) {
+      const h1 = this.root.querySelector<HTMLElement>('main h1');
+      if (h1) {
+        h1.tabIndex = -1;
+        h1.focus({ preventScroll: true });
+      }
+      this.say(document.title);
+    }
+  }
+
+  /**
+   * Message for screen readers: a polite live region outside the page (which is redrawn), created with the app so it
+   * is already in the accessibility tree when the first message arrives.
+   */
+  say(text: string, delay = 0): void {
+    clearTimeout(this.liveTimer);
+    this.liveTimer = window.setTimeout(() => (this.live.textContent = text), delay);
   }
 
   /** Re-applies the configuration (editor preview) without leaving the page. */
@@ -146,9 +203,10 @@ export class SiteApp {
     const c = this.config;
     this.applyTheme();
     if (this.route !== 'imoveis') this.mapFrame = null;
+    const parked = this.parkMap();
     this.root.innerHTML = `
       <a class="skip" href="#conteudo">Pular para o conteúdo</a>
-      ${this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária, contatos e imóveis fictícios.</div>` : ''}
+      ${this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária, contatos e imóveis fictícios. <button type="button" class="link-btn" data-open-editor>Personalizar este site</button></div>` : ''}
       ${this.headerHtml()}
       <main id="conteudo" tabindex="-1" class="page page-${this.route}"></main>
       ${this.footerHtml()}
@@ -165,9 +223,24 @@ export class SiteApp {
       favoritos: (el) => this.favorites(el),
       comparar: (el) => this.compare(el),
     };
-    pages[this.route](main);
+    if (this.notFound) this.missingPage(main);
+    else pages[this.route](main);
+    // the new page did not take the map back
+    if (parked?.parentElement === document.body) parked.remove();
     this.wireHeader();
     this.refreshSavedUi();
+  }
+
+  /**
+   * Redrawing the page (the editor's preview redraws it as the agency types) would reload the search's 3D map: a frame
+   * reloads when it leaves the document. Where the browser can move a frame without reloading it (moveBefore), the map
+   * waits outside the page and the new page takes it back (showMap).
+   */
+  private parkMap(): HTMLIFrameElement | null {
+    const frame = this.mapFrame;
+    if (!frame?.isConnected || !('moveBefore' in Element.prototype)) return null;
+    document.body.moveBefore(frame, null);
+    return frame;
   }
 
   private applyTheme(): void {
@@ -196,8 +269,11 @@ export class SiteApp {
         `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 1 1 7v8h5v-5h4v5h5V7z" fill="${c.colors.primary}"/></svg>`)}`;
   }
 
-  private setMeta(title: string, description: string, canonical?: string): void {
+  private setMeta(title: string, description: string, canonical?: string, noindex = false): void {
     document.title = title;
+    // pages that do not exist stay out of search engines (the demo's site-wide noindex is a separate tag)
+    document.querySelector('meta[name=robots][data-page]')?.remove();
+    if (noindex) document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex" data-page>');
     document.querySelector('meta[name=description]')?.setAttribute('content', description.slice(0, 300));
     let link = document.querySelector<HTMLLinkElement>('link[rel=canonical]');
     if (canonical) {
@@ -276,11 +352,11 @@ export class SiteApp {
         <button type="button" class="icon-btn nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">${ICONS.menu}</button>
         <nav id="site-nav" class="nav" aria-label="Principal">
           <ul>${c.menu
-            .map((m) => `<li><a href="${escapeHtml(this.menuHref(m))}" data-nav${m === active ? ' aria-current="page"' : ''}>${MENU_LABELS[m]}${m === 'favoritos' && favCount ? ` <span class="nav-count">${favCount}</span>` : ''}</a></li>`)
+            .map((m) => `<li><a href="${escapeHtml(this.menuHref(m))}" data-nav${m === active ? ' aria-current="page"' : ''}>${MENU_LABELS[m]}${m === 'favoritos' ? ` <span class="nav-count"${favCount ? '' : ' hidden'}>${favCount}</span>` : ''}</a></li>`)
             .join('')}</ul>
         </nav>
         <div class="bar-actions">
-          ${c.menu.includes('favoritos') ? '' : `<a class="icon-btn fav-link" href="${escapeHtml(this.href('favoritos'))}" data-nav aria-label="Favoritos">${ICONS.heart}<span class="nav-count" ${favCount ? '' : 'hidden'}>${favCount}</span></a>`}
+          ${c.menu.includes('favoritos') ? '' : `<a class="icon-btn fav-link" href="${escapeHtml(this.href('favoritos'))}" data-nav>${ICONS.heart}<span class="sr-only">Favoritos </span><span class="nav-count" ${favCount ? '' : 'hidden'}>${favCount}</span></a>`}
           ${c.contacts.whatsapp ? `<a class="btn btn-wa" data-contact href="${escapeHtml(whatsappHref(c.contacts.whatsapp, c.whatsappButton.message))}" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">${ICONS.whatsapp}<span>WhatsApp</span></a>` : ''}
         </div>
       </div>
@@ -306,11 +382,17 @@ export class SiteApp {
     }
     this.wireHeaderFit = fit;
     const toggle = this.root.querySelector<HTMLButtonElement>('.nav-toggle');
-    toggle?.addEventListener('click', () => {
-      const open = toggle.getAttribute('aria-expanded') !== 'true';
-      toggle.setAttribute('aria-expanded', String(open));
-      this.root.querySelector('.site-header')!.classList.toggle('nav-open', open);
-    });
+    toggle?.addEventListener('click', () => this.setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+  }
+
+  /** Phone menu: while open, the page behind it is inert (Tab stays in the menu; Esc closes it). */
+  private setMenu(open: boolean): void {
+    const toggle = this.root.querySelector<HTMLButtonElement>('.nav-toggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    this.root.querySelector('.site-header')!.classList.toggle('nav-open', open);
+    for (const el of this.root.querySelectorAll<HTMLElement>('main, footer, .wa-float, .compare-bar')) el.inert = open;
+    if (open) this.root.querySelector<HTMLAnchorElement>('#site-nav a')?.focus();
   }
 
   private footerHtml(): string {
@@ -407,7 +489,7 @@ export class SiteApp {
       const k = this.saved.compared.length;
       bar.hidden = k === 0 || this.route === 'comparar';
       bar.innerHTML = `<span>${plural(k, 'imóvel selecionado', 'imóveis selecionados')} para comparar</span>
-        <a class="btn btn-primary" href="${escapeHtml(this.href('comparar'))}" data-nav>Comparar</a>
+        <a class="btn btn-primary" href="${escapeHtml(this.href('comparar', this.lastRent ? { negocio: 'alugar' } : {}))}" data-nav>Comparar</a>
         <button type="button" class="btn btn-ghost" data-clear-cmp>Limpar</button>`;
       bar.querySelector('[data-clear-cmp]')?.addEventListener('click', () => this.saved.clearCompare());
     }
@@ -492,10 +574,10 @@ export class SiteApp {
     let s = emptySearch(c.search.sort, c.search.view);
     const bairros = bairroCounts(all, false).map((b) => b.name);
     box.innerHTML = `
-      <div class="q-tabs" role="tablist" aria-label="O que você procura">
-        <button type="button" role="tab" aria-selected="true" data-deal="sale">Comprar</button>
-        ${hasRent ? '<button type="button" role="tab" aria-selected="false" data-deal="rent">Alugar</button>' : ''}
-        ${c.menu.includes('anunciar') ? `<a role="tab" aria-selected="false" href="${escapeHtml(this.href('anunciar'))}" data-nav>Vender</a>` : ''}
+      <div class="q-tabs" role="group" aria-label="O que você procura">
+        <button type="button" aria-pressed="true" data-deal="sale">Comprar</button>
+        ${hasRent ? '<button type="button" aria-pressed="false" data-deal="rent">Alugar</button>' : ''}
+        ${c.menu.includes('anunciar') ? `<a href="${escapeHtml(this.href('anunciar'))}" data-nav>Vender</a>` : ''}
       </div>
       <div class="q-row">
         <label class="fld"><span class="sr-only">Tipo de imóvel</span><select name="tipo"><option value="">Tipo de imóvel</option>${LISTING_TYPES.map((t) => `<option value="${t}">${TYPE_LABELS[t]}</option>`).join('')}</select></label>
@@ -531,7 +613,7 @@ export class SiteApp {
     };
     box.querySelectorAll<HTMLButtonElement>('[data-deal]').forEach((b) =>
       b.addEventListener('click', () => {
-        box.querySelectorAll('[data-deal]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+        box.querySelectorAll('[data-deal]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
         set({}, { transaction: b.dataset.deal === 'rent' ? 'rent' : null });
       }),
     );
@@ -583,7 +665,7 @@ export class SiteApp {
   /** "1 2 3 4+" buttons (minimum count); clicking the selected one clears it. */
   private countGroup(label: string, name: string, value: number | null): string {
     return `<fieldset class="box count" data-count="${name}"><legend>${label}</legend>${[1, 2, 3, 4]
-      .map((n) => `<button type="button" data-v="${n}" aria-pressed="${value === n}" aria-label="${n} ou mais ${label.toLowerCase()}">${n === 4 ? '4+' : n}</button>`)
+      .map((n) => `<button type="button" data-v="${n}" aria-pressed="${value === n}" aria-label="${n === 4 ? '4+' : n}: ${n} ou mais ${label.toLowerCase()}">${n === 4 ? '4+' : n}</button>`)
       .join('')}</fieldset>`;
   }
 
@@ -603,7 +685,8 @@ export class SiteApp {
 
   private searchPage(main: HTMLElement): void {
     const c = this.config;
-    this.search = queryToSearch(location.search, c.search, new Set([this.data.agencyId]));
+    // unknown neighbourhood names in the address are dropped (no arbitrary text in the page title)
+    this.search = queryToSearch(location.search, c.search, new Set([this.data.agencyId]), bairroCounts(this.data.listings, false).map((b) => b.name));
     const s = this.search;
     const hasRent = this.data.listings.some(isForRent);
     const lateral = c.search.filters === 'lateral';
@@ -636,7 +719,7 @@ export class SiteApp {
               </div>
             </div>
           </div>
-          <div class="chips" aria-label="Filtros aplicados"></div>
+          <div class="chips" role="group" aria-label="Filtros aplicados"></div>
           <div class="r-list"></div>
           <nav class="pager" aria-label="Páginas"></nav>
         </section>
@@ -747,7 +830,15 @@ export class SiteApp {
         .map((a) => `<label class="pill"><input type="checkbox" name="comodidade" value="${a}"${c.features.includes(a) ? ' checked' : ''}><span>${AMENITY_LABELS[a]}</span></label>`)
         .join('')}</div></div>` : ''}
       <label class="f-group fld"><span>Código do imóvel</span><input name="codigo" value="${escapeHtml(s.code ?? '')}" maxlength="30" placeholder="Ex.: ${escapeHtml(codeOf(this.data.listings[0] ?? ({ id: 'abc' } as Listing)))}"></label>
-      <button type="button" class="link-btn f-clear">Limpar filtros</button>`;
+      <button type="button" class="link-btn f-clear">Limpar filtros</button>
+      <button type="button" class="btn btn-primary f-apply">Ver imóveis</button>`;
+    // phones: the panel covers the results; this closes it and shows them
+    $(panel, '.f-apply').addEventListener('click', () => {
+      const btn = this.root.querySelector<HTMLButtonElement>('.filters-btn[aria-expanded="true"]');
+      btn?.click();
+      this.root.querySelector<HTMLElement>('#r-title')?.focus();
+      this.root.querySelector('.results')?.scrollIntoView({ block: 'start' });
+    });
     panel.querySelectorAll<HTMLInputElement>('[name=tipo]').forEach((i) =>
       i.addEventListener('change', () => this.update({}, { types: [...panel.querySelectorAll<HTMLInputElement>('[name=tipo]:checked')].map((x) => x.value as Listing['type']) })),
     );
@@ -800,9 +891,15 @@ export class SiteApp {
     const c = this.config;
     const found = runSearch(this.data.listings, s);
     const rent = s.criteria.transaction === 'rent';
+    this.lastRent = rent;
+    const title = resultsTitle(found.length, s);
+    // screen readers hear the new count once the typing stops
+    this.say(title, 600);
+    main.querySelectorAll<HTMLElement>('.f-apply').forEach((b) => (b.textContent = found.length ? `Ver ${plural(found.length, 'imóvel', 'imóveis')}` : 'Nenhum imóvel com esses filtros'));
     const panelCount = chipsOf(s).filter((ch) => !s.criteria.bairros.includes(ch.label) && ch.label !== 'Lançamentos' && ch.label !== 'Pronto' && ch.label !== 'Baixou o preço').length;
     main.querySelectorAll<HTMLElement>('.fcount').forEach((el) => (el.textContent = panelCount ? `(${panelCount})` : ''));
-    $(main, '#r-title').textContent = resultsTitle(found.length, s);
+    $(main, '#r-title').textContent = title;
+    $(main, '#r-title').tabIndex = -1;
     $(main, '.r-sub').textContent = found.length
       ? s.view === 'mapa'
         ? 'Clique num imóvel no mapa para ver os detalhes. Gire com o botão direito (ou dois dedos).'
@@ -864,8 +961,14 @@ export class SiteApp {
       return;
     }
     const pg = pageOf(found, s.page, c.search.perPage);
+    // a page past the end (pagina=99) shows the last one: the address says so too
+    if (pg.page !== s.page) {
+      this.search = { ...s, page: pg.page };
+      history.replaceState(null, '', this.searchHref(this.search));
+    }
     list.className = `r-list r-${s.view}`;
-    list.innerHTML = pg.items.map((l) => cardHtml(l, this.cardCtx(rent), s.view === 'lista' ? 'lista' : 'grade')).join('');
+    // cards under the page's h1 are h2 (on the home page, under a section's h2, they are h3)
+    list.innerHTML = pg.items.map((l) => cardHtml(l, this.cardCtx(rent), s.view === 'lista' ? 'lista' : 'grade', 2)).join('');
     pager.innerHTML =
       pg.pages > 1
         ? Array.from({ length: pg.pages }, (_, i) => i + 1)
@@ -873,11 +976,16 @@ export class SiteApp {
             .map((n, i, arr) => `${i > 0 && n - arr[i - 1] > 1 ? '<span class="gap">…</span>' : ''}<a href="${escapeHtml(this.searchHref({ ...s, page: n }))}" data-page="${n}"${n === pg.page ? ' aria-current="page"' : ''}>${n}</a>`)
             .join('')
         : '';
+    // each page is a history entry (Back returns to the previous page); Ctrl/middle click opens a new tab
     pager.querySelectorAll<HTMLAnchorElement>('[data-page]').forEach((a) =>
       a.addEventListener('click', (e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
-        this.update({ page: Number(a.dataset.page) }, {}, false, true);
+        this.search = { ...this.search, page: Number(a.dataset.page) };
+        history.pushState(null, '', this.searchHref(this.search));
+        this.renderResults();
         main.querySelector('.results')!.scrollIntoView({ behavior: 'smooth' });
+        $(main, '#r-title').focus({ preventScroll: true });
       }),
     );
   }
@@ -893,6 +1001,14 @@ export class SiteApp {
   private showMap(box: HTMLElement, found: Listing[]): void {
     const ids = found.map((l) => l.id);
     if (this.mapFrame && box.contains(this.mapFrame)) {
+      this.postResults(ids);
+      return;
+    }
+    // the map of the page before the redraw (parkMap), if it still shows the same thing
+    const parked = this.mapFrame;
+    if (parked?.parentElement === document.body && parked.getAttribute('src') === this.mapUrl()) {
+      box.innerHTML = '<div class="map-frame"></div>';
+      box.firstElementChild!.moveBefore(parked, null);
       this.postResults(ids);
       return;
     }
@@ -927,7 +1043,7 @@ export class SiteApp {
     const c = this.config;
     const l = this.data.listings.find((x) => x.id === this.params.get('id'));
     if (!l) {
-      this.setMeta(`Imóvel não encontrado · ${c.name}`, '');
+      this.setMeta(`Imóvel não encontrado · ${c.name}`, '', undefined, true);
       main.innerHTML = `<div class="wrap narrow"><h1>Imóvel não encontrado</h1><p>Ele pode ter sido vendido ou retirado do site.</p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver os imóveis disponíveis</a></div>`;
       return;
     }
@@ -972,7 +1088,7 @@ export class SiteApp {
         l.address?.bairro ? ` › <a href="${escapeHtml(this.searchHref(this.bairroSearch(l.address.bairro)))}" data-nav>${escapeHtml(l.address.bairro)}</a>` : ''
       } › <span>Cód. ${escapeHtml(codeOf(l))}</span></nav>
       <div class="gallery" data-index="0">
-        <figure class="g-main${photos[0].illustration ? ' illus' : ''}"><img src="${escapeHtml(photos[0].src)}" alt="${escapeHtml(photos[0].caption ?? `${l.title}: foto 1`)}">
+        <figure class="g-main${photos[0].illustration ? ' illus' : ''}">${galleryPhoto(photos[0], photos[0].caption ?? `${l.title}: foto 1`)}
           ${photos.length > 1 ? `<button type="button" class="icon-btn g-prev" aria-label="Foto anterior">${ICONS.left}</button><button type="button" class="icon-btn g-next" aria-label="Próxima foto">${ICONS.right}</button>` : ''}
           <figcaption><span class="g-count">1 / ${photos.length}</span> <span class="g-cap">${escapeHtml(photos[0].caption ?? '')}</span></figcaption></figure>
         ${photos.length > 1 ? `<div class="g-thumbs">${photos.map((p, i) => `<button type="button" data-i="${i}" aria-label="Foto ${i + 1}"${i === 0 ? ' aria-current="true"' : ''}><img src="${escapeHtml(p.thumb ?? p.src)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
@@ -1090,9 +1206,7 @@ export class SiteApp {
     const show = (i: number) => {
       const k = (i + photos.length) % photos.length;
       g.dataset.index = String(k);
-      const img = $<HTMLImageElement>(g, '.g-main img');
-      img.src = photos[k].src;
-      img.alt = photos[k].caption ?? `Foto ${k + 1}`;
+      (g.querySelector('.g-main picture') ?? $(g, '.g-main img')).outerHTML = galleryPhoto(photos[k], photos[k].caption ?? `Foto ${k + 1}`);
       $(g, '.g-count').textContent = `${k + 1} / ${photos.length}`;
       $(g, '.g-cap').textContent = photos[k].caption ?? '';
       g.querySelectorAll('.g-thumbs button').forEach((b, j) => (j === k ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current')));
@@ -1200,6 +1314,14 @@ export class SiteApp {
     );
   }
 
+  /** An address that is not a page of the site (out of search engines). */
+  private missingPage(main: HTMLElement): void {
+    const c = this.config;
+    this.setMeta(`Página não encontrada · ${c.name}`, '', undefined, true);
+    main.innerHTML = `<div class="wrap narrow"><h1>Página não encontrada</h1><p>O endereço pode estar errado ou a página foi retirada.</p>
+      <p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver os imóveis</a> <a class="btn btn-ghost" href="${escapeHtml(this.href('inicio'))}" data-nav>Página inicial</a></p></div>`;
+  }
+
   private favorites(main: HTMLElement): void {
     const c = this.config;
     this.setMeta(`Favoritos · ${c.name}`, 'Imóveis que você salvou.');
@@ -1219,12 +1341,15 @@ export class SiteApp {
       main.innerHTML = `<div class="wrap"><h1>Comparar imóveis</h1><div class="empty"><p>Marque "Comparar" em até ${MAX_COMPARE} imóveis para vê-los lado a lado.</p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver imóveis</a></div></div>`;
       return;
     }
+    // in the mode of the search: rentals compare the monthly rent (the value per m² is a sale measure)
+    const rent = this.params.get('negocio') === 'alugar';
+    const salePrice = (l: Listing) => priceIn(l, false);
     const rows: [string, (l: Listing) => string][] = [
-      ['Preço', (l) => priceHtml(l, false, true)],
+      [rent ? 'Aluguel' : 'Preço', (l) => (priceIn(l, rent) === null ? `<span class="muted">${rent ? 'Só venda' : 'Só aluguel'}</span>` : priceHtml(l, rent, true))],
       ['Tipo', (l) => TYPE_LABELS[l.type]],
       ['Bairro', (l) => escapeHtml(l.address?.bairro ?? '—')],
       ['Área', (l) => formatArea(l.areaM2)],
-      ['Valor do m²', (l) => formatBRL(Math.round(l.price / l.areaM2))],
+      ...(rent ? [] : ([['Valor do m²', (l: Listing) => (salePrice(l) === null ? '—' : formatBRL(Math.round(salePrice(l)! / l.areaM2)))]] as [string, (l: Listing) => string][])),
       ['Quartos', (l) => (l.type === 'land' ? '—' : String(l.bedrooms))],
       ['Suítes', (l) => (l.suites === undefined ? '—' : String(l.suites))],
       ['Banheiros', (l) => (l.type === 'land' ? '—' : String(l.bathrooms))],
@@ -1236,23 +1361,27 @@ export class SiteApp {
     ];
     // best value of each numeric row is marked
     const best = (vals: number[], low: boolean) => (low ? Math.min(...vals) : Math.max(...vals));
+    const perM2 = list.map(salePrice).filter((p): p is number => p !== null);
     const bestOf: Record<string, number> = {
-      'Valor do m²': best(list.map((l) => l.price / l.areaM2), true),
+      ...(rent || !perM2.length ? {} : { 'Valor do m²': best(list.filter((l) => salePrice(l) !== null).map((l) => salePrice(l)! / l.areaM2), true) }),
       Área: best(list.map((l) => l.areaM2), false),
     };
     const isBest = (row: string, l: Listing) =>
-      list.length > 1 && row in bestOf && (row === 'Área' ? l.areaM2 : l.price / l.areaM2) === bestOf[row];
+      list.length > 1 && row in bestOf && (row === 'Área' ? l.areaM2 : salePrice(l) === null ? NaN : salePrice(l)! / l.areaM2) === bestOf[row];
+    const both = list.some((l) => priceIn(l, !rent) !== null);
     main.innerHTML = `<div class="wrap"><h1>Comparar imóveis</h1>
       <div class="cmp-wrap"><table class="cmp-table">
         <thead><tr><th scope="col"><span class="sr-only">Item</span></th>${list
           .map(
-            (l) => `<th scope="col"><a href="${escapeHtml(this.href('imovel', { id: l.id }))}" data-nav><img src="${escapeHtml(photosOf(l, c)[0].thumb ?? photosOf(l, c)[0].src)}" alt=""><span>${escapeHtml(l.title)}</span></a>
+            (l) => `<th scope="col"><a href="${escapeHtml(this.href('imovel', { id: l.id, ...(rent ? { negocio: 'alugar' } : {}) }))}" data-nav><img src="${escapeHtml(photosOf(l, c)[0].thumb ?? photosOf(l, c)[0].src)}" alt=""><span>${escapeHtml(l.title)}</span></a>
             <button type="button" class="link-btn" data-uncmp="${escapeHtml(l.id)}">Remover</button></th>`,
           )
           .join('')}</tr></thead>
         <tbody>${rows.map(([k, f]) => `<tr><th scope="row">${k}</th>${list.map((l) => `<td${isBest(k, l) ? ' class="best"' : ''}>${f(l)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>
-      <p class="muted small">Em destaque: a maior área e o menor valor do m² entre os selecionados.</p></div>`;
+      <p class="muted small">Em destaque: ${rent ? 'a maior área' : 'a maior área e o menor valor do m²'} entre os selecionados.${
+        both ? ` <a href="${escapeHtml(this.href('comparar', rent ? {} : { negocio: 'alugar' }))}" data-nav>${rent ? 'Comparar os preços de venda' : 'Comparar os aluguéis'}</a>` : ''
+      }</p></div>`;
     main.querySelectorAll<HTMLButtonElement>('[data-uncmp]').forEach((b) =>
       b.addEventListener('click', () => {
         this.saved.toggleCompare(b.dataset.uncmp!);

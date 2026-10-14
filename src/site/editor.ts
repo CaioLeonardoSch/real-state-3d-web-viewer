@@ -143,7 +143,7 @@ export class SiteEditor {
       `<label class="check"><input type="checkbox" data-k="${path}"${get(d, path) ? ' checked' : ''}> ${label}</label>`;
     const image = (path: Path, label: string, kind: 'logo' | 'capa' | 'sobre') =>
       `<div class="fld"><span>${label}</span><div class="ed-img">${get(d, path) ? `<img src="${escapeHtml(String(get(d, path)))}" alt="">` : '<em>Nenhuma</em>'}
-        <label class="btn btn-ghost">Escolher…<input type="file" accept="image/*" data-img="${path}" data-kind="${kind}" hidden></label>
+        <label class="btn btn-ghost file-btn">Escolher…<input type="file" accept="image/*" class="sr-only" data-img="${path}" data-kind="${kind}"></label>
         ${get(d, path) ? `<button type="button" class="link-btn" data-noimg="${path}">Remover</button>` : ''}</div></div>`;
     const ordered = (path: 'menu' | 'home.sections', all: readonly string[], labels: Record<string, string>) => {
       const on = get(d, path) as string[];
@@ -232,14 +232,36 @@ export class SiteEditor {
     if (rerenderPanel) {
       const open = [...this.el.querySelectorAll('details')].map((x) => x.open);
       const scroll = this.el.querySelector('.ed-body')?.scrollTop ?? 0;
+      const focus = this.focusedControl();
       this.render();
       this.el.querySelectorAll('details').forEach((x, i) => (x.open = open[i] ?? false));
       this.el.querySelector('.ed-body')!.scrollTop = scroll;
+      // keyboard and screen reader users stay on the control they were using
+      for (const sel of focus) {
+        const el = this.el.querySelector<HTMLElement>(sel);
+        if (el) {
+          el.focus({ preventScroll: true });
+          break;
+        }
+      }
     } else {
       const st = this.el.querySelector('.ed-state');
       if (st) st.textContent = this.dirty ? 'Alterações não salvas.' : 'Tudo salvo.';
       this.el.querySelectorAll<HTMLButtonElement>('[data-save], [data-undo]').forEach((b) => (b.disabled = !this.dirty));
     }
+  }
+
+  /**
+   * The focused control of the panel, as selectors that find it again once the panel is redrawn (its data-
+   * attributes); after "Remover" on an image, the focus goes to that image's "Escolher…".
+   */
+  private focusedControl(): string[] {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLElement) || !this.el.contains(el)) return [];
+    const data = [...el.attributes].filter((a) => a.name.startsWith('data-'));
+    if (!data.length) return [];
+    const sel = el.tagName.toLowerCase() + data.map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join('');
+    return el.dataset.noimg ? [sel, `[data-img="${CSS.escape(el.dataset.noimg)}"]`] : [sel];
   }
 
   private wire(): void {
@@ -262,7 +284,7 @@ export class SiteEditor {
         }
         // selects, sliders and checkboxes change labels and warnings: redraw the panel; text fields keep the focus
         const redraw = input instanceof HTMLSelectElement || input.type === 'checkbox';
-        timer = window.setTimeout(() => this.preview(redraw), redraw ? 0 : 250);
+        timer = window.setTimeout(() => this.preview(redraw), redraw ? 0 : 350);
       };
       input.addEventListener(input instanceof HTMLSelectElement || input.type === 'checkbox' ? 'change' : 'input', apply);
       if (input.type === 'color' || input.type === 'range') input.addEventListener('change', () => this.preview(true));

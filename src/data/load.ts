@@ -1,5 +1,6 @@
 import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson';
 import { validateListingsFile, type ListingsFile } from './types';
+import { DEMO } from './demo';
 import { validateDevelopmentsFile, type Development } from './developments';
 
 /** meta.json, written by scripts/build-tiles.mjs. */
@@ -9,8 +10,10 @@ export interface DataMeta {
   bairros: string[];
   center: [number, number];
   boundaryBbox: [number, number, number, number];
-  /** Vector tiles file (PMTiles) next to meta.json. */
+  /** Vector tiles file (PMTiles) next to meta.json (or an absolute https URL). */
   tiles: string;
+  /** Close-up detail (roofs, trees, street lamps), same rules. */
+  detailTiles?: string;
   osmTimestamp: string;
   counts: Record<string, number>;
   /** Where building heights come from (OSM; the city cadastre when it was used). */
@@ -25,10 +28,14 @@ export interface AppData {
   bairros: FeatureCollection<Point, { name: string; kind?: 'bairro' | 'distrito' | 'cidade' }>;
   /** Absolute URL of the PMTiles archive (buildings, roads, water, green, neighbourhood outlines). */
   tilesUrl: string;
+  /** Absolute URL of the close-up detail archive, when there is one. */
+  detailUrl: string | null;
   listings: ListingsFile;
   /** Developments with units (empty when the file is missing). */
   developments: Development[];
 }
+
+const NO_DEMO_LISTINGS: ListingsFile = { fictional: true, notice: '', seed: 0, agencies: [], listings: [] };
 
 const dataUrl = (name: string) => new URL(`${import.meta.env.BASE_URL}data/${name}`, location.href).href;
 
@@ -54,17 +61,19 @@ export async function loadData(): Promise<AppData> {
     getJson<DataMeta>('meta.json'),
     getJson<AppData['boundary']>('boundary.geojson'),
     getJson<AppData['bairros']>('bairros.geojson'),
-    getJson<unknown>('listings.json'),
+    DEMO ? getJson<unknown>('listings.json') : Promise.resolve(NO_DEMO_LISTINGS),
   ]);
   const listings = validateListingsFile(rawListings);
   // optional layer: the map works without it
-  const developments = await getJson<unknown>('developments.json')
-    .then((raw) => validateDevelopmentsFile(raw).developments)
-    .catch((err: Error) => {
-      console.warn(`Empreendimentos indisponíveis: ${err.message}`);
-      return [];
-    });
+  const developments = DEMO
+    ? await getJson<unknown>('developments.json')
+        .then((raw) => validateDevelopmentsFile(raw).developments)
+        .catch((err: Error) => {
+          console.warn(`Empreendimentos indisponíveis: ${err.message}`);
+          return [];
+        })
+    : [];
   // the tiles can live elsewhere (object storage, one file per monthly version): an absolute URL in meta.json
-  const tilesUrl = /^https:\/\//.test(meta.tiles) ? meta.tiles : dataUrl(meta.tiles);
-  return { meta, boundary, bairros, tilesUrl, listings, developments };
+  const url = (name: string) => (/^https:\/\//.test(name) ? name : dataUrl(name));
+  return { meta, boundary, bairros, tilesUrl: url(meta.tiles), detailUrl: meta.detailTiles ? url(meta.detailTiles) : null, listings, developments };
 }

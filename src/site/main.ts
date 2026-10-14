@@ -1,9 +1,9 @@
 // Entry of a client's site (site.html). Loads the client's configuration and listings, renders the site and,
 // for its owners and admins (or anyone in the demo), the "Personalizar site" editor.
 import './site.css';
-import { backendConfig } from '../backend/remote';
+import { backendConfig } from '../backend/config';
 import { SiteApp } from './app';
-import { loadSite } from './data';
+import { SiteNotFoundError, loadSite } from './data';
 
 async function main() {
   const root = document.getElementById('site')!;
@@ -31,7 +31,16 @@ async function main() {
   };
   let editing = params.get('editar') === '1';
   if (editing) await openEditor();
-  const canEdit = data.demo || (await data.remote?.canEditSite(data.agencyId));
+  // demo: the button is in the demonstration bar at the top (a floating one covered content on phones)
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('[data-open-editor]')) return;
+    editing = true;
+    const url = new URL(location.href);
+    url.searchParams.set('editar', '1');
+    history.replaceState(null, '', url);
+    void openEditor();
+  });
+  const canEdit = !data.demo && (await data.remote?.canEditSite(data.agencyId));
   if (canEdit) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -55,9 +64,13 @@ async function main() {
 }
 
 main().catch((err: Error) => {
-  console.error(err);
   const root = document.getElementById('site')!;
   root.removeAttribute('aria-busy');
-  root.innerHTML = `<div class="site-error"><h1>Não foi possível abrir o site</h1><p></p></div>`;
+  const missing = err instanceof SiteNotFoundError;
+  if (!missing) console.error(err);
+  // a neutral page, kept out of search engines
+  document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
+  document.title = missing ? 'Site não encontrado' : 'Não foi possível abrir o site';
+  root.innerHTML = `<div class="site-error"><h1>${document.title}</h1><p></p></div>`;
   root.querySelector('p')!.textContent = err.message;
 });

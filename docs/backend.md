@@ -298,7 +298,7 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
   - um corretor apagava ou sobrescrevia no storage as fotos dos anúncios dos colegas (as linhas de
     `listing_photos` eram protegidas; os arquivos, não): agora só quem edita o anúncio mexe nos arquivos dele;
   - a limpeza dos arquivos órfãos da lixeira ficou só com administradores;
-  - os rótulos dos empreendimentos no mapa passam por `escapeHtml`;
+  - os rótulos dos empreendimentos no mapa são montados com `textContent` (o texto nunca vira HTML);
   - `.env` no `.gitignore`;
   - senha mínima de 8 caracteres também no Supabase local.
   Sem achados em: textos dos clientes (sempre escapados; a configuração do site é validada campo a campo), links

@@ -121,6 +121,11 @@ img {
   font-size: 13px;
   padding: 4px 12px;
 }
+.demo-note .link-btn {
+  color: #5a4300;
+  font-weight: 700;
+  text-decoration: underline;
+}
 
 /* ---------------------------------------------------------------- buttons and fields */
 .btn {
@@ -187,6 +192,8 @@ img {
   background: none;
   border: 0;
   padding: 0;
+  /* at least 24 px tall to tap (WCAG 2.2, 2.5.8) */
+  min-height: 24px;
   font: inherit;
   font-weight: 600;
   color: var(--s-primary-text);
@@ -643,7 +650,7 @@ img {
   text-decoration: none;
   cursor: pointer;
 }
-.q-tabs [aria-selected='true'] {
+.q-tabs [aria-pressed='true'] {
   color: var(--s-primary-text);
   border-bottom-color: var(--s-primary);
 }
@@ -1171,6 +1178,10 @@ img {
 .only-mobile {
   display: none;
 }
+/* "Ver N imóveis": only where the filter panel covers the results (phones) */
+.f-apply {
+  display: none;
+}
 @media (max-width: 900px) {
   .search-body.lateral {
     grid-template-columns: 1fr;
@@ -1182,6 +1193,14 @@ img {
   }
   .search-body.lateral.panel-open .f-panel {
     display: grid;
+  }
+  .search-body.panel-open .f-apply {
+    display: block;
+    position: sticky;
+    bottom: 8px;
+    width: 100%;
+    grid-column: 1 / -1;
+    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.22);
   }
   .only-mobile {
     display: inline-flex;
@@ -1307,6 +1326,12 @@ img {
 }
 .g-main.illus {
   aspect-ratio: 16 / 5;
+  /* the illustration has the site's colours: no black bars around it */
+  background: var(--s-surface);
+}
+/* the photo's <picture> (sizes by screen) takes no box: the image fills the frame */
+.g-main picture {
+  display: contents;
 }
 .g-main img {
   width: 100%;
@@ -1918,6 +1943,11 @@ body.editing .wa-float {
   min-height: 32px;
   font-size: 13px;
   padding: 0 10px;
+}
+/* the file field is hidden inside its button: the button shows its focus */
+.file-btn:has(input:focus-visible) {
+  outline: 3px solid var(--s-primary-text);
+  outline-offset: 2px;
 }
 .ed-order {
   list-style: none;

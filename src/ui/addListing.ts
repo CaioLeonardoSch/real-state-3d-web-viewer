@@ -34,7 +34,7 @@ import {
   type Usage,
 } from '../data/types';
 import { formatCep, safeUrl, today } from '../data/listingText';
-import { makeThumb, resizeImage } from '../utils/images';
+import { makeThumb, photoVersions, resizeImage } from '../utils/images';
 import type { PickResult, Scene } from '../map/scene';
 import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type PlacementChecker } from '../utils/placement';
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
@@ -411,7 +411,9 @@ export class AddListingPanel {
     if (!files.length) return;
     this.showError(null);
     try {
-      for (const f of files) this.photos.push({ src: await resizeImage(f), thumb: await makeThumb(f) });
+      // with a back end the photos go to storage in three sizes; kept in this browser, two small ones
+      const remote = !!this.deps.remoteOrgName?.();
+      for (const f of files) this.photos.push(remote ? await photoVersions(f) : { src: await resizeImage(f), thumb: await makeThumb(f) });
     } catch {
       this.showError('Não foi possível ler uma das imagens. Use JPEG, PNG ou WebP.');
     }

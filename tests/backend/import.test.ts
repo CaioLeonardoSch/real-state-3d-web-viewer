@@ -35,7 +35,7 @@ describe.skipIf(!URL_)('importação do XML (VRSync)', () => {
     return JSON.parse(stdout.trim().split('\n').at(-1)!);
   };
   const byRef = async (ref: string) =>
-    (await db().from('listings').select('*, listing_photos(path, thumb_path, caption, position, is_floor_plan, source_url)').eq('org_id', orgId).eq('reference_code', ref).single()).data!;
+    (await db().from('listings').select('*, listing_photos(path, thumb_path, large_path, caption, position, is_floor_plan, source_url)').eq('org_id', orgId).eq('reference_code', ref).single()).data!;
 
   beforeAll(async () => {
     // photos with a GPS position in their metadata, as a phone would save them
@@ -65,11 +65,19 @@ describe.skipIf(!URL_)('importação do XML (VRSync)', () => {
     expect(ap).toMatchObject({ building_osm_id: 'way/515701197', address_display: 'full', created_by: brokerId, import_source: 'xml', price: 780000, highlight: 'featured' });
     expect(ap.advertiser).toMatchObject({ creci: '7777-J', email: brokerEmail });
     const photos = [...ap.listing_photos].sort((a, b) => a.position - b.position);
-    expect(photos.map((p) => [p.caption, p.is_floor_plan, !!p.thumb_path])).toEqual([['Fachada', false, true], ['Sala', false, true], ['Planta', true, false]]);
-    const img = Buffer.from(await (await fetch(`${URL_}/storage/v1/object/public/listing-photos/${photos[0].path}`)).arrayBuffer());
-    const m = await sharp(img).metadata();
-    expect(m.width).toBe(1600);
+    // three sizes of each photo (the original is 2400 px wide); the floor plan, one file
+    expect(photos.map((p) => [p.caption, p.is_floor_plan, !!p.thumb_path, !!p.large_path])).toEqual([
+      ['Fachada', false, true, true],
+      ['Sala', false, true, true],
+      ['Planta', true, false, false],
+    ]);
+    const meta = async (path: string) => sharp(Buffer.from(await (await fetch(`${URL_}/storage/v1/object/public/listing-photos/${path}`)).arrayBuffer())).metadata();
+    const m = await meta(photos[0].path);
+    expect(m.width).toBe(1024);
     expect(m.exif).toBeUndefined(); // sem a localização GPS da foto original
+    expect((await meta(photos[0].large_path)).width).toBe(1920);
+    expect((await meta(photos[0].thumb_path)).width).toBe(480);
+    expect((await meta(photos[2].path)).width).toBe(1600);
 
     const casa = await byRef('CA-2002');
     expect(casa).toMatchObject({ building_osm_id: null, address_display: 'neighborhood', transaction: 'both', rent_price: 3200, created_by: null });

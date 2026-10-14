@@ -2,6 +2,7 @@
 // scripts/prerender.mjs, one HTML file per listing, plus sitemap.xml. Self-contained (only type imports and
 // types.ts), so Node runs it directly.
 import type { Listing } from '../data/types.ts';
+import { photoSrcset } from '../utils/images.ts';
 import { AMENITY_LABELS, HIGHLIGHT_LABELS, STATUS_LABELS, TRANSACTION_LABELS, TYPE_LABELS } from '../data/types.ts';
 
 export interface PageContext {
@@ -187,7 +188,10 @@ ${addr.line ? `<p class="addr">${esc(addr.line)}</p>` : ''}
 ${
   l.photos?.length
     ? `<div class="gallery">${l.photos
-        .map((p, i) => `<img src="${esc(p.src)}" alt="${esc(p.caption ?? `${l.title}, foto ${i + 1}`)}" ${i ? 'loading="lazy"' : ''}>`)
+        .map((p, i) => {
+          const set = photoSrcset(p, 'src');
+          return `<img src="${esc(p.src)}"${set ? ` srcset="${esc(set)}" sizes="(max-width: 560px) 100vw, 300px"` : ''} alt="${esc(p.caption ?? `${l.title}, foto ${i + 1}`)}" ${i ? 'loading="lazy"' : ''}>`;
+        })
         .join('')}</div>`
     : ''
 }

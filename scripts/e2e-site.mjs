@@ -56,6 +56,41 @@ async function open(browser, query = '', viewport = { width: 1440, height: 900 }
   return { ctx, page, errors };
 }
 
+// accessibility rules of WCAG 2.2 A and AA (axe-core); the source is evaluated in the page, so the CSP does not block it
+const AXE = readFileSync(path.join(ROOT, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
+const axeFindings = [];
+async function axe(page, label) {
+  if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE);
+  const found = await page.evaluate(async () => {
+    const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] } });
+    return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(', ')}`);
+  });
+  axeFindings.push(...found.map((f) => `${label}: ${f}`));
+}
+
+// photos stored in three sizes (the demo has none): blobs of 480, 1024 and 1920 px given to a listing in the page
+const withPhotos = (page) =>
+  page.evaluate(async () => {
+    const blob = async (w, color) => {
+      const c = Object.assign(document.createElement('canvas'), { width: w, height: Math.round(w * 0.75) });
+      const g = c.getContext('2d');
+      g.fillStyle = color;
+      g.fillRect(0, 0, c.width, c.height);
+      return URL.createObjectURL(await new Promise((r) => c.toBlob(r, 'image/jpeg')));
+    };
+    const photo = async (color) => ({ thumb: await blob(480, color), src: await blob(1024, color), large: await blob(1920, color) });
+    const { app, data } = window.__site;
+    const l = data.listings[0];
+    l.photos = [await photo('#c33'), await photo('#3c3')];
+    app.go(`?p=imovel&id=${l.id}`);
+    return l.photos;
+  });
+const shownPhoto = (page) =>
+  page.waitForFunction(() => {
+    const img = document.querySelector('.g-main img');
+    return img?.complete && img.currentSrc ? img.currentSrc : false;
+  }).then((h) => h.jsonValue());
+
 const title = (page) => page.locator('#r-title').textContent();
 const cardCount = (page) => page.locator('.r-list .card').count();
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -79,6 +114,7 @@ async function main() {
       home.template === 'leve' && home.primary === '#1f4fd1' && home.h1 === 'Imóveis com desconto de verdade' && home.count === String(forSale.length) && home.robots === 'noindex',
       JSON.stringify(home));
     await page.screenshot({ path: path.join(SHOTS, 'site-home.png') });
+    await axe(page, 'início');
     await page.click('.q-more');
     await page.click('.quick .switch');
     const qReduced = await page.locator('.q-count').textContent();
@@ -92,6 +128,27 @@ async function main() {
     check('"Buscar" abre a busca com o filtro de desconto na URL e só imóveis com redução registrada',
       afterQuick.url.includes('reduzido=1') && afterQuick.title.startsWith(`${reduced.length} `) && afterQuick.discount === Math.min(12, reduced.length),
       JSON.stringify(afterQuick));
+    // a single-page site: after each navigation the focus goes to the new heading and screen readers hear the title
+    await page.waitForFunction(() => document.getElementById('site-live')?.textContent === document.title);
+    const nav1 = await page.evaluate(() => ({ focus: document.activeElement?.id, live: document.getElementById('site-live').textContent }));
+    // the header folds the last items of a long menu into "Mais": any visible link to the page will do
+    await page.locator('a[data-nav][href*="p=contato"]:visible').first().click();
+    await page.waitForSelector('main.page-contato');
+    await page.waitForFunction(() => document.getElementById('site-live')?.textContent === document.title);
+    const nav2 = await page.evaluate(() => ({ focus: document.activeElement?.matches('main h1') ?? false, live: document.getElementById('site-live').textContent }));
+    check('troca de página: o foco vai para o título novo e o leitor de tela ouve o nome da página',
+      nav1.focus === 'r-title' && nav1.live.startsWith(`${reduced.length} `) && nav2.focus && nav2.live.startsWith('Contato'), JSON.stringify({ nav1, nav2 }));
+    await axe(page, 'contato');
+    await page.goto(`${BASE}?p=pagina-que-nao-existe`);
+    await page.waitForSelector('body[data-ready="true"]');
+    const missing = await page.evaluate(() => ({ h1: document.querySelector('main h1')?.textContent, robots: document.querySelector('meta[name=robots][data-page]')?.content }));
+    check('endereço que não é página do site: "Página não encontrada", fora do Google', missing.h1 === 'Página não encontrada' && missing.robots === 'noindex', JSON.stringify(missing));
+    await axe(page, 'página não encontrada');
+    for (const q of ['?p=sobre', '?p=anunciar', '?p=favoritos']) {
+      await page.goto(BASE + q);
+      await page.waitForSelector('body[data-ready="true"]');
+      await axe(page, q.slice(3));
+    }
 
     // ------------------------------------------------ search page
     await page.goto(`${BASE}?p=imoveis`);
@@ -100,6 +157,7 @@ async function main() {
     check('busca: todos os imóveis à venda, 12 por página, filtros fechados no modelo "leve"',
       first.title === `${forSale.length} imóveis à venda` && first.cards === 12 && first.pages === Math.ceil(forSale.length / 12) && first.panelHidden, JSON.stringify(first));
     await page.click('.filters-btn');
+    await axe(page, 'busca com filtros abertos');
     await page.click('#f-panel .pill:has-text("Casa")');
     await page.waitForFunction((n) => document.querySelector('#r-title').textContent.startsWith(`${n} `), houses.length);
     await page.click('#f-panel [data-count=quartos] button[data-v="3"]');
@@ -153,6 +211,7 @@ async function main() {
     const cmp = { cols: await page.locator('.cmp-table thead th').count(), best: await page.locator('.cmp-table td.best').count() };
     check('comparar: barra flutuante e tabela lado a lado com o melhor valor destacado', bar.includes('2 imóveis') && cmp.cols === 3 && cmp.best >= 2, JSON.stringify(cmp));
     await page.screenshot({ path: path.join(SHOTS, 'site-comparar.png') });
+    await axe(page, 'comparar');
     await page.reload();
     await page.waitForSelector('body[data-ready="true"]');
     await page.goto(`${BASE}?p=favoritos`);
@@ -189,6 +248,13 @@ async function main() {
     await page.click('.side-card .btn-wa');
     check('contatos fictícios não abrem WhatsApp de verdade', (await page.locator('.toast').textContent()).startsWith('Demonstração') && page.url().startsWith(BASE));
     await page.screenshot({ path: path.join(SHOTS, 'site-imovel.png') });
+    await axe(page, 'imóvel');
+    const desk = await withPhotos(page);
+    const d1 = await shownPhoto(page);
+    await page.click('.g-main .g-next');
+    await page.waitForFunction((src) => document.querySelector('.g-main img')?.getAttribute('src') === src, desk[1].src);
+    const d2 = await shownPhoto(page);
+    check('galeria no computador: a versão grande das fotos (1920 px), também ao passar para a próxima', d1 === desk[0].large && d2 === desk[1].large, JSON.stringify({ d1: d1 === desk[0].large, d2: d2 === desk[1].large }));
 
     // ------------------------------------------------ embedded 3D map
     await page.goto(`${BASE}?p=imoveis&tipo=casa&vista=mapa`);
@@ -220,6 +286,14 @@ async function main() {
     await page.screenshot({ path: path.join(SHOTS, 'site-mapa.png') });
 
     // ------------------------------------------------ editor
+    // in the demo, the button is in the demonstration bar (no floating button over the content)
+    await page.goto(BASE);
+    await page.waitForSelector('body[data-ready="true"]');
+    const fab = await page.locator('.edit-fab').count();
+    await page.click('.demo-note [data-open-editor]');
+    await page.waitForSelector('.editor .ed-body');
+    check('demonstração: "Personalizar este site" na barra do topo abre o editor (sem botão flutuante sobre o conteúdo)', fab === 0 && page.url().includes('editar=1'), page.url());
+    await axe(page, 'editor');
     await page.goto(`${BASE}?editar=1`);
     await page.waitForSelector('.editor .ed-body');
     await page.click('.editor [data-template=lateral]');
@@ -262,6 +336,31 @@ async function main() {
     check('sem erros no console (computador)', h.errors.length === 0, h.errors.join(' | '));
     await h.ctx.close();
 
+    // ------------------------------------------------ editor: preview over the 3D map, keyboard
+    const e = await open(browser, '?p=imoveis&vista=mapa&editar=1');
+    const edFrame = await (await e.page.waitForSelector('.map-frame iframe')).contentFrame();
+    await edFrame.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await edFrame.evaluate(() => (window.__kept = true));
+    await e.page.fill('.editor [data-k="name"]', 'Exemplo A Imóveis Ltda');
+    await e.page.waitForFunction(() => document.title.includes('Ltda'));
+    // a frame that reloaded lost the mark; one that was replaced is detached
+    const mapKept = await edFrame.evaluate(() => window.__kept === true).catch(() => false);
+    check('editor: a prévia atualiza o site enquanto digita sem recarregar o mapa 3D da busca', mapKept && (await e.page.locator('.map-frame iframe').count()) === 1);
+    await e.page.focus('.editor [data-template=classico]');
+    await e.page.keyboard.press('Enter');
+    await e.page.waitForFunction(() => document.documentElement.dataset.template === 'classico');
+    const f1 = await e.page.evaluate(() => document.activeElement?.dataset.template);
+    await e.page.focus('.editor [data-k="corners"]');
+    await e.page.selectOption('.editor [data-k="corners"]', 'retos');
+    await e.page.waitForFunction(() => document.querySelector('.editor [data-k="corners"]')?.value === 'retos');
+    const f2 = await e.page.evaluate(() => document.activeElement?.dataset.k);
+    await e.page.focus('.editor [data-img="logo"]');
+    const f3 = await e.page.evaluate(() => document.activeElement?.dataset.img);
+    check('editor pelo teclado: o foco fica no controle depois de trocar o modelo ou uma opção; "Escolher…" imagem recebe o foco',
+      f1 === 'classico' && f2 === 'corners' && f3 === 'logo', JSON.stringify({ f1, f2, f3 }));
+    check('sem erros no console (editor)', e.errors.length === 0, e.errors.join(' | '));
+    await e.ctx.close();
+
     // ------------------------------------------------ another client: dark template, other menu
     const b = await open(browser, `?imobiliaria=${SITES[1].slug}&p=imoveis`);
     const bInfo = await b.page.evaluate(() => ({
@@ -272,8 +371,31 @@ async function main() {
     const bIds = new Set(DATA.filter((l) => l.agency === SITES[1].agency).map((l) => l.id));
     check('outra imobiliária: tema escuro, o menu dela e só os imóveis dela', bInfo.theme === 'dark' && !bInfo.menu.includes('Alugar') && bInfo.ids.every((id) => bIds.has(id)), JSON.stringify(bInfo.menu));
     await b.page.screenshot({ path: path.join(SHOTS, 'site-escuro.png') });
+    await axe(b.page, 'outra imobiliária (busca, tema escuro)');
+    await b.page.goto(`${BASE}?imobiliaria=${SITES[1].slug}`);
+    await b.page.waitForSelector('body[data-ready="true"]');
+    await axe(b.page, 'outra imobiliária (início)');
     check('sem erros no console (outra imobiliária)', b.errors.length === 0, b.errors.join(' | '));
     await b.ctx.close();
+
+    // ------------------------------------------------ rentals
+    const r = await open(browser, '?p=imoveis&negocio=alugar');
+    const rentIds = await r.page.locator('.r-list .card').evaluateAll((cs) => cs.slice(0, 2).map((c) => c.dataset.id));
+    for (const id of rentIds) await r.page.click(`.card[data-id="${id}"] [data-cmp]`);
+    await r.page.click('.compare-bar a');
+    await r.page.waitForSelector('.cmp-table');
+    const rentCmp = await r.page.evaluate(() => ({
+      url: location.search,
+      rows: [...document.querySelectorAll('.cmp-table tbody th')].map((th) => th.textContent),
+      toggle: document.querySelector('main .small a')?.textContent,
+    }));
+    check('comparar aluguéis: a comparação abre no modo da busca, com o aluguel e sem o valor do m² de venda',
+      rentCmp.url.includes('negocio=alugar') && rentCmp.rows[0] === 'Aluguel' && !rentCmp.rows.includes('Valor do m²') && rentCmp.toggle === 'Comparar os preços de venda', JSON.stringify(rentCmp));
+    await r.page.click('main .small a');
+    await r.page.waitForFunction(() => document.querySelector('.cmp-table tbody th')?.textContent === 'Preço');
+    check('comparar: um clique troca para os preços de venda', !r.page.url().includes('negocio=alugar'), r.page.url());
+    check('sem erros no console (aluguel)', r.errors.length === 0, r.errors.join(' | '));
+    await r.ctx.close();
 
     // ------------------------------------------------ phone
     const m = await open(browser, '', { width: 390, height: 844 });
@@ -289,6 +411,13 @@ async function main() {
     await m.page.waitForSelector('body[data-ready="true"]');
     await m.page.click('.nav-toggle');
     check('celular: menu abre pelo botão', await m.page.locator('#site-nav').isVisible());
+    const menuOpen = await m.page.evaluate(() => ({ inert: document.querySelector('main').inert, focus: document.activeElement?.closest('#site-nav') !== null }));
+    await axe(m.page, 'celular, menu aberto');
+    await m.page.keyboard.press('Escape');
+    const menuClosed = await m.page.evaluate(() => ({ inert: document.querySelector('main').inert, focus: document.activeElement?.classList.contains('nav-toggle'), expanded: document.querySelector('.nav-toggle').getAttribute('aria-expanded') }));
+    check('celular: com o menu aberto o resto da página fica inerte; Esc fecha e devolve o foco ao botão',
+      menuOpen.inert && menuOpen.focus && !menuClosed.inert && menuClosed.focus && menuClosed.expanded === 'false', JSON.stringify({ menuOpen, menuClosed }));
+    await m.page.click('.nav-toggle');
     await m.page.click('#site-nav a:has-text("Anunciar imóvel")');
     await m.page.waitForSelector('main.page-anunciar');
     await m.page.selectOption('[name=x-finalidade]', 'Vender');
@@ -298,11 +427,26 @@ async function main() {
     await m.page.click('main form.lead button[type=submit]');
     await m.page.waitForSelector('main .form-msg.ok');
     check('celular: "Anunciar imóvel" (captação de proprietário) envia', true);
+    // the filter panel covers the results on phones: "Ver N imóveis" shows the count and closes it
+    await m.page.goto(`${BASE}?p=imoveis`);
+    await m.page.waitForSelector('main.page-imoveis');
+    await m.page.click('.filters-btn');
+    await m.page.click('#f-panel .pill:has-text("Casa")');
+    await m.page.waitForFunction((n) => document.querySelector('.f-apply').textContent === `Ver ${n} imóveis`, houses.length);
+    await axe(m.page, 'celular, filtros abertos');
+    await m.page.click('.f-apply');
+    const applied = await m.page.evaluate(() => ({ panel: document.querySelector('#f-panel').checkVisibility(), focus: document.activeElement?.id }));
+    check('celular: o botão "Ver N imóveis" do painel de filtros mostra a contagem e leva aos resultados', !applied.panel && applied.focus === 'r-title', JSON.stringify(applied));
+    const phone = await withPhotos(m.page);
+    const p1 = await shownPhoto(m.page);
+    check('galeria no celular: fotos de até 1024 px, nunca a versão grande', phone[0].thumb === p1 || phone[0].src === p1, p1 === phone[0].thumb ? 'thumb' : p1 === phone[0].src ? 'src' : 'large');
     await m.page.goto(BASE);
     await m.page.waitForSelector('body[data-ready="true"]');
     await m.page.screenshot({ path: path.join(SHOTS, 'site-celular.png') });
+    await axe(m.page, 'celular, início');
     check('sem erros no console (celular)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
+    check('acessibilidade (axe, WCAG 2.2 A/AA): nenhuma violação nas páginas, no editor, nos dois modelos e no celular', axeFindings.length === 0, axeFindings.join(' | '));
   } finally {
     await browser.close();
     server.kill();

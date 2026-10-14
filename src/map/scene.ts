@@ -17,6 +17,7 @@ import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
 import { dirtRoad, pavingStones, waterFacets, type TextureImage } from './textures';
 import { craneParts } from './crane';
+import { osmNumericId } from '../data/osmId';
 
 const OSM_ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL)';
@@ -96,6 +97,7 @@ const CLIP_LAYERS = [
   'lamp-glow',
   'buildings-flat',
   'context-buildings',
+  'roofs',
   'trees',
   'lamps',
   'listing-dimmed',
@@ -219,7 +221,8 @@ export class Scene {
     // Those go to the console as warnings; any other map error stays an error.
     this.map.on('error', (e) => {
       const { error, sourceId } = e as unknown as { error?: Error; sourceId?: string };
-      if (sourceId === 'osm') console.warn(`Bloco do mapa base não carregado: ${error?.message ?? error}`);
+      // tiles of the base map or of its close-up detail requested past z15 during camera flights (see README)
+      if (sourceId === 'osm' || sourceId === 'detail') console.warn(`Bloco do mapa base não carregado: ${error?.message ?? error}`);
       else console.error(error ?? e);
     });
     // textures of water, paving stones and dirt roads: drawn when a layer first needs them
@@ -298,11 +301,19 @@ export class Scene {
    * development are hidden (replaced by its tower).
    */
   private contextFilter(): ExpressionSpecification {
-    const ids = [
+    return ['!', ['in', ['get', 'osmId'], ['literal', this.contextHiddenIds()]]];
+  }
+
+  /** The same for the roofs, which carry the building as a numeric feature id (src/data/osmId.ts). */
+  private roofFilter(): ExpressionSpecification {
+    return ['!', ['in', ['id'], ['literal', this.contextHiddenIds().map(osmNumericId)]]];
+  }
+
+  private contextHiddenIds(): string[] {
+    return [
       ...this.listings.filter((l) => l.buildingOsmId && !l.approximateLocation).map((l) => l.buildingOsmId!),
       ...this.data.developments.flatMap((d) => d.hiddenBuildingIds),
     ];
-    return ['!', ['in', ['get', 'osmId'], ['literal', ids]]];
   }
 
   /**
@@ -430,7 +441,7 @@ export class Scene {
         // warm pools of light under the street lamps (night only)
         id: 'lamp-glow',
         type: 'circle',
-        source: 'osm',
+        source: this.detailSource,
         'source-layer': 'lights',
         minzoom: Z_TREES + 0.5,
         // always visible, transparent by day: a layer hidden when the tiles load gets no features when it is shown
@@ -482,6 +493,24 @@ export class Scene {
         },
       },
       {
+        // low-poly roofs up close (scripts/lib/roofs.mjs): stepped gabled and hipped roofs on houses, the water
+        // tank on towers; they rise with the buildings, and listing buildings (drawn by the listing layers) have none
+        id: 'roofs',
+        type: 'fill-extrusion',
+        source: this.detailSource,
+        'source-layer': 'roofs',
+        minzoom: Z_TREES,
+        filter: this.roofFilter(),
+        paint: {
+          'fill-extrusion-color': this.roofColor(t),
+          // b and h in decimetres
+          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, ['/', ['get', 'b'], 10]],
+          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, ['/', ['get', 'h'], 10]],
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': false,
+        },
+      },
+      {
         // canopy mass of woods (woods shrunk by 6 m): the edge trees stand in front of it and taller crowns
         // (trees layer) poke out of its top
         id: 'wood-canopy',
@@ -500,7 +529,7 @@ export class Scene {
         // low-poly trees: trunk, faceted crown and its top (properties p, b, h, v from scripts/lib/scenery.mjs)
         id: 'trees',
         type: 'fill-extrusion',
-        source: 'osm',
+        source: this.detailSource,
         'source-layer': 'trees',
         minzoom: Z_TREES,
         paint: {
@@ -514,7 +543,7 @@ export class Scene {
         // illustrative street lamps: pole, arm and luminaire (bright at night)
         id: 'lamps',
         type: 'fill-extrusion',
-        source: 'osm',
+        source: this.detailSource,
         'source-layer': 'lamps',
         minzoom: Z_LAMPS,
         paint: {
@@ -545,6 +574,17 @@ export class Scene {
     return ['match', ['get', 'p'], 'trunk', sc.trunk, 'bush', sc.bush, 'top', shade(sc.tops), shade(sc.crowns)];
   }
 
+  /** Source of the close-up detail layers (older data has them in the base archive). */
+  private get detailSource(): string {
+    return this.data.detailUrl ? 'detail' : 'osm';
+  }
+
+  /** Roof colour per variant v (clay tiles, fibre cement, dark tiles, concrete). */
+  private roofColor(t: Theme): ExpressionSpecification {
+    const r = t.scenery.roofs;
+    return ['match', ['get', 'v'], 1, r[1], 2, r[2], 3, r[3], r[0]];
+  }
+
   private buildStyle(): StyleSpecification {
     const t = this.theme;
     const matchedFilter: ExpressionSpecification = ['==', ['get', 'matched'], true];
@@ -569,6 +609,10 @@ export class Scene {
           maxzoom: 15,
           attribution: (this.data.meta.heightSources?.length ?? 0) > 1 ? `${OSM_ATTRIBUTION} · ${CADASTRE_ATTRIBUTION}` : OSM_ATTRIBUTION,
         },
+        // close-up detail (roofs, trees, street lamps): a second file, read only from zoom 15
+        ...(this.data.detailUrl
+          ? { detail: { type: 'vector' as const, url: `pmtiles://${this.data.detailUrl}`, minzoom: 15, maxzoom: 15 } }
+          : {}),
         boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },
         'listing-pins': { type: 'geojson', data: this.pinCollection() },
@@ -828,8 +872,8 @@ export class Scene {
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
     (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
     (this.map.getSource('construction') as GeoJSONSource | undefined)?.setData(this.constructionCollection());
-    for (const id of ['context-buildings', 'buildings-flat']) {
-      this.baseFilters.set(id, this.contextFilter());
+    for (const id of ['context-buildings', 'buildings-flat', 'roofs']) {
+      this.baseFilters.set(id, id === 'roofs' ? this.roofFilter() : this.contextFilter());
       this.applyFilter(id);
     }
   }
@@ -1001,6 +1045,7 @@ export class Scene {
     m.setPaintProperty('roads-sidewalk', 'line-color', sc.sidewalk);
     m.setPaintProperty('roads-lanes', 'line-color', sc.laneMark);
     m.setPaintProperty('trees', 'fill-extrusion-color', this.treeColor(t));
+    m.setPaintProperty('roofs', 'fill-extrusion-color', this.roofColor(t));
     m.setPaintProperty('lamps', 'fill-extrusion-color', ['match', ['get', 'p'], 'lum', sc.lum, sc.pole]);
     m.setPaintProperty('lamp-glow', 'circle-color', sc.glow);
     m.setPaintProperty('lamp-glow', 'circle-opacity', sc.glowOpacity);
