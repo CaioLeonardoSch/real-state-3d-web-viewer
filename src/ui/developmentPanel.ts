@@ -70,6 +70,7 @@ export class DevelopmentPanel {
     this.render();
     this.el.classList.add('open');
     this.el.setAttribute('aria-hidden', 'false');
+    this.el.inert = false;
     document.body.classList.add('dev-open');
     this.el.scrollTop = 0;
     this.el.focus({ preventScroll: true });
@@ -82,6 +83,8 @@ export class DevelopmentPanel {
     this.viewing = false;
     this.el.classList.remove('open');
     this.el.setAttribute('aria-hidden', 'true');
+    // closed, it stays in the page out of view: inert keeps Tab out of its links and buttons
+    this.el.inert = true;
     document.body.classList.remove('dev-open');
     this.handlers.onClose();
   }

@@ -383,6 +383,7 @@ export class Drawer {
     // a newly opened listing starts collapsed on mobile; browsing keeps the current state
     this.setExpanded(freshOpen ? false : this.expanded);
     this.el.setAttribute('aria-hidden', 'false');
+    this.el.inert = false;
     this.el.scrollTop = 0;
     this.el.focus({ preventScroll: true });
   }
@@ -518,6 +519,8 @@ export class Drawer {
     document.body.classList.remove('drawer-open');
     this.setExpanded(false);
     this.el.setAttribute('aria-hidden', 'true');
+    // closed, it stays in the page out of view: inert keeps Tab out of its links and buttons
+    this.el.inert = true;
     this.onClose();
   }
 }

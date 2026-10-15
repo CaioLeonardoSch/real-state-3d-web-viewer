@@ -35,10 +35,25 @@ const check = (name, pass, detail = '') => {
 const sha = (buf) => createHash('sha1').update(buf).digest('hex').slice(0, 10);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// accessibility: axe-core (WCAG 2.2 A/AA) in the main states of the map; findings are checked at the end
+const AXE = readFileSync(path.join(ROOT, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
+const axeStates = [];
+const axeFindings = [];
+async function axe(page, label) {
+  if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE);
+  const found = await page.evaluate(async () => {
+    const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] } });
+    return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(', ')}`);
+  });
+  axeStates.push(label);
+  axeFindings.push(...found.map((f) => `${label}: ${f}`));
+}
+
 async function startServer() {
-  const proc = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+  // the vite binary itself (not npx): kill() reaches the server, and no unread pipes keep this process alive
+  const proc = spawn(path.join(ROOT, 'node_modules', '.bin', 'vite'), ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
     cwd: ROOT,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: 'ignore',
   });
   for (let i = 0; i < 60; i++) {
     try {
@@ -147,6 +162,7 @@ async function main() {
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
     check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
+    await axe(page, 'mapa');
     const initialList = await page.evaluate(() => ({
       heading: document.querySelector('#results .results-title')?.textContent,
       rows: document.querySelectorAll('#results button[data-id]').length,
@@ -217,6 +233,7 @@ async function main() {
     const drawerOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
     check('click on a listing opens the drawer', !!clicked && drawerOpen, clicked?.id ?? 'no clickable listing found');
     check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Imóvel fictício para demonstração'));
+    await axe(page, 'ficha do imóvel');
     check('drawer shows "Planta ilustrativa" and "Simulação ilustrativa"',
       (await page.isVisible('#drawer >> text=Planta ilustrativa')) && (await page.isVisible('#drawer >> text=Simulação ilustrativa')));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer.png') });
@@ -271,6 +288,7 @@ async function main() {
     check('editing filters does NOT change the map', dimBefore === dimAfterEdit && stateBefore === stateAfterEdit && resultsHidden,
       `dimmed ${dimBefore}→${dimAfterEdit}, camera unchanged=${stateBefore === stateAfterEdit}, list unchanged=${resultsHidden}`);
     check('"Alterações não aplicadas" hint shown', await page.isVisible('text=Alterações não aplicadas'));
+    await axe(page, 'filtros');
     await page.screenshot({ path: path.join(SHOTS, 'desktop-filters-pending.png') });
 
     await page.click('button:has-text("Buscar")');
@@ -425,6 +443,7 @@ async function main() {
     await page.selectOption('select[name="bathroomsMin"]', '2');
     await sleep(200);
     const moreLabel = (await page.textContent('.f-more-toggle'))?.trim();
+    await axe(page, 'mais filtros');
     await page.screenshot({ path: path.join(SHOTS, 'desktop-more-filters.png') });
     await page.click('button:has-text("Buscar")');
     await sleep(400);
@@ -524,6 +543,7 @@ async function main() {
     await page.click('.add-toggle');
     await sleep(200);
     check('"Anunciar" opens the form', await page.isVisible('#add-panel .add-form'));
+    await axe(page, 'anunciar imóvel');
     // 1×1 PNG: the form shrinks photos in the browser, any image will do
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     /** Required fields other than price, area and place: photos, address, CRECI, WhatsApp. */
@@ -673,6 +693,7 @@ async function main() {
     await page.click('#results button[data-dev="landhaus"]');
     await sleep(500);
     await waitIdle(page);
+    await axe(page, 'espelho de vendas');
     const lh = devUnits('landhaus');
     const devOpen = await page.evaluate(() => ({
       title: document.querySelector('#dev-panel.open h2')?.textContent ?? null,
@@ -909,6 +930,7 @@ async function main() {
     const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check('mobile: no horizontal overflow', overflow <= 0, `${overflow}px`);
     check('mobile: filters collapsed behind toggle', !(await mp.isVisible('#filters')) && (await mp.isVisible('.filters-toggle')));
+    await axe(mp, 'celular');
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-map.png') });
     await mp.click('.filters-toggle');
     await sleep(300);
@@ -980,6 +1002,7 @@ async function main() {
     });
     check('mobile: the development sheet is half open and leaves the tower visible above it',
       mDev.open && mDev.top > 300 && mDev.top < 600 && mDev.overflow <= 0, JSON.stringify(mDev));
+    await axe(mp, 'celular: espelho de vendas');
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-development.png') });
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
@@ -988,9 +1011,10 @@ async function main() {
     server.kill();
   }
 
+  check(`acessibilidade (axe, WCAG 2.2 A/AA): nenhuma violação (${axeStates.join(', ')})`, axeFindings.length === 0, axeFindings.join(' | '));
   const failed = results.filter((r) => !r.pass);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-  if (failed.length) process.exit(1);
+  process.exit(failed.length ? 1 : 0);
 }
 
 main().catch((e) => {

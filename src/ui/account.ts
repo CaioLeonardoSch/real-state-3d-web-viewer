@@ -223,8 +223,10 @@ export class AccountPanel {
 
   /** Second step of the login, for accounts with two-step verification: the code of the authenticator app. */
   private renderCode(head: string): void {
+    // already on screen: the login event refreshes the panel a second time, and the code being typed must stay
+    if (this.el.querySelector<HTMLFormElement>('form[data-form="mfa"]')?.dataset.email === this.email) return;
     this.el.innerHTML = `${head}
-      <form class="add-form account-form" data-form="mfa" novalidate>
+      <form class="add-form account-form" data-form="mfa" data-email="${escapeHtml(this.email!)}" novalidate>
         <p class="a-hint a-wide">Verificação em duas etapas de ${escapeHtml(this.email!)}: digite o código de 6 dígitos que aparece agora no aplicativo autenticador.</p>
         <label class="a-field a-wide">Código<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>
         <p class="a-error a-wide" role="alert" hidden></p>
