@@ -121,7 +121,9 @@ try {
   await staff.page.fill('#account-panel input[name="orgSlug"]', `${slug}-${tag}`);
   await staff.page.fill('#account-panel input[name="ownerEmail"]', ownerEmail);
   await staff.page.click('#account-panel form[data-form="org"] button[type="submit"]');
-  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 15000 });
+  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 15000 }).catch(async (e) => {
+    throw new Error(`${e.message}\npainel: ${(await staff.page.textContent('#account-panel'))?.replace(/\s+/g, ' ').slice(0, 800)}`);
+  });
   const ownerLink = await staff.page.inputValue('#account-panel .org-result input');
   await staff.page.screenshot({ path: path.join(SHOTS, 'backend-suporte.png') });
   check('o suporte cadastra a imobiliária e recebe o link do convite do dono',
@@ -461,6 +463,17 @@ try {
   const savedBranding = (await svc.from('organizations').select('branding').eq('slug', `${slug}-${tag}`).single()).data.branding;
   check('site: o dono personaliza e publica; fica salvo no banco já validado',
     savedBranding.template === 'escuro' && savedBranding.name === 'Ação Imóveis' && savedBranding.contacts.whatsapp === '47988881234', JSON.stringify({ t: savedBranding.template, n: savedBranding.name }));
+  await ed.p.click('.editor summary:has-text("Histórico de publicações")');
+  await ed.p.waitForSelector('.editor .ed-history li:nth-child(2)', { timeout: 10000 });
+  const hist = await ed.p.$$eval('.editor .ed-history li', (li) => li.map((x) => x.textContent));
+  check('site: o histórico mostra a publicação no ar, com quem publicou, e a versão de antes',
+    hist.length === 2 && /·.*no ar/.test(hist[0]) && /Antes do histórico/.test(hist[1]), JSON.stringify(hist));
+  await ed.p.click('.editor [data-version]');
+  await ed.p.click('.editor [data-save]');
+  await ed.p.waitForFunction(() => document.querySelectorAll('.editor .ed-history li').length === 3, null, { timeout: 10000 });
+  const back = (await svc.from('organizations').select('branding').eq('slug', `${slug}-${tag}`).single()).data.branding;
+  check('site: abrir a versão de antes e publicar volta o site, e a volta também fica no histórico', back.template !== 'escuro' && back.name !== 'Ação Imóveis', JSON.stringify({ t: back.template, n: back.name }));
+  await svc.from('organizations').update({ branding: savedBranding }).eq('slug', `${slug}-${tag}`);
   await ed.ctx.close();
   const vis = await siteOpen(`${siteUrl}&p=anunciar`);
   const look = await vis.p.evaluate(() => ({ theme: document.documentElement.dataset.theme, brand: document.querySelector('.brand-name')?.textContent, edit: !!document.querySelector('.edit-fab'), demo: !!document.querySelector('.demo-note') }));

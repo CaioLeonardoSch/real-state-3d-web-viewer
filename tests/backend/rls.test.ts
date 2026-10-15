@@ -434,6 +434,27 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect(pub.data!.branding).toEqual(config);
     });
 
+    it('cada publicação do site entra no histórico, que só donos e administradores leem (as 30 últimas)', async () => {
+      const first = { template: 'escuro', name: 'A Imóveis', colors: { primary: '#123456' } };
+      const v2 = { template: 'claro', name: 'A Imóveis 2' };
+      expect((await ana.client.from('organizations').update({ branding: v2 }).eq('id', orgA)).error).toBeNull();
+      const hist = await ana.client.rpc('site_history', { p_org: orgA });
+      expect(hist.error).toBeNull();
+      const rows = hist.data as { published_at: string | null; author: string | null; branding: unknown }[];
+      expect(rows[0].branding).toEqual(v2);
+      expect(rows[0].author).toBeTruthy();
+      expect(rows[1].branding).toEqual(first);
+      expect(rows.at(-1)!.published_at).toBeNull(); // a configuração de antes do histórico
+      expect((await bruno.client.rpc('site_history', { p_org: orgA })).data ?? []).toHaveLength(0);
+      expect((await carla.client.rpc('site_history', { p_org: orgA })).data ?? []).toHaveLength(0);
+      expect((await anon().rpc('site_history', { p_org: orgA })).error).not.toBeNull();
+      expect((await ana.client.from('site_versions').select('id')).data ?? []).toHaveLength(0);
+      expect((await ana.client.from('site_versions').insert({ org_id: orgA, branding: {} })).error).not.toBeNull();
+      for (let i = 0; i < 31; i++) await service().from('organizations').update({ branding: { name: `v${i}` } }).eq('id', orgA);
+      expect(((await ana.client.rpc('site_history', { p_org: orgA })).data as unknown[]).length).toBe(30);
+      await service().from('organizations').update({ branding: first }).eq('id', orgA);
+    });
+
     it('endereço (slug) e domínio próprio: só o suporte muda; domínio inválido é recusado', async () => {
       expect((await ana.client.from('organizations').update({ slug: `outro-${tag}` }).eq('id', orgA)).error?.message).toMatch(/suporte/);
       expect((await ana.client.from('organizations').update({ custom_domain: `a-${tag}.com.br` }).eq('id', orgA)).error?.message).toMatch(/suporte/);

@@ -62,7 +62,9 @@ const axeFindings = [];
 async function axe(page, label) {
   if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE);
   const found = await page.evaluate(async () => {
-    const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] } });
+    // preload: false — axe would fetch() the stylesheets (Google Fonts included) to read them, which the page's own
+    // CSP (connect-src) refuses; only the css-orientation-lock rule needs that
+    const r = await window.axe.run(document, { preload: false, runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] } });
     return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(', ')}`);
   });
   axeFindings.push(...found.map((f) => `${label}: ${f}`));

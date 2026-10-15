@@ -145,6 +145,8 @@ domínio próprio passa a valer.
 Cada imobiliária tem um site com a marca dela em `site.html?imobiliaria=<slug>` (o slug é o do cadastro). Para
 personalizar: entre como dono ou administrador e use **Minha conta → Personalizar o site** (ou abra o site com
 `&editar=1`). As alterações aparecem na hora para quem editar e, depois de **Publicar alterações**, para todos.
+Cada publicação entra no **Histórico de publicações**, no fim do editor (as 30 últimas, com data e quem publicou):
+**Abrir esta versão** coloca uma versão anterior no editor, para conferir e publicar de novo.
 Logo e fotos vão para o bucket `site-assets`.
 
 **Domínio próprio:** o suporte grava o domínio em `organizations.custom_domain` (sem `www.`, por exemplo
@@ -204,9 +206,8 @@ em outro storage) tem de entrar em `scripts/lib/csp.mjs`; o teste `tests/csp.tes
 
 ## O que o banco garante (testado)
 
-Os itens de 14/10/2026 (verificação em duas etapas, CAPTCHA dos contatos e arquivos no storage) foram conferidos com
-as migrações num PostgreSQL local, com o esquema `auth` simulado; os testes de backend correspondentes estão escritos,
-mas ainda não rodaram no Supabase local (estava parado).
+Os itens de 14/10/2026 (verificação em duas etapas, CAPTCHA dos contatos e arquivos no storage) e o histórico do site
+passaram nos testes de backend e no fluxo pelo navegador, no Supabase local, em 15/10/2026.
 
 - A equipe da plataforma só tem os poderes de suporte numa sessão confirmada com a verificação em duas etapas
   (`aal2` no token); sem ela, a conta da equipe é tratada como a de um usuário comum. Quem ativou a verificação só
@@ -219,6 +220,8 @@ mas ainda não rodaram no Supabase local (estava parado).
 - Só a equipe de suporte cadastra imobiliárias; ninguém se coloca na equipe pelo site.
 - Só dono e administradores mudam o site da imobiliária (configuração de até 64 KB); endereço e domínio, só o
   suporte. Imagens do site só na pasta do próprio cliente, sem SVG.
+- Cada publicação do site entra no histórico (as 30 últimas, com data e autor), que só dono e administradores leem;
+  ninguém grava nele direto (`20261021000002_site_history.sql`).
 - Corretores entram só por convite, e o convite só vale para o e-mail convidado, uma vez, por 14 dias. Corretor não
   convida; administrador não cria dono; a imobiliária nunca fica sem dono.
 - Cada imobiliária vê e edita só os próprios anúncios; o corretor edita os dele, o dono/administrador edita todos.
@@ -251,7 +254,7 @@ mas ainda não rodaram no Supabase local (estava parado).
 
 ```bash
 npm run db:start        # Supabase local (Docker); a primeira vez baixa as imagens
-npm run test:backend    # 44 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
+npm run test:backend    # 45 testes: permissões, convites (e o e-mail), auditoria, lixeira, contatos (com o aviso
                         # por e-mail num provedor falso, inclusive chamadas simultâneas), CAPTCHA dos contatos
                         # (verificador falso), verificação em duas etapas (suporte e dona), privacidade, preço,
                         # obra em andamento, site da imobiliária, storage e importação do XML
@@ -260,7 +263,7 @@ npm run verify:backend  # navegador: suporte ativa a verificação em duas etapa
                         # edição completa → lixeira e restauração → excluir de vez → suporte entra de novo com o
                         # código → histórico, contato do visitante, convites por e-mail, site da imobiliária
                         # personalizado pelo dono, e o dono ativa a verificação e entra no editor com o código
-                        # (30 checagens)
+                        # (32 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

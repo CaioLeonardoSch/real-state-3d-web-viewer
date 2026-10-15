@@ -118,6 +118,14 @@ const PHOTOS = 'listing-photos';
 const SITE_ASSETS = 'site-assets';
 
 /** A client as its public site sees it. */
+/** One published version of a client's site (site_history); publishedAt is null for the one from before the history. */
+export interface SiteVersion {
+  id: number;
+  publishedAt: string | null;
+  author: string | null;
+  config: unknown;
+}
+
 export interface SiteOrg {
   id: string;
   name: string;
@@ -658,6 +666,14 @@ export class RemoteBackend {
   async saveSiteConfig(orgId: string, config: unknown): Promise<void> {
     const { error } = await this.sb.from('organizations').update({ branding: config }).eq('id', orgId);
     fail(error, 'Não foi possível salvar o site');
+  }
+
+  /** Published versions of the site, newest first (the last 30; owners and admins). */
+  async siteHistory(orgId: string): Promise<SiteVersion[]> {
+    const { data, error } = await this.sb.rpc('site_history', { p_org: orgId });
+    fail(error, 'Não foi possível ler o histórico do site');
+    const rows = (data ?? []) as { id: number; published_at: string | null; author: string | null; branding: unknown }[];
+    return rows.map((r) => ({ id: r.id, publishedAt: r.published_at, author: r.author, config: r.branding }));
   }
 
   /** Uploads a logo or banner (data URL prepared by the editor); returns its public URL. */

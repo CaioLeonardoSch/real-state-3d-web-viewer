@@ -405,7 +405,8 @@ a partir de uma **configuração** (dados, não código), guardada em `organizat
   proprietários**, que o mercado costuma tratar como formulário solto.
 - **Editor "Personalizar site"** (dono e administradores; `?editar=1` ou link em Minha conta): pré-visualização
   ao vivo, aviso de contraste das cores (WCAG) e correção automática da cor dos textos, envio de logo e fotos,
-  "Desfazer" e "Publicar alterações".
+  "Desfazer", "Publicar alterações" e o histórico de publicações (as 30 últimas, com data e autor), de onde uma
+  versão anterior volta ao editor para ser conferida e publicada de novo.
 
 **Onde ficamos à frente** (a confirmar com clientes):
 1. **Mapa 3D da cidade** dentro do site do cliente, filtrando junto com a busca, e o prédio do imóvel na ficha.

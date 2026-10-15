@@ -2,6 +2,7 @@
 // site change while typing. Saves to the back end (organizations.branding) or, in the demo, to this browser.
 import { escapeHtml } from '../utils/format';
 import { captchaBox, formCaptcha } from '../backend/captcha';
+import type { SiteVersion } from '../backend/remote';
 import { siteImage } from '../utils/images';
 import { SORT_KEYS, SORT_LABELS } from '../state/sort';
 import type { SiteApp } from './app';
@@ -43,6 +44,8 @@ export class SiteEditor {
   private leaving = false;
   /** Login of an account with two-step verification: after the password, the code of the authenticator app. */
   private codeStep = false;
+  /** Published versions (back end only), loaded when "Histórico de publicações" opens. */
+  private history: SiteVersion[] | null = null;
 
   constructor(private app: SiteApp) {
     this.draft = structuredClone(app.config);
@@ -215,6 +218,7 @@ export class SiteEditor {
         <details><summary>Google</summary>
           ${text('seo.description', 'Descrição do site no Google', { max: 300, area: true, hint: 'Até 160 caracteres aparecem no resultado da busca.' })}
         </details>
+        ${this.app.data.remote && !demo ? this.historyPanel() : ''}
       </div>
       <div class="ed-foot">
         <p class="ed-state" role="status">${this.dirty ? 'Alterações não salvas.' : 'Tudo salvo.'}</p>
@@ -223,6 +227,59 @@ export class SiteEditor {
         ${demo ? '<button type="button" class="link-btn" data-export>Baixar configuração (JSON)</button> <button type="button" class="link-btn" data-reset>Voltar ao original</button>' : ''}
       </div>`;
     this.wire();
+  }
+
+  /** "Histórico de publicações": opening a version puts it in the editor, to review and publish again. */
+  private historyPanel(): string {
+    return `<details data-history><summary>Histórico de publicações</summary>
+          <p class="hint">As 30 últimas publicações. Abrir uma versão a coloca no editor: confira e clique em "Publicar alterações".</p>
+          <div data-history-list>${this.historyList()}</div>
+        </details>`;
+  }
+
+  private historyList(): string {
+    if (!this.history) return '<p class="hint">Carregando…</p>';
+    if (!this.history.length) return '<p class="hint">Nenhuma publicação registrada ainda.</p>';
+    const when = (v: SiteVersion) =>
+      v.publishedAt ? new Date(v.publishedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Antes do histórico';
+    const items = this.history.map((v, i) => {
+      const label = escapeHtml(when(v)) + (v.author ? ` · ${escapeHtml(v.author)}` : '');
+      const action =
+        i === 0
+          ? '<strong>no ar</strong>'
+          : `<button type="button" class="link-btn" data-version="${v.id}">Abrir esta versão<span class="sr-only"> (${escapeHtml(when(v))})</span></button>`;
+      return `<li><span>${label}</span>${action}</li>`;
+    });
+    return `<ol class="ed-history">${items.join('')}</ol>`;
+  }
+
+  private wireHistory(): void {
+    this.el.querySelectorAll<HTMLButtonElement>('[data-version]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const v = this.history?.find((x) => x.id === Number(b.dataset.version));
+        if (!v || (this.dirty && !confirm('Descartar as alterações que não foram salvas?'))) return;
+        this.draft = normalizeSiteConfig(v.config, this.app.data.orgName);
+        this.preview(true);
+        this.app.toast('Versão aberta no editor. Confira e clique em "Publicar alterações".');
+      }),
+    );
+  }
+
+  private async loadHistory(): Promise<void> {
+    const { remote, agencyId } = this.app.data;
+    if (!remote) return;
+    let html: string;
+    try {
+      this.history = await remote.siteHistory(agencyId);
+      html = this.historyList();
+    } catch (err) {
+      html = `<p class="hint">${escapeHtml((err as Error).message)}</p>`;
+    }
+    const box = this.el.querySelector('[data-history-list]');
+    if (box) {
+      box.innerHTML = html;
+      this.wireHistory();
+    }
   }
 
   /** Applies the draft to the preview (normalized, as the published site would read it). */
@@ -267,6 +324,11 @@ export class SiteEditor {
   private wire(): void {
     const el = this.el;
     el.querySelector('[data-close]')!.addEventListener('click', () => this.close());
+    const hist = el.querySelector<HTMLDetailsElement>('[data-history]');
+    hist?.addEventListener('toggle', () => {
+      if (hist.open && !this.history) void this.loadHistory();
+    });
+    this.wireHistory();
     let timer = 0;
     el.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[data-k]').forEach((input) => {
       const path = input.dataset.k!;
@@ -375,6 +437,7 @@ export class SiteEditor {
         }
       } else await remote.saveSiteConfig(agencyId, this.draft);
       this.saved = JSON.stringify(this.draft);
+      this.history = null; // reloaded when the panel opens again (right away if it is open)
       this.app.toast(demo ? 'Salvo neste navegador (demonstração).' : 'Site atualizado. Os visitantes já veem as mudanças.');
     } catch (err) {
       this.app.toast((err as Error).message);
