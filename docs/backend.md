@@ -452,8 +452,11 @@ monta é `src/seo/siteServer.ts`, com uma consulta ao banco (`site_bootstrap`) p
      `*.pages.dev`).
    - `public/_routes.json` deixa os arquivos do build fora da função.
    - Em outra hospedagem, basta chamar `handleSiteRequest` (recebe `Request`, devolve `Response`).
-   - **Ainda não foi testado na Cloudflare.** Na homologação, confira se os cabeçalhos de segurança chegam nas
-     páginas: a Cloudflare não aplica o `_headers` às respostas de funções, e o servidor copia os do `site.html`.
+   - **Testado com o `wrangler` 4 (o mesmo runtime da Cloudflare) na máquina, ainda não num projeto de verdade.**
+     Com `npx wrangler pages dev dist --binding SUPABASE_URL=... --binding SUPABASE_ANON_KEY=...` e um domínio
+     `.localhost`, saíram a inicial e a ficha com título, canônico e dados estruturados, o sitemap com os anúncios,
+     o 301, o 404 e os cabeçalhos de segurança (a Cloudflare não aplica o `_headers` às respostas de funções; o
+     servidor copia os do `site.html`, e isso funcionou). No primeiro projeto, confira o mesmo com o domínio real.
 2. **Testar localmente:** `vite preview` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` também atende os
    domínios dos clientes.
    - Um domínio terminado em `.localhost` chega à própria máquina sem configurar nada: grave

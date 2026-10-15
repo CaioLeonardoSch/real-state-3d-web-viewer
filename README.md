@@ -122,6 +122,9 @@ conforme a busca), ficha do imóvel com o prédio no mapa, favoritos, comparaç�
   configurados em `public/data/sites.json`. Na demonstração, a personalização fica salva só no navegador.
 - Com backend: `site.html?imobiliaria=<slug>` ou o domínio próprio do cliente; configuração em
   `organizations.branding`.
+- No domínio do cliente, cada página sai do servidor com título, descrição, canônico e dados estruturados, em
+  endereços limpos (`/imoveis`, `/imovel/<título>-<código>`), com `sitemap.xml` e `robots.txt` do cliente
+  (`src/seo/siteServer.ts`; na Cloudflare Pages, `functions/[[path]].ts`).
 - Código em `src/site/`; decisões e comparação com o mercado no item 12 de [`docs/backend.md`](docs/backend.md).
 
 ## Empreendimentos: espelho de vendas 3D

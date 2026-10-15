@@ -6,50 +6,57 @@ Avaliação realista do mapa 3D, do site das imobiliárias e do backend, pedida 
 - uma auditoria completa sobre o commit `0de02db`: Lighthouse, axe, roteiros de teclado, uso manual no desktop e no
   celular, e leitura do código;
 - a pesquisa sobre alturas e telhados por satélite;
-- o que foi corrigido em seguida, no mesmo dia.
+- o que foi corrigido em seguida, no mesmo dia;
+- a segunda rodada (14 e 15/10), que levou o mapa, o site, o desempenho, a acessibilidade, a segurança e o Google à
+  nota 8 (coluna "Hoje" e a situação de cada item abaixo).
 
 As notas e os números de antes vêm da auditoria; os de depois foram medidos de novo onde está indicado.
 
 ## Veredito
 
-**O produto é bom para demonstração e para vender a ideia. Ainda está longe de um lançamento com clientes pagantes.**
+**O produto é bom para demonstração e para vender a ideia. Depois da segunda rodada, o que falta para um piloto pago
+é sobretudo operação e jurídico, e não mais o produto em si.**
 
 - O mapa 3D é a parte mais madura e o diferencial real.
 - O site de cada imobiliária cobre o que o mercado de Joinville oferece, com uma interface mais leve que a média.
 
-O que falta é estrutura. Numa demonstração ninguém percebe, mas sem isso não dá para cobrar de um cliente:
+A auditoria apontou cinco faltas de estrutura. Situação em 15/10:
 
-1. **Google:** o site do cliente não é indexável de forma útil, e o crédito das páginas vai para o domínio da plataforma.
-2. **LGPD:** não há política de privacidade, termos nem prazo de retenção dos contatos.
-3. **Hospedagem para vários domínios:** hoje o site só sai pelo GitHub Pages.
-4. **Operação:** não há monitoramento nem ambiente de homologação.
-5. **Demonstração separada do produto:** hoje o build de produção leva textos e dados fictícios, inclusive
+1. **Google:** resolvido no código. No domínio do cliente, cada página sai com título, descrição, canônico e dados
+   estruturados no HTML, e há sitemap e endereços limpos. Falta publicar na hospedagem com um domínio real.
+2. **LGPD:** só as fontes passaram a vir do próprio site. Continuam faltando a política de privacidade, os termos e o
+   prazo de retenção dos contatos.
+3. **Hospedagem para vários domínios:** o adaptador para a Cloudflare Pages está pronto e passou no runtime da
+   Cloudflare, rodando na máquina; o projeto em si ainda não foi criado.
+4. **Operação:** ainda não há monitoramento, ambiente de homologação nem e2e no CI.
+5. **Demonstração separada do produto:** resolvida no build de produção. A demonstração pública ainda mostra
    empreendimentos reais com preços inventados.
 
-**Prazo estimado: 8 a 12 semanas de trabalho de uma pessoa até um piloto pago com 2 ou 3 imobiliárias.** É uma
-estimativa grosseira (detalhe na lista do fim). Depende do jurídico (LGPD e licença dos dados da Prefeitura) e do
-retorno dos primeiros clientes.
+**Prazo estimado: 4 a 6 semanas de trabalho de uma pessoa até um piloto pago com 2 ou 3 imobiliárias** (eram 8 a 12
+semanas na auditoria). É uma estimativa grosseira (detalhe na lista do fim). Depende do jurídico (LGPD e licença dos
+dados da Prefeitura) e do retorno dos primeiros clientes.
 
 ## Notas por área (0 a 10)
 
 Critério: quão perto a área está de um lançamento público com clientes pagantes. 8 ou mais significa pronto, com
 ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, faltam peças estruturais.
 
-| Área | Auditoria | Hoje | Por quê |
-|---|---|---|---|
-| Mapa 3D | 7 | 7 | Ganhou o recorte por bairro, a paisagem e as obras, mas continua pesado no celular e com textos de demonstração fixos |
-| Site das imobiliárias | 5 | 6 | A maioria dos defeitos visíveis foi corrigida (I1 a I5, I8 e "Voltar ao original"); faltam a comparação no aluguel, o foco nas trocas de página e a paginação |
-| Desempenho | 6 | 7 | A ficha do imóvel foi de 40–54 para 99 no celular; o mapa continua em 51–52 |
-| Acessibilidade | 5 | 6 | Contraste corrigido no site e no mapa; faltam foco, Esc, `aria-live` e o padrão de abas |
-| SEO | 2 | 2 | Nada mudou; é o maior bloqueio |
-| Segurança | 6 | 6 | Sem CAPTCHA, CSP, 2FA nem teste de invasão |
-| Prontidão para produção | 2 | 2 | O serviço mensal do mapa ajuda, mas os bloqueios abaixo continuam |
+| Área | Auditoria | 14/10 | Hoje (15/10) | Por quê |
+|---|---|---|---|---|
+| Mapa 3D | 7 | 7 | 8 | Telhados, arquivo de detalhe e abertura mais rápida (Lighthouse no celular de 51–52 para 67–69); build de produção sem textos nem dados de demonstração; axe sem violações em 8 estados. Falta medir num Android de entrada |
+| Site das imobiliárias | 5 | 6 | 8 | Comparação de aluguel, paginação no histórico, "Ver N imóveis", fotos em três tamanhos, histórico de publicações com volta a versões anteriores, "Site não encontrado" e endereços limpos no domínio do cliente. Falta: `app.ts` grande e "Joinville" fixo (M7); nunca foi visto com fotos e feed reais |
+| Desempenho | 6 | 7 | 8 | Inicial, busca e ficha do site em 99 no celular; o site abre com uma consulta em vez de quatro em série, com fontes próprias e fotos no tamanho da tela. O mapa fica em 67–69 num teste cujo WebGL por software pesa mais que um aparelho real (veja Números) |
+| Acessibilidade | 5 | 6 | 8 | Foco nas trocas de página, Esc, aviso com `aria-live`, `aria-pressed`, `h1` no mapa e painéis fechados fora do Tab; axe sem violações em 17 telas do site e 8 estados do mapa. Falta o teste com um leitor de tela de verdade |
+| SEO | 2 | 2 | 8 | No domínio do cliente, cada página sai com título, descrição, canônico, Open Graph e dados estruturados no HTML; endereços limpos, sitemap com os anúncios, robots.txt, 301 e 404. Testado no navegador e no runtime da Cloudflare. Falta publicar e acompanhar no Search Console |
+| Segurança | 6 | 6 | 8 | CSP e cabeçalhos, verificação em duas etapas (obrigatória para o suporte), CAPTCHA pronto para ligar, fotos presas a quem edita o anúncio e aviso de contato sem duplicar. Falta um teste de invasão feito por terceiros |
+| Prontidão para produção | 2 | 2 | 4 | Demonstração separada no build e adaptador da hospedagem pronto; faltam LGPD, o projeto na hospedagem, monitoramento, homologação e e2e no CI |
 
 ## O que está bom de verdade
 
 - **Mapa 3D da cidade inteira:**
   - 164.672 prédios; 93% com altura estimada pelo cadastro da Prefeitura;
-  - um único arquivo de 20 MB, lido por partes (o celular baixa só o que aparece);
+  - um arquivo base de cerca de 14 MB e um de detalhe (árvores, postes, telhados) só para o zoom 15, lidos por
+    partes (o celular baixa só o que aparece);
   - teclado, histórico do navegador e estados vazios úteis ("Remover o preço máximo · 34 imóveis");
   - nenhum erro de console e nota 100 em boas práticas.
 - **Diferenciais que não vimos nos sites concorrentes analisados:**
@@ -61,8 +68,8 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 - **Site das imobiliárias:**
   - 5 modelos e um editor ao vivo;
   - busca no estilo da 636, favoritos e comparação;
-  - cerca de 27 KB de JavaScript compactado na demonstração;
-  - nota 92–93 no celular na página inicial e na busca.
+  - cerca de 28 KB de JavaScript compactado na demonstração;
+  - nota 99 no celular na página inicial, na busca e na ficha.
 - **Segurança do navegador:**
   - nenhum texto do cliente vira HTML (um teste com `<img onerror>` no editor apareceu como texto);
   - a configuração é validada campo a campo;
@@ -73,7 +80,7 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
   - os arquivos de cada cliente ficam presos à pasta dele.
 - **Base de código:**
   - TypeScript estrito;
-  - 125 testes de unidade e 39 de backend;
+  - 151 testes de unidade e 46 de backend;
   - geração dos dados reproduzível: com os mesmos dados de entrada, o `.pmtiles` sai igual byte a byte.
 
 ## O que bloqueia o lançamento
@@ -93,6 +100,14 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
     `/imovel/<slug>-<código>`);
   - título, descrição, OG, JSON-LD e canônico no domínio do cliente;
   - `sitemap.xml` e `robots.txt` por domínio.
+- **Situação (15/10): feito.**
+  - `src/seo/siteServer.ts` monta o cabeçalho de cada página no domínio do cliente, e `functions/[[path]].ts` o liga
+    na Cloudflare Pages.
+  - Testado em unidade, no navegador (e2e com um domínio `.localhost`) e com o `wrangler`, que roda o runtime da
+    Cloudflare na máquina.
+  - O corpo da página continua montado pelo JavaScript. O Google o executa, e o cabeçalho já traz o essencial para
+    os outros robôs e para a prévia do WhatsApp.
+  - **Falta:** publicar num projeto real, com o domínio de um cliente, e cadastrar o sitemap no Search Console.
 
 ### B2. LGPD (1 a 2 semanas, mais a revisão de um advogado)
 
@@ -108,6 +123,8 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
   - rotina de anonimização dos contatos antigos;
   - pedido de exportação e exclusão;
   - fontes hospedadas no próprio site.
+- **Situação (15/10):** as fontes passaram a vir do próprio site, e nada mais vai ao Google. O resto continua
+  faltando.
 
 ### B3. Hospedagem e operação para vários clientes (cerca de 2 semanas)
 
@@ -123,6 +140,12 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
   - Sentry e um monitor de disponibilidade;
   - um projeto Supabase de homologação;
   - e2e e axe no CI.
+- **Situação (15/10):**
+  - CSP e cabeçalhos prontos (`public/_headers`), copiados também pelo servidor nas páginas dos clientes;
+  - adaptador da Cloudflare Pages pronto e testado com o `wrangler`;
+  - 404 nos domínios dos clientes.
+  - **Falta:** criar o projeto, monitoramento, homologação e e2e no CI. O CI roda os testes de unidade, o build e os
+    testes do banco.
 
 ### B4. Demonstração misturada ao produto (3 a 5 dias)
 
@@ -136,25 +159,31 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
   - modo demonstração separado no build;
   - espelho com dados autorizados vindos do banco (ou empreendimentos fictícios);
   - domínio desconhecido leva a uma página neutra.
+- **Situação (15/10):**
+  - o build de produção (`VITE_DEMO_LISTINGS=false`) sai sem os imóveis, os empreendimentos, os sites de exemplo e
+    os textos de demonstração;
+  - endereço ou domínio desconhecido mostra "Site não encontrado" (noindex).
+  - **Falta:** o espelho de vendas do produto vir do banco, e trocar na demonstração pública os empreendimentos reais
+    por fictícios (ou pedir autorização às construtoras).
 
 ## Importante
 
 | Item | Situação |
 |---|---|
-| I1. A busca de aluguel virava venda ao abrir a ficha | **Corrigido** nos links dos cards. **Falta:** a comparação e os favoritos ainda mostram preço e m² de venda |
+| I1. A busca de aluguel virava venda ao abrir a ficha | **Corrigido** nos links dos cards e, depois, na comparação (5a2d8b2). Os favoritos não foram conferidos de novo |
 | I2. Reservado e vendido sumiam da ficha | **Corrigido:** selo, aviso, chamada de contato ajustada e `LimitedAvailability` no schema |
 | I3. Filtros que mostravam uma coisa e aplicavam outra (preço mínimo perdido, bairro com acento) | **Corrigido:** um temporizador por campo; bairro sem acento e sem diferença de maiúsculas |
 | I4. Painel de filtros esticado e cabeçalho que rolava para o lado | **Corrigido:** as caixas do painel ficam alinhadas ao topo; o menu recolhe quando não cabe, medido na tela, sem depender de largura fixa |
 | I5. No celular, o preço e o contato só apareciam a 2.400 px do topo | **Corrigido:** preço junto ao título e barra fixa com WhatsApp e "Mensagem" |
 | I6. A ficha sempre carregava o mapa 3D inteiro | **Corrigido:** o mapa só carrega ao chegar na tela ou no botão "Ver o prédio no mapa 3D" |
-| I7. Acessibilidade | **Parte corrigida:** contraste do site (cor principal e de destaque ajustadas para 4,5:1), do laranja do mapa, do preço reduzido e do WhatsApp; nome acessível no WhatsApp do cabeçalho; aviso do editor para destaque muito claro. **Falta:** foco nas trocas de página, Esc fechando painéis, `aria-live` na contagem, padrão de abas, `h1` no mapa |
+| I7. Acessibilidade | **Corrigido:** contraste do site e do mapa; foco no título ao trocar de página, Esc fechando painéis, uma região de aviso com `aria-live`, botões com `aria-pressed`, alvos de 24 px, `h1` no mapa e painéis fechados com `inert`. O axe não acha violações em 17 telas do site e em 8 estados do mapa. **Falta:** o teste com um leitor de tela de verdade |
 | I8. O mapa embutido virava o portal ao recarregar o quadro | **Corrigido:** o mapa mantém `embed`, `site`, `cor` e `pagina` no endereço |
-| I9. Escala com backend | **Falta:** cada visita baixa todos os anúncios do cliente; `.in()` com centenas de ids passa de 8 KB de URL; limite de 1.000 linhas sem paginação; 5 requisições em série; com o backend o JavaScript do site soma cerca de 93 KB compactados (27 do site, 11 do acesso ao backend e 55 do cliente do Supabase) |
-| I10. Editor | **Corrigido:** "Voltar ao original" não pergunta mais "Sair do site?". **Falta:** histórico de publicações e desfazer o que já foi publicado; a pré-visualização redesenha tudo a cada tecla |
-| I11. CAPTCHA, CSP, 2FA e teste de invasão | **Falta** |
-| I12. Endereço da página estática muda com o título; vendidos somem sem redirecionamento | **Falta** |
-| I13. Fotos limitadas a 960 px, sem `srcset` | **Falta** |
-| I14. Testes do site, e2e fora do CI, sem lint nem regressão visual | **Parte:** testes novos de obra, relatório do mapa e mapeamento. **Falta** o resto |
+| I9. Escala com backend | **Parte corrigida:** o site abre com uma chamada só (`site_bootstrap`), sem o `.in()` de URL longa nem o limite de 1.000 linhas, e o cliente do Supabase baixa junto com o módulo que o usa; com o backend, o JavaScript do site soma cerca de 89 KB compactados (28 do site, 6 do acesso ao backend e 55 do cliente do Supabase). **Falta:** cada visita ainda baixa todos os anúncios do cliente, o que serve até algumas centenas; não foi medido com milhares |
+| I10. Editor | **Corrigido:** "Voltar ao original" não pergunta mais "Sair do site?"; histórico das 30 últimas publicações, com volta a uma versão anterior (c672119); o mapa da pré-visualização não recarrega a cada edição |
+| I11. CAPTCHA, CSP, 2FA e teste de invasão | **Parte corrigida:** CSP e cabeçalhos, verificação em duas etapas (TOTP, obrigatória para o suporte), CAPTCHA (Turnstile) pronto para ligar e revisão do storage. **Falta:** o teste de invasão feito por terceiros |
+| I12. Endereço da página estática muda com o título; vendidos somem sem redirecionamento | **Corrigido nos domínios dos clientes:** o endereço termina no código do anúncio, então um título novo leva ao endereço atual com 301, e um anúncio que saiu do ar responde 404 com noindex. As páginas estáticas do domínio da plataforma continuam como antes |
+| I13. Fotos limitadas a 960 px, sem `srcset` | **Corrigido:** 480, 1024 e 1920 px, com `srcset` e `sizes` nos cards, na galeria e nas páginas estáticas; o importador XML gera os mesmos tamanhos (5a2d8b2) |
+| I14. Testes do site, e2e fora do CI, sem lint nem regressão visual | **Parte:** testes de obra, relatório do mapa e mapeamento; axe no e2e do site e do mapa; testes do servidor de páginas, do histórico, das duas etapas e do storage. **Falta:** e2e no CI, lint e regressão visual |
 
 ## Melhorias
 
@@ -162,25 +191,30 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 |---|---|
 | M1. Escape na ordem errada na imagem de capa | **Corrigido** |
 | M2. DDI repetido no `tel:` | **Corrigido** |
-| M3. Paginação com `replaceState` (Voltar pula as páginas), clique do meio bloqueado, `pagina=99` | **Falta** |
-| M4. `?p=qualquer` mostra a inicial; "Imóvel não encontrado" sem `noindex` | **Falta** |
+| M3. Paginação com `replaceState` (Voltar pula as páginas), clique do meio bloqueado, `pagina=99` | **Parte corrigida:** a paginação entra no histórico, e `pagina=99` mostra a última página, com o endereço corrigido (5a2d8b2). O clique do meio não foi conferido de novo |
+| M4. `?p=qualquer` mostra a inicial; "Imóvel não encontrado" sem `noindex` | **Corrigido:** página desconhecida mostra "Página não encontrada", e as duas páginas têm noindex; no domínio do cliente, respondem 404 |
 | M5. O acesso ao backend (11 KB) é carregado mesmo sem backend | **Falta** |
-| M6. Banco e e-mail | **Corrigido:** imagens em `data:image/svg+xml` recusadas. **Conferido:** o limite de 64 KB da configuração funciona, porque a checagem vê o valor ainda sem compressão (o teste de backend com 70 mil caracteres repetidos é recusado). **Falta:** o aviso de contato por e-mail pode sair duplicado (`notify-lead` não é atômico) |
+| M6. Banco e e-mail | **Corrigido:** imagens em `data:image/svg+xml` recusadas, e o aviso de contato por e-mail não sai mais duplicado (49d9120). **Conferido:** o limite de 64 KB da configuração funciona, porque a checagem vê o valor ainda sem compressão (o teste de backend com 70 mil caracteres repetidos é recusado). |
 | M7. `app.ts` com 1.200 linhas montando HTML em texto; "Joinville" fixo no código | **Falta** |
-| M8. Detalhes de interface (rótulo do favorito, caixa "Comparar", filtros do celular sem "Ver N resultados") | **Falta** |
+| M8. Detalhes de interface (rótulo do favorito, caixa "Comparar", filtros do celular sem "Ver N resultados") | **Parte:** os filtros do celular ganharam "Ver N imóveis" (5a2d8b2); os outros dois não foram conferidos de novo |
 
 ## Números
 
 **Lighthouse no celular** (rede e CPU simuladas; WebGL por software, o que pesa mais no mapa do que num aparelho
-real). "Hoje" foi medido depois das correções, com 2 ou 3 execuções:
+real). "Hoje" foi medido em 15/10 (mapa, inicial e busca) e em 14/10 (ficha):
 
 | Página | Desempenho (auditoria → hoje) | Acessibilidade (auditoria → hoje) | Observação |
 |---|---|---|---|
-| Site: página inicial | 92–93 → 91–98 | 93 → 100 | Contraste corrigido: 11 violações → 0 |
+| Site: página inicial | 92–93 → 99 | 93 → 100 | Contraste corrigido: 11 violações → 0; LCP de 1,7 s e 115 KB transferidos |
+| Site: busca | 92–93 → 99 | não medida → 100 | |
 | Site: ficha do imóvel | 40–54 → 99 | 94 → 100 | LCP de 4,6–5,5 s para 1,6–1,8 s; transferência de 1,7 MB para 119 KB; 63 → 14 requisições |
-| Mapa | 54–55 → 51–52 | 96 → 100 | TBT de 3,4–3,5 s para 2,6–4,1 s; primeiro desenho 0,3 s mais lento (+18 KB de código) |
+| Mapa | 54–55 → 67–69 | 96 → 100 | O topo pinta antes do mapa (`src/boot.ts`): FCP e LCP de 0,9 s. O TBT continua alto (5,5 s na última medição) |
 
-A busca do site não foi medida de novo (92–93 na auditoria; nada mudou no carregamento dela).
+No site, a nota de SEO do Lighthouse fica em 63 porque o endereço de demonstração é marcado noindex de propósito.
+
+**O TBT do mapa.** O perfil mostra que quase todo o tempo bloqueado é a compilação dos programas de shader pelo
+WebGL por software do teste (SwiftShader). Num aparelho com placa de vídeo essa etapa costuma ser bem mais rápida,
+mas isso ainda precisa ser confirmado num celular de entrada.
 
 **O mapa e a paisagem.** A primeira medição depois da paisagem mostrou o mapa bem mais pesado: TBT de 7 a 9 s. O
 perfil mostrou duas causas, ambas corrigidas:
@@ -190,20 +224,21 @@ perfil mostrou duas causas, ambas corrigidas:
 2. A primeira tela compilava 20 programas de shader em vez de 13. As camadas passaram a compartilhar os mesmos
    programas, e agora são 14.
 
-O peso no celular continua sendo o ponto fraco do mapa: 345 KB de código e WebGL obrigatório.
+O peso no celular continua sendo o ponto fraco do mapa: 333 KB de código e WebGL obrigatório.
 
-**JavaScript compactado (gzip):**
-- mapa: 345 KB (eram 327; a paisagem, as obras e o recorte por bairro somaram 18 KB);
-- worker do MapLibre: 141 KB;
-- site: 27 KB;
-- acesso ao backend: 11 KB;
+**JavaScript compactado (gzip), medido em 15/10:**
+- mapa: 333 KB (345 em 14/10; 327 na auditoria);
+- worker do MapLibre: 141 KB (não foi medido de novo);
+- site: 28 KB;
+- acesso ao backend: 6 KB (eram 11);
 - cliente do Supabase: 55 KB (só com backend);
-- recorte por bairro: 9 KB, carregados só quando se escolhe um bairro.
+- editor do site: 6 KB, só para quem edita;
+- recorte por bairro: 8 KB, carregados só quando se escolhe um bairro.
 
-**Testes (14/10, depois das correções):**
-- 125 testes de unidade e 39 de backend;
-- 29 checagens do site, 27 do backend no navegador e 76 do mapa, todas passando.
-- O teste do backend no navegador passou na segunda execução. Na primeira, a criação da imobiliária estourou o
+**Testes (15/10):**
+- 151 testes de unidade e 46 de backend;
+- 43 checagens do site, 34 do backend no navegador e 77 do mapa, todas passando.
+- Em 14/10, o teste do backend no navegador passou na segunda execução. Na primeira, a criação da imobiliária estourou o
   limite de 15 s logo no início, com o Supabase local recém-acionado.
 - A primeira rodada do mapa achou um defeito real, já corrigido: escolhendo "Noite" já perto da rua, os postes não
   acendiam.
@@ -224,7 +259,7 @@ O peso no celular continua sendo o ponto fraco do mapa: 345 KB de código e WebG
   - A importação de XML existe e tem testes, mas não rodou com o feed de uma imobiliária de verdade nem em volume.
   - A galeria e o carrossel nunca foram vistos com fotos reais.
 - **Celular.**
-  - O mapa exige WebGL e 345 KB de código.
+  - O mapa exige WebGL e 333 KB de código.
   - Não foi testado em aparelho Android de entrada nem com leitor de tela real.
 - **Uma pessoa só no código** e custos de infraestrutura ainda não medidos com tráfego real.
 - **Mercado.**
@@ -330,18 +365,19 @@ não se paga em Joinville**:
 Ordem sugerida. As estimativas são de trabalho de uma pessoa.
 
 - [ ] Validar preço e interesse com 2 ou 3 imobiliárias piloto, antes de investir nos itens grandes.
-- [ ] B4: separar a demonstração do produto (3 a 5 dias).
-- [ ] B3: hospedagem para vários domínios, cabeçalhos, 404, Sentry, monitor de disponibilidade e homologação (2
-      semanas).
-- [ ] B1: páginas pré-renderizadas por domínio, endereços limpos, sitemap por cliente, "Compartilhar" no domínio do
-      cliente (2 a 3 semanas).
-- [ ] B2: política, termos, consentimento versionado, retenção, exportação e exclusão, fontes locais (1 a 2 semanas,
-      mais advogado).
+- [x] B4: separar a demonstração do produto no build.
+- [ ] B4 (resto): espelho de vendas vindo do banco; empreendimentos fictícios na demonstração pública (2 a 3 dias).
+- [x] B1: cabeçalho de cada página gerado por domínio, endereços limpos, sitemap por cliente, "Compartilhar" no
+      domínio do cliente.
+- [ ] B3 e B1 no ar: projeto na Cloudflare Pages com o domínio de um cliente, Search Console, Sentry, monitor de
+      disponibilidade, homologação e e2e no CI (1 a 2 semanas). Cabeçalhos e 404 já estão prontos.
+- [ ] B2: política, termos, consentimento versionado, retenção, exportação e exclusão (1 a 2 semanas, mais
+      advogado). As fontes locais já estão feitas.
 - [ ] Autorização da Prefeitura para o cadastro e publicação das alturas sob ODbL.
-- [ ] I9: consultas paginadas por cliente, fotos agregadas, requisições em paralelo (1 semana).
-- [ ] I7 (resto), I11, I12, I13 e I14: foco e Esc, CAPTCHA, CSP, 2FA, URLs estáveis, fotos maiores, e2e no CI (2 a
-      3 semanas).
+- [x] I9 (parte): o site abre com uma consulta só, com as fotos juntas.
+- [x] I7, I12 e I13; I11 sem o teste de invasão.
+- [ ] Teste de invasão por terceiros; I14 (e2e no CI, lint e regressão visual).
 - [ ] Primeiro feed XML real importado e revisado com o cliente.
 - [ ] Teste em celulares Android de entrada e com leitor de tela.
 
-*Anotado por Claude (assistente de IA), 14/10/2026, para consulta na manutenção.*
+*Anotado por Claude (assistente de IA), 14/10/2026 (atualizado em 15/10/2026), para consulta na manutenção.*
