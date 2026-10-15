@@ -9,9 +9,6 @@ export const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
 const VIDEO_FRAMES = ['https://www.youtube-nocookie.com', 'https://player.vimeo.com'];
 /** CEP lookup of the "Anunciar" form (src/ui/addListing.ts). */
 const VIACEP = 'https://viacep.com.br';
-/** Fonts a client's site may pick (FONTS in src/site/config.ts). */
-const FONTS_CSS = 'https://fonts.googleapis.com';
-const FONTS_FILES = 'https://fonts.gstatic.com';
 
 /** Origin of an absolute http(s) URL; null for anything else (relative paths, empty, other schemes). */
 export function originOf(url) {
@@ -49,8 +46,9 @@ export function appCsp({ supabaseUrl, tileUrls = [], turnstile = false, meta = f
   return serialize({
     'default-src': ["'self'"],
     'script-src': ["'self'", ...opt(turnstile, TURNSTILE_ORIGIN)],
-    'style-src': ["'self'", "'unsafe-inline'", FONTS_CSS],
-    'font-src': ["'self'", FONTS_FILES],
+    'style-src': ["'self'", "'unsafe-inline'"],
+    // the fonts of the clients' sites are served by the site itself (src/site/fonts.ts)
+    'font-src': ["'self'"],
     // data: and blob: for photos resized in the browser, placeholders and the QR code of the second factor
     'img-src': ["'self'", 'data:', 'blob:', ...opt(supabase, supabase)],
     'connect-src': ["'self'", ...opt(supabase, supabase), ...tiles, VIACEP, ...opt(turnstile, TURNSTILE_ORIGIN)],

@@ -27,7 +27,6 @@ import {
   MENU_LABELS,
   SOCIALS,
   SOCIAL_LABELS,
-  fontsHref,
   formatPhone,
   telHref,
   themeVars,
@@ -37,6 +36,7 @@ import {
 } from './config';
 import { cardHtml, codeOf, photosOf, placeOf, priceHtml, specsHtml, wireCarousels, type CardContext } from './cards';
 import type { SiteData } from './data';
+import { fontFaceCss } from './fonts';
 import { leadFormHtml, wireLeadForm } from './forms';
 import { ICONS } from './icons';
 import { MAX_COMPARE, SavedLists } from './saved';
@@ -249,17 +249,17 @@ export class SiteApp {
     for (const [k, v] of Object.entries(themeVars(c))) html.style.setProperty(k, v);
     html.dataset.theme = c.theme;
     html.dataset.template = c.template;
-    const href = fontsHref(c);
-    let link = document.querySelector<HTMLLinkElement>('link[data-fonts]');
-    if (href) {
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.dataset.fonts = '';
-        document.head.append(link);
+    // the chosen fonts, served by the site itself (./fonts)
+    const faces = fontFaceCss(c);
+    let style = document.querySelector<HTMLStyleElement>('style[data-fonts]');
+    if (faces) {
+      if (!style) {
+        style = document.createElement('style');
+        style.dataset.fonts = '';
+        document.head.append(style);
       }
-      if (link.href !== href) link.href = href;
-    } else link?.remove();
+      if (style.textContent !== faces) style.textContent = faces;
+    } else style?.remove();
     document.querySelector('meta[name=theme-color]')?.setAttribute('content', c.colors.header);
     // tab icon: the client's logo, or a house in its colour
     const icon = document.querySelector<HTMLLinkElement>('link[rel=icon]');

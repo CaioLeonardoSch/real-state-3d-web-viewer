@@ -4,7 +4,6 @@ import {
   colorWarnings,
   contrast,
   defaultSiteConfig,
-  fontsHref,
   formatPhone,
   inkOn,
   normalizeSiteConfig,
@@ -14,6 +13,7 @@ import {
   themeVars,
   whatsappHref,
 } from '../src/site/config';
+import { fontFaceCss } from '../src/site/fonts';
 
 describe('configuração do site do cliente', () => {
   it('qualquer valor vira uma configuração completa e segura', () => {
@@ -93,10 +93,14 @@ describe('configuração do site do cliente', () => {
   });
 
   it('fontes, telefone e WhatsApp', () => {
-    expect(fontsHref(normalizeSiteConfig({ font: 'system', headingFont: 'system' }))).toBeNull();
-    expect(fontsHref(normalizeSiteConfig({ font: 'inter', headingFont: 'playfair' }))).toBe(
-      'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@500;700&display=swap',
-    );
+    expect(fontFaceCss(normalizeSiteConfig({ font: 'system', headingFont: 'system' }))).toBe('');
+    // servidas pelo próprio site: Inter em 3 pesos e Playfair em 2, sem nada do Google
+    const faces = fontFaceCss(normalizeSiteConfig({ font: 'inter', headingFont: 'playfair' }));
+    expect(faces.match(/@font-face/g)).toHaveLength(5);
+    expect(faces).toContain("font-family:'Playfair Display';font-style:normal;font-weight:700");
+    expect(faces).toMatch(/src:url\([^)]*inter-latin-400-normal\.woff2\) format\('woff2'\)/);
+    expect(faces).not.toMatch(/google|gstatic/);
+    expect(fontFaceCss(normalizeSiteConfig({ font: 'lato', headingFont: 'lato' })).match(/@font-face/g)).toHaveLength(2);
     expect(formatPhone('47999991234')).toBe('(47) 99999-1234');
     expect(formatPhone('4733334444')).toBe('(47) 3333-4444');
     expect(whatsappHref('47999991234', 'Olá!')).toBe('https://wa.me/5547999991234?text=Ol%C3%A1!');

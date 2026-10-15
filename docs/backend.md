@@ -381,7 +381,7 @@ a comparação abaixo vem dos prints e do que é comum nesses sites.
 a partir de uma **configuração** (dados, não código), guardada em `organizations.branding`:
 
 - **Marca:** nome, CRECI, logo (com altura), três cores (principal, destaque, cabeçalho), fundo claro ou escuro,
-  fontes (do sistema ou Google Fonts, de uma lista fechada) e cantos.
+  fontes (do sistema ou de uma lista fechada, servidas pelo próprio site, sem chamar o Google) e cantos.
 - **Modelos prontos:** *Leve* (inspirado na 636), *Clássico* (GW/Nozz), *Filtros na lateral* (wPrime), *Escuro*
   (The Office) e *Moderno*. Trocar o modelo muda cores, fontes e o jeito da busca, sem perder textos e contatos.
 - **Contatos e redes:** WhatsApp (botão flutuante e no topo), telefone, e-mail, endereço, horário, Instagram,

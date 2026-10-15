@@ -15,14 +15,14 @@ export const TEMPLATE_LABELS: Record<Template, string> = {
 
 /** Fonts the site may load (Google Fonts) or the system font. */
 export const FONTS = {
-  system: { label: 'Do sistema (mais rápida)', css: "system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", google: null },
-  inter: { label: 'Inter', css: "'Inter', system-ui, sans-serif", google: 'Inter:wght@400;600;700' },
-  montserrat: { label: 'Montserrat', css: "'Montserrat', system-ui, sans-serif", google: 'Montserrat:wght@400;600;700' },
-  poppins: { label: 'Poppins', css: "'Poppins', system-ui, sans-serif", google: 'Poppins:wght@400;600;700' },
-  lato: { label: 'Lato', css: "'Lato', system-ui, sans-serif", google: 'Lato:wght@400;700' },
-  raleway: { label: 'Raleway', css: "'Raleway', system-ui, sans-serif", google: 'Raleway:wght@400;600;700' },
-  playfair: { label: 'Playfair Display (títulos)', css: "'Playfair Display', Georgia, serif", google: 'Playfair+Display:wght@500;700' },
-  lora: { label: 'Lora (títulos)', css: "'Lora', Georgia, serif", google: 'Lora:wght@500;700' },
+  system: { label: 'Do sistema (mais rápida)', css: "system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" },
+  inter: { label: 'Inter', css: "'Inter', system-ui, sans-serif" },
+  montserrat: { label: 'Montserrat', css: "'Montserrat', system-ui, sans-serif" },
+  poppins: { label: 'Poppins', css: "'Poppins', system-ui, sans-serif" },
+  lato: { label: 'Lato', css: "'Lato', system-ui, sans-serif" },
+  raleway: { label: 'Raleway', css: "'Raleway', system-ui, sans-serif" },
+  playfair: { label: 'Playfair Display (títulos)', css: "'Playfair Display', Georgia, serif" },
+  lora: { label: 'Lora (títulos)', css: "'Lora', Georgia, serif" },
 } as const;
 export type FontKey = keyof typeof FONTS;
 const FONT_KEYS = Object.keys(FONTS) as FontKey[];
@@ -396,12 +396,6 @@ export function themeVars(c: SiteConfig): Record<string, string> {
     '--s-font': FONTS[c.font].css,
     '--s-heading-font': FONTS[c.headingFont].css,
   };
-}
-
-/** Google Fonts stylesheet for the chosen fonts (null when only system fonts are used). */
-export function fontsHref(c: SiteConfig): string | null {
-  const families = [...new Set([FONTS[c.font].google, FONTS[c.headingFont].google].filter(Boolean))];
-  return families.length ? `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join('&')}&display=swap` : null;
 }
 
 /** "(47) 99999-1234" from digits. */

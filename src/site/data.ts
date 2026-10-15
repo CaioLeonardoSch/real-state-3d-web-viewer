@@ -77,11 +77,12 @@ async function demoSlugs(): Promise<string[]> {
 export async function loadSite(params: URLSearchParams, backend: { url: string; key: string } | null): Promise<SiteData> {
   const slug = params.get('imobiliaria')?.trim().toLowerCase() || null;
   if (backend && !(DEMO && slug && (await demoSlugs()).includes(slug))) {
-    const { RemoteBackend } = await import('../backend/remote');
+    // the database client is fetched alongside the module that uses it (connect would only ask for it afterwards)
+    const [{ RemoteBackend }] = await Promise.all([import('../backend/remote'), import('@supabase/supabase-js')]);
     const remote = await RemoteBackend.connect(backend.url, backend.key);
-    const org = (await remote.siteOrg({ host: location.hostname })) ?? (slug ? await remote.siteOrg({ slug }) : null);
-    if (org) {
-      const listings = await remote.publicListingsOf(org.id);
+    const site = await remote.siteBootstrap({ host: location.hostname, slug });
+    if (site) {
+      const { org, listings } = site;
       const config = normalizeSiteConfig(org.branding, org.name);
       if (!config.creci && org.creci) config.creci = org.creci;
       return { agencyId: org.id, slug: org.slug, orgName: org.name, config, listings, remote, demo: false };

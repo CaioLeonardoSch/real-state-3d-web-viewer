@@ -733,4 +733,32 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(r.data.map((x: { id: string }) => x.id)).toContain(inside.data!.id);
     expect(r.data.every((x: { location: { coordinates: number[] } }) => x.location.coordinates[0] > -48.71)).toBe(true);
   });
+
+  it('o site abre com uma consulta: a imobiliária (pelo domínio, senão pelo endereço), os publicados e as fotos', async () => {
+    const pub = anon();
+    const domain = `boot-${tag}.com.br`;
+    expect((await staff.client.from('organizations').update({ custom_domain: domain }).eq('id', orgA)).error).toBeNull();
+    const slugB = (await pub.from('organizations').select('slug').eq('id', orgB).single()).data!.slug;
+    // o domínio vale mais que o endereço; www. e maiúsculas não atrapalham
+    const site = await pub.rpc('site_bootstrap', { p_host: `www.${domain.toUpperCase()}`, p_slug: slugB });
+    expect(site.error).toBeNull();
+    expect(site.data.org).toMatchObject({ id: orgA, custom_domain: domain });
+    expect((await pub.rpc('site_bootstrap', { p_host: 'nao-existe.com.br', p_slug: slugB.toUpperCase() })).data.org.id).toBe(orgB);
+    expect((await pub.rpc('site_bootstrap', { p_host: 'nao-existe.com.br', p_slug: null })).error).toBeNull();
+    expect((await pub.rpc('site_bootstrap', { p_host: 'nao-existe.com.br', p_slug: null })).data).toBeNull();
+    // as mesmas linhas das consultas separadas: só publicados, com a localização já aproximada pela view
+    const listings = (await pub.from('public_listings').select('*').eq('org_id', orgA)).data!;
+    expect(listings.length).toBeGreaterThan(0);
+    expect(site.data.listings).toHaveLength(listings.length);
+    expect(site.data.listings).toEqual(expect.arrayContaining(listings));
+    const photos = (
+      await pub
+        .from('listing_photos')
+        .select('listing_id, path, thumb_path, large_path, caption, position, is_floor_plan')
+        .in('listing_id', listings.map((l: { id: string }) => l.id))
+    ).data!;
+    expect(photos.length).toBeGreaterThan(0);
+    expect(site.data.photos).toHaveLength(photos.length);
+    expect(site.data.photos).toEqual(expect.arrayContaining(photos));
+  });
 });

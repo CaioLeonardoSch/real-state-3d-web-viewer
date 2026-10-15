@@ -8,14 +8,14 @@ import { SiteNotFoundError, loadSite } from './data';
 async function main() {
   const root = document.getElementById('site')!;
   const params = new URLSearchParams(location.search);
+  // pages built at publish time (scripts/prerender.mjs): canonical address of each listing for search engines.
+  // Optional, and asked for alongside the site's data.
+  const pages = fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
+    .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
+    .catch(() => null);
   const data = await loadSite(params, backendConfig);
-  // pages built at publish time (scripts/prerender.mjs): canonical address of each listing for search engines
-  try {
-    const r = await fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href));
-    if (r.ok) (window as unknown as { __sitePages: Record<string, string> }).__sitePages = await r.json();
-  } catch {
-    /* optional */
-  }
+  const sitePages = await pages;
+  if (sitePages) (window as unknown as { __sitePages: Record<string, string> }).__sitePages = sitePages;
   // the demo sites are fictional: keep them out of search results
   if (data.demo) document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
   const app = new SiteApp(root, data);

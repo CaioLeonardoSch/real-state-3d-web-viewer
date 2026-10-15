@@ -639,27 +639,25 @@ export class RemoteBackend {
     return (await this.session())?.user.id ?? null;
   }
 
-  /** Price histories (visible to the listing's client only), oldest first. */
   // ---------------------------------------------------------------- client's site
 
-  /** The client whose site is open: by its own domain, or by slug (?imobiliaria=). */
-  async siteOrg(by: { slug?: string; host?: string }): Promise<SiteOrg | null> {
-    let q = this.sb.from('organizations').select('id, name, slug, creci, custom_domain, branding');
-    if (by.slug) q = q.eq('slug', by.slug.toLowerCase());
-    else if (by.host) q = q.eq('custom_domain', by.host.toLowerCase().replace(/^www\./, ''));
-    else return null;
-    const { data, error } = await q.maybeSingle();
+  /**
+   * What the site of a client needs to open, in one request (public.site_bootstrap): the client found by its own
+   * domain, else by slug (?imobiliaria=), its published listings and their photos. Null when no client matches.
+   */
+  async siteBootstrap(by: { host: string; slug: string | null }): Promise<{ org: SiteOrg; listings: Listing[] } | null> {
+    const { data, error } = await this.sb.rpc('site_bootstrap', { p_host: by.host, p_slug: by.slug });
     fail(error, 'Não foi possível ler a imobiliária');
-    return data ? { id: data.id, name: data.name, slug: data.slug, creci: data.creci, customDomain: data.custom_domain, branding: data.branding } : null;
-  }
-
-  /** Published listings of one client (what its site shows). */
-  async publicListingsOf(orgId: string): Promise<Listing[]> {
-    const { data, error } = await this.sb.from('public_listings').select('*').eq('org_id', orgId);
-    fail(error, 'Não foi possível carregar os anúncios');
-    const rows = (data ?? []) as ListingRow[];
-    const photos = await this.photosFor(rows.map((r) => r.id));
-    return rows.map((r) => rowToListing(r, photos, this.photoUrl, false));
+    if (!data) return null;
+    const { org: o, listings, photos } = data as {
+      org: { id: string; name: string; slug: string; creci: string | null; custom_domain: string | null; branding: unknown };
+      listings: ListingRow[];
+      photos: PhotoRow[];
+    };
+    return {
+      org: { id: o.id, name: o.name, slug: o.slug, creci: o.creci, customDomain: o.custom_domain, branding: o.branding },
+      listings: listings.map((r) => rowToListing(r, photos, this.photoUrl, false)),
+    };
   }
 
   /** Saves the site configuration (owners and admins; the database checks the size and the fields). */
