@@ -11,3 +11,4 @@ dist-seo
 # variáveis locais (chaves): nunca no repositório
 .env
 supabase/functions/.env
+.wrangler/
