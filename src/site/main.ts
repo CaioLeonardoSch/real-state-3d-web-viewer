@@ -9,10 +9,12 @@ async function main() {
   const root = document.getElementById('site')!;
   const params = new URLSearchParams(location.search);
   // pages built at publish time (scripts/prerender.mjs): canonical address of each listing for search engines.
-  // Optional, and asked for alongside the site's data.
-  const pages = fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
-    .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
-    .catch(() => null);
+  // Optional, and asked for alongside the site's data; on the client's own domain the listings have their own.
+  const pages = document.querySelector('meta[name="site-paths"]')
+    ? Promise.resolve(null)
+    : fetch(new URL(`${import.meta.env.BASE_URL}data/pages.json`, location.href))
+        .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
+        .catch(() => null);
   const data = await loadSite(params, backendConfig);
   const sitePages = await pages;
   if (sitePages) (window as unknown as { __sitePages: Record<string, string> }).__sitePages = sitePages;

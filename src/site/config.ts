@@ -1,7 +1,7 @@
 // Configuration of a client's site (white label): brand, contacts, menu, texts and layout. Stored as data
 // (organizations.branding in the back end, public/data/sites.json in the demo), never as code: every value is
 // checked here before use, because any admin of a client can write it.
-import { SORT_KEYS, type SortKey } from '../state/sort';
+import { SORT_KEYS, type SortKey } from '../state/sort.ts';
 
 export const TEMPLATES = ['leve', 'classico', 'lateral', 'escuro', 'moderno'] as const;
 export type Template = (typeof TEMPLATES)[number];

@@ -427,20 +427,45 @@ precisa ser um objeto de no máximo 64 KB; endereço (slug) e domínio só o sup
 `site-assets`, na pasta do cliente, só por donos e administradores, e sem SVG (que pode conter scripts: o editor
 converte SVG em PNG).
 
-**O que falta para colocar o site de um cliente no ar com o domínio dele:**
-1. **Hospedagem que atende vários domínios.** O GitHub Pages serve um domínio por repositório. Para vários
-   clientes, publicar o mesmo `dist/` num serviço que aceite domínios personalizados em quantidade com HTTPS
-   automático (Cloudflare Pages ou Cloudflare for SaaS, Vercel, Netlify). O site já descobre o cliente pelo
-   domínio (`organizations.custom_domain`) ou por `?imobiliaria=<slug>` no endereço provisório.
-2. **Páginas estáticas por cliente** para o Google (hoje a página estática é por anúncio, no endereço do mapa):
-   gerar a página inicial, a busca por bairro e as fichas no domínio de cada cliente, com o `sitemap.xml` dele.
-   Até lá, o Google indexa o site pelo JavaScript (funciona, mas é mais lento para entrar).
-3. Redirecionamentos 301 dos endereços antigos (ver item 9), página de política de privacidade e o CAPTCHA
-   (Turnstile) nos formulários, se aparecer spam.
-4. Ideias para depois: blog, páginas extras livres, banner com várias fotos na capa, "Seja corretor" (vagas),
+**Páginas no domínio do cliente (Google e prévia de links).** Quem pede uma página no domínio de um cliente recebe o
+HTML do site já com título, descrição, endereço canônico, Open Graph (a prévia do WhatsApp e do Facebook) e dados
+estruturados: a imobiliária (`RealEstateAgent`) em todas as páginas e o anúncio (`RealEstateListing`) na ficha. Quem
+monta é `src/seo/siteServer.ts`, com uma consulta ao banco (`site_bootstrap`) por página.
+- **Endereços:** `/`, `/imoveis` (os filtros ficam na query), `/imovel/<título>-<código>`, `/sobre`, `/contato` e
+  `/anunciar`. O código é a referência do anúncio (única no cliente) ou o começo do id; é ele que acha o anúncio, então
+  um link com o título antigo continua funcionando. Favoritos e Comparar ficam fora do Google (`noindex` e
+  `robots.txt`).
+- **Do cliente:** `/sitemap.xml`, com as páginas do menu e todos os anúncios publicados (com a data da última
+  alteração), e `/robots.txt`.
+- **Endereços antigos** (`site.html?p=...`, `?id=`, título antigo, barra no fim) vão para o novo com 301. O que não
+  existe responde 404, com `noindex`.
+- **Compartilhar e WhatsApp** usam o endereço da ficha no domínio do cliente. O mapa da ficha já era o do próprio
+  site (filtrado pelo cliente).
+- O site só usa esses endereços quando o servidor marca a página (`<meta name="site-paths">`). Na demonstração e no
+  endereço provisório (`site.html?imobiliaria=<slug>`), continua com `?p=`.
+
+**Para colocar o site de um cliente no ar com o domínio dele:**
+1. **Hospedagem que atende vários domínios.** O GitHub Pages serve um domínio por repositório. O caminho previsto é
+   publicar o mesmo `dist/` na Cloudflare Pages (com Cloudflare for SaaS para os domínios dos clientes).
+   - `functions/[[path]].ts` passa as páginas dos domínios dos clientes pelo `siteServer`. Variáveis:
+     `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `PLATFORM_HOSTS` (os endereços da própria plataforma, como
+     `*.pages.dev`).
+   - `public/_routes.json` deixa os arquivos do build fora da função.
+   - Em outra hospedagem, basta chamar `handleSiteRequest` (recebe `Request`, devolve `Response`).
+   - **Ainda não foi testado na Cloudflare.** Na homologação, confira se os cabeçalhos de segurança chegam nas
+     páginas: a Cloudflare não aplica o `_headers` às respostas de funções, e o servidor copia os do `site.html`.
+2. **Testar localmente:** `vite preview` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` também atende os
+   domínios dos clientes.
+   - Um domínio terminado em `.localhost` chega à própria máquina sem configurar nada: grave
+     `custom_domain = 'imobiliaria.localhost'` e abra `http://imobiliaria.localhost:4173/`.
+   - O teste do backend (`npm run verify:backend`) faz isso.
+3. Página de política de privacidade e o CAPTCHA (Turnstile) nos formulários, se aparecer spam.
+4. Se o tráfego crescer, guardar as páginas na borda por alguns minutos (`s-maxage`) ou mandar os dados junto com o
+   HTML, para o site não repetir a consulta.
+5. Ideias para depois: blog, páginas extras livres, banner com várias fotos na capa, "Seja corretor" (vagas),
    alerta de imóvel novo por e-mail para a busca salva.
 
-*Anotado por Claude (assistente de IA), 13/10/2026, para consulta na manutenção.*
+*Anotado por Claude (assistente de IA), 13/10/2026 (atualizado em 15/10/2026), para consulta na manutenção.*
 
 ## 13. Mapa: bairro, paisagem, obras e serviço mensal (conversa de 14/10/2026)
 

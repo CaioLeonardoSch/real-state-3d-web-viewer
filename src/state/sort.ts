@@ -1,5 +1,5 @@
-import { HIGHLIGHTS, priceIn, type Listing } from '../data/types';
-import { formatBRL, formatBRLCompact } from '../utils/format';
+import { HIGHLIGHTS, priceIn, type Listing } from '../data/types.ts';
+import { formatBRL, formatBRLCompact } from '../utils/format.ts';
 
 export const SORT_KEYS = ['price-asc', 'price-desc', 'area-desc', 'ppm2-asc', 'relevance', 'recent'] as const;
 export type SortKey = (typeof SORT_KEYS)[number];

@@ -34,16 +34,15 @@ import {
   type MenuItem,
   type SiteConfig,
 } from './config';
-import { cardHtml, codeOf, photosOf, placeOf, priceHtml, specsHtml, wireCarousels, type CardContext } from './cards';
+import { cardHtml, photosOf, placeOf, priceHtml, specsHtml, wireCarousels, type CardContext } from './cards';
 import type { SiteData } from './data';
 import { fontFaceCss } from './fonts';
 import { leadFormHtml, wireLeadForm } from './forms';
 import { ICONS } from './icons';
+import { ROUTES, codeOf, listingPath, pageMeta, parsePath, routePath, type Route } from './routes';
 import { MAX_COMPARE, SavedLists } from './saved';
 import { bairroCounts, chipsOf, emptySearch, pageOf, queryToSearch, resultsTitle, runSearch, searchToQuery, type SiteSearch } from './search';
 
-export const ROUTES = ['inicio', 'imoveis', 'imovel', 'sobre', 'contato', 'anunciar', 'favoritos', 'comparar'] as const;
-export type Route = (typeof ROUTES)[number];
 
 const $ = <T extends HTMLElement>(root: ParentNode, sel: string) => root.querySelector<T>(sel)!;
 
@@ -75,6 +74,8 @@ export class SiteApp {
   private mapReady = false;
   /** Keeps ?imobiliaria= in links when the site was opened that way (not on the client's own domain). */
   private keep: Record<string, string> = {};
+  /** On the client's own domain the server (src/seo/siteServer.ts) marks the page: clean addresses (./routes). */
+  private readonly paths = !!document.querySelector('meta[name="site-paths"]');
   private fitBound = false;
   private fitTimer = 0;
   private wireHeaderFit: () => void = () => {};
@@ -135,11 +136,18 @@ export class SiteApp {
   // ---------------------------------------------------------------- routing
 
   href(route: string, params: Record<string, string> | URLSearchParams = {}): string {
-    const p = new URLSearchParams({ ...this.keep });
-    if (route !== 'inicio') p.set('p', route);
+    const p = new URLSearchParams(this.paths ? {} : { ...this.keep });
+    if (route !== 'inicio' && !this.paths) p.set('p', route);
     for (const [k, v] of params instanceof URLSearchParams ? params : Object.entries(params)) p.append(k, v);
+    let path = location.pathname;
+    if (this.paths) {
+      // a listing's own address, when it is known (the map's "__ID__" template stays "/imovel?id=")
+      const l = route === 'imovel' ? this.data.listings.find((x) => x.id === p.get('id')) : undefined;
+      if (l) p.delete('id');
+      path = l ? listingPath(l) : routePath(route as Route);
+    }
     const s = p.toString();
-    return `${location.pathname}${s ? `?${s}` : ''}`;
+    return `${path}${s ? `?${s}` : ''}`;
   }
 
   /** Search of one neighbourhood (default order and view). */
@@ -155,7 +163,7 @@ export class SiteApp {
 
   go(url: string, replace = false): void {
     const next = new URL(url, location.href);
-    const samePage = next.searchParams.get('p') === this.params.get('p') && this.route !== 'imovel';
+    const samePage = (this.paths ? next.pathname === location.pathname : next.searchParams.get('p') === this.params.get('p')) && this.route !== 'imovel';
     if (replace) history.replaceState(null, '', next);
     else history.pushState(null, '', next);
     this.load(!samePage);
@@ -167,9 +175,16 @@ export class SiteApp {
    */
   load(scrollTop = true, focus = scrollTop): void {
     this.params = new URLSearchParams(location.search);
-    const p = this.params.get('p') as Route | null;
-    this.notFound = !!p && !ROUTES.includes(p);
-    this.route = p && ROUTES.includes(p) ? p : 'inicio';
+    if (this.paths) {
+      const page = parsePath(location.pathname, this.data.listings);
+      this.notFound = !page;
+      this.route = page?.route ?? 'inicio';
+      if (page?.listing) this.params.set('id', page.listing.id);
+    } else {
+      const p = this.params.get('p') as Route | null;
+      this.notFound = !!p && !ROUTES.includes(p);
+      this.route = p && ROUTES.includes(p) ? p : 'inicio';
+    }
     this.render();
     if (scrollTop) window.scrollTo({ top: 0 });
     if (focus) {
@@ -269,8 +284,16 @@ export class SiteApp {
         `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 1 1 7v8h5v-5h4v5h5V7z" fill="${c.colors.primary}"/></svg>`)}`;
   }
 
+  /** Title and description of a page without a listing (./routes, the same the server sends). */
+  private setPage(page: Parameters<typeof pageMeta>[0]): void {
+    const m = pageMeta(page, this.config);
+    this.setMeta(m.title, m.description, undefined, m.noindex);
+  }
+
   private setMeta(title: string, description: string, canonical?: string, noindex = false): void {
     document.title = title;
+    // on the client's domain each page has its own address (a search leaves its filters out of it)
+    if (this.paths && !noindex) canonical ??= location.origin + routePath(this.route);
     // pages that do not exist stay out of search engines (the demo's site-wide noindex is a separate tag)
     document.querySelector('meta[name=robots][data-page]')?.remove();
     if (noindex) document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex" data-page>');
@@ -500,7 +523,7 @@ export class SiteApp {
   private home(main: HTMLElement): void {
     const c = this.config;
     const all = this.data.listings;
-    this.setMeta(`${c.name} · Imóveis em Joinville`, c.seo.description || c.home.subtitle || `Imóveis de ${c.name}.`);
+    this.setPage('inicio');
     const hero = c.home.heroImage
       ? `style="--hero-img:url('${escapeHtml(c.home.heroImage.replace(/'/g, '%27').replace(/\\/g, '%5C'))}')"`
       : '';
@@ -995,7 +1018,7 @@ export class SiteApp {
   private mapUrl(extra: Record<string, string> = {}): string {
     const detail = new URL(this.href('imovel', { id: '__ID__' }), location.href).href;
     const p = new URLSearchParams({ embed: '1', site: this.data.agencyId, cor: this.config.colors.primary.slice(1), pagina: detail, ...extra });
-    return new URL(`${import.meta.env.BASE_URL}index.html?${p}`, location.href).href;
+    return new URL(`${this.paths ? '/' : import.meta.env.BASE_URL}index.html?${p}`, location.href).href;
   }
 
   private showMap(box: HTMLElement, found: Listing[]): void {
@@ -1043,7 +1066,7 @@ export class SiteApp {
     const c = this.config;
     const l = this.data.listings.find((x) => x.id === this.params.get('id'));
     if (!l) {
-      this.setMeta(`Imóvel não encontrado · ${c.name}`, '', undefined, true);
+      this.setPage('imovel-nao-encontrado');
       main.innerHTML = `<div class="wrap narrow"><h1>Imóvel não encontrado</h1><p>Ele pode ter sido vendido ou retirado do site.</p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver os imóveis disponíveis</a></div>`;
       return;
     }
@@ -1053,7 +1076,12 @@ export class SiteApp {
     const addr = addressLabel(l) ?? placeOf(l);
     const url = location.href;
     const pages = (window as unknown as { __sitePages?: Record<string, string> }).__sitePages;
-    const canonical = pages?.[l.id] ? new URL(`${import.meta.env.BASE_URL}${pages[l.id]}`, location.href).href : undefined;
+    // the listing's address on the client's domain; elsewhere its page built at publish time, when there is one
+    const canonical = this.paths
+      ? location.origin + listingPath(l)
+      : pages?.[l.id]
+        ? new URL(`${import.meta.env.BASE_URL}${pages[l.id]}`, location.href).href
+        : undefined;
     this.setMeta(`${l.title} · ${c.name}`, seoDescription(l, c.name), canonical);
     const ld = document.createElement('script');
     ld.type = 'application/ld+json';
@@ -1225,7 +1253,7 @@ export class SiteApp {
 
   private about(main: HTMLElement): void {
     const c = this.config;
-    this.setMeta(`${c.about.title} · ${c.name}`, c.about.text.slice(0, 200) || `Conheça a ${c.name}.`);
+    this.setPage('sobre');
     const paragraphs = (c.about.text || `A ${c.name} ajuda você a comprar, vender e alugar imóveis em Joinville.`).split(/\n+/).filter(Boolean);
     main.innerHTML = `<div class="wrap narrow about">
       <h1>${escapeHtml(c.about.title)}</h1>
@@ -1238,7 +1266,7 @@ export class SiteApp {
 
   private contact(main: HTMLElement): void {
     const c = this.config;
-    this.setMeta(`Contato · ${c.name}`, `Fale com a ${c.name}: ${[c.contacts.phone && formatPhone(c.contacts.phone), c.contacts.email].filter(Boolean).join(' · ')}`);
+    this.setPage('contato');
     const maps = c.contacts.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.contacts.address)}` : '';
     main.innerHTML = `<div class="wrap two-col">
       <div>
@@ -1268,7 +1296,7 @@ export class SiteApp {
 
   private announce(main: HTMLElement): void {
     const c = this.config;
-    this.setMeta(`Anuncie seu imóvel · ${c.name}`, `Quer vender ou alugar? Anuncie com a ${c.name}: site, mapa 3D e portais.`);
+    this.setPage('anunciar');
     const bairros = bairroCounts(this.data.listings, false).map((b) => b.name);
     main.innerHTML = `<div class="wrap two-col">
       <div>
@@ -1316,15 +1344,13 @@ export class SiteApp {
 
   /** An address that is not a page of the site (out of search engines). */
   private missingPage(main: HTMLElement): void {
-    const c = this.config;
-    this.setMeta(`Página não encontrada · ${c.name}`, '', undefined, true);
+    this.setPage('nao-encontrada');
     main.innerHTML = `<div class="wrap narrow"><h1>Página não encontrada</h1><p>O endereço pode estar errado ou a página foi retirada.</p>
       <p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver os imóveis</a> <a class="btn btn-ghost" href="${escapeHtml(this.href('inicio'))}" data-nav>Página inicial</a></p></div>`;
   }
 
   private favorites(main: HTMLElement): void {
-    const c = this.config;
-    this.setMeta(`Favoritos · ${c.name}`, 'Imóveis que você salvou.');
+    this.setPage('favoritos');
     const list = this.saved.favorites.map((id) => this.data.listings.find((l) => l.id === id)).filter((l): l is Listing => !!l);
     main.innerHTML = `<div class="wrap"><h1>Favoritos</h1>${
       list.length
@@ -1335,7 +1361,7 @@ export class SiteApp {
 
   private compare(main: HTMLElement): void {
     const c = this.config;
-    this.setMeta(`Comparar imóveis · ${c.name}`, 'Compare imóveis lado a lado.');
+    this.setPage('comparar');
     const list = this.saved.compared.map((id) => this.data.listings.find((l) => l.id === id)).filter((l): l is Listing => !!l);
     if (!list.length) {
       main.innerHTML = `<div class="wrap"><h1>Comparar imóveis</h1><div class="empty"><p>Marque "Comparar" em até ${MAX_COMPARE} imóveis para vê-los lado a lado.</p><a class="btn btn-primary" href="${escapeHtml(this.menuHref('venda'))}" data-nav>Ver imóveis</a></div></div>`;

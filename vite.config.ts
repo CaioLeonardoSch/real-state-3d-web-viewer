@@ -4,6 +4,7 @@ import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { appCsp, cspMeta, listingCsp, renderHeaders, styleHash } from './scripts/lib/csp.mjs';
 import { LISTING_PAGE_CSS } from './src/seo/listingPage.ts';
+import { handleSiteRequest } from './src/seo/siteServer.ts';
 
 /** Demonstration data in public/data: left out of production builds. */
 const DEMO_FILES = ['listings.json', 'developments.json', 'sites.json'];
@@ -71,11 +72,39 @@ function production(demo: boolean): Plugin {
   };
 }
 
+/**
+ * `vite preview` answers clients' own domains as the hosting does (functions/[[path]].ts): their pages come from
+ * src/seo/siteServer.ts. Needs the back end (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). To try it, a domain under
+ * .localhost reaches this machine with no setup: organizations.custom_domain = 'imobiliaria.localhost', then
+ * http://imobiliaria.localhost:4173/.
+ */
+function clientDomains(env: Record<string, string | undefined>): Plugin {
+  return {
+    name: 'client-domains',
+    configurePreviewServer(server) {
+      const { VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY } = env;
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+      const shell = path.resolve(server.config.root, server.config.build.outDir, 'site.html');
+      server.middlewares.use((req, res, next) => {
+        const request = new Request(`http://${req.headers.host}${req.url}`, { method: req.method });
+        handleSiteRequest(request, { SUPABASE_URL, SUPABASE_ANON_KEY }, async () => new Response(readFileSync(shell)))
+          .then(async (response) => {
+            if (!response) return next();
+            res.statusCode = response.status;
+            response.headers.forEach((v, k) => res.setHeader(k, v));
+            res.end(Buffer.from(await response.arrayBuffer()));
+          })
+          .catch(next);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
   return {
     base: './',
-    plugins: [securityPolicy(), production(env.VITE_DEMO_LISTINGS !== 'false')],
+    plugins: [securityPolicy(), production(env.VITE_DEMO_LISTINGS !== 'false'), clientDomains(env)],
     build: {
       // index.html: the 3D map (also embedded by the sites); site.html: a client's site (white label)
       rollupOptions: { input: { main: 'index.html', site: 'site.html' } },

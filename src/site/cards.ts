@@ -6,6 +6,7 @@ import { photoSrcset } from '../utils/images';
 import type { SiteConfig } from './config';
 import { ICONS } from './icons';
 import { placeholderPhoto } from './placeholder';
+import { codeOf } from './routes';
 
 export interface CardContext {
   config: SiteConfig;
@@ -23,7 +24,6 @@ export function photosOf(l: Listing, c: SiteConfig): (Photo & { illustration?: t
 }
 
 export const placeOf = (l: Listing) => [l.address?.bairro, l.address?.city ?? 'Joinville'].filter(Boolean).join(' - ');
-export const codeOf = (l: Listing) => l.referenceCode ?? l.id.toUpperCase();
 
 /** Price block: rent "/mês", reduced price with the previous one struck through and the percentage. */
 export function priceHtml(l: Listing, rent: boolean, compact = false): string {

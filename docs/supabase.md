@@ -151,7 +151,13 @@ Logo e fotos vão para o bucket `site-assets`.
 
 **Domínio próprio:** o suporte grava o domínio em `organizations.custom_domain` (sem `www.`, por exemplo
 `suaimobiliaria.com.br`) e o cliente aponta o DNS para a hospedagem. O site reconhece o cliente pelo domínio.
-O GitHub Pages atende um domínio só; para vários clientes, ver o item 12 de [`backend.md`](backend.md).
+No domínio do cliente, o site tem endereços limpos (`/imovel/<título>-<código>`) e cada página chega pronta para o
+Google e para a prévia do WhatsApp, com o `sitemap.xml` e o `robots.txt` do cliente. Isso pede a hospedagem com a
+função `functions/[[path]].ts` (Cloudflare Pages), porque o GitHub Pages atende um domínio só. Detalhes no item 12
+de [`backend.md`](backend.md).
+
+O site abre com uma consulta só: `site_bootstrap` devolve o cliente (pelo domínio, senão pelo slug), os anúncios
+publicados e as fotos. A consulta roda com os direitos de quem chama.
 
 Os formulários "Contato" e "Anunciar imóvel" do site chegam em Minha conta → Contatos (para os administradores) e
 por e-mail, como os contatos dos anúncios.

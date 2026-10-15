@@ -3,6 +3,7 @@
 // builds dist-backend/ with the local URL and key, then: sign-up → client → announce with photos → the public
 // sees it (without the private fields) → lower the price → delete. Never point this at a production project.
 import { execFileSync, spawn } from 'node:child_process';
+import http from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,7 +58,15 @@ async function open(browser, url = URL_) {
 
 // edge functions with a fake e-mail provider (lead notifications)
 const fns = await startLocalFunctions(status.API_URL, URL_);
-const server = spawn('npx', ['vite', 'preview', '--outDir', OUT, '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
+// with the back end in its environment, the preview also answers clients' own domains (vite.config.ts, clientDomains)
+// a server left on the port (e.g. the demo build, or one from an interrupted run) would answer in place of ours
+if (await fetch(URL_).then(() => true, () => false)) throw new Error(`a porta ${PORT} está ocupada por outro servidor`);
+// vite itself rather than through npx, so that kill() stops the server and does not leave it holding the port
+const server = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vite.js'), 'preview', '--outDir', OUT, '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+  cwd: ROOT,
+  stdio: 'ignore',
+  env: { ...process.env, VITE_SUPABASE_URL: status.API_URL, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
+});
 const browser = await chromium.launch({ executablePath: EXEC, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
   for (let i = 0; i < 60; i++) {
@@ -66,8 +75,6 @@ try {
     } catch {}
     await sleep(500);
   }
-  // with --strictPort, a busy port makes our server exit while another one answers (e.g. the demo build)
-  if (server.exitCode !== null) throw new Error(`a porta ${PORT} está ocupada por outro servidor`);
   const tag = Date.now().toString(36);
   const PASSWORD = 'senha-segura-123';
 
@@ -361,6 +368,53 @@ try {
     pubEdited.title === 'Casa editada no backend' && /Rua do Teste/.test(pubEdited.address ?? '') && !/123/.test(pubEdited.address ?? '') && pubEdited.approx,
     JSON.stringify(pubEdited));
 
+  // ---- the client's own domain, while the listing is published: pages ready for search engines and link previews
+  // (src/seo/siteServer.ts)
+  const domain = `imob-${tag}.localhost`; // under .localhost the browser reaches this machine, with no DNS
+  const origin = `http://${domain}:${PORT}`;
+  const org = (await svc.from('organizations').update({ custom_domain: domain }).eq('slug', `${slug}-${tag}`).select('id').single()).data;
+  const published = (await svc.from('public_listings').select('id').eq('org_id', org.id)).data;
+  const raw = (p) =>
+    new Promise((resolve, reject) =>
+      http
+        .get({ host: '127.0.0.1', port: PORT, path: p, headers: { host: `${domain}:${PORT}` } }, (res) => {
+          let body = '';
+          res.on('data', (d) => (body += d)).on('end', () => resolve({ status: res.statusCode, location: res.headers.location, body }));
+        })
+        .on('error', reject),
+    );
+  const [home, sitemap, robots, old] = await Promise.all(['/', '/sitemap.xml', '/robots.txt', `/site.html?imobiliaria=${slug}-${tag}&p=sobre`].map(raw));
+  const listed = sitemap.body.match(/<loc>[^<]*\/imovel\/[^<]+<\/loc>/g) ?? [];
+  check(
+    'domínio do cliente: o HTML já traz título, canônico e Open Graph; sitemap com os anúncios, robots.txt e 301 dos endereços antigos',
+    home.status === 200 && /<title>[^<]+ · Imóveis em Joinville<\/title>/.test(home.body) && home.body.includes(`<link rel="canonical" href="${origin}/">`) &&
+      home.body.includes('property="og:title"') && published.length > 0 && listed.length === published.length &&
+      robots.body.includes(`Sitemap: ${origin}/sitemap.xml`) && old.status === 301 && old.location === '/sobre',
+    JSON.stringify({ home: home.status, title: /<title>[^<]*/.exec(home.body)?.[0], listed: listed.length, published: published.length, robots: robots.status, old: [old.status, old.location] }),
+  );
+  const dom = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const dp = await dom.newPage();
+  const domErrors = [];
+  dp.on('pageerror', (e) => domErrors.push(String(e)));
+  dp.on('console', (m) => m.type() === 'error' && domErrors.push(m.text()));
+  await dp.goto(`${origin}/imoveis`);
+  await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+  const card = dp.locator('main .card-title a[href^="/imovel/"]').first();
+  const href = await card.getAttribute('href');
+  await card.click();
+  await dp.waitForFunction((h) => location.pathname === h, href);
+  const meta = () => dp.evaluate(() => ({ canonical: document.querySelector('link[rel=canonical]')?.href, h1: document.querySelector('main h1')?.textContent }));
+  const opened = await meta();
+  await dp.reload();
+  await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+  const reloaded = await meta();
+  check(
+    'domínio do cliente: links com endereços limpos; a ficha aberta pelo link e recarregada mostra o imóvel, com o canônico no domínio',
+    !!href && opened.canonical === origin + href && reloaded.canonical === origin + href && !!reloaded.h1 && reloaded.h1 === opened.h1 && domErrors.length === 0,
+    JSON.stringify({ href, opened, reloaded, domErrors }),
+  );
+  await dom.close();
+
   // ---- session survives a reload; trash → restore → trash → delete for good
   await page.reload();
   await page.waitForSelector('body[data-ready="true"]');
@@ -522,6 +576,7 @@ try {
   await ed2.p.waitForSelector('.editor .ed-body', { timeout: 15000 });
   check('dono: ativa a verificação em duas etapas em Minha conta; o editor do site pede o código depois da senha', !editorBeforeCode, String(editorBeforeCode));
   await ed2.ctx.close();
+
   check('sem erros no console', errors.length === 0 && visitor.errors.length === 0, [...errors, ...visitor.errors].join(' | '));
   await visitor.ctx.close();
 } finally {
