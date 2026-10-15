@@ -291,12 +291,16 @@ O peso no celular continua sendo o ponto fraco do mapa: 333 KB de código e WebG
   - Ao todo são 41.012 postes:
     - 416 mapeados no OSM;
     - o resto **ilustrativo**, a cada 38 m nas ruas pavimentadas da área urbana.
-  - À noite cada poste projeta uma mancha de luz.
+  - À noite cada poste projeta no chão uma mancha larga e um ponto mais forte sob a luminária, na cor do seu tipo de
+    luz: LED branco neutro nas ruas principais, sódio alaranjado em parte das outras e LED branco quente no resto.
   - Não são as posições reais. O cadastro real da iluminação pública (58 mil pontos) existe com a concessionária da
     PPP.
 - **Árvores, matas e água.**
-  - 212.298 árvores low-poly: 1.071 do OSM e o resto ilustrativo em praças, matas e bordas de mata.
-  - As matas são uma copa facetada, um pouco recuada, com árvores na borda.
+  - 206.242 árvores low-poly: 1.071 do OSM e o resto ilustrativo em praças, matas e bordas de mata, fora de 6 m em
+    volta dos prédios e da pista das ruas.
+  - As matas são uma copa facetada, um pouco recuada, com árvores na borda e clareiras em volta das casas e das ruas
+    de carro.
+  - De dia, os prédios projetam a sua sombra no chão, do lado oposto ao sol.
   - A água tem textura facetada e margem.
 - **Obras em andamento.**
   - Os andares prontos aparecem sólidos e o resto translúcido, com uma grua.
@@ -319,8 +323,8 @@ O peso no celular continua sendo o ponto fraco do mapa: 333 KB de código e WebG
 
 ## Mapa 3D: melhorias pedidas em 15/10
 
-Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um. **Nada disso foi feito ainda.** Os
-prazos são de trabalho, sem contar a espera por dados.
+Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um. **Feitos em 15/10: os itens 5, 4 e 6
+(etapa 1)**, descritos em cada item; os outros ainda não. Os prazos são de trabalho, sem contar a espera por dados.
 
 1. **Relevo, e a câmera sem atravessar o chão (1 a 2 semanas).**
    - **Hoje:** o mapa é plano. No zoom máximo, com a inclinação de 75°, a câmera fica a uns 30 m do chão e entra nas
@@ -367,8 +371,8 @@ prazos são de trabalho, sem contar a espera por dados.
    - **Limite:** padarias e mercados pequenos são o que mais falta no OSM. Onde faltar, o anúncio não pode dar a
      entender que não há nenhum por perto.
 4. **Luz dos postes mais natural (1 a 2 dias).**
-   - **Hoje:** cada poste acende uma mancha redonda de 11 m, com a borda esfumada, a mesma cor e a mesma intensidade
-     em todos.
+   - **Antes:** cada poste acendia uma mancha redonda de 11 m, com a borda esfumada, a mesma cor e a mesma
+     intensidade em todos.
    - **Como:**
      - a luz mais forte embaixo da luminária e caindo devagar, com as manchas vizinhas somando onde se encontram (uma
        camada de intensidade, `heatmap`, ou círculos sobrepostos; a escolha sai do teste no celular);
@@ -378,29 +382,56 @@ prazos são de trabalho, sem contar a espera por dados.
    - **Limite:** a luz é desenhada no chão. Paredes e árvores não recebem a luz dos postes, porque o MapLibre não tem
      luz pontual. Com o cadastro real da iluminação (58 mil pontos), daria para usar o tipo e a potência de cada
      poste.
+   - **Feito em 15/10:**
+     - duas manchas por poste, ambas esfumadas até a borda: uma larga, de 12 m, e um ponto mais forte, de 4,5 m, sob
+       a luminária. Onde as manchas vizinhas se encontram, a luz soma;
+     - ficaram os círculos sobrepostos, e não o `heatmap`: o `heatmap` satura, muda de cor com o zoom e não deixa
+       cada poste ter a sua cor;
+     - o tipo de luz é sorteado na geração do mapa, um por rua, e sai igual em toda visita:
+       - LED branco neutro nas avenidas e ruas principais (`primary`, `secondary`, `tertiary`);
+       - sódio alaranjado em 15% das outras ruas;
+       - LED branco quente no resto;
+     - cada poste tem a sua intensidade: nas ruas principais, 25% maior, com variação de 15% para mais ou para menos;
+     - à noite, a luminária acende na cor da sua luz;
+     - o arquivo de perto só grava o tipo quando não é o branco quente, que é o padrão do estilo. Assim o arquivo não
+       cresceu (ver o peso abaixo).
 5. **Casas dentro da mata (1 a 2 dias).**
    - **Causa:**
      - as árvores ilustrativas das matas são sorteadas numa grade sem descontar os prédios (`sampleTrees`, em
        `scripts/lib/scenery.mjs`);
      - a copa da mata (a área de mata recuada 6 m e erguida a 6 m) também cobre o que está dentro;
      - onde o OSM marca mata em volta de casas (chácaras, ruas abertas na mata), a mata passa por cima delas.
-   - **Correção, na geração do mapa:**
-     - uma clareira de uns 6 m em volta de cada prédio, e nenhuma árvore sobre as ruas;
-     - a copa da mata ganha os mesmos recortes (a biblioteca de recorte de polígonos já está no projeto);
-     - conferir na área da imagem enviada e no relatório mensal.
+   - **Feito em 15/10, na geração do mapa** (`clearings` e `cutCanopy`, em `scripts/lib/scenery.mjs`):
+     - nenhuma árvore ilustrativa a menos de 6 m de um prédio, nem sobre a pista das ruas (meia largura da via mais
+       0,8 m; túneis não contam). As árvores mapeadas no OSM ficam onde estão;
+     - a copa da mata é recortada 6 m em volta dos prédios e ao longo das ruas de carro que a atravessam. Trilhas e
+       caminhos não cortam a copa, e sobras com menos de 150 m² somem;
+     - resultado: 1.120 copas recortadas, sem nenhuma falha de recorte, e 206.242 árvores (eram 212.298, 6.056 a
+       menos);
+     - falta conferir na área da imagem enviada.
 6. **Sol e sombras (3 a 5 dias na primeira etapa).**
-   - **Hoje:** manhã e tarde já mudam a luz. A posição do sol vem da hora (biblioteca `suncalc`), e a parede virada
-     para o sol fica mais clara. Mas nenhum prédio projeta sombra:
+   - **Antes:** manhã e tarde já mudavam a luz. A posição do sol vem da hora (biblioteca `suncalc`), e a parede virada
+     para o sol fica mais clara. Mas nenhum prédio projetava sombra:
      - o MapLibre GL JS 6.13 não desenha sombras;
      - o [plugin de sombras de 2026](https://maplibre.org/news/2026-09-02-maplibre-newsletter-august-2026/) é para o
        MapLibre Native (aplicativos), não para a web.
-   - **Etapa 1, sombra no chão (3 a 5 dias):**
+   - **Etapa 1, sombra no chão: feita em 15/10** (`src/map/shadows.ts`):
      - a sombra de cada prédio é o contorno estendido na direção oposta ao sol, pelo comprimento que a altura e o
-       ângulo do sol dão (às 9h de 20/03, uma torre de 30 m faz uns 44 m de sombra);
-     - desenhada como uma mancha escura translúcida, muda com manhã e tarde;
-     - o cálculo é feito no navegador, em segundo plano (web worker), só para os prédios visíveis: não pesa no
-       arquivo do mapa e já serve para a etapa 2;
-     - sombra de prédio sobre outro prédio (na parede ou no telhado) não aparece nesta etapa.
+       ângulo do sol dão (às 9h de 20/03, uma torre de 30 m faz uns 44 m de sombra). Na prática, é o casco convexo
+       do contorno e da sua cópia deslocada: exato em prédios convexos; num prédio em L, o canto de dentro também
+       fica na sombra;
+     - fazem sombra os prédios do mapa, os prédios dos anúncios e as torres das obras. De manhã a sombra vai para
+       oeste, à tarde para leste, e à noite não há sombra;
+     - desenhada como uma camada escura translúcida, que o MapLibre pinta uma vez só por pixel: sombras que se
+       cruzam não escurecem duas vezes. Os prédios, desenhados depois, cobrem a parte da sombra que fica atrás deles;
+     - aparece no zoom 15,5, quando os prédios chegam à altura cheia, e fica nítida no 16. Começar no 15 não
+       compensava: ali os prédios ainda estão subindo, a sombra quase não se vê e o cálculo levava 0,2 s no centro;
+     - o cálculo roda no navegador quando a câmera para, com os blocos do mapa já carregados. Não pesa no arquivo
+       do mapa e já serve para a etapa 2. O corte em blocos fica com o worker do MapLibre;
+     - entram só os prédios a até 1 km do centro da tela no zoom 15,5 (metade a cada zoom a mais, no mínimo
+       500 m). No teste, no centro da cidade, foram 2.470 sombras em 102 ms no zoom 15,6 e 871 em 17 a 41 ms de
+       perto (zoom 17,6);
+     - sombra de prédio sobre outro prédio (na parede ou no telhado) não aparece nesta etapa, nem a das árvores.
    - **Etapa 2, régua de horário e estação (mais 1 a 2 semanas):**
      - arrastar a hora e o mês e ver a sombra andar;
      - no anúncio, o sol do apartamento: quantas horas de sol a fachada recebe no inverno e no verão, já descontando
@@ -416,17 +447,56 @@ prazos são de trabalho, sem contar a espera por dados.
 
 **Ordem sugerida**, do mais rápido e visível ao que pede dados e decisões:
 
-1. casas na mata (item 5);
-2. luz dos postes (item 4);
-3. sombra no chão (item 6, etapa 1);
+1. casas na mata (item 5): feito em 15/10;
+2. luz dos postes (item 4): feito em 15/10;
+3. sombra no chão (item 6, etapa 1): feito em 15/10;
 4. nomes das ruas e a rua na busca (item 2);
 5. serviços por perto (item 3);
 6. relevo (item 1). Mexe em tudo (câmera, prédios, obras, vista da janela) e depende da licença do MDT; vale pedir os
    dados já, para não esperar por eles depois;
 7. régua de horário e sol do apartamento (item 6, etapa 2).
 
-Somando, são cerca de 4 a 6 semanas sem a régua de horário. Se o relevo for o mais importante, ele pode vir antes; só
-demora mais para aparecer.
+Com os três primeiros feitos, faltam cerca de 3 a 4 semanas sem a régua de horário. Se o relevo for o mais importante,
+ele pode vir antes; só demora mais para aparecer.
+
+### Peso no carregamento, e o que fica em comum entre os sites (15/10)
+
+**Peso dos itens feitos em 15/10**, medido nos arquivos gerados:
+
+| Arquivo | Antes | Depois | Diferença |
+|---|---|---|---|
+| `joinville.pmtiles` (zooms 10 a 15) | 14,68 MB | 14,77 MB | +91 KB (+0,6%): os recortes das copas |
+| `joinville-detalhe.pmtiles` (zoom 15) | 10,81 MB | 10,76 MB | −44 KB (−0,4%): 6 mil árvores a menos pesam mais que o tipo e a intensidade dos postes |
+| Sombras | — | — | nada a baixar: calculadas no navegador |
+
+O navegador só baixa os blocos da área vista (pedidos por faixa de bytes), então a diferença numa tela é de poucos KB.
+Nenhum dos três itens precisou do banco.
+
+**Em comum e de cada cliente.** O mapa de Joinville já é um só para todos os sites:
+- **em comum, gerado uma vez por mês:** os arquivos do mapa (prédios com altura, telhados, matas com as clareiras,
+  árvores, postes com o tipo de luz, ruas com o pavimento). Todo cálculo pesado acontece na geração, uma vez, e o
+  resultado fica materializado nos arquivos, servidos como estáticos pela CDN. Mais um site cliente não custa nada a
+  mais: todos leem os mesmos arquivos, e o navegador guarda o que já baixou;
+- **de cada cliente, no banco:** anúncios, empreendimentos, unidades e preços, separados por cliente;
+- **o que não vale materializar:** o que depende de uma escolha de quem olha, como a sombra na hora escolhida. É
+  barato de calcular no navegador e caro de guardar: cada horário seria mais uma cópia das sombras dos 164.672
+  prédios.
+
+**Os próximos itens seguem o mesmo princípio:**
+- **serviços por perto (item 3):**
+  - uma tabela de serviços da cidade, em comum, atualizada pelo serviço mensal;
+  - para cada anúncio, o serviço mais próximo de cada tipo e a distância são calculados quando o anúncio é salvo e
+    guardados junto com ele, e recalculados quando a tabela muda;
+  - o filtro "até 500 m de escola" vira uma consulta simples por índice, sem calcular distâncias a cada busca;
+- **ruas na busca (item 2):** a lista de ruas com nome e posição, em comum, como arquivo estático ou tabela;
+- **relevo (item 1):** o terreno como mais um arquivo do mapa, em comum. A altura do chão de cada anúncio é guardada
+  quando ele é salvo, para a vista da janela e as peças empilhadas;
+- **sol do apartamento (item 6, etapa 2):** calculado por unidade quando ela é salva e guardado no banco, usando os
+  prédios em volta, que vêm dos dados em comum.
+
+Não vale pôr a geometria do mapa no banco para servir os blocos a cada visita: cada tela custaria processamento do
+banco, e a conta cresceria com cada site. Os arquivos estáticos na CDN atendem qualquer número de sites quase sem
+custo.
 
 ### Google Maps Platform: avaliação (15/10)
 

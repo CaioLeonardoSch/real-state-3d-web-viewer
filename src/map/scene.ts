@@ -15,6 +15,7 @@ import type { AppData } from '../data/load';
 import { OverviewControl } from './overviewControl';
 import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
+import { M_PER_DEG, shadowOffset, shadowRing } from './shadows';
 import { dirtRoad, pavingStones, waterFacets, type TextureImage } from './textures';
 import { craneParts } from './crane';
 import { osmNumericId } from '../data/osmId';
@@ -51,8 +52,40 @@ const Z_WATER_PATTERN = 13;
  */
 const FEATURE_BASE: ExpressionSpecification = ['coalesce', ['get', 'base'], ['get', 'b'], 0];
 const Z_LAMPS = 16;
+/**
+ * Light of the street lamps at night: a pool fading out LAMP_POOL_M metres around the point under the luminaire and
+ * a brighter spot LAMP_CORE_M wide, both scaled by the strength of the lamp (k: 1.25 on main streets, ±15% each).
+ */
+const LAMP_POOL_M = 12;
+const LAMP_CORE_M = 4.5;
+const LAMP_POOL_OPACITY = 0.6;
+const LAMP_CORE_OPACITY = 0.85;
+const LAMP_STRENGTH: ExpressionSpecification = ['coalesce', ['get', 'k'], 1];
 /** Canopy mass of woods (m), as in scripts/lib/scenery.mjs. */
 const WOOD_CANOPY_M = 6;
+/**
+ * Building shadows on the ground by day (src/map/shadows.ts): from Z_SHADOWS, when the buildings stand at their full
+ * height (while they rise the shadows would be faint, and in the city centre cost some 0.2 s each time the camera
+ * stops), fading in until Z_SHADOWS_FULL. They are cast by the buildings within SHADOW_RADIUS_M of the map centre at
+ * Z_SHADOWS (half as far per zoom level in, at least SHADOW_MIN_RADIUS_M) and recomputed when the camera stops or the
+ * sun moves.
+ */
+const Z_SHADOWS = Z_3D_FULL;
+const Z_SHADOWS_FULL = Z_3D_FULL + 0.5;
+const SHADOW_RADIUS_M = 1000;
+const SHADOW_MIN_RADIUS_M = 500;
+const SHADOW_MIN_HEIGHT_M = 2;
+const SHADOW_COLOR = '#1b2236';
+const SHADOW_OPACITY = 0.3;
+/** Layers whose volumes cast shadows (all standing on the ground), and their height in metres. */
+const SHADOW_CASTERS: { layer: string; height: (p: Record<string, unknown>) => number }[] = [
+  { layer: 'context-buildings', height: (p) => Number(p.height) },
+  { layer: 'listing-buildings', height: (p) => Number(p.built ?? p.height) },
+  { layer: 'listing-dimmed', height: (p) => (p.kind === 'building' ? Number(p.height) : 0) },
+  // developments (src/map/developmentLayer.ts): the tower, or its floors while it is open
+  { layer: 'dev-towers', height: (p) => Number(p.height) },
+  { layer: 'dev-blocks', height: (p) => Number(p.top) },
+];
 /** Road widths (m) by OSM class, at real scale from zoom 16 (lamps stand just beyond the kerb). */
 const ROAD_WIDTH_M: ExpressionSpecification = [
   'match',
@@ -95,6 +128,7 @@ const CLIP_LAYERS = [
   'roads-dirt',
   'roads-lanes',
   'lamp-glow',
+  'lamp-core',
   'buildings-flat',
   'context-buildings',
   'roofs',
@@ -173,6 +207,9 @@ export class Scene {
   /** Area the map is cut to (neighbourhood filter), or null. */
   private clip: Polygon | MultiPolygon | null = null;
   private labelMarkers: { marker: Marker; kind: string; name: string }[] = [];
+  /** The shadows must be recomputed at the map's next idle moment (camera stopped, sun or listings changed). */
+  private shadowsDirty = true;
+  private shadowStats: { count: number; ms: number; offset: [number, number] | null } = { count: 0, ms: 0, offset: null };
 
   constructor(
     container: HTMLElement,
@@ -232,6 +269,77 @@ export class Scene {
     });
     this.bindInteractions();
     this.addBairroLabels();
+    // the shadows follow the camera: recomputed once the tiles it moved to are loaded
+    this.map.on('moveend', () => (this.shadowsDirty = true));
+    this.map.on('idle', () => this.updateShadows());
+  }
+
+  // ---------------------------------------------------------------- building shadows
+
+  /** Last shadow computation: shadows drawn, time taken (ms) and the sun's offset (for scripts/e2e-check.mjs). */
+  get shadowInfo(): { count: number; ms: number; offset: [number, number] | null } {
+    return this.shadowStats;
+  }
+
+  /** Recomputes the shadows at the map's next idle moment (after the frame that shows the change). */
+  private invalidateShadows(): void {
+    this.shadowsDirty = true;
+    this.map.triggerRepaint();
+  }
+
+  private updateShadows(): void {
+    const source = this.map.getSource('shadows') as GeoJSONSource | undefined;
+    if (!this.shadowsDirty || !source) return;
+    this.shadowsDirty = false;
+    const t0 = performance.now();
+    const sun = this.theme.sun;
+    const offset = sun && this.map.getZoom() >= Z_SHADOWS ? shadowOffset(sun, this.map.getCenter().lat) : null;
+    const features = offset ? this.castShadows(offset) : [];
+    if (features.length || this.shadowStats.count) source.setData({ type: 'FeatureCollection', features });
+    this.shadowStats = { count: features.length, ms: Math.round(performance.now() - t0), offset };
+  }
+
+  /** Shadows of the volumes of SHADOW_CASTERS near the map centre, from the tiles already loaded. */
+  private castShadows(offset: [number, number]): Feature<Polygon>[] {
+    const m = this.map;
+    const { lng, lat } = m.getCenter();
+    const kx = M_PER_DEG * Math.cos((lat * Math.PI) / 180);
+    const radius = Math.max(SHADOW_MIN_RADIUS_M, SHADOW_RADIUS_M * 2 ** (Z_SHADOWS - m.getZoom()));
+    const near = (x: number, y: number) => Math.hypot((x - lng) * kx, (y - lat) * M_PER_DEG) <= radius;
+    // tiles wholly beyond the radius are skipped without reading their features' geometry
+    const tileNear = new Map<string, boolean>();
+    const inReach = ({ z, x, y }: { z: number; x: number; y: number }): boolean => {
+      const key = `${z}/${x}/${y}`;
+      let ok = tileNear.get(key);
+      if (ok === undefined) {
+        const n = 2 ** z;
+        const lat2 = (j: number) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * j) / n))) * 180) / Math.PI;
+        const cx = Math.min(Math.max(lng, (x / n) * 360 - 180), ((x + 1) / n) * 360 - 180);
+        const cy = Math.min(Math.max(lat, lat2(y + 1)), lat2(y));
+        ok = near(cx, cy);
+        tileNear.set(key, ok);
+      }
+      return ok;
+    };
+    const out: Feature<Polygon>[] = [];
+    for (const { layer, height } of SHADOW_CASTERS) {
+      const l = m.getLayer(layer);
+      if (!l || m.getLayoutProperty(layer, 'visibility') === 'none') continue;
+      // the layer's own filter (hidden listing buildings), without the bairro cut: the mask covers what is beyond
+      const filter = this.baseFilters.has(layer) ? this.baseFilters.get(layer) : m.getFilter(layer);
+      for (const f of m.querySourceFeatures(l.source, { sourceLayer: l.sourceLayer, filter: filter ?? undefined })) {
+        const h = height(f.properties);
+        const tile = (f as { tile?: { z: number; x: number; y: number } }).tile;
+        if (!(h >= SHADOW_MIN_HEIGHT_M) || (tile && !inReach(tile))) continue;
+        const g = f.geometry;
+        for (const rings of g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []) {
+          if (!near(rings[0][0][0], rings[0][0][1])) continue;
+          const ring = shadowRing(rings[0], h, offset);
+          if (ring) out.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } });
+        }
+      }
+    }
+    return out;
   }
 
   private texture(id: string): TextureImage | null {
@@ -438,7 +546,8 @@ export class Scene {
         paint: { 'line-color': t.boundary, 'line-width': 1.5, 'line-dasharray': [3, 2], 'line-opacity': 0.8 },
       },
       {
-        // warm pools of light under the street lamps (night only)
+        // pools of light under the street lamps (night only): fading from the middle to the edge (blur 1), in the
+        // colour of the kind of lamp (t) and as wide as its strength (k, scripts/lib/scenery.mjs)
         id: 'lamp-glow',
         type: 'circle',
         source: this.detailSource,
@@ -447,12 +556,45 @@ export class Scene {
         // always visible, transparent by day: a layer hidden when the tiles load gets no features when it is shown
         // later (the night chosen up close would stay dark)
         paint: {
-          'circle-color': sc.glow,
-          'circle-opacity': sc.glowOpacity,
-          'circle-radius': this.meters(11, Z_TREES),
-          'circle-blur': 0.75,
+          'circle-color': this.glowColor(sc),
+          'circle-opacity': sc.glowOpacity * LAMP_POOL_OPACITY,
+          'circle-radius': this.meters(['*', LAMP_POOL_M, LAMP_STRENGTH], Z_TREES),
+          'circle-blur': 1,
           'circle-pitch-alignment': 'map',
           'circle-pitch-scale': 'map',
+        },
+      },
+      {
+        // the bright spot right under the luminaire, over the pool
+        id: 'lamp-core',
+        type: 'circle',
+        source: this.detailSource,
+        'source-layer': 'lights',
+        minzoom: Z_TREES + 0.5,
+        paint: {
+          'circle-color': this.glowColor(sc),
+          'circle-opacity': sc.glowOpacity * LAMP_CORE_OPACITY,
+          'circle-radius': this.meters(['*', LAMP_CORE_M, LAMP_STRENGTH], Z_TREES),
+          'circle-blur': 1,
+          'circle-pitch-alignment': 'map',
+          'circle-pitch-scale': 'map',
+        },
+      },
+      {
+        // by day the buildings cast their shadows on the ground (empty at night). A flat translucent extrusion:
+        // MapLibre colours each pixel of such a layer once, so overlapping shadows do not darken twice; the
+        // buildings drawn after it hide the part of the shadow behind them. The ground layers before it get
+        // shaded; the bairro mask after it covers the shadows outside the chosen area.
+        id: 'building-shadows',
+        type: 'fill-extrusion',
+        source: 'shadows',
+        minzoom: Z_SHADOWS,
+        paint: {
+          'fill-extrusion-color': SHADOW_COLOR,
+          'fill-extrusion-height': 0,
+          'fill-extrusion-base': 0,
+          'fill-extrusion-opacity': ['interpolate', ['linear'], ['zoom'], Z_SHADOWS, 0, Z_SHADOWS_FULL, SHADOW_OPACITY],
+          'fill-extrusion-vertical-gradient': false,
         },
       },
       {
@@ -547,7 +689,7 @@ export class Scene {
         'source-layer': 'lamps',
         minzoom: Z_LAMPS,
         paint: {
-          'fill-extrusion-color': ['match', ['get', 'p'], 'lum', sc.lum, sc.pole],
+          'fill-extrusion-color': this.lampColor(sc),
           'fill-extrusion-base': ['get', 'b'],
           'fill-extrusion-height': ['get', 'h'],
           'fill-extrusion-vertical-gradient': false,
@@ -566,6 +708,16 @@ export class Scene {
   private roadColor(t: Theme): ExpressionSpecification {
     const sc = t.scenery;
     return ['match', ['get', 's'], 'a', sc.asphalt, 'c', sc.paving, 'p', sc.paved, 'u', sc.unpaved, t.roads];
+  }
+
+  /** Light of a street lamp by its kind (t, scripts/lib/scenery.mjs): warm white LED, neutral white LED, sodium. */
+  private glowColor(sc: Theme['scenery']): ExpressionSpecification {
+    return ['match', ['coalesce', ['get', 't'], 'w'], 'n', sc.glowNeutral, 's', sc.glowSodium, sc.glow];
+  }
+
+  /** Pole and arm, and the luminaire in the colour of its light (orange for sodium). */
+  private lampColor(sc: Theme['scenery']): ExpressionSpecification {
+    return ['match', ['get', 'p'], 'lum', ['match', ['coalesce', ['get', 't'], 'w'], 's', sc.lumSodium, sc.lum], sc.pole];
   }
 
   private treeColor(t: Theme): ExpressionSpecification {
@@ -622,6 +774,8 @@ export class Scene {
         // neighbourhood(s) the map is cut to (filter "bairro"), and the ground outside them plus 100 m (masked)
         'clip-area': { type: 'geojson', data: EMPTY_FC },
         'clip-mask': { type: 'geojson', data: EMPTY_FC },
+        // building shadows by day (updateShadows)
+        shadows: { type: 'geojson', data: EMPTY_FC, maxzoom: 16 },
       },
       light: { anchor: 'map', ...t.light },
       sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon },
@@ -860,6 +1014,7 @@ export class Scene {
     (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
     (this.map.getSource('construction') as GeoJSONSource | undefined)?.setData(this.constructionCollection());
     this.setHover(null);
+    this.invalidateShadows();
   }
 
   /** Replaces the listings shown on the map (e.g. after one is added or removed in this browser). */
@@ -876,6 +1031,7 @@ export class Scene {
       this.baseFilters.set(id, id === 'roofs' ? this.roofFilter() : this.contextFilter());
       this.applyFilter(id);
     }
+    this.invalidateShadows();
   }
 
   // ---------------------------------------------------------------- neighbourhood cut ("bairro" filter)
@@ -1046,9 +1202,11 @@ export class Scene {
     m.setPaintProperty('roads-lanes', 'line-color', sc.laneMark);
     m.setPaintProperty('trees', 'fill-extrusion-color', this.treeColor(t));
     m.setPaintProperty('roofs', 'fill-extrusion-color', this.roofColor(t));
-    m.setPaintProperty('lamps', 'fill-extrusion-color', ['match', ['get', 'p'], 'lum', sc.lum, sc.pole]);
-    m.setPaintProperty('lamp-glow', 'circle-color', sc.glow);
-    m.setPaintProperty('lamp-glow', 'circle-opacity', sc.glowOpacity);
+    m.setPaintProperty('lamps', 'fill-extrusion-color', this.lampColor(sc));
+    for (const [id, share] of [['lamp-glow', LAMP_POOL_OPACITY], ['lamp-core', LAMP_CORE_OPACITY]] as const) {
+      m.setPaintProperty(id, 'circle-color', this.glowColor(sc));
+      m.setPaintProperty(id, 'circle-opacity', sc.glowOpacity * share);
+    }
     m.setPaintProperty('clip-line', 'line-color', t.accentStrong);
     for (const id of TEXTURES) {
       const img = this.texture(id);
@@ -1079,6 +1237,7 @@ export class Scene {
     m.setPaintProperty('listing-pins-dimmed', 'circle-stroke-color', t.pinStroke);
     m.setLight({ anchor: 'map', ...t.light });
     m.setSky({ 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon });
+    this.invalidateShadows();
   }
 
   // ---------------------------------------------------------------- interaction

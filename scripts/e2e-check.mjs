@@ -43,7 +43,17 @@ async function axe(page, label) {
   if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE);
   const found = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] } });
-    return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(', ')}`);
+    // for each node: its selector and, when a check names them, the elements behind the failure (the focusable ones in
+    // an aria-hidden box, say), with the box's own state
+    const related = (n) => [...n.all, ...n.any, ...n.none].flatMap((c) => c.relatedNodes ?? []).slice(0, 2).map((x) => x.target.join(' '));
+    const state = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? `[aria-hidden=${el.getAttribute('aria-hidden')} inert=${el.inert} class=${el.className}]` : '';
+    };
+    return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 3).map((n) => {
+      const more = related(n);
+      return `${n.target.join(' ')}${v.id === 'aria-hidden-focus' ? state(n.target.join(' ')) : ''}${more.length ? ` → ${more.join(', ')}` : ''}`;
+    }).join(', ')}`);
   });
   axeStates.push(label);
   axeFindings.push(...found.map((f) => `${label}: ${f}`));
@@ -912,14 +922,48 @@ async function main() {
     check('up close: low-poly roofs, trees, street lamps and roads by pavement (asphalt, paving stones…); no night lights by day',
       scDay.trees > 0 && scDay.lamps > 0 && scDay.roofs > 0 && scDay.surfaces.includes('a') && scDay.surfaces.includes('c') && scDay.glow === 0, JSON.stringify(scDay));
     await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery.png') });
+    // building shadows on the ground: away from the sun (west in the morning, east in the afternoon), none at night
+    const shadowsAt = async (label, east) => {
+      await sc.page.click(`.time-of-day button:has-text("${label}")`);
+      await sc.page.waitForFunction((e) => {
+        const s = window.__demo.shadows();
+        return e === 0 ? s.count === 0 : s.count > 0 && Math.sign(s.offset[0]) === e;
+      }, east, { timeout: 15000 }).catch(() => {});
+      await waitIdle(sc.page);
+      return sc.page.evaluate(() => ({ ...window.__demo.shadows(), drawn: window.__demo.map.queryRenderedFeatures({ layers: ['building-shadows'] }).length }));
+    };
+    const shMorning = await shadowsAt('Manhã', -1);
+    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-shadows-morning.png') });
+    const shAfternoon = await shadowsAt('Tarde', 1);
+    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-shadows-afternoon.png') });
+    check('by day the buildings cast shadows on the ground: west in the morning, east in the afternoon',
+      shMorning.count > 0 && shMorning.drawn > 0 && shMorning.offset[0] < 0 && shAfternoon.count > 0 && shAfternoon.drawn > 0 && shAfternoon.offset[0] > 0,
+      JSON.stringify({ morning: shMorning, afternoon: shAfternoon }));
+    // the most shadows are computed when they first appear (zoom 15: buildings within 1.5 km of the centre)
+    await sc.page.evaluate(() => window.__demo.map.jumpTo({ zoom: 15.6 }));
+    await waitIdle(sc.page);
+    console.log('  shadows at zoom 15.6:', JSON.stringify(await sc.page.evaluate(() => window.__demo.shadows())));
+    await sc.page.evaluate(() => window.__demo.map.jumpTo({ zoom: 17.6 }));
+    await waitIdle(sc.page);
     await sc.page.click('.time-of-day button:has-text("Noite")');
     await waitIdle(sc.page);
+    await sc.page.waitForFunction(() => window.__demo.shadows().count === 0, null, { timeout: 10000 }).catch(() => {});
     // switched to night already up close (tiles loaded by day): the lights must appear without moving the map
-    const scNight = await sc.page.evaluate(() => ({
-      lights: window.__demo.map.queryRenderedFeatures({ layers: ['lamp-glow'] }).length,
-      opacity: window.__demo.map.getPaintProperty('lamp-glow', 'circle-opacity'),
-    }));
-    check('at night the street lamps light up the street', scNight.lights > 0 && scNight.opacity > 0, JSON.stringify(scNight));
+    const scNight = await sc.page.evaluate(() => {
+      const m = window.__demo.map;
+      const lights = m.queryRenderedFeatures({ layers: ['lamp-glow'] });
+      return {
+        lights: lights.length,
+        // each lamp has its kind (warm or neutral white LED, sodium) and strength, fixed at build time
+        typed: lights.every((f) => ['w', 'n', 's'].includes(f.properties.t ?? 'w') && f.properties.k > 0),
+        opacity: m.getPaintProperty('lamp-glow', 'circle-opacity'),
+        core: m.getPaintProperty('lamp-core', 'circle-opacity'),
+        kinds: [...new Set(lights.map((f) => f.properties.t ?? 'w'))].sort().join(','),
+        shadows: window.__demo.shadows().count,
+      };
+    });
+    check('at night the street lamps light up the street (a pool and a bright spot, by kind of lamp), and there are no shadows',
+      scNight.lights > 0 && scNight.typed && scNight.opacity > 0 && scNight.core > scNight.opacity && scNight.shadows === 0, JSON.stringify(scNight));
     await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery-night.png') });
     check('no console errors (scenery)', sc.errors.length === 0, sc.errors.join(' | '));
     await sc.ctx.close();

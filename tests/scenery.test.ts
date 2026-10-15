@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Feature, LineString, Point, Polygon } from 'geojson';
 import {
   LAMP_SPACING_M,
+  clearings,
+  cutCanopy,
   frame,
   lampPositions,
   lampShapes,
@@ -70,6 +72,27 @@ describe('postes ilustrativos', () => {
     for (const s of shapes) expect(s.properties.b).toBeLessThan(s.properties.h);
     expect((light.geometry.coordinates[1] - LAT) * f.ky).toBeCloseTo(1.5, 1);
   });
+  it('tipo de luz por rua (avenida: LED branco neutro e mais forte) e intensidade de cada poste', () => {
+    const main = lampPositions([road('primary', { surface: 'asphalt' })], [], everywhere, LAT);
+    expect(main.length).toBeGreaterThan(0);
+    for (const l of main) {
+      expect(l.t).toBe('n');
+      expect(l.k).toBeGreaterThanOrEqual(1);
+      expect(l.k).toBeLessThanOrEqual(1.5);
+    }
+    const side = lampPositions([road('residential', { surface: 'asphalt' })], [], everywhere, LAT);
+    expect(new Set(side.map((l) => l.t)).size).toBe(1); // o mesmo tipo ao longo da rua
+    expect(['w', 's']).toContain(side[0].t);
+    for (const l of side) {
+      expect(l.k).toBeGreaterThanOrEqual(0.8);
+      expect(l.k).toBeLessThanOrEqual(1.2);
+    }
+    // a luz e a luminária levam o tipo; o branco quente (padrão do estilo do mapa) fica de fora
+    const { shapes, light } = lampShapes(main[0], LAT);
+    expect(light.properties).toEqual({ t: 'n', k: main[0].k });
+    expect(shapes[2].properties.t).toBe('n');
+    expect(lampShapes({ x: -48.85, y: LAT, angle: 0, t: 'w', k: 1 }, LAT).light.properties).toEqual({ k: 1 });
+  });
 });
 
 describe('árvores', () => {
@@ -122,5 +145,46 @@ describe('geometria', () => {
     expect(m.has([-48.85, LAT])).toBe(true);
     expect(m.has([-48.85 + f.dx(150), LAT])).toBe(true);
     expect(m.has([-48.85 + f.dx(600), LAT])).toBe(false);
+  });
+});
+
+describe('clareiras: casas e ruas fora da mata', () => {
+  const x0 = -48.85;
+  /** Ponto a `east` m para leste e `north` m para o norte de (x0, LAT). */
+  const at = (east: number, north: number): [number, number] => [x0 + f.dx(east), LAT + f.dy(north)];
+  const house = { type: 'Feature' as const, properties: {}, geometry: square(...at(100, 50), 10) };
+  const wood = { type: 'Feature' as const, properties: { kind: 'wood', osmId: 'way/9' }, geometry: square(...at(0, 20), 200) };
+  const lane = (highway: string): Feature<LineString, { highway: string; osmId: string }> => ({
+    type: 'Feature',
+    properties: { highway, osmId: 'way/2' },
+    geometry: { type: 'LineString', coordinates: [at(50, 0), at(50, 300)] },
+  });
+  it('dentro da casa, a menos de 6 m dela ou sobre a rua fica bloqueado; longe, não', () => {
+    const clear = clearings([house], [road('residential')], { lat0: LAT });
+    expect(clear.blocked(at(105, 55))).toBe(true);
+    expect(clear.blocked(at(105, 64))).toBe(true);
+    expect(clear.blocked(at(105, 70))).toBe(false);
+    expect(clear.blocked(at(50, 2))).toBe(true); // meia pista de rua residencial (2,8 m) + 0,8 m
+    expect(clear.blocked(at(50, 5))).toBe(false);
+  });
+  it('árvores ilustrativas ficam fora das clareiras', () => {
+    const clear = clearings([house], [lane('residential')], { lat0: LAT });
+    const trees = sampleTrees([wood], [], everywhere, { lat0: LAT, blocked: clear.blocked });
+    expect(trees.length).toBeGreaterThan(50);
+    expect(trees.some((t) => clear.blocked([t.x, t.y]))).toBe(false);
+    expect(sampleTrees([wood], [], everywhere, { lat0: LAT, blocked: () => true })).toEqual([]);
+  });
+  it('a copa da mata abre em volta da casa e ao longo da rua que a atravessa; trilha não corta', () => {
+    const { features, cut, failed } = cutCanopy([wood], clearings([house], [lane('residential')], { lat0: LAT }));
+    expect([cut, failed]).toEqual([1, 0]);
+    const inWood = polygonTester(features[0].geometry);
+    expect(inWood(at(105, 55))).toBe(false);
+    expect(inWood(at(105, 63))).toBe(false);
+    expect(inWood(at(50, 100))).toBe(false);
+    expect(inWood(at(56, 100))).toBe(true);
+    expect(inWood(at(150, 150))).toBe(true);
+    const path = cutCanopy([wood], clearings([], [lane('footway')], { lat0: LAT }));
+    expect(path.cut).toBe(0);
+    expect(path.features[0]).toBe(wood);
   });
 });

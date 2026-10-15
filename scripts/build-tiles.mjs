@@ -22,7 +22,7 @@ import turfArea from '@turf/area';
 import { computeRenderHeight, loadCadastreFloors } from './lib/height.mjs';
 import { isResidentialBuilding } from './lib/residential.mjs';
 import { writePmtiles } from './lib/pmtiles-writer.mjs';
-import { frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeShapes, urbanMask } from './lib/scenery.mjs';
+import { clearings, cutCanopy, frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeShapes, urbanMask } from './lib/scenery.mjs';
 import { orientedRect, roofKind, roofShapes } from './lib/roofs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,13 +77,17 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
 roads.features = roads.features.filter((f) => !NOT_ROADS.has(f.properties.highway));
 // trees and lamps mapped in OSM (older extractions do not have these files)
 const [osmTrees, osmLamps, canopy] = await Promise.all(['trees', 'lamps', 'canopy'].map((n) => read(`${n}.geojson`).catch(() => EMPTY)));
-for (const f of canopy.features) f.properties = {};
 
 // ---- scenery (before trimming the road properties: lamps need surface and lighting tags)
 const lat0 = meta.center?.[1] ?? -26.3;
 // where the city is: cells with buildings, grown ~200 m
 const mask = urbanMask(buildings.features.map((f) => (f.geometry.type === 'Polygon' ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0])), 100, 2, lat0);
-const treeList = sampleTrees(green.features, osmTrees.features, mask, { lat0 });
+// clearings: no illustrative tree on a house or a street, and the canopy mass of woods cut back around them
+const clear = clearings(buildings.features, roads.features, { lat0 });
+const canopyCut = cutCanopy(canopy.features, clear);
+canopy.features = canopyCut.features;
+for (const f of canopy.features) f.properties = {};
+const treeList = sampleTrees(green.features, osmTrees.features, mask, { lat0, blocked: clear.blocked });
 const trees = { type: 'FeatureCollection', features: treeList.flatMap((t) => treeShapes(t, lat0)) };
 const lampList = lampPositions(roads.features, osmLamps.features, mask, lat0);
 const lampParts = lampList.map((l) => lampShapes(l, lat0));
@@ -260,6 +264,7 @@ await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + 
 const kb = (b) => `${(b / 1024).toFixed(0)} KB`;
 console.log(`Telhados: ${JSON.stringify(roofCounts)} (${roofList.length} peças)`);
 console.log(`Cenário: ${treeList.length} árvores (${outMeta.counts.treesFromOsm} do OSM), ${lampList.length} postes (${outMeta.counts.lampsFromOsm} do OSM), máscara urbana ${mask.size} células de 100 m`);
+console.log(`Matas: ${canopyCut.cut} copas com casas ou ruas por perto, recortadas${canopyCut.failed ? ` (${canopyCut.failed} mantidas inteiras: recorte falhou)` : ''}`);
 console.log(`${file}: ${tiles.base.length} tiles, ${kb((await stat(path.join(OUT, file))).size)}`);
 console.log(`${detailFile}: ${tiles.detail.length} tiles, ${kb((await stat(path.join(OUT, detailFile))).size)}`);
 for (const [z, v] of Object.entries(perZoom)) console.log(`  ${z}: ${v.tiles} tiles, ${kb(v.bytes)} (maior ${kb(v.max)})`);

@@ -49,6 +49,8 @@ export interface Theme {
   light: { color: string; intensity: number; position: [number, number, number] };
   sky: { sky: string; horizon: string };
   scenery: Scenery;
+  /** Where the sun is (building shadows); themes made by hand may leave it out. */
+  sun?: SunInfo;
 }
 
 export type GreenKind = 'park' | 'grass' | 'wood' | 'scrub' | 'wetland' | 'farm';
@@ -86,9 +88,13 @@ export interface Scenery {
   crane: string;
   /** Roofs (scripts/lib/roofs.mjs): clay tiles, fibre cement, dark tiles, concrete (water tank and lift room). */
   roofs: [string, string, string, string];
-  /** Pool of light under each lamp (night only). */
+  /** Pool of light under each lamp (night only), by kind of lamp: warm white LED, neutral white LED, sodium. */
   glow: string;
+  glowNeutral: string;
+  glowSodium: string;
   glowOpacity: number;
+  /** Luminaire of the sodium lamps (orange at night). */
+  lumSodium: string;
 }
 
 const DAY_SCENERY: Scenery = {
@@ -116,7 +122,10 @@ const DAY_SCENERY: Scenery = {
   crane: '#f0b429',
   roofs: ['#c48d72', '#a7acb2', '#8f6f62', '#c6c6c1'],
   glow: '#ffd27a',
+  glowNeutral: '#fff4dc',
+  glowSodium: '#ffb257',
   glowOpacity: 0,
+  lumSodium: '#dfe3e8',
 };
 
 export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: Theme; sun: SunInfo } {
@@ -125,6 +134,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
     return {
       sun,
       theme: {
+        sun,
         background: '#141b2d',
         context: '#3a4152',
         roads: '#2a3245',
@@ -162,11 +172,14 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
           trunk: '#2c2622',
           bush: '#253f2f',
           pole: '#3e4555',
-          lum: '#fff1c2',
+          lum: '#fff6dc',
+          lumSodium: '#ffb44d',
           crane: '#b98a2a',
           roofs: ['#4c3c48', '#3f4659', '#3b3242', '#454b5d'],
-          glow: '#ffd37e',
-          glowOpacity: 0.85,
+          glow: '#ffd99a',
+          glowNeutral: '#fff0d4',
+          glowSodium: '#ffa640',
+          glowOpacity: 1,
         },
       },
     };
@@ -175,6 +188,7 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
   return {
     sun,
     theme: {
+      sun,
       background: warm ? '#e9e4da' : '#e6eaee',
       context: '#d9d9d6',
       roads: '#c4c4bf',

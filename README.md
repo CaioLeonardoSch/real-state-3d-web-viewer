@@ -239,14 +239,22 @@ não muda as árvores do resto da cidade.
 - **Postes**:
   - 416 mapeados no OSM, mais um a cada 38 m nas ruas pavimentadas da área urbana, do lado direito (41.012 ao todo);
   - não entram em túneis, pontes, ruas de chão e onde o OSM diz `lit=no`;
-  - à noite, cada um projeta uma mancha de luz no chão;
+  - à noite, cada um projeta no chão uma mancha larga e um ponto mais forte sob a luminária, na cor do tipo de luz,
+    fixo por rua: LED branco neutro nas ruas principais, sódio alaranjado em 15% das outras e LED branco quente no
+    resto; cada poste tem a sua intensidade;
   - **os postes ilustrativos não são as posições reais.**
-- **Árvores**: 212.298, das quais 1.071 do OSM (árvores e fileiras):
+- **Árvores**: 206.242, das quais 1.071 do OSM (árvores e fileiras):
   - o resto é ilustrativo, espalhado em praças, gramados e bordas de mata da área urbana, em três formatos e três tons;
   - as matas grandes viram uma copa facetada, recuada 6 m, com árvores na borda, em vez de árvores soltas: com elas
-    eram quase 1 milhão de árvores, e a geração dos blocos estourava a memória.
+    eram quase 1 milhão de árvores, e a geração dos blocos estourava a memória;
+  - nenhuma árvore ilustrativa a menos de 6 m de um prédio nem sobre a pista das ruas, e a copa da mata abre clareiras
+    em volta dos prédios e ao longo das ruas de carro que a atravessam (`clearings` e `cutCanopy`, em
+    `scripts/lib/scenery.mjs`).
 - **Água**: de perto (zoom 13), textura facetada em tons claros e escuros e uma margem mais clara; de longe, cor
   lisa, que pesa menos na primeira tela. Rios e canais aparecem como linhas.
+- **Sombras**: de dia, cada prédio projeta a sua sombra no chão, do lado oposto ao sol (oeste de manhã, leste à tarde),
+  a partir do zoom 15. São calculadas no navegador quando a câmera para, com os blocos já carregados
+  (`src/map/shadows.ts`), e não pesam no arquivo do mapa.
 - **Onde aparece:** só de perto:
   - a copa das matas sobe junto com os prédios, a partir do zoom 14;
   - os telhados sobem com os prédios, a partir do zoom 15;
@@ -625,9 +633,9 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 - Mapa (ver [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md)):
-  - melhorias pedidas em 15/10, nesta ordem: casas fora da mata, luz dos postes mais natural, sombra dos prédios no
-    chão, nomes das ruas (e a rua na busca), serviços por perto, relevo com a câmera sempre acima do chão, e a régua
-    de horário com o sol de cada apartamento;
+  - melhorias pedidas em 15/10: casas fora da mata, luz dos postes mais natural e sombra dos prédios no chão já
+    feitas; faltam, nesta ordem, nomes das ruas (e a rua na busca), serviços por perto, relevo com a câmera sempre
+    acima do chão, e a régua de horário com o sol de cada apartamento;
   - pavimento da Secretaria de Infraestrutura para completar os 640 km sem informação;
   - LiDAR da Prefeitura e um estéreo único do núcleo vertical para as torres;
   - classificador de telhado (plano, duas águas, quatro águas);
@@ -647,7 +655,7 @@ Extrato OSM de 13/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 14/10/
 | Vias (`highway`) | 19.090 |
 | Água (`natural=water`, `waterway`) | 2.099 |
 | Áreas verdes (parques, gramados, matas, mangue, campos) | 2.730 |
-| Árvores no mapa (1.071 do OSM, o resto ilustrativo) | 212.298 |
+| Árvores no mapa (1.071 do OSM, o resto ilustrativo) | 206.242 |
 | Postes no mapa (416 do OSM, o resto ilustrativo) | 41.012 |
 
 - Joinville e Araquari, 53 bairros com nome no OSM; bbox −49,200842, −26,599012, −48,650741, −26,074239 (W, S, E, N).

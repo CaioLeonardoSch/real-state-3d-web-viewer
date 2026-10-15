@@ -698,6 +698,7 @@ async function main() {
       return scene.clipped;
     },
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
+    shadows: () => scene.shadowInfo,
     developmentIds: developments.map((d) => d.id),
   };
 }

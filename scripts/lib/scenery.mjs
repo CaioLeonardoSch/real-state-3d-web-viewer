@@ -2,6 +2,7 @@
 // and street lamps. OSM maps few trees and lamps in Joinville (hundreds), so most are *illustrative*: trees are
 // spread inside parks and woods near the city, lamps along paved streets. Deterministic (same input, same output),
 // so a monthly rebuild only changes what changed in OSM.
+import polygonClipping from 'polygon-clipping';
 
 // ---------------------------------------------------------------- pavement
 
@@ -117,6 +118,212 @@ const bboxOf = (geometry) => {
   return [w, s, e, n];
 };
 
+// ---------------------------------------------------------------- clearings: no trees on houses or streets
+
+/** Clear ground (m) around buildings: no tree stands closer, and the canopy mass of woods is cut back as far. */
+export const BUILDING_CLEARING_M = 6;
+/** Half width (m) of the carriageway by road class (links 3.5 m, paths 1 m); trees keep ROAD_CLEARING_M beyond it. */
+export const ROAD_HALF_M = {
+  motorway: 7,
+  trunk: 6,
+  primary: 4.8,
+  secondary: 4.8,
+  tertiary: 4.2,
+  unclassified: 2.8,
+  residential: 2.8,
+  living_street: 2.4,
+  service: 2.2,
+  busway: 3.5,
+  pedestrian: 3,
+  track: 1.8,
+};
+export const ROAD_CLEARING_M = 0.8;
+const roadHalf = (highway) => ROAD_HALF_M[highway] ?? (highway.endsWith('_link') ? 3.5 : 1);
+
+/** Distance (m) from p to the segment a–b (degrees), in the local metric frame f. */
+function segmentDistance(f, px, py, x1, y1, x2, y2) {
+  const ax = (x1 - px) * f.kx;
+  const ay = (y1 - py) * f.ky;
+  const dx = (x2 - x1) * f.kx;
+  const dy = (y2 - y1) * f.ky;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+  return Math.hypot(ax + t * dx, ay + t * dy);
+}
+
+function inRing(px, py, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[j];
+    if (y1 > py !== y2 > py && px < ((x2 - x1) * (py - y1)) / (y2 - y1) + x1) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * What trees keep clear of: building outlines (BUILDING_CLEARING_M around them) and road carriageways (half width
+ * plus ROAD_CLEARING_M; not in tunnels). Each item is filed in the grid cells (≈ cellM metres) its cleared area
+ * reaches. `blocked(p)` tells whether a tree may not stand at p; `near(bbox)` lists the items around an area.
+ * OSM puts many houses inside woods (country houses, streets opened in the woods): without this, the illustrative
+ * trees and the canopy mass covered them.
+ */
+export function clearings(buildings, roads, { lat0 = -26.3, cellM = 50 } = {}) {
+  const f = frame(lat0);
+  const cw = f.dx(cellM);
+  const ch = f.dy(cellM);
+  const cells = new Map();
+  const file = (item) => {
+    const [w, s, e, n] = item.bb;
+    for (let i = Math.floor(w / cw); i <= Math.floor(e / cw); i++)
+      for (let j = Math.floor(s / ch); j <= Math.floor(n / ch); j++) {
+        const list = cells.get(`${i}:${j}`);
+        if (list) list.push(item);
+        else cells.set(`${i}:${j}`, [item]);
+      }
+  };
+  const grow = (w, s, e, n, m) => [w - f.dx(m), s - f.dy(m), e + f.dx(m), n + f.dy(m)];
+  for (const b of buildings) {
+    const g = b.geometry;
+    const rings = g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p) => p[0]) : [];
+    for (const ring of rings) {
+      let w = Infinity;
+      let s = Infinity;
+      let e = -Infinity;
+      let n = -Infinity;
+      for (const [x, y] of ring) (w = Math.min(w, x)), (e = Math.max(e, x)), (s = Math.min(s, y)), (n = Math.max(n, y));
+      file({ ring, clear: BUILDING_CLEARING_M, bb: grow(w, s, e, n, BUILDING_CLEARING_M) });
+    }
+  }
+  for (const r of roads) {
+    const p = r.properties;
+    if (p.tunnel && p.tunnel !== 'no') continue;
+    const g = r.geometry;
+    const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+    const half = roadHalf(p.highway);
+    const clear = half + ROAD_CLEARING_M;
+    for (const line of lines)
+      for (let i = 1; i < line.length; i++) {
+        const [x1, y1] = line[i - 1];
+        const [x2, y2] = line[i];
+        const bb = grow(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2), clear);
+        file({ seg: [x1, y1, x2, y2], clear, car: half > 1, bb });
+      }
+  }
+  const blocked = ([x, y]) => {
+    const list = cells.get(`${Math.floor(x / cw)}:${Math.floor(y / ch)}`);
+    if (!list) return false;
+    for (const it of list) {
+      if (x < it.bb[0] || x > it.bb[2] || y < it.bb[1] || y > it.bb[3]) continue;
+      if (it.seg) {
+        if (segmentDistance(f, x, y, ...it.seg) < it.clear) return true;
+        continue;
+      }
+      const r = it.ring;
+      if (inRing(x, y, r)) return true;
+      for (let i = 1; i < r.length; i++) if (segmentDistance(f, x, y, r[i - 1][0], r[i - 1][1], r[i][0], r[i][1]) < it.clear) return true;
+    }
+    return false;
+  };
+  const near = ([w, s, e, n]) => {
+    const found = new Set();
+    for (let i = Math.floor(w / cw); i <= Math.floor(e / cw); i++)
+      for (let j = Math.floor(s / ch); j <= Math.floor(n / ch); j++) for (const it of cells.get(`${i}:${j}`) ?? []) found.add(it);
+    return [...found].filter((it) => it.bb[0] <= e && it.bb[2] >= w && it.bb[1] <= n && it.bb[3] >= s);
+  };
+  return { blocked, near, frame: f };
+}
+
+/** Convex hull (monotone chain) of [x, y] points, as a closed ring. */
+function convexHull(points) {
+  const pts = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (list) => {
+    const out = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  const hull = [...half(pts), ...half(pts.reverse())];
+  hull.push(hull[0]);
+  return hull;
+}
+
+/** The clearing around a building: its outline's convex hull grown by `m` metres (an octagon at each corner). */
+function grownHull(f, ring, m) {
+  const pts = [];
+  for (const [x, y] of ring)
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4 + Math.PI / 8;
+      pts.push([x + f.dx(m * Math.cos(a)), y + f.dy(m * Math.sin(a))]);
+    }
+  return [convexHull(pts)];
+}
+
+/** A street's cleared strip: the segment grown by `m` metres on every side (square ends cover the joints). */
+function segmentStrip(f, [x1, y1, x2, y2], m) {
+  const dx = (x2 - x1) * f.kx;
+  const dy = (y2 - y1) * f.ky;
+  const len = Math.hypot(dx, dy);
+  if (!len) return null;
+  const ux = dx / len;
+  const uy = dy / len;
+  const at = (along, across) => [x1 + f.dx(ux * along - uy * across), y1 + f.dy(uy * along + ux * across)];
+  return [[at(-m, -m), at(len + m, -m), at(len + m, m), at(-m, m), at(-m, -m)]];
+}
+
+/** Area (m²) of a polygon given as [outer, ...holes] in degrees. */
+function polygonAreaM2(f, poly) {
+  const ringArea = (ring) => {
+    let a = 0;
+    for (let i = 1; i < ring.length; i++) a += ring[i - 1][0] * ring[i][1] - ring[i][0] * ring[i - 1][1];
+    return Math.abs(a / 2) * f.kx * f.ky;
+  };
+  return poly.reduce((acc, ring, i) => (i ? acc - ringArea(ring) : ringArea(ring)), 0);
+}
+
+/**
+ * The canopy mass of woods with clearings: cut back BUILDING_CLEARING_M around the buildings inside it and along
+ * the streets for cars that cross it (`index` from clearings()). Pieces under 150 m² are dropped, as for the mass
+ * itself (scripts/extract-region.py). Returns { features, cut, failed }: masses with something to clear around
+ * them, and those the clipping failed on (kept whole).
+ */
+export function cutCanopy(canopy, index, minAreaM2 = 150) {
+  const f = index.frame;
+  const out = [];
+  let cut = 0;
+  let failed = 0;
+  for (const feature of canopy) {
+    const g = feature.geometry;
+    if (g.type !== 'Polygon' && g.type !== 'MultiPolygon') continue;
+    const clips = index
+      .near(bboxOf(g))
+      .filter((it) => !it.seg || it.car)
+      .map((it) => (it.seg ? segmentStrip(f, it.seg, it.clear) : grownHull(f, it.ring, BUILDING_CLEARING_M)))
+      .filter(Boolean);
+    if (!clips.length) {
+      out.push(feature);
+      continue;
+    }
+    const polys = (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).filter((p) => p[0].length >= 4);
+    let rest;
+    try {
+      rest = polygonClipping.difference(polys, ...clips).filter((p) => polygonAreaM2(f, p) >= minAreaM2);
+    } catch {
+      // the clipping library gives up on some degenerate outlines: keep that mass as it was
+      failed++;
+      out.push(feature);
+      continue;
+    }
+    cut++;
+    if (rest.length) out.push({ ...feature, geometry: rest.length === 1 ? { type: 'Polygon', coordinates: rest[0] } : { type: 'MultiPolygon', coordinates: rest } });
+  }
+  return { features: out, cut, failed };
+}
+
 // ---------------------------------------------------------------- trees
 
 /**
@@ -137,9 +344,10 @@ export const WOOD_CANOPY_M = 6;
 
 /**
  * Tree positions inside green areas (jittered grid, only in the urban mask), along the edges of woods, plus the
- * trees and tree rows mapped in OSM. Returns { x, y, kind: 'broad' | 'edge' | 'bush' | 'canopy', scale } items.
+ * trees and tree rows mapped in OSM. `blocked` (from clearings()) keeps the illustrative ones off houses and
+ * streets. Returns { x, y, kind: 'broad' | 'edge' | 'bush' | 'canopy', scale } items.
  */
-export function sampleTrees(green, osmTrees, mask, { lat0 = -26.3, max = Infinity } = {}) {
+export function sampleTrees(green, osmTrees, mask, { lat0 = -26.3, max = Infinity, blocked = () => false } = {}) {
   const f = frame(lat0);
   const out = [];
   for (const t of osmTrees) {
@@ -190,7 +398,7 @@ export function sampleTrees(green, osmTrees, mask, { lat0 = -26.3, max = Infinit
               const a = [cx + f.dx((ey / len) * inset), cy + f.dy((-ex / len) * inset)];
               const b = [cx - f.dx((ey / len) * inset), cy - f.dy((-ex / len) * inset)];
               const p = inside(a) ? a : inside(b) ? b : null;
-              if (p && mask.has(p)) out.push({ x: p[0], y: p[1], kind: 'edge', scale: 0.85 + r() * 0.55 });
+              if (p && mask.has(p) && !blocked(p)) out.push({ x: p[0], y: p[1], kind: 'edge', scale: 0.85 + r() * 0.55 });
               next += WOOD_EDGE_STEP_M * (0.7 + r() * 0.6);
             }
             walked += len;
@@ -207,7 +415,7 @@ export function sampleTrees(green, osmTrees, mask, { lat0 = -26.3, max = Infinit
         const scaleR = r();
         if (keep > density.keep) continue;
         const p = [x + jx, y + jy];
-        if (!mask.has(p) || !inside(p)) continue;
+        if (!mask.has(p) || !inside(p) || blocked(p)) continue;
         out.push({ x: p[0], y: p[1], kind: kind === 'scrub' ? 'bush' : kind === 'wood' ? 'canopy' : 'broad', scale: 0.75 + scaleR * 0.6 });
         if (out.length >= max) return out;
       }
@@ -294,16 +502,26 @@ export const LAMP_ROADS = {
 };
 export const LAMP_SPACING_M = 38;
 export const LAMP_HEIGHT_M = 7;
+/** Main streets: neutral white LED and a wider, stronger pool of light (taller luminaires, more lumens). */
+const MAIN_LAMP_ROADS = new Set(['primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link']);
+/** Share of the other streets still with sodium lamps (orange); the rest warm white LED. Illustrative. */
+export const SODIUM_SHARE = 0.15;
 
 /**
  * Lamp positions: one every LAMP_SPACING_M metres on paved streets of the urban mask (not where OSM says lit=no),
- * on the right-hand side of the way, plus the lamps mapped in OSM. Returns { x, y, angle } where angle points
- * from the pole to the street (radians, east = 0, north = π/2).
+ * on the right-hand side of the way, plus the lamps mapped in OSM. Returns { x, y, angle, t, k } where angle
+ * points from the pole to the street (radians, east = 0, north = π/2), t is the kind of lamp ('n' neutral white
+ * LED on main streets, 'w' warm white LED, 's' sodium; the same along a street) and k scales its pool of light
+ * (main streets 1.25, give or take 15% per lamp).
  */
 export function lampPositions(roads, osmLamps, mask, lat0 = -26.3) {
   const f = frame(lat0);
   const out = [];
-  for (const l of osmLamps) out.push({ x: l.geometry.coordinates[0], y: l.geometry.coordinates[1], angle: 0, mapped: true });
+  for (const l of osmLamps) {
+    const [x, y] = l.geometry.coordinates;
+    const r = rng(hash(`${x.toFixed(6)},${y.toFixed(6)}`));
+    out.push({ x, y, angle: 0, mapped: true, t: r() < SODIUM_SHARE ? 's' : 'w', k: round1(0.85 + r() * 0.3) });
+  }
   for (const road of roads) {
     const p = road.properties;
     const half = LAMP_ROADS[p.highway];
@@ -311,8 +529,12 @@ export function lampPositions(roads, osmLamps, mask, lat0 = -26.3) {
     if (surfaceClass(p.highway, p.surface) === 'u') continue;
     const coords = road.geometry.type === 'LineString' ? road.geometry.coordinates : null;
     if (!coords || coords.length < 2) continue;
+    const seed = hash(p.osmId ?? `${coords[0][0]},${coords[0][1]}`);
+    const r = rng(seed);
+    const main = MAIN_LAMP_ROADS.has(p.highway);
+    const t = main ? 'n' : r() < SODIUM_SHARE ? 's' : 'w';
     // start half a spacing in (no lamps on top of corners), phase from the way id so parallel ways don't align
-    let next = LAMP_SPACING_M * (0.35 + (hash(p.osmId ?? '') % 1000) / 2500);
+    let next = LAMP_SPACING_M * (0.35 + (seed % 1000) / 2500);
     let walked = 0;
     for (let i = 1; i < coords.length; i++) {
       const [x1, y1] = coords[i - 1];
@@ -322,15 +544,16 @@ export function lampPositions(roads, osmLamps, mask, lat0 = -26.3) {
       const len = Math.hypot(ex, ey);
       if (len === 0) continue;
       while (next <= walked + len) {
-        const t = (next - walked) / len;
-        const cx = x1 + (x2 - x1) * t;
-        const cy = y1 + (y2 - y1) * t;
+        const u = (next - walked) / len;
+        const cx = x1 + (x2 - x1) * u;
+        const cy = y1 + (y2 - y1) * u;
         // right-hand normal (in metres), pointing away from the street centre
         const nx = ey / len;
         const ny = -ex / len;
         const px = cx + f.dx(nx * (half + 0.7));
         const py = cy + f.dy(ny * (half + 0.7));
-        if (mask.has([px, py])) out.push({ x: px, y: py, angle: Math.atan2(-ny, -nx) });
+        const k = round1((main ? 1.25 : 1) * (0.85 + r() * 0.3));
+        if (mask.has([px, py])) out.push({ x: px, y: py, angle: Math.atan2(-ny, -nx), t, k });
         next += LAMP_SPACING_M;
       }
       walked += len;
@@ -353,20 +576,23 @@ function rect(f, x, y, angle, along0, along1, width) {
 }
 
 /**
- * Low-poly street lamp: pole, arm reaching over the kerb and the luminaire (p: 'pole' | 'arm' | 'lum'), plus the
- * point under the luminaire where the light falls at night (returned separately).
+ * Low-poly street lamp: pole, arm reaching over the kerb and the luminaire (p: 'pole' | 'arm' | 'lum'; the
+ * luminaire keeps the kind of lamp t, for its colour at night), plus the point under the luminaire where the light
+ * falls at night (returned separately, with t and k).
  */
 export function lampShapes(l, lat0 = -26.3) {
+  // warm white ('w') is the default of the map style: left out, it saves a property on most lamps
+  const kind = l.t && l.t !== 'w' ? { t: l.t } : {};
   const f = frame(lat0);
   const H = LAMP_HEIGHT_M;
   const shapes = [
     { type: 'Feature', properties: { p: 'pole', b: 0, h: H }, geometry: { type: 'Polygon', coordinates: rect(f, l.x, l.y, l.angle, -0.12, 0.12, 0.24) } },
     { type: 'Feature', properties: { p: 'arm', b: H - 0.25, h: H }, geometry: { type: 'Polygon', coordinates: rect(f, l.x, l.y, l.angle, 0, 1.5, 0.16) } },
-    { type: 'Feature', properties: { p: 'lum', b: H - 0.45, h: H - 0.1 }, geometry: { type: 'Polygon', coordinates: rect(f, l.x, l.y, l.angle, 1.1, 1.9, 0.4) } },
+    { type: 'Feature', properties: { p: 'lum', b: H - 0.45, h: H - 0.1, ...kind }, geometry: { type: 'Polygon', coordinates: rect(f, l.x, l.y, l.angle, 1.1, 1.9, 0.4) } },
   ];
   const lx = l.x + f.dx(Math.cos(l.angle) * 1.5);
   const ly = l.y + f.dy(Math.sin(l.angle) * 1.5);
-  return { shapes, light: { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [round7(lx), round7(ly)] } } };
+  return { shapes, light: { type: 'Feature', properties: { ...kind, k: l.k ?? 1 }, geometry: { type: 'Point', coordinates: [round7(lx), round7(ly)] } } };
 }
 
 // ---------------------------------------------------------------- simplification (for the neighbourhood areas)
