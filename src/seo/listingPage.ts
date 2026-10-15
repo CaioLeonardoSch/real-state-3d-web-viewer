@@ -61,7 +61,8 @@ export function pagePath(l: Pick<Listing, 'id' | 'title'>): string {
 /** Address as the advertiser allows it to be shown. */
 function shownAddress(l: Listing): { line: string | null; street?: string; locality?: string; region: string; postal?: string } {
   const a = l.address ?? {};
-  const display = l.addressDisplay ?? (l.approximateLocation ? 'neighborhood' : 'full');
+  // no choice recorded: only the neighbourhood, as in addressLabel and publicAddress
+  const display = l.addressDisplay ?? 'neighborhood';
   const street = display === 'neighborhood' ? undefined : display === 'full' ? [a.street, a.number].filter(Boolean).join(', ') || undefined : a.street;
   const locality = a.city ?? undefined;
   const line = [street, a.bairro, locality].filter(Boolean).join(' · ') || null;

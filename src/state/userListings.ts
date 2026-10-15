@@ -1,3 +1,4 @@
+import { publicAddress } from '../data/listingText';
 import { validateListingsFile, type Agency, type Listing } from '../data/types';
 
 /**
@@ -48,7 +49,10 @@ export function loadUserListings(agencies: Agency[], takenIds: Set<string>): Lis
   return out;
 }
 
-/** Persists the listings; returns false when the browser does not allow storage. */
+/**
+ * Persists the listings; returns false when the browser does not allow storage. The whole address is kept (the form
+ * needs it to edit the listing); the export below keeps only what the advertiser chose to show.
+ */
 export function saveUserListings(listings: Listing[]): boolean {
   const s = storage();
   if (!s) return false;
@@ -62,12 +66,18 @@ export function saveUserListings(listings: Listing[]): boolean {
 
 const stripRuntimeFields = ({ userAdded: _ignored, ...l }: Listing): Listing => l;
 
+/** The export is merged into the public listings.json: the CEP and the parts of the address the advertiser hid stay out. */
+const toPublic = (listing: Listing): Listing => {
+  const l = stripRuntimeFields(listing);
+  return l.address ? { ...l, address: publicAddress(l.address, l.addressDisplay) } : l;
+};
+
 export function exportUserListings(listings: Listing[], agencies: Agency[]): UserListingsExport {
   return {
     fictional: true,
     notice: 'Imóveis cadastrados pelo formulário "Anunciar imóvel" do protótipo. Dados de demonstração.',
     agencies,
-    listings: listings.map(stripRuntimeFields),
+    listings: listings.map(toPublic),
   };
 }
 

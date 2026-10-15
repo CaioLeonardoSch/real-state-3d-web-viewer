@@ -592,7 +592,13 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
   it('o público lê pela view, sem o endereço exato quando o anunciante escolheu esconder', async () => {
     const full = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'full' })).select('id').single();
     const street = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'street' })).select('id').single();
-    const hood = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'neighborhood' })).select('id').single();
+    // um campo que a view não conhece (ponto de referência) também não pode aparecer
+    const hoodAddress = { ...listingRow(orgA).address, reference: 'Em frente à padaria' };
+    const hood = await ana.client
+      .from('listings')
+      .insert(listingRow(orgA, { address_display: 'neighborhood', address: hoodAddress }))
+      .select('id')
+      .single();
     const direct = await anon().from('listings').select('id').eq('id', full.data!.id);
     expect(direct.data ?? []).toHaveLength(0); // a tabela não é pública
 

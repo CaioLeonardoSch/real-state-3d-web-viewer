@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addressLabel, formatCep, videoEmbedUrl, whatsappLink } from '../src/data/listingText';
-import type { Listing } from '../src/data/types';
+import { addressLabel, formatCep, publicAddress, videoEmbedUrl, whatsappLink } from '../src/data/listingText';
+import type { AddressDisplay, Listing } from '../src/data/types';
 
 describe('video embeds', () => {
   it('turns YouTube and Vimeo links into embeddable players', () => {
@@ -25,6 +25,20 @@ describe('address and contact', () => {
     expect(addressLabel(l('full'))).toBe('Rua A, 10 (apto 3) · Centro, Joinville');
     expect(addressLabel(l('street'))).toBe('Rua A · Centro, Joinville');
     expect(addressLabel(l('neighborhood'))).toBe('Centro, Joinville');
+  });
+  it('publishes only the fields the choice allows, never the CEP (same rule as the public_listings view)', () => {
+    const address = { cep: '89201-000', street: 'Rua A', number: '10', complement: 'apto 3', bairro: 'Centro', city: 'Joinville' };
+    expect(publicAddress(address, 'full')).toEqual({ street: 'Rua A', number: '10', complement: 'apto 3', bairro: 'Centro', city: 'Joinville' });
+    expect(publicAddress(address, 'street')).toEqual({ street: 'Rua A', bairro: 'Centro', city: 'Joinville' });
+    expect(publicAddress(address, 'neighborhood')).toEqual({ bairro: 'Centro', city: 'Joinville' });
+    // no choice, or one this version does not know: only the neighbourhood, as addressLabel shows it
+    expect(publicAddress(address, undefined)).toEqual({ bairro: 'Centro', city: 'Joinville' });
+    expect(publicAddress(address, 'everything' as AddressDisplay)).toEqual({ bairro: 'Centro', city: 'Joinville' });
+    expect(publicAddress(address, '__proto__' as AddressDisplay)).toEqual({ bairro: 'Centro', city: 'Joinville' });
+    // fields it does not know are dropped too; missing ones are not invented; the input is not changed
+    expect(publicAddress({ ...address, reference: 'Em frente à padaria' } as typeof address, 'full')).not.toHaveProperty('reference');
+    expect(publicAddress({ street: 'Rua A', bairro: 'Centro' }, 'full')).toEqual({ street: 'Rua A', bairro: 'Centro' });
+    expect(address.cep).toBe('89201-000');
   });
   it('formats CEP and WhatsApp links', () => {
     expect(formatCep('89201000')).toBe('89201-000');

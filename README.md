@@ -41,7 +41,8 @@ São três caminhos:
    ```
    O script valida o arquivo com as mesmas regras do `listings.json`. Ids repetidos ganham sufixo, e um anúncio num
    prédio que já tem outro é recusado. O resultado combinado é validado de novo, e se falhar o `listings.json` volta
-   ao original. Depois é só fazer o commit.
+   ao original. Depois é só fazer o commit. Do endereço, vai para o arquivo público só o que o anunciante escolheu
+   mostrar (o CEP nunca), como na view `public_listings`; a exportação já sai assim, e o script corta de novo.
 3. **Gerar mais imóveis fictícios**: `npm run data:listings -- --count 50` (de 4 a 200; o padrão é 100). Mantém a
    proporção 5 : 4 : 3 : 3 entre apartamentos, casas, geminados e terrenos.
 
