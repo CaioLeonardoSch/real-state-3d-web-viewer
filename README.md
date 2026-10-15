@@ -616,8 +616,6 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 
 - Modelo 3D detalhado de um prédio "hero" com janelas por unidade e janelas acesas à noite, com Three.js como camada
   customizada do MapLibre (o `fill-extrusion` não suporta isso).
-- Sombras reais (shadow mapping) via camada customizada.
-- Rótulos de ruas, que exigem fontes/glyphs locais.
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Backend (contas, anúncios, fotos, leads, espelho de vendas) e hospedagem multi-cliente: ver
   [`docs/backend.md`](docs/backend.md).
@@ -627,6 +625,9 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 - Mapa (ver [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md)):
+  - melhorias pedidas em 15/10, nesta ordem: casas fora da mata, luz dos postes mais natural, sombra dos prédios no
+    chão, nomes das ruas (e a rua na busca), serviços por perto, relevo com a câmera sempre acima do chão, e a régua
+    de horário com o sol de cada apartamento;
   - pavimento da Secretaria de Infraestrutura para completar os 640 km sem informação;
   - LiDAR da Prefeitura e um estéreo único do núcleo vertical para as torres;
   - classificador de telhado (plano, duas águas, quatro águas);

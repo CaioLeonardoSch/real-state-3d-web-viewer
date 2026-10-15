@@ -317,6 +317,155 @@ O peso no celular continua sendo o ponto fraco do mapa: 333 KB de código e WebG
     contorno estava num lote vizinho grande. A estimativa agora exige 70% do contorno dentro do lote para passar de
     4 andares, o que afetou 5 prédios.
 
+## Mapa 3D: melhorias pedidas em 15/10
+
+Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um. **Nada disso foi feito ainda.** Os
+prazos são de trabalho, sem contar a espera por dados.
+
+1. **Relevo, e a câmera sem atravessar o chão (1 a 2 semanas).**
+   - **Hoje:** o mapa é plano. No zoom máximo, com a inclinação de 75°, a câmera fica a uns 30 m do chão e entra nas
+     torres.
+   - **Dados:** o modelo do terreno (MDT) de 1 m do Estado (SIGSC, 2010–2012, gratuito), conferido com as curvas de
+     nível 1:1.000 da Prefeitura (2007/2010). A licença para uso em produto precisa ser confirmada (ver
+     [`dados-prefeitura.md`](dados-prefeitura.md)).
+   - **Como:**
+     - reduzir para 5 a 10 m na cidade e 30 m na serra, e gravar como relevo do MapLibre (`raster-dem`) em PMTiles;
+     - ligar o relevo (`setTerrain`) com um sombreado suave das encostas (`hillshade`);
+     - prédios, árvores e postes passam a ficar sobre o terreno;
+     - a câmera fica sempre acima do terreno e dos telhados: altura mínima conferida a cada movimento e inclinação
+       máxima menor de perto.
+   - **Riscos:**
+     - peso no celular: mais um arquivo e mais trabalho de desenho;
+     - peças empilhadas: telhados, andares das obras e a vista da janela precisam usar a mesma altura de terreno do
+       prédio. Numa encosta, o MapLibre pode apoiar cada peça numa altura diferente. Conferir nos morros do Boa Vista
+       e do Iririú;
+     - a licença do MDT do Estado.
+2. **Nomes das ruas, e a rua na busca (3 a 5 dias).**
+   - **Hoje:** o mapa não tem texto. O estilo não tem fontes (glyphs), e o arquivo do mapa não guarda o nome das ruas.
+   - **No mapa, sem atrapalhar:**
+     - nome pequeno e cinza, com contorno claro, deitado ao longo da rua;
+     - só de perto (zoom 16 em diante); à noite, texto claro;
+     - sem placas nem ícones, e o MapLibre já esconde os nomes que se sobrepõem.
+   - **Fontes:** servidas pelo próprio site, porque a política de segurança só aceita o próprio domínio. Basta a faixa
+     de caracteres do português, uns 70 KB por fonte.
+   - **Arquivo:** o nome entra nas ruas dos ladrilhos de perto. O peso a mais precisa ser medido.
+   - **Busca:**
+     - "Ir para a rua": a caixa de busca sugere ruas pelo nome (lista tirada do OSM) e leva o mapa até ela;
+     - "Imóveis nesta rua": só os anúncios que mostram a rua. Quem escolheu mostrar só o bairro fica de fora, senão o
+       filtro revelaria o endereço.
+   - **Limite:** o nome vem do OSM. Quantas ruas têm nome precisa ser medido na geração do mapa.
+3. **Serviços por perto (cerca de 1 semana).**
+   - **Dados, todos abertos:**
+     - equipamentos públicos da Prefeitura (`SEPUR/equipamento_publicos_2026_*`: escolas, saúde, lazer, cultura);
+     - escolas do INEP e unidades de saúde do CNES, que têm coordenadas;
+     - farmácias, mercados, padarias e hospitais do OSM. A cobertura em Joinville precisa ser medida na geração do
+       mapa (o serviço de consulta do OSM não respondeu daqui).
+   - **No mapa:** ícones discretos, por tipo, ligados por um botão "Serviços".
+   - **No anúncio:** o mais próximo de cada tipo, com a distância em linha reta, dita assim (tempo a pé exige rotas).
+   - **Na busca:** filtros como "até 500 m de escola" e "até 500 m de mercado".
+   - **Atualização:** entra no serviço mensal, junto com o resto do mapa.
+   - **Limite:** padarias e mercados pequenos são o que mais falta no OSM. Onde faltar, o anúncio não pode dar a
+     entender que não há nenhum por perto.
+4. **Luz dos postes mais natural (1 a 2 dias).**
+   - **Hoje:** cada poste acende uma mancha redonda de 11 m, com a borda esfumada, a mesma cor e a mesma intensidade
+     em todos.
+   - **Como:**
+     - a luz mais forte embaixo da luminária e caindo devagar, com as manchas vizinhas somando onde se encontram (uma
+       camada de intensidade, `heatmap`, ou círculos sobrepostos; a escolha sai do teste no celular);
+     - variação fixa por poste, a mesma em toda visita: LED branco nas ruas principais, sódio alaranjado em parte das
+       outras, com intensidade e alcance um pouco diferentes;
+     - a luminária mais brilhante, com um halo pequeno, visível de longe.
+   - **Limite:** a luz é desenhada no chão. Paredes e árvores não recebem a luz dos postes, porque o MapLibre não tem
+     luz pontual. Com o cadastro real da iluminação (58 mil pontos), daria para usar o tipo e a potência de cada
+     poste.
+5. **Casas dentro da mata (1 a 2 dias).**
+   - **Causa:**
+     - as árvores ilustrativas das matas são sorteadas numa grade sem descontar os prédios (`sampleTrees`, em
+       `scripts/lib/scenery.mjs`);
+     - a copa da mata (a área de mata recuada 6 m e erguida a 6 m) também cobre o que está dentro;
+     - onde o OSM marca mata em volta de casas (chácaras, ruas abertas na mata), a mata passa por cima delas.
+   - **Correção, na geração do mapa:**
+     - uma clareira de uns 6 m em volta de cada prédio, e nenhuma árvore sobre as ruas;
+     - a copa da mata ganha os mesmos recortes (a biblioteca de recorte de polígonos já está no projeto);
+     - conferir na área da imagem enviada e no relatório mensal.
+6. **Sol e sombras (3 a 5 dias na primeira etapa).**
+   - **Hoje:** manhã e tarde já mudam a luz. A posição do sol vem da hora (biblioteca `suncalc`), e a parede virada
+     para o sol fica mais clara. Mas nenhum prédio projeta sombra:
+     - o MapLibre GL JS 6.13 não desenha sombras;
+     - o [plugin de sombras de 2026](https://maplibre.org/news/2026-09-02-maplibre-newsletter-august-2026/) é para o
+       MapLibre Native (aplicativos), não para a web.
+   - **Etapa 1, sombra no chão (3 a 5 dias):**
+     - a sombra de cada prédio é o contorno estendido na direção oposta ao sol, pelo comprimento que a altura e o
+       ângulo do sol dão (às 9h de 20/03, uma torre de 30 m faz uns 44 m de sombra);
+     - desenhada como uma mancha escura translúcida, muda com manhã e tarde;
+     - o cálculo é feito no navegador, em segundo plano (web worker), só para os prédios visíveis: não pesa no
+       arquivo do mapa e já serve para a etapa 2;
+     - sombra de prédio sobre outro prédio (na parede ou no telhado) não aparece nesta etapa.
+   - **Etapa 2, régua de horário e estação (mais 1 a 2 semanas):**
+     - arrastar a hora e o mês e ver a sombra andar;
+     - no anúncio, o sol do apartamento: quantas horas de sol a fachada recebe no inverno e no verão, já descontando
+       os prédios em volta. É argumento de venda que hoje se resume a "face norte".
+   - **Etapa 3, sombras completas (depois):** sombra sobre paredes e telhados exige uma camada própria em WebGL
+     (shadow mapping), pesada no celular. Só se o produto pedir.
+   - **Pronto para comparar:** a biblioteca
+     [`mapbox-gl-shadow-simulator`](https://github.com/ted-piotrowski/mapbox-gl-shadow-simulator) (ShadeMap)
+     desenha a sombra dos prédios e do relevo sobre o mapa. A licença e o desempenho no celular precisam ser
+     conferidos antes de escolher entre ela e a nossa.
+   - **Com o relevo:** a mancha da sombra acompanha o terreno sozinha, porque o MapLibre deita as camadas planas sobre
+     o relevo. Só o comprimento fica aproximado nas encostas.
+
+**Ordem sugerida**, do mais rápido e visível ao que pede dados e decisões:
+
+1. casas na mata (item 5);
+2. luz dos postes (item 4);
+3. sombra no chão (item 6, etapa 1);
+4. nomes das ruas e a rua na busca (item 2);
+5. serviços por perto (item 3);
+6. relevo (item 1). Mexe em tudo (câmera, prédios, obras, vista da janela) e depende da licença do MDT; vale pedir os
+   dados já, para não esperar por eles depois;
+7. régua de horário e sol do apartamento (item 6, etapa 2).
+
+Somando, são cerca de 4 a 6 semanas sem a régua de horário. Se o relevo for o mais importante, ele pode vir antes; só
+demora mais para aparecer.
+
+### Google Maps Platform: avaliação (15/10)
+
+Pergunta do cliente: o Google Maps Platform pode ser útil? **Como base do mapa, não. Em pontos isolados, sim.**
+
+- **O que ele oferece para estes pedidos** (preços de 15/10/2026):
+  - **Cidade em 3D fotográfico, com o relevo** (Photorealistic 3D Tiles):
+    - uma malha tirada de fotos aéreas, com terreno, prédios e árvores;
+    - 1.000 sessões grátis por mês, depois US$ 6 por mil;
+    - a cobertura de Joinville não foi confirmada.
+  - **Serviços por perto** (Places, busca por proximidade): farmácias, mercados e padarias, com nota e horário. São
+    5.000 consultas grátis por mês na versão Pro, depois US$ 32 por mil.
+  - **Nomes de ruas:** já vêm no mapa do Google.
+- **Por que não serve de base:**
+  - **Contrato.** Os termos proíbem mostrar o conteúdo do Places num mapa que não seja do Google ("Customer must not
+    use Google Maps Content from the Places API in conjunction with a non-Google map"). O nosso mapa é MapLibre.
+  - **Nada pode ser guardado**, salvo latitude e longitude por até 30 dias. Cada visita a um anúncio vira consulta
+    paga: 50 mil visitas por mês, com uma busca cada, dão pelo menos US$ 1.440 por mês (45 mil pagas × US$ 32 por
+    mil). Os dados abertos são de graça e ficam no arquivo do mapa.
+  - **A malha 3D não separa nada.** É uma casca única, que não sabe o que é prédio, andar ou lote. Com ela não daria
+    para destacar o prédio do anúncio, mostrar a obra andar por andar, recortar por bairro nem acender os postes à
+    noite, que é o que o mapa faz hoje. E é pesada no celular.
+  - **Imagens.** A pesquisa do satélite (abaixo) já tinha visto que os termos do Google não permitem tirar dados das
+    imagens (alturas, telhados) para um produto comercial.
+  - **Trocar o mapa inteiro pelo do Google** resolveria os nomes e liberaria o Places. Mas seria refazer o mapa, com
+    custo por carregamento e sem o controle que temos hoje.
+- **O que dá para usar sem conflito:**
+  - um botão "Abrir no Google Maps" e "Como chegar" no anúncio, quando o endereço é público. É só um link: sem chave,
+    sem custo e sem contrato;
+  - talvez uma tela separada, só do Google, com a vista 3D fotográfica do entorno (e nela o Places), se Joinville
+    tiver cobertura e o custo couber.
+- **Conclusão:** para os seis pedidos, os dados abertos (Estado, Prefeitura, OSM, INEP, CNES) bastam. São de graça e
+  ficam no nosso arquivo. Vale rever se o produto precisar de horário de funcionamento e nota dos estabelecimentos,
+  que os dados abertos não têm.
+- **Fontes** (consultadas em 15/10/2026):
+  [preços](https://developers.google.com/maps/billing-and-pricing/pricing),
+  [termos dos serviços](https://cloud.google.com/maps-platform/terms/maps-service-terms),
+  [3D Tiles](https://developers.google.com/maps/documentation/tile/3d-tiles-overview).
+
 ## Satélite para alturas e telhados: conclusão da pesquisa
 
 A ideia de calcular a altura pela diferença entre imagens (estéreo) funciona. Mas **um serviço mensal por satélite
