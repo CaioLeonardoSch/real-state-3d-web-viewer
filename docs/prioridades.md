@@ -23,8 +23,8 @@ Segurança, integridade ou funcionamento que impedem um piloto com clientes reai
 
 | # | Item | Impacto | Esforço | Risco | Dependências | Origem |
 |---|---|---|---|---|---|---|
-| 1 | Convite só aceito com e-mail confirmado (`my_invitations` e `accept_invitation`), com teste no `rls.test.ts` | Alto: evita que alguém entre como dono de uma imobiliária | Pequeno | Baixo | — | A3 |
-| 2 | Tirar da produção a planta ilustrativa e a simulação sem juros da ficha do mapa | Alto: conteúdo enganoso em anúncio real | Pequeno | Baixo | — | A2 |
+| 1 | ~~Convite só aceito com e-mail confirmado (`my_invitations` e `accept_invitation`), com teste no `rls.test.ts`~~ **Feito em 17/10:** a lista da conta não traz mais o código; aceitar exige o link (ver A3) | Alto: evita que alguém entre como dono de uma imobiliária | Pequeno | Baixo | — | A3 |
+| 2 | ~~Tirar da produção a planta ilustrativa e a simulação sem juros da ficha do mapa~~ **Feito em 17/10** | Alto: conteúdo enganoso em anúncio real | Pequeno | Baixo | — | A2 |
 | 3 | Conferir o Supabase de produção: "Confirm email" ligado, `max_rows`, Turnstile ativo, backup com restauração a um ponto no tempo, recusa de senhas vazadas | Alto: várias proteções dependem dessa configuração | Pequeno | Baixo | Plano Pro (backup e senhas vazadas) | A3, A9, backend §10 |
 | 4 | Trocar os empreendimentos reais da demonstração pública por fictícios (ou pedir autorização às construtoras) | Alto: risco de marca e jurídico, já no ar | Pequeno | Baixo | — | B4, A7 |
 | 5 | Busca e carregamento no servidor: função com filtros e paginação, resumo leve para o mapa, anúncio completo ao abrir a ficha, embed filtrado por imobiliária, fotos sem o corte de 1.000 linhas | Muito alto: hoje fotos e anúncios somem em silêncio com volume real | Médio a grande | Médio: mexe na sincronia mapa, lista e URL; rodar os e2e antes | Definir o formato da busca | A1, I9, README |

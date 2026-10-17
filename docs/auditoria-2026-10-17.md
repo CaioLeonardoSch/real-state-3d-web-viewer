@@ -83,6 +83,7 @@ Interface, negócio e jurídico · alta · alta · pequeno.
 - **Recomendação:** em produção, sem planta não mostrar planta; trocar a simulação por um link de simulação real ou
   retirá-la.
 - **Pronto quando:** o build com `VITE_DEMO_LISTINGS=false` não tem "ilustrativa" na ficha.
+- **Feito em 17/10:** a planta gerada e a simulação só aparecem com `DEMO`; o build de produção não tem esses textos.
 
 ### A3. O convite depende de "Confirm email" estar ligado [prioridade 1]
 
@@ -96,6 +97,11 @@ Segurança · alta se a configuração estiver errada · média · pequeno.
   na imobiliária, inclusive como dona. O `docs/supabase.md` manda ligar a confirmação, mas a segurança não deveria
   depender só disso. **Não conferido** no projeto real.
 - **Recomendação:** exigir e-mail confirmado nas duas funções e cobrir com um teste em `tests/backend/rls.test.ts`.
+- **Feito em 17/10, de outro jeito:** no Supabase local, com a confirmação desligada, o próprio cadastro já marca o
+  e-mail como confirmado. Exigir `email_confirmed_at` não fecharia o furo. A migration
+  `20261024000001_invite_link_only.sql` tira o código de `my_invitations`: a conta vê para qual imobiliária e com qual
+  papel foi convidada, mas só aceita com o link enviado por quem convidou. `accept_invitation` também recusa e-mail
+  não confirmado, para contas criadas sem confirmação. Teste em `rls.test.ts`.
 
 ### A4. LGPD incompleta [prioridade 6]
 

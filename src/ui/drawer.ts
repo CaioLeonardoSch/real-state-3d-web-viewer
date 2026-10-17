@@ -21,6 +21,7 @@ import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } f
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
+import { DEMO } from '../data/demo';
 import { simulatePayment } from '../utils/payment';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
 
@@ -307,7 +308,8 @@ export class Drawer {
           : ''
       }
       ${
-        l.floorPlanImage
+        // the generated plan and the payment simulation are invented: only the demonstration shows them, never a real listing
+        l.floorPlanImage || !DEMO
           ? ''
           : `<figure class="floorplan">
         ${floorPlanSvg(l)}
@@ -315,7 +317,7 @@ export class Drawer {
       </figure>`
       }
 
-      ${sale ? `<section class="simulation">
+      ${sale && DEMO ? `<section class="simulation">
         <h3>Simulação ilustrativa</h3>
         <dl>
           <div><dt>Entrada (20%)</dt><dd>${formatBRLCents(sim.downPayment)}</dd></div>

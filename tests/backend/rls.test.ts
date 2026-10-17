@@ -171,6 +171,18 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await carla.client.rpc('accept_invitation', { p_token: late.data!.token })).error?.message).toMatch(/expirou/);
   });
 
+  it('convites: a lista da conta não traz o código; sem o link, o convite não é aceito', async () => {
+    // com "Confirm email" desligado, qualquer pessoa cria a conta com o e-mail convidado; ela vê o convite, mas não o código
+    const pessoa = await userClient('sem-link');
+    const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: pessoa.email, role: 'owner' }).select('token').single();
+    const pending = await pessoa.client.rpc('my_invitations');
+    expect(pending.data).toHaveLength(1);
+    expect(pending.data[0]).not.toHaveProperty('token');
+    expect(pending.data[0]).toMatchObject({ org_name: 'Imobiliária A', role: 'owner' });
+    expect(JSON.stringify(pending.data)).not.toContain(inv.data!.token);
+    await ana.client.from('invitations').delete().eq('org_id', orgA).eq('email', pessoa.email);
+  });
+
   it('convites: corretor não convida; administrador não convida dono; convite pendente aparece para a pessoa', async () => {
     const byAgent = await bruno.client.from('invitations').insert({ org_id: orgA, email: `x-${tag}@teste.local`, role: 'agent' });
     expect(byAgent.error).not.toBeNull();

@@ -568,7 +568,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   a câmera enquadra todos os resultados (`fitBounds`).
 - **Contorno**: as extrusões do MapLibre não têm contorno próprio, então o destaque usa uma camada `line` na base
   do polígono.
-- **Simulação de pagamento**, sem juros:
+- **Simulação de pagamento**, sem juros, só na demonstração (o build de produção, `VITE_DEMO_LISTINGS=false`, não a
+  mostra):
   - Pronto: 20% de entrada e 120 parcelas iguais.
   - Em construção: 20% de entrada, 4 reforços anuais de 5% do preço e o saldo (60%) em 60 parcelas.
   - Valores arredondados aos centavos.
@@ -578,6 +579,7 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   volumes continuarem legíveis.
   - A altitude do sol é limitada a um ângulo polar entre 10° e 80°, para as faces não ficarem totalmente escuras.
 - **Planta**: SVG genérico com retângulos (sala, cozinha, quartos, banhos), em escala proporcional à raiz da área.
+  Também só na demonstração: em produção, a ficha mostra a planta apenas quando o anunciante envia uma.
   Terrenos mostram só o contorno do lote.
 - **Sem servidor de tiles e sem fontes externas**: o estilo não tem `glyphs` nem `sprite`. Os nomes das ruas usam
   `font-faces` do MapLibre: a fonte Inter 500 (só latim, 24 KB, servida pelo próprio site) é desenhada no navegador,

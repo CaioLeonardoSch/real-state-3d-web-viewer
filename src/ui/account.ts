@@ -194,9 +194,13 @@ export class AccountPanel {
       ? await Promise.all([this.backend.members(this.org.id), this.backend.invitations(this.org.id)])
       : [[], []];
     // the invitation from the link, when it is for this account and not in the list yet
-    const offers = [...this.pending];
-    if (this.linkToken && this.linkInfo && !this.linkInfo.accepted && !this.linkInfo.expired && !offers.some((p) => p.token === this.linkToken))
-      offers.push({ token: this.linkToken, orgId: '', orgName: this.linkInfo.orgName, role: this.linkInfo.role });
+    let offers = [...this.pending];
+    const link = this.linkInfo;
+    if (this.linkToken && link && !link.accepted && !link.expired)
+      offers = [
+        { token: this.linkToken, orgId: '', orgName: link.orgName, role: link.role },
+        ...offers.filter((p) => p.orgName !== link.orgName || p.role !== link.role),
+      ];
 
     this.el.innerHTML = `${head}
       <p class="muted small">Conectado como ${escapeHtml(this.email)}${this.staff ? ' · <strong>suporte da plataforma</strong>' : ''}</p>
@@ -567,7 +571,11 @@ export class AccountPanel {
     return `<section class="account-section"><h3>Convites</h3><ul class="account-list">${offers
       .map(
         (o) => `<li><span><strong>${escapeHtml(o.orgName)}</strong> · ${ROLE_LABELS[o.role]}</span>
-          <button type="button" class="btn-primary" data-accept="${escapeHtml(o.token)}">Aceitar</button></li>`,
+          ${
+            o.token
+              ? `<button type="button" class="btn-primary" data-accept="${escapeHtml(o.token)}">Aceitar</button>`
+              : '<span class="muted small">Para aceitar, abra o link do convite que você recebeu.</span>'
+          }</li>`,
       )
       .join('')}</ul></section>`;
   }

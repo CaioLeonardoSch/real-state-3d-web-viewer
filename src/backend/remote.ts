@@ -81,7 +81,8 @@ export interface TrashItem {
 }
 
 export interface PendingInvitation {
-  token: string;
+  /** Only known from the invitation link: the list of pending invitations does not carry it. */
+  token?: string;
   orgId: string;
   orgName: string;
   role: Role;
@@ -333,13 +334,12 @@ export class RemoteBackend {
     return { orgName: i.org_name, email: i.email, role: i.role, expired: i.expired, accepted: i.accepted };
   }
 
-  /** Invitations waiting for the logged-in user's e-mail. */
+  /** Invitations waiting for the logged-in user's e-mail; accepting one needs the token from its link. */
   async myInvitations(): Promise<PendingInvitation[]> {
     if (!(await this.session())) return [];
     const { data, error } = await this.sb.rpc('my_invitations');
     fail(error, 'Não foi possível ler seus convites');
-    return (data ?? []).map((i: { token: string; org_id: string; org_name: string; role: Role }) => ({
-      token: i.token,
+    return (data ?? []).map((i: { org_id: string; org_name: string; role: Role }) => ({
       orgId: i.org_id,
       orgName: i.org_name,
       role: i.role,
