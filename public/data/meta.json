@@ -94,6 +94,10 @@
       "tank": 925,
       "flat": 36134
     },
+    "namedRoads": 11188,
+    "namedRoadLines": 8252,
+    "streets": 6026,
+    "streetNames": 5504,
     "roadKmBySurface": {
       "a": 1459,
       "?": 640.2,

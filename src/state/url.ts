@@ -94,6 +94,7 @@ export function stateToSearch(state: UrlState): string {
   }
   if (c.types.length) p.set('tipo', c.types.map((t) => TYPE_SLUGS[t]).join(','));
   for (const b of c.bairros) p.append('bairro', b);
+  if (c.street) p.set('rua', c.street);
   for (const [field, param] of NUMBER_PARAMS) if (c[field] !== null) p.set(param, String(c[field]));
   if (c.statuses.length) p.set('situacao', c.statuses.map((s) => STATUS_SLUGS[s]).join(','));
   if (c.features.length) p.set('comodidades', c.features.map((f) => AMENITY_SLUGS[f]).join(','));
@@ -123,6 +124,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     transaction: p.get('negocio') === 'alugar' ? 'rent' : null,
     types: parseList(p.get('tipo'), SLUG_TO_TYPE),
     bairros: parseBairros(p.getAll('bairro'), known.bairros),
+    street: parseStreet(p.get('rua')),
     statuses: parseList(p.get('situacao'), SLUG_TO_STATUS),
     features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),
     agency: agency && known.agencyIds.has(agency) ? agency : null,
@@ -154,6 +156,14 @@ function parseBairros(raw: string[], known?: readonly string[]): string[] {
     .map((b) => (byKey ? byKey.get(normalizeName(b)) : b))
     .filter((b): b is string => !!b);
   return [...new Set(out)].slice(0, 20);
+}
+
+/**
+ * Street from the URL: any text (it is compared with the listings' streets, and the street list is not loaded at
+ * start-up), whitespace collapsed, at most 120 characters.
+ */
+function parseStreet(raw: string | null): string | null {
+  return raw?.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 120).trim() || null;
 }
 
 /** Equal criteria, ignoring the order of list values. */

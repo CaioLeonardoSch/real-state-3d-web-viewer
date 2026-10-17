@@ -3,11 +3,12 @@ import { Protocol } from 'pmtiles';
 // MapLibre v6 loads its worker from a separate module next to the library file. After bundling,
 // that file must be emitted explicitly and its URL handed to MapLibre.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { loadBairroAreas, loadData } from './data/load';
+import { loadBairroAreas, loadData, loadStreets } from './data/load';
+import type { StreetEntry, StreetFinder } from './data/streets';
 import type { MultiPolygon, Polygon } from 'geojson';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import type { Listing } from './data/types';
-import { Scene } from './map/scene';
+import { Scene, type StreetRef } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import {
   EMPTY_CRITERIA,
@@ -21,6 +22,7 @@ import {
 import { sameCriteria, searchToState, stateToSearch } from './state/url';
 import { DEFAULT_SORT, sortListings, type SortKey } from './state/sort';
 import { mountFilters } from './ui/filters';
+import { StreetCard } from './ui/streetCard';
 import { ResultsPanel, resultsHeading } from './ui/results';
 import { Drawer } from './ui/drawer';
 import { mountTimeOfDay } from './ui/timeOfDay';
@@ -261,7 +263,62 @@ async function main() {
     else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
   }
 
-  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies, data.meta.bairros);
+  const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies, data.meta.bairros, {
+    load: loadStreets,
+    onStreet: (street, finder) => goToStreet(street, finder),
+  });
+
+  // ------------------------------------------------------------ a street chosen in the search box
+  // Choosing a street is navigation: the map goes there and lights it, the criteria stay. Its card offers the
+  // listings on it as a search ("Imóveis nesta rua"). Any search, closing the card or another street ends it.
+  let litStreet: StreetRef | null = null;
+  /** Lights a street on the map (null: none) once the map's style is there. */
+  function lightStreet(street: StreetRef | null) {
+    if (!street && !litStreet) return;
+    litStreet = street;
+    void scene.ready.then(() => scene.highlightStreet(litStreet));
+  }
+  const streetCard = new StreetCard($('.stage'), {
+    onSearch: (name) => {
+      filtersUi.applyStreet(name);
+      // the card goes away with the search: focus moves to the results
+      if (isMobile()) $('#results').focus();
+      else results.focusFirst();
+    },
+    onClose: () => {
+      lightStreet(null);
+      (isMobile() ? $('.filters-toggle') : $('#f-bairro-input')).focus();
+    },
+  });
+  function goToStreet(street: StreetEntry, finder: StreetFinder) {
+    // the street takes over the camera: no listing or development stays open over it
+    closingForSearch = true;
+    drawer.close();
+    closingForSearch = false;
+    const devOpen = devPanel.currentId !== null;
+    leavingDevelopment = true;
+    devPanel.close();
+    leavingDevelopment = false;
+    if (devOpen) replaceUrl();
+    // only listings that show their street in the address are counted (see publicStreet)
+    const count = filterListings(listings, { ...store.getPending(), street: street.name }).length;
+    // the card first: on small screens it is a bar at the bottom, and the street is framed above it
+    streetCard.show({ street, count, elsewhere: finder.inOtherPlaces(street) });
+    const mobile = isMobile();
+    if (mobile) {
+      // the filters panel and the list would cover the street
+      document.body.classList.remove('filters-open');
+      $('.filters-toggle').setAttribute('aria-expanded', 'false');
+      results.setCollapsed(true);
+    }
+    // bar height + its 8 px from the bottom edge + some map between the bar and the street
+    scene.frameStreet(street.bbox, street.point, mobile ? { bottom: streetCard.height + 24 } : {});
+    lightStreet({ name: street.name, bbox: street.bbox });
+    // "em", not "na": some names are masculine (Acesso, Calçadão, Elevado)
+    announce(`Mapa em ${street.name}, ${street.bairro || street.city}.`);
+    // the box that had focus is hidden with the panel
+    if (mobile) streetCard.focus();
+  }
 
   // developments on the map (created once the map has loaded, see below)
   let devLayer: DevelopmentLayer | null = null;
@@ -335,6 +392,9 @@ async function main() {
   }
 
   store.onApply((criteria) => {
+    // a search ends the visit to a chosen street
+    streetCard.hide();
+    lightStreet(null);
     showResults();
     // desktop: show the results; mobile: the collapsed pill already shows the count and the map is fitted
     if (!isMobile()) results.setCollapsed(false);
@@ -532,6 +592,27 @@ async function main() {
       drawer.pageFor = (id) => (pages[id] ? new URL(`${import.meta.env.BASE_URL}${pages[id]}`, location.href).href : null);
     })
     .catch(() => {});
+  // The development panel exists before the first wait below: a listing or a street chosen meanwhile closes it
+  // (openListing, goToStreet). True while another view (a listing, a street) closes the development panel.
+  let leavingDevelopment = false;
+  const devPanel = new DevelopmentPanel($('#dev-panel'), {
+    onClose: () => {
+      devLayer?.close();
+      if (syncingFromUrl || leavingDevelopment) return;
+      // "Voltar ao bairro"
+      scene.showOverview(true);
+      replaceUrl();
+    },
+    onSelectUnit: (unitId) => {
+      devLayer?.selectUnit(unitId);
+      if (!syncingFromUrl) replaceUrl();
+    },
+    onFloor: (level) => devLayer?.setFloor(level),
+    onFilter: (fn) => devLayer?.setUnitFilter(fn),
+    onHoverUnit: (unitId) => devLayer?.hoverUnit(unitId),
+    onView: (unitId) => devLayer?.viewFrom(unitId),
+    onExitView: () => devLayer?.exitView(true),
+  });
   await account?.refresh();
   // opened from an invitation link (?convite=…): show it right away
   await account?.openFromLink();
@@ -552,27 +633,6 @@ async function main() {
   });
 
   // ------------------------------------------------------------ developments ("espelho de vendas 3D")
-  // True while another view (a listing) closes the development panel.
-  let leavingDevelopment = false;
-  const devPanel = new DevelopmentPanel($('#dev-panel'), {
-    onClose: () => {
-      devLayer?.close();
-      if (syncingFromUrl || leavingDevelopment) return;
-      // "Voltar ao bairro"
-      scene.showOverview(true);
-      replaceUrl();
-    },
-    onSelectUnit: (unitId) => {
-      devLayer?.selectUnit(unitId);
-      if (!syncingFromUrl) replaceUrl();
-    },
-    onFloor: (level) => devLayer?.setFloor(level),
-    onFilter: (fn) => devLayer?.setUnitFilter(fn),
-    onHoverUnit: (unitId) => devLayer?.hoverUnit(unitId),
-    onView: (unitId) => devLayer?.viewFrom(unitId),
-    onExitView: () => devLayer?.exitView(true),
-  });
-
   function openDevelopment(id: string, unitId: string | null = null) {
     const d = developments.find((x) => x.id === id);
     if (!d || !devLayer) return;
@@ -700,6 +760,10 @@ async function main() {
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     shadows: () => scene.shadowInfo,
     developmentIds: developments.map((d) => d.id),
+    /** Name of the street lit by the search box, or null. */
+    get highlightedStreet() {
+      return litStreet?.name ?? null;
+    },
   };
 }
 

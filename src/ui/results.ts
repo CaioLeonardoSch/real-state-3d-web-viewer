@@ -40,6 +40,7 @@ const FIELD_LABELS: Record<RelaxableField, string> = {
   transaction: 'a busca por aluguel',
   types: 'o filtro de tipo',
   bairros: 'o filtro de bairro',
+  street: 'o filtro de rua',
   priceMin: 'o preço mínimo',
   priceMax: 'o preço máximo',
   bedroomsMin: 'o mínimo de quartos',

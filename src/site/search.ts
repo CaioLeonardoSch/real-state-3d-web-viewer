@@ -1,6 +1,7 @@
 // Search of a client's site: the map's criteria (src/state/filters.ts, neighbourhoods included) plus reference code
 // and suites, with page and view. Kept in the address bar so any search can be shared or bookmarked.
 import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, type Listing } from '../data/types';
+import { hasStreetType } from '../data/streets';
 import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName, type FilterCriteria } from '../state/filters';
 import { DEFAULT_SORT, sortListings, type SortKey } from '../state/sort';
 import { searchToState, stateToSearch } from '../state/url';
@@ -105,6 +106,8 @@ export function chipsOf(s: SiteSearch): Chip[] {
   const out: Chip[] = [];
   for (const t of c.types) out.push({ label: TYPE_LABELS[t], without: reset(s, {}, { types: c.types.filter((x) => x !== t) }) });
   for (const b of c.bairros) out.push({ label: b, without: reset(s, {}, { bairros: c.bairros.filter((x) => x !== b) }) });
+  // "Rua XV de Novembro" reads as a street on its own; a name without its type gets one
+  if (c.street) out.push({ label: hasStreetType(c.street) ? c.street : `Rua: ${c.street}`, without: reset(s, {}, { street: null }) });
   if (c.priceMin !== null) out.push({ label: `A partir de ${money(c.priceMin)}`, without: reset(s, {}, { priceMin: null }) });
   if (c.priceMax !== null) out.push({ label: `Até ${money(c.priceMax)}`, without: reset(s, {}, { priceMax: null }) });
   if (c.areaMin !== null) out.push({ label: `A partir de ${formatArea(c.areaMin)}`, without: reset(s, {}, { areaMin: null }) });

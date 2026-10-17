@@ -1441,7 +1441,7 @@ body[data-tod='night'] .a-error {
   font-size: 14px;
 }
 
-/* ---------------- neighbourhood labels (HTML markers: the map style has no fonts) ---------------- */
+/* ---------------- neighbourhood labels (HTML markers in the page font; the style's one font is for street names) */
 .bairro-label {
   pointer-events: none;
   font-size: 12px;
@@ -1927,7 +1927,8 @@ body.embed .site-page-link {
   color: #fff;
   font-size: 12px;
 }
-.f-bairro-chip button {
+.f-bairro-chip button,
+.f-street-chip button {
   border: 0;
   background: none;
   color: inherit;
@@ -1935,6 +1936,199 @@ body.embed .site-page-link {
   line-height: 1;
   padding: 0 4px;
   cursor: pointer;
+}
+/* the searched street: an outlined chip after the neighbourhoods */
+.f-street-chips {
+  display: contents;
+}
+.f-street-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 1px 3px 1px 7px;
+  border: 1px solid var(--accent-strong);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  font-size: 12px;
+}
+.f-street-chip button {
+  flex: none;
+}
+.f-street-chip span {
+  /* a long name ends in "…" (its full text is the title and the button's label) instead of widening the box */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* suggestions of the "Bairro ou rua" box, over the map */
+.f-bairro {
+  position: relative;
+}
+.topbar:has(#f-place-list:not([hidden])) {
+  /* above the panels of the map (drawer 4, side panels 5) while the list is open */
+  z-index: 6;
+}
+.f-place-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1;
+  margin-top: 4px;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 14px;
+}
+.f-place-list[hidden] {
+  display: none;
+}
+.f-place-head {
+  padding: 8px 8px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.f-place-opt {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px 6px 6px;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.f-place-opt[data-i]:hover,
+.f-place-opt[aria-selected='true'] {
+  background: var(--accent-soft);
+}
+/* the highlighted option is marked by more than its colour */
+.f-place-opt[aria-selected='true'] {
+  border-left-color: var(--accent-strong);
+}
+.f-place-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.f-place-note {
+  cursor: default;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* street chosen in the "Bairro ou rua" box (src/ui/streetCard.ts): top centre, clear of the results list */
+.street-card {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 324px;
+  right: 12px;
+  width: max-content;
+  max-width: min(440px, calc(100% - 336px));
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 6px 10px 12px;
+  background: var(--panel);
+  color: var(--text);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.street-card[hidden] {
+  display: none;
+}
+.street-card:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.street-card p {
+  margin: 0;
+}
+/* basis auto: the card is as wide as its content (max-content), so nothing wraps on a wide screen */
+.street-card-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.street-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.street-card-place,
+.street-card-empty,
+.street-card .street-card-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.street-card .street-card-note {
+  margin-top: 4px;
+}
+.street-card-empty {
+  flex: 1 1 auto;
+  max-width: 16em;
+}
+.street-card-search {
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.street-card-close {
+  align-self: flex-start;
+}
+@media (max-width: 720px) {
+  /* "Bairro ou rua" takes the whole row; its suggestions stay inside the screen */
+  /* a long chip shrinks (ellipsis) instead of widening the form and the row past the screen */
+  .filters,
+  .f-field.f-bairro {
+    min-width: 0;
+  }
+  .f-field.f-bairro {
+    flex-basis: 100%;
+  }
+  .f-bairro-box {
+    max-width: none;
+  }
+  .f-place-list {
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: 50vh;
+  }
+  /* the chosen street: a bar at the bottom (the results pill is at the top) */
+  .street-card {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding-right: 40px;
+  }
+  /* the × in the top right corner: in the flow it would trail the wrapped second row */
+  .street-card-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+  body.street-card-open:not(.drawer-open) .maplibregl-ctrl-bottom-left,
+  body.street-card-open:not(.drawer-open) .maplibregl-ctrl-bottom-right {
+    bottom: calc(var(--street-card-h, 0px) + 8px);
+  }
 }
 
 /* works under way (listing panel) */

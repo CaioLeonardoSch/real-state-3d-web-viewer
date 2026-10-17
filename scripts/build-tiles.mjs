@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // Turns the region GeoJSON (.cache/region/, from scripts/extract-region.py) into the files the app loads:
-//   public/data/<region>.pmtiles   vector tiles: buildings, roads (with pavement class), water, green, bairros and
-//                                  the canopy of woods
+//   public/data/<region>.pmtiles   vector tiles: buildings, roads (with pavement class; the street name in the
+//                                  close-up z15 tiles), water, green, bairros and the canopy of woods
 //   public/data/<region>-detalhe.pmtiles  close-up detail (z15 only): low-poly roofs (scripts/lib/roofs.mjs), trees,
 //                                  street lamps and their lights (scripts/lib/scenery.mjs). A separate file, so the
 //                                  buildings draw first and the detail follows (it doubles the close-up weight)
 //   public/data/bairros-areas.geojson  simplified neighbourhood polygons (the "bairro" filter cuts the map to them)
 //   public/data/boundary.geojson   outline of the region (small; the app tests points against it)
 //   public/data/bairros.geojson    neighbourhood outlines and names (labels)
+//   public/data/ruas.json          street index of the search box: name, bairro and city, box and a point on the
+//                                  street (scripts/lib/streets.mjs)
 //   public/data/meta.json          centre, bounds, counts
 // The browser only downloads the tiles in view (HTTP range requests on the single .pmtiles file).
 import { readFile, writeFile, stat } from 'node:fs/promises';
@@ -24,6 +26,7 @@ import { isResidentialBuilding } from './lib/residential.mjs';
 import { writePmtiles } from './lib/pmtiles-writer.mjs';
 import { clearings, cutCanopy, frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeShapes, urbanMask } from './lib/scenery.mjs';
 import { orientedRect, roofKind, roofShapes } from './lib/roofs.mjs';
+import { OUTSIDE_FONT, displayName, mergeLines, roadMergeKey, streetIndex, streetIndexJson } from './lib/streets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, '.cache', 'region');
@@ -123,12 +126,28 @@ for (const f of buildings.features) {
   f.properties = { osmId: f.properties.osmId, height: renderHeight, residential: isResidentialBuilding(f.properties) };
 }
 const roofs = { type: 'FeatureCollection', features: roofList };
+// street names (after the scenery, which seeds each lamp from its OSM way): only in the z15 tiles, where the map
+// writes them (from zoom 16, overzooming z15); the overview zooms and z14 keep {highway, s} only
+const namedRoads = [];
+const roadsZ15 = [];
+const renamed = new Set();
 for (const f of roads.features) {
   const sc = surfaceClass(f.properties.highway, f.properties.surface);
   if (CAR_ROADS.has(f.properties.highway.replace(/_link$/, ''))) surfaceKm[sc || '?'] = (surfaceKm[sc || '?'] ?? 0) + lengthM(f.geometry) / 1000;
+  const name = displayName(f.properties.name);
+  if (name && name !== f.properties.name) renamed.add(`${f.properties.name} → ${name}`);
   // s: pavement class ('a' asphalt, 'c' paving stones, 'p' other paved, 'u' unpaved, '' unknown)
   f.properties = { highway: f.properties.highway, s: sc };
+  if (!name) {
+    roadsZ15.push(f);
+    continue;
+  }
+  const named = { type: 'Feature', properties: { ...f.properties, name }, geometry: f.geometry };
+  namedRoads.push(named);
+  roadsZ15.push(named);
 }
+// pieces of one street (same name, class and pavement) joined where they meet: longer lines, room for the label
+const roadLinesZ15 = mergeLines(roadsZ15, roadMergeKey);
 for (const f of water.features) f.properties = { waterway: f.properties.waterway ?? 'area', k: f.properties.water ?? '' };
 for (const f of green.features) f.properties = { k: f.properties.kind ?? 'park' };
 // outlines in the tiles: neighbourhoods only (cities and districts are labels, their outline is the region's)
@@ -137,7 +156,7 @@ bairros.features = bairros.features.filter((f) => (f.properties.kind ?? 'bairro'
 const vt = (fc, maxZoom) => geojsonvt(fc, { maxZoom, indexMaxZoom: 5, indexMaxPoints: 100000, tolerance: 2, extent: 4096, buffer: 96 });
 const fc = (features) => ({ type: 'FeatureCollection', features });
 const indexes = Object.fromEntries(
-  Object.entries({ buildings, roads, water, green, bairros, canopy, roofs, trees, lamps, lights }).map(([name, fc]) => [name, vt(fc, LAYERS[name].maxzoom)]),
+  Object.entries({ buildings, roads: fc(roadLinesZ15), water, green, bairros, canopy, roofs, trees, lamps, lights }).map(([name, layer]) => [name, vt(layer, LAYERS[name].maxzoom)]),
 );
 // lighter indexes for the overview zooms (z10–z13), per layer. Built up to z14: geojson-vt does not simplify
 // the tiles of an index's own maximum zoom (they keep every vertex for overzooming)
@@ -147,6 +166,8 @@ for (const [z, minArea] of Object.entries(OVERVIEW_MIN_AREA_M2)) {
   overview.buildings[z] = vt(fc(buildings.features.filter((f) => areas.get(f) >= minArea).map((f) => ({ ...f, properties: {} }))), OVERVIEW_INDEX_MAX_ZOOM);
 }
 for (const z of [10, 11, 12, 13]) overview.roads[z] = vt(fc(roads.features.filter((f) => roadMinZoom(f.properties.highway) <= z)), OVERVIEW_INDEX_MAX_ZOOM);
+// z14 roads without names, simplified as before: an index up to z15 (its z14 tiles are simplified, unlike its own z15)
+overview.roads[14] = vt(roads, LAYERS.roads.maxzoom);
 const greenArea = new Map(green.features.map((f) => [f, turfArea(f)]));
 for (const [z, minArea] of Object.entries(GREEN_MIN_AREA_M2)) overview.green[z] = vt(fc(green.features.filter((f) => greenArea.get(f) >= minArea)), OVERVIEW_INDEX_MAX_ZOOM);
 const waterArea = new Map(water.features.filter((f) => f.geometry.type !== 'LineString' && f.geometry.type !== 'MultiLineString').map((f) => [f, turfArea(f)]));
@@ -235,6 +256,10 @@ const areas3m = {
     })),
 };
 await writeFile(path.join(OUT, 'bairros-areas.geojson'), JSON.stringify(areas3m));
+// streets of the search box: one entry per name and place (bairro or distrito, and city), each stretch of a street
+// in the place it lies in
+const streets = streetIndex(namedRoads, await read('bairros.geojson'), { lat0 });
+await writeFile(path.join(OUT, 'ruas.json'), streetIndexJson(streets));
 const outMeta = {
   ...meta,
   tiles: file,
@@ -252,6 +277,11 @@ const outMeta = {
     lamps: lampList.length,
     lampsFromOsm: lampList.filter((l) => l.mapped).length,
     roofs: roofCounts,
+    // OSM ways with a name, the lines they make in the z15 tiles once joined, and the search box's streets
+    namedRoads: namedRoads.length,
+    namedRoadLines: roadLinesZ15.filter((f) => f.properties.name).length,
+    streets: streets.streets.length,
+    streetNames: new Set(streets.streets.map((r) => r[0])).size,
     // 'a' asphalt, 'c' paving stones, 'p' other paved, 'u' unpaved, '?' not mapped
     roadKmBySurface: Object.fromEntries(Object.entries(surfaceKm).map(([k, v]) => [k, Math.round(v * 10) / 10])),
   },
@@ -264,6 +294,13 @@ await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + 
 const kb = (b) => `${(b / 1024).toFixed(0)} KB`;
 console.log(`Telhados: ${JSON.stringify(roofCounts)} (${roofList.length} peças)`);
 console.log(`Cenário: ${treeList.length} árvores (${outMeta.counts.treesFromOsm} do OSM), ${lampList.length} postes (${outMeta.counts.lampsFromOsm} do OSM), máscara urbana ${mask.size} células de 100 m`);
+console.log(
+  `Ruas: ${namedRoads.length} trechos com nome, ${outMeta.counts.namedRoadLines} linhas nos tiles z15 (vias: ${roads.features.length} → ${roadLinesZ15.length}); ` +
+    `ruas.json: ${streets.streets.length} ruas, ${outMeta.counts.streetNames} nomes, ${streets.places.length} lugares, ${kb((await stat(path.join(OUT, 'ruas.json'))).size)}`,
+);
+if (renamed.size) console.log(`  nomes ajustados: ${[...renamed].join('; ')}`);
+const unfit = [...new Set(namedRoads.map((f) => f.properties.name).filter((n) => OUTSIDE_FONT.test(n)))];
+if (unfit.length) console.warn(`  AVISO: nomes com letras fora da fonte do mapa (o rótulo não aparece): ${unfit.join('; ')}`);
 console.log(`Matas: ${canopyCut.cut} copas com casas ou ruas por perto, recortadas${canopyCut.failed ? ` (${canopyCut.failed} mantidas inteiras: recorte falhou)` : ''}`);
 console.log(`${file}: ${tiles.base.length} tiles, ${kb((await stat(path.join(OUT, file))).size)}`);
 console.log(`${detailFile}: ${tiles.detail.length} tiles, ${kb((await stat(path.join(OUT, detailFile))).size)}`);

@@ -2,6 +2,7 @@ import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson';
 import { validateListingsFile, type ListingsFile } from './types';
 import { DEMO } from './demo';
 import { validateDevelopmentsFile, type Development } from './developments';
+import { parseStreetsFile, type StreetEntry } from './streets';
 
 /** meta.json, written by scripts/build-tiles.mjs. */
 export interface DataMeta {
@@ -54,6 +55,18 @@ export function loadBairroAreas(): Promise<BairroAreas> {
     throw err;
   });
   return bairroAreas;
+}
+
+/** Streets of the search box (ruas.json, scripts/build-tiles.mjs), loaded the first time the box is used. */
+let streets: Promise<StreetEntry[]> | null = null;
+export function loadStreets(): Promise<StreetEntry[]> {
+  streets ??= getJson<unknown>('ruas.json')
+    .then(parseStreetsFile)
+    .catch((err: Error) => {
+      streets = null;
+      throw err;
+    });
+  return streets;
 }
 
 export async function loadData(): Promise<AppData> {

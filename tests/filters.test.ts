@@ -178,3 +178,41 @@ describe('bairro', () => {
     expect(matchesCriteria({ ...l, address: undefined } as never, { ...EMPTY_CRITERIA, bairros: ['Glória'] })).toBe(false);
   });
 });
+
+describe('rua', () => {
+  const l = { id: 'x', type: 'house', title: '', agency: 'a', price: 1, areaM2: 1, bedrooms: 1, bathrooms: 1, parkingSpots: 0, status: 'ready', features: [], approximateLocation: false, description: '', address: { street: 'R. XV de Novembro, 1208', bairro: 'Centro' } } as const;
+  it('só acha anúncios que mostram a rua no endereço', async () => {
+    const { matchesCriteria, EMPTY_CRITERIA } = await import('../src/state/filters');
+    const c = { ...EMPTY_CRITERIA, street: 'Rua XV de Novembro' };
+    // the street of a listing shown by its neighbourhood only (or without a choice) never counts
+    expect(matchesCriteria({ ...l, addressDisplay: 'neighborhood' } as never, c)).toBe(false);
+    expect(matchesCriteria(l as never, c)).toBe(false);
+    expect(matchesCriteria({ ...l, addressDisplay: 'street' } as never, c)).toBe(true);
+    expect(matchesCriteria({ ...l, addressDisplay: 'full' } as never, c)).toBe(true);
+    expect(matchesCriteria({ ...l, addressDisplay: 'full', address: { bairro: 'Centro' } } as never, c)).toBe(false);
+    expect(matchesCriteria({ ...l, addressDisplay: 'full' } as never, EMPTY_CRITERIA)).toBe(true);
+  });
+  it('compara sem acento, sem maiúsculas e com abreviações', async () => {
+    const { matchesCriteria, EMPTY_CRITERIA } = await import('../src/state/filters');
+    const at = (street: string) => ({ ...l, addressDisplay: 'full', address: { street } }) as never;
+    const c = { ...EMPTY_CRITERIA, street: 'Rua Visconde de Mauá' };
+    expect(matchesCriteria(at('RUA VISCONDE DE MAUA'), c)).toBe(true);
+    expect(matchesCriteria(at('R. Visconde de Mauá, 1297 (esquina) – América'), c)).toBe(true);
+    expect(matchesCriteria(at('Visconde de Mauá'), c)).toBe(true);
+    expect(matchesCriteria(at('Rua Visconde de Taunay'), c)).toBe(false);
+    expect(matchesCriteria(at('Rua Blumenau'), { ...EMPTY_CRITERIA, street: 'Estrada Blumenau' })).toBe(false);
+  });
+  it('uma rua de link que não está na lista de ruas ainda filtra pelo nome', async () => {
+    const { matchesCriteria, EMPTY_CRITERIA } = await import('../src/state/filters');
+    const at = (street: string) => ({ ...l, addressDisplay: 'full', address: { street } }) as never;
+    // ?rua= is any text: compared with the listings' streets, no lookup in ruas.json
+    expect(matchesCriteria(at('Rua Inventada do Teste, 10'), { ...EMPTY_CRITERIA, street: 'Rua Inventada do Teste' })).toBe(true);
+    for (const street of ['<b>x</b>', '...', ',', '-', '()', 'nº 12', 'Rua'])
+      expect(() => matchesCriteria(at('Rua XV de Novembro'), { ...EMPTY_CRITERIA, street })).not.toThrow();
+    expect(matchesCriteria(at('Rua XV de Novembro'), { ...EMPTY_CRITERIA, street: ',' })).toBe(false);
+  });
+  it('a rua conta como critério (resumo e sugestões)', () => {
+    expect(isEmptyCriteria({ ...EMPTY_CRITERIA, street: 'Rua A' })).toBe(false);
+    expect(countActive({ ...EMPTY_CRITERIA, street: 'Rua A' }, ADVANCED_FIELDS)).toBe(0);
+  });
+});

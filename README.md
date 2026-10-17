@@ -203,8 +203,9 @@ algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 5
 **3D só de perto, sem ficar "chapado" de longe:**
 
 - de longe (zoom < 14,6) os prédios aparecem **planos**, como textura da cidade (`buildings-flat`), junto com ruas,
-  verde e água. Os rótulos são HTML (o estilo não usa fontes): cidades e distritos (Joinville, Araquari,
-  Pirabeiraba) até o zoom 12,6, e bairros do 12,6 ao 15;
+  verde e água. Os rótulos de lugar são HTML: cidades e distritos (Joinville, Araquari,
+  Pirabeiraba) até o zoom 12,6, e bairros do 12,6 ao 15. Os nomes das ruas são desenhados pelo próprio estilo, a partir
+  do zoom 16 (ver abaixo);
 - a partir do zoom 14 eles **sobem** gradualmente até a altura cheia no 15,5
   (`fill-extrusion-height` interpolado pelo zoom), então a transição é contínua;
 - com a câmera inclinada, o fundo da tela usa blocos de zoom menor, que não têm os prédios pequenos: **o centro da
@@ -577,8 +578,15 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   - A altitude do sol é limitada a um ângulo polar entre 10° e 80°, para as faces não ficarem totalmente escuras.
 - **Planta**: SVG genérico com retângulos (sala, cozinha, quartos, banhos), em escala proporcional à raiz da área.
   Terrenos mostram só o contorno do lote.
-- **Sem servidor de tiles e sem fontes externas**: o estilo não tem `glyphs` nem `sprite`, então não há rótulos de
-  texto no mapa.
+- **Sem servidor de tiles e sem fontes externas**: o estilo não tem `glyphs` nem `sprite`. Os nomes das ruas usam
+  `font-faces` do MapLibre: a fonte Inter 500 (só latim, 24 KB, servida pelo próprio site) é desenhada no navegador,
+  sem arquivos de glifos. Aparecem do zoom 16 em diante, deitados ao longo da rua e de frente para a câmera, acima dos
+  prédios. O nome das ruas só existe no zoom 15 de `joinville.pmtiles` (+190 KB).
+- **Busca "Bairro ou rua"**: a caixa sugere bairros e ruas. A lista de ruas (`public/data/ruas.json`, 542 KB, 165 KB
+  com gzip) é baixada só quando a pessoa começa a digitar. Cada rua aparece uma vez por bairro (ou distrito, ou
+  cidade) e leva o mapa até o trecho mais longo dela ali, com a rua destacada. "Imóveis nesta rua" filtra só os
+  anúncios que mostram a rua (`addressDisplay` `full` ou `street`); quem mostra só o bairro fica de fora, senão o filtro
+  revelaria o endereço. A rua escolhida vai para o link (`?rua=`).
 
 ## Limitações conhecidas
 

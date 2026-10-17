@@ -344,20 +344,30 @@ Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um
        prédio. Numa encosta, o MapLibre pode apoiar cada peça numa altura diferente. Conferir nos morros do Boa Vista
        e do Iririú;
      - a licença do MDT do Estado.
-2. **Nomes das ruas, e a rua na busca (3 a 5 dias).**
-   - **Hoje:** o mapa não tem texto. O estilo não tem fontes (glyphs), e o arquivo do mapa não guarda o nome das ruas.
-   - **No mapa, sem atrapalhar:**
-     - nome pequeno e cinza, com contorno claro, deitado ao longo da rua;
-     - só de perto (zoom 16 em diante); à noite, texto claro;
-     - sem placas nem ícones, e o MapLibre já esconde os nomes que se sobrepõem.
-   - **Fontes:** servidas pelo próprio site, porque a política de segurança só aceita o próprio domínio. Basta a faixa
-     de caracteres do português, uns 70 KB por fonte.
-   - **Arquivo:** o nome entra nas ruas dos ladrilhos de perto. O peso a mais precisa ser medido.
-   - **Busca:**
-     - "Ir para a rua": a caixa de busca sugere ruas pelo nome (lista tirada do OSM) e leva o mapa até ela;
-     - "Imóveis nesta rua": só os anúncios que mostram a rua. Quem escolheu mostrar só o bairro fica de fora, senão o
-       filtro revelaria o endereço.
-   - **Limite:** o nome vem do OSM. Quantas ruas têm nome precisa ser medido na geração do mapa.
+2. **Nomes das ruas, e a rua na busca: feito em 17/10.**
+   - **No mapa:** nome cinza com contorno claro (à noite, texto claro com contorno escuro), deitado ao longo da rua,
+     do zoom 16 em diante. Fica de frente para a câmera e acima dos prédios, para ser lido com o mapa inclinado. O
+     MapLibre esconde os nomes que se sobrepõem.
+   - **Fonte:** Inter 500, só latim, 24 KB, servida pelo próprio site e desenhada no navegador (`font-faces` do
+     MapLibre). Não foi preciso gerar arquivos de glifos. Só é baixada quando o primeiro nome aparece.
+   - **Arquivo do mapa:** o nome entrou só no zoom 15 de `joinville.pmtiles`, com os trechos ligados de mesmo nome
+     unidos: +190 KB (14,77 → 14,96 MB). `joinville-detalhe.pmtiles` não mudou.
+   - **Quantas ruas têm nome:** 11.188 dos 19.090 trechos de via do mapa.
+   - **Busca "Bairro ou rua":**
+     - lista `public/data/ruas.json`, gerada junto com o mapa: 6.026 entradas, 5.504 nomes. 542 KB, 165 KB com gzip,
+       baixada só quando a pessoa começa a digitar;
+     - cada rua aparece uma vez por bairro, distrito ou cidade. "Ir para a rua" leva o mapa ao trecho mais longo dela
+       ali e destaca a rua em laranja;
+     - "Imóveis nesta rua" mostra só os anúncios que mostram a rua; quem escolheu mostrar só o bairro fica de fora. A
+       rua vai para o link (`?rua=`) e para a busca do site.
+   - **Limites conhecidos:**
+     - os anúncios de demonstração mostram só o bairro, então "Imóveis nesta rua" não acha nenhum na demonstração;
+     - o filtro e o destaque usam o nome: ruas de mesmo nome em outros bairros entram juntas (o cartão avisa);
+     - perto do horizonte, com o mapa inclinado, os nomes ficam pequenos (uns 7 px);
+     - à noite, o laranja do destaque fica perto da cor da luz dos postes;
+     - as ruas de Pirabeiraba não aparecem num recorte por bairro, porque o distrito não tem bairros;
+     - Centro, Itinga e Parque Guarani existem em Joinville e em Araquari: o recorte por bairro inclui as duas
+       cidades, igual no mapa e nas sugestões.
 3. **Serviços por perto (cerca de 1 semana).**
    - **Dados, todos abertos:**
      - equipamentos públicos da Prefeitura (`SEPUR/equipamento_publicos_2026_*`: escolas, saúde, lazer, cultura);
@@ -450,7 +460,7 @@ Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um
 1. casas na mata (item 5): feito em 15/10;
 2. luz dos postes (item 4): feito em 15/10;
 3. sombra no chão (item 6, etapa 1): feito em 15/10;
-4. nomes das ruas e a rua na busca (item 2);
+4. nomes das ruas e a rua na busca (item 2): feito em 17/10;
 5. serviços por perto (item 3);
 6. relevo (item 1). Mexe em tudo (câmera, prédios, obras, vista da janela) e depende da licença do MDT; vale pedir os
    dados já, para não esperar por eles depois;
@@ -481,6 +491,10 @@ Nenhum dos três itens precisou do banco.
 - **o que não vale materializar:** o que depende de uma escolha de quem olha, como a sombra na hora escolhida. É
   barato de calcular no navegador e caro de guardar: cada horário seria mais uma cópia das sombras dos 164.672
   prédios.
+
+**Peso do item feito em 17/10 (nomes das ruas):** `joinville.pmtiles` +190 KB (+1,3%); `ruas.json` 542 KB (165 KB
+com gzip), baixado só ao digitar na busca; fonte de 24 KB, baixada no primeiro nome; o código cresceu uns 3 KB com
+gzip. Também não precisou do banco: a lista de ruas é um arquivo estático em comum.
 
 **Os próximos itens seguem o mesmo princípio:**
 - **serviços por perto (item 3):**
@@ -599,4 +613,4 @@ Ordem sugerida. As estimativas são de trabalho de uma pessoa.
 - [ ] Primeiro feed XML real importado e revisado com o cliente.
 - [ ] Teste em celulares Android de entrada e com leitor de tela.
 
-*Anotado por Claude (assistente de IA), 14/10/2026 (atualizado em 15/10/2026), para consulta na manutenção.*
+*Anotado por Claude (assistente de IA), 14/10/2026 (atualizado em 15/10/2026 e 17/10/2026), para consulta na manutenção.*

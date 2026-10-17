@@ -101,3 +101,25 @@ describe('bairro na URL', () => {
     );
   });
 });
+
+describe('rua na URL', () => {
+  const known = { agencyIds: new Set<string>(), listingIds: new Set<string>() };
+  it('vai e volta depois dos bairros', () => {
+    const search = stateToSearch({ criteria: { ...EMPTY_CRITERIA, bairros: ['Centro'], street: 'Rua de Teste' }, listingId: null, sort: 'price-asc' });
+    expect(search).toBe('?bairro=Centro&rua=Rua+de+Teste');
+    expect(searchToState(search, known).criteria).toEqual({ ...EMPTY_CRITERIA, bairros: ['Centro'], street: 'Rua de Teste' });
+    expect(searchToState('?rua=Rua%20XV%20de%20Novembro', known).criteria.street).toBe('Rua XV de Novembro');
+  });
+  it('limpa espaços, corta o excesso e ignora vazio', () => {
+    expect(searchToState('?rua=%20%20Rua%20%20%20das%0AFlores%20', known).criteria.street).toBe('Rua das Flores');
+    expect(searchToState('?rua=%20%20', known).criteria.street).toBeNull();
+    expect(searchToState('?rua=', known).criteria.street).toBeNull();
+    expect(searchToState('', known).criteria.street).toBeNull();
+    const long = searchToState(`?rua=${'a'.repeat(200)}`, known).criteria.street;
+    expect(long).toHaveLength(120);
+  });
+  it('rua diferente = busca diferente', () => {
+    expect(sameCriteria({ ...EMPTY_CRITERIA, street: 'Rua A' }, EMPTY_CRITERIA)).toBe(false);
+    expect(sameCriteria({ ...EMPTY_CRITERIA, street: 'Rua A' }, { ...EMPTY_CRITERIA, street: 'Rua A' })).toBe(true);
+  });
+});

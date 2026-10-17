@@ -26,6 +26,36 @@ const TOTAL = DATA.length;
 const ALL_HEADING = `${TOTAL} imóveis à venda`;
 const LANDS = DATA.filter((l) => l.type === 'land');
 const brl = (n) => `R$ ${n.toLocaleString('pt-BR')}`;
+// streets of the search box (written with the map tiles): [name, place, w, s, e, n, x, y], places [bairro, city]
+const RUAS = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'ruas.json'), 'utf8'));
+/** A street through the Centro and three other bairros: the box offers one option per bairro, each its own stretch. */
+const XV = 'Rua XV de Novembro';
+const placeLabel = ([bairro, city]) => (bairro ? `${bairro}, ${city}` : city);
+/** The rows of ruas.json for a name: { place ("Centro, Joinville"), bbox [w, s, e, n], point [x, y] }. */
+const streetRows = (name) =>
+  RUAS.streets.filter((s) => s[0] === name).map((s) => ({ place: placeLabel(RUAS.places[s[1]]), bbox: s.slice(2, 6), point: s.slice(6, 8) }));
+const XV_CENTRO = streetRows(XV).find((r) => r.place === 'Centro, Joinville');
+/** Note of the street card when the name is also listed in another place (and some listing shows the street). */
+const ELSEWHERE_NOTE = 'O nome também aparece em outros bairros; a busca inclui todos os trechos.';
+/** Labels drawn at the default close-up of the Centro (zoom 17, pitch 55): about 34 were measured; this keeps a margin. */
+const MIN_NAMES_3D = 20;
+/** Shortest distance in metres from a point to the rings of a polygon (equirectangular: fine at a bairro's scale). */
+function metresToRings([x, y], rings) {
+  const my = 111320;
+  const mx = my * Math.cos((y * Math.PI) / 180);
+  let best = Infinity;
+  for (const ring of rings)
+    for (let i = 1; i < ring.length; i++) {
+      const ax = (ring[i - 1][0] - x) * mx, ay = (ring[i - 1][1] - y) * my;
+      const dx = (ring[i][0] - x) * mx - ax, dy = (ring[i][1] - y) * my - ay;
+      const t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy || 1)));
+      best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+    }
+  return best;
+}
+const fold = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** How people abbreviate the street types ("R. Blumenau"): the search must still find the street. */
+const ABBR = { Rua: 'R.', Avenida: 'Av.', Servidão: 'Serv.', Estrada: 'Estr.', Travessa: 'Trav.', Rodovia: 'Rod.', Alameda: 'Al.' };
 
 const results = [];
 const check = (name, pass, detail = '') => {
@@ -88,6 +118,9 @@ async function openPage(browser, viewport, label, query = '') {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errors = [];
+  // every URL asked for (the street names' font must come from this site)
+  const requests = [];
+  page.on('request', (r) => requests.push(r.url()));
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
@@ -98,7 +131,7 @@ async function openPage(browser, viewport, label, query = '') {
   await page.goto(URL_ + query);
   await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
   await waitIdle(page);
-  return { ctx, page, errors, label };
+  return { ctx, page, errors, requests, label };
 }
 
 const renderedCount = (page, layer) =>
@@ -145,6 +178,60 @@ async function emptyPoint(page) {
     return null;
   });
 }
+
+/**
+ * Types into the "Bairro ou rua" box (as a person would, key by key) and returns the options it suggests once the
+ * street list is in: id, name, the line under it and the heading of its group.
+ */
+async function suggestions(page, text) {
+  await page.click('#f-bairro-input');
+  await page.fill('#f-bairro-input', '');
+  await page.keyboard.type(text, { delay: 20 });
+  await page.waitForFunction(() => {
+    const list = document.querySelector('#f-place-list');
+    return !list.hidden && !list.textContent.includes('Carregando ruas');
+  }, null, { timeout: 20000 });
+  return page.evaluate(() =>
+    [...document.querySelectorAll('#f-place-list [role="option"][data-i]')].map((o) => ({
+      id: o.id,
+      name: o.querySelector('.f-place-name').textContent,
+      sub: o.querySelector('.f-place-sub').textContent,
+      group: o.closest('[role="group"]')?.querySelector('.f-place-head')?.textContent ?? '',
+    })),
+  );
+}
+
+/** Highlights the option `id` of the open list with ↓, as a keyboard user does; true once it is the active one. */
+async function arrowTo(page, id) {
+  for (let i = 0; i < 20; i++) {
+    await page.keyboard.press('ArrowDown');
+    if ((await page.getAttribute('#f-bairro-input', 'aria-activedescendant')) === id) return true;
+  }
+  return false;
+}
+
+/** State of the map and the page after a street was chosen in the box. */
+const streetState = (page) =>
+  page.evaluate(() => {
+    const m = window.__demo.map;
+    const card = document.querySelector('.street-card');
+    return {
+      zoom: Math.round(m.getZoom() * 100) / 100,
+      search: location.search,
+      pendingHint: !document.querySelector('.f-pending').hidden,
+      listOpen: !document.querySelector('#f-place-list').hidden,
+      card: card && !card.hidden ? card.querySelector('.street-card-name')?.textContent : null,
+      place: card?.querySelector('.street-card-place')?.textContent ?? null,
+      button: card?.querySelector('.street-card-search')?.textContent ?? null,
+      empty: card?.querySelector('.street-card-empty')?.textContent ?? null,
+      note: card?.querySelector('.street-card-note')?.textContent ?? null,
+      center: [m.getCenter().lng, m.getCenter().lat],
+      lit: window.__demo.highlightedStreet,
+      litDrawn: [...new Set(m.queryRenderedFeatures({ layers: ['road-highlight'] }).map((f) => f.properties.name))],
+      names: m.queryRenderedFeatures({ layers: ['road-names'] }).length,
+      focus: document.activeElement?.id || document.activeElement?.className || null,
+    };
+  });
 
 async function main() {
   await mkdir(SHOTS, { recursive: true });
@@ -514,7 +601,7 @@ async function main() {
     // ------------------------------------------------ "Anunciar imóvel"
     const rowCount = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
     const placeStatus = () => page.textContent('#add-panel .a-place-status');
-    /** Clicks map points (grid scan) accepted by `accept` until the form reports a chosen place. */
+    /** Clicks map points (grid scan) accepted by `accept` until the form reports a chosen place; returns that point or null. */
     async function pickOnMap(accept, maxTries = 40) {
       const candidates = await page.evaluate(({ accept }) => {
         const map = window.__demo.map;
@@ -540,9 +627,43 @@ async function main() {
       for (const c of candidates.slice(0, maxTries)) {
         await page.mouse.click(c.x, c.y);
         await sleep(250);
-        if ((await placeStatus())?.startsWith('✓')) return true;
+        if ((await placeStatus())?.startsWith('✓')) return c;
       }
-      return false;
+      return null;
+    }
+    /**
+     * The street of the list (ruas.json) next to a point of the screen: named roads drawn around it, nearest first,
+     * kept when the list has that name around there (its box grown by ~100 m). Prefers a type people abbreviate.
+     */
+    async function streetNear(point) {
+      const near = await page.evaluate(({ x, y }) => {
+        const map = window.__demo.map;
+        const r = map.getCanvas().getBoundingClientRect();
+        const p = { x: x - r.left, y: y - r.top };
+        const best = new Map();
+        for (const f of map.queryRenderedFeatures([[p.x - 160, p.y - 160], [p.x + 160, p.y + 160]], { layers: ['roads'] })) {
+          if (!f.properties.name) continue;
+          const lines = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates;
+          for (const line of lines) {
+            for (let i = 1; i < line.length; i++) {
+              const a = map.project(line[i - 1]);
+              const b = map.project(line[i]);
+              const len2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+              const t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / len2)) : 0;
+              const d = Math.hypot(p.x - (a.x + t * (b.x - a.x)), p.y - (a.y + t * (b.y - a.y)));
+              if (d < (best.get(f.properties.name) ?? Infinity)) best.set(f.properties.name, d);
+            }
+          }
+        }
+        return { at: map.unproject([p.x, p.y]).toArray(), names: [...best].sort((a, b) => a[1] - b[1]).map(([name]) => name) };
+      }, point);
+      const [lng, lat] = near.at;
+      const pad = 0.001;
+      const found = near.names.flatMap((name) => {
+        const row = RUAS.streets.find((s) => s[0] === name && s[2] - pad <= lng && lng <= s[4] + pad && s[3] - pad <= lat && lat <= s[5] + pad);
+        return row ? [{ name, bairro: RUAS.places[row[1]][0], city: RUAS.places[row[1]][1] }] : [];
+      });
+      return found.find((s) => ABBR[s.name.split(' ')[0]]) ?? found[0] ?? null;
     }
 
     // buildings are picked up close, where they are 3D
@@ -557,12 +678,12 @@ async function main() {
     // 1×1 PNG: the form shrinks photos in the browser, any image will do
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     /** Required fields other than price, area and place: photos, address, CRECI, WhatsApp. */
-    async function fillRequired(photoCount = 5) {
+    async function fillRequired(photoCount = 5, street = 'Rua de Teste') {
       await page.setInputFiles('#add-panel input[name="photos"]',
         Array.from({ length: photoCount }, (_, i) => ({ name: `foto${i + 1}.png`, mimeType: 'image/png', buffer: PNG })));
       await page.waitForFunction((n) => document.querySelectorAll('#add-panel .a-photos img').length === n, photoCount);
       if (!(await page.inputValue('#add-panel input[name="bairro"]'))) await page.fill('#add-panel input[name="bairro"]', 'Centro');
-      await page.fill('#add-panel input[name="street"]', 'Rua de Teste');
+      await page.fill('#add-panel input[name="street"]', street);
       await page.fill('#add-panel input[name="creci"]', '12345-J');
       await page.fill('#add-panel input[name="whatsapp"]', '(47) 90000-0000');
     }
@@ -576,8 +697,13 @@ async function main() {
     const pickingUi = await page.evaluate(() => document.querySelector('#add-panel').classList.contains('picking'));
     const pickedBuilding = await pickOnMap('building');
     const autoBairro = await page.inputValue('#add-panel input[name="bairro"]');
+    // the house is on a real street next to its building, written as people do ("R. …"): the search box finds it later
+    const houseStreet = pickedBuilding ? await streetNear(pickedBuilding) : null;
+    const [houseType, ...houseRest] = (houseStreet?.name ?? 'Rua de Teste').split(' ');
+    const houseTyped = `${ABBR[houseType] ?? houseType} ${houseRest.join(' ')}`;
+    console.log(`  street of the house: "${houseTyped}" (${JSON.stringify(houseStreet)})`);
     // incomplete record: no CRECI is refused
-    await fillRequired(4);
+    await fillRequired(4, houseTyped);
     await page.fill('#add-panel input[name="creci"]', '');
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(200);
@@ -605,8 +731,8 @@ async function main() {
         added.stored === 1 && (await rowCount()) === TOTAL + 1,
       JSON.stringify(added));
     check('the saved listing shows its photos, address (street only) and a WhatsApp contact',
-      added.gallery === '1/5' && added.whatsapp?.startsWith('https://wa.me/5547900000000') && /Rua de Teste/.test(added.address ?? '') &&
-        !/Rua de Teste, /.test(added.address ?? ''),
+      added.gallery === '1/5' && added.whatsapp?.startsWith('https://wa.me/5547900000000') && !!houseStreet &&
+        (added.address ?? '').includes(`${houseTyped} · `) && !(added.address ?? '').includes(`${houseTyped}, `),
       `bairro from map: "${autoBairro}"; ${JSON.stringify({ ...added, whatsapp: added.whatsapp?.slice(0, 40) })}`);
     await page.screenshot({ path: path.join(SHOTS, 'desktop-added-listing.png') });
     // owner lowers the price: the old one is struck through and the history records both
@@ -661,18 +787,70 @@ async function main() {
     await page.click('#add-panel [data-action="pick"]');
     await sleep(200);
     const pickedLot = await pickOnMap('land');
-    await fillRequired();
+    // the lot names the same street but shows the public only its neighbourhood: no street search may find it
+    await fillRequired(5, houseStreet?.name ?? 'Rua de Teste');
+    await page.selectOption('#add-panel select[name="addressDisplay"]', 'neighborhood');
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(700);
     await waitIdle(page);
     const lotAdded = await page.evaluate(() => document.querySelector('#drawer.open h2')?.textContent ?? null);
     check('a new lot is placed on free ground (no building, road, water or green) and saved',
-      pickedLot && lotAdded === 'Terreno de 300 m²' && (await rowCount()) === TOTAL + 2, `${pickedLot} ${lotAdded}`);
+      !!pickedLot && lotAdded === 'Terreno de 300 m²' && (await rowCount()) === TOTAL + 2, `${!!pickedLot} ${lotAdded}`);
     await page.keyboard.press('Escape');
     await sleep(300);
 
-    // persisted across reloads, then deleted from the drawer
-    await page.reload();
+    // "Imóveis nesta rua": the street chosen in the box offers the listings that show it in their address
+    const houseOpts = houseStreet ? await suggestions(page, fold(houseRest.join(' '))) : [];
+    const houseOpt = houseOpts.find((o) => o.name === houseStreet.name && o.sub.startsWith(houseStreet.bairro ? `${houseStreet.bairro}, ${houseStreet.city}` : houseStreet.city));
+    if (houseOpt) await page.click(`#${houseOpt.id}`);
+    await sleep(300);
+    await waitIdle(page);
+    const streetCard = await streetState(page);
+    // one row per (name, place): the card notes the name when ruas.json lists it in another place too
+    const housePlaces = houseStreet ? new Set(streetRows(houseStreet.name).map((r) => r.place)) : new Set();
+    check('a street chosen in the box counts the listings showing it ("R. …" counts; a lot showing only its neighbourhood does not)',
+      !!houseOpt && streetCard.card === houseStreet.name && streetCard.button === 'Imóveis nesta rua (1)' && streetCard.lit === houseStreet.name &&
+        streetCard.note === (housePlaces.size > 1 ? ELSEWHERE_NOTE : null),
+      `${houseTyped} → ${JSON.stringify({ ...streetCard, places: [...housePlaces] })}`);
+    await page.click('.street-card-search');
+    await sleep(400);
+    await waitIdle(page);
+    const searchedStreet = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-title')?.textContent,
+      rows: [...document.querySelectorAll('#results button[data-id]')].map((b) => b.querySelector('.r-title')?.textContent ?? b.textContent.trim().slice(0, 40)),
+      search: location.search,
+      chip: document.querySelector('.f-street-chip > span')?.textContent ?? null,
+      card: !document.querySelector('.street-card').hidden,
+      lit: window.__demo.highlightedStreet,
+    }));
+    check('"Imóveis nesta rua" searches them: one result, ?rua= in the address bar and a street chip in the box',
+      searchedStreet.header === '1 imóvel encontrado' && searchedStreet.rows.length === 1 && searchedStreet.rows[0].includes('Casa de teste editada') &&
+        new URLSearchParams(searchedStreet.search).get('rua') === houseStreet?.name && searchedStreet.chip === houseStreet?.name &&
+        !searchedStreet.card && searchedStreet.lit === null,
+      JSON.stringify(searchedStreet));
+    await page.click('.f-street-chip button');
+    await page.click('#filters button[type="submit"]');
+    await sleep(400);
+    await waitIdle(page);
+    const unStreet = await page.evaluate(() => ({ header: document.querySelector('#results .results-title')?.textContent, search: location.search, chips: document.querySelectorAll('.f-street-chip').length }));
+    check('removing the street chip and searching lists every listing again',
+      unStreet.header === `${TOTAL + 2} imóveis à venda` && unStreet.search === '' && unStreet.chips === 0, JSON.stringify(unStreet));
+    // a shared link with the street searches the same way, before the street list is even loaded
+    await page.goto(`${URL_}?rua=${encodeURIComponent(houseStreet?.name ?? '')}`);
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await waitIdle(page);
+    const streetLink = await page.evaluate(() => ({
+      header: document.querySelector('#results .results-title')?.textContent,
+      rows: [...document.querySelectorAll('#results button[data-id]')].map((b) => b.querySelector('.r-title')?.textContent ?? b.textContent.trim().slice(0, 40)),
+      chip: document.querySelector('.f-street-chip > span')?.textContent ?? null,
+    }));
+    check('a link with ?rua= opens with that street search (the lot showing only its neighbourhood stays out)',
+      streetLink.header === '1 imóvel encontrado' && streetLink.rows.length === 1 && streetLink.rows[0].includes('Casa de teste editada') &&
+        streetLink.chip === houseStreet?.name,
+      JSON.stringify(streetLink));
+
+    // persisted across reloads (a fresh load without the street), then deleted from the drawer
+    await page.goto(URL_);
     await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(page);
     const afterReload = await rowCount();
@@ -900,6 +1078,38 @@ async function main() {
         cutState.filter.includes('"distance"') && cutState.mask > 0 && cutState.outline === 'none' && cutState.devMarkers === 0,
       JSON.stringify({ ...cutState, filter: cutState.filter.slice(0, 60) }));
     await cut.page.screenshot({ path: path.join(SHOTS, 'desktop-bairro.png') });
+    // with the neighbourhood search applied, the box suggests only the streets inside it: a word of a street of the
+    // neighbourhood that streets elsewhere share
+    const cutPlace = RUAS.places.findIndex(([b, c]) => b === BAIRRO && c === 'Joinville');
+    const wordsOfStreet = (name) => fold(name).split(/[^a-z0-9]+/).slice(1).filter((w) => w.length >= 5);
+    const elsewhere = (w) => RUAS.streets.filter((s) => s[1] !== cutPlace && wordsOfStreet(s[0]).some((x) => x.startsWith(w))).length;
+    const cutWord = RUAS.streets.filter((s) => s[1] === cutPlace).flatMap((s) => wordsOfStreet(s[0])).sort((a, b) => elsewhere(b) - elsewhere(a))[0];
+    const cutOpts = await suggestions(cut.page, cutWord);
+    const cutStreets = cutOpts.filter((o) => o.sub.endsWith('ir para a rua'));
+    check('bairro filter: the search box suggests only the streets of the chosen neighbourhood',
+      cutStreets.length > 0 && cutStreets.every((o) => o.sub.startsWith(`${BAIRRO}, Joinville`) && o.group === 'Ruas nos bairros escolhidos') && elsewhere(cutWord) > 0,
+      `"${cutWord}": ${cutStreets.map((o) => o.name).join(', ')} (${elsewhere(cutWord)} elsewhere left out)`);
+    // the names are drawn above the mask, so the cut hides them by itself: none in the Centro, more than 1 km from the
+    // cut (the whole screen is outside it), while the bairro keeps its names
+    const AREAS = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'bairros-areas.geojson'), 'utf8')).features;
+    const cutRings = AREAS.filter((f) => f.properties.name === BAIRRO).flatMap((f) =>
+      f.properties.grown.type === 'Polygon' ? f.properties.grown.coordinates : f.properties.grown.coordinates.flat());
+    const OUT = [-48.8457, -26.3035];
+    const IN = streetRows(XV).find((r) => r.place === `${BAIRRO}, Joinville`)?.point;
+    const cutNames = async (center) => {
+      await cut.page.evaluate((c) => window.__demo.map.jumpTo({ center: c, zoom: 17, pitch: 55, bearing: 0 }), center);
+      await waitIdle(cut.page);
+      await sleep(600);
+      return cut.page.evaluate(() => [...new Set(window.__demo.map.queryRenderedFeatures({ layers: ['road-names'] }).map((f) => f.properties.name))]);
+    };
+    const namesOut = await cutNames(OUT);
+    const namesIn = IN ? await cutNames(IN) : [];
+    const outDist = Math.round(metresToRings(OUT, cutRings));
+    check('bairro filter: street names outside the cut are hidden (none in the Centro), the bairro keeps its own',
+      cutRings.length > 0 && outDist > 1000 && namesOut.length === 0 && namesIn.length > 0,
+      `${outDist} m from the cut: ${JSON.stringify(namesOut)}; inside: ${namesIn.length} names (${namesIn.slice(0, 3).join(', ')}…)`);
+    await cut.page.keyboard.press('Escape');
+    await cut.page.keyboard.press('Escape');
     await cut.page.click('.f-bairro-chip button');
     await cut.page.click('#filters button[type="submit"]');
     await cut.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 20000 });
@@ -967,6 +1177,125 @@ async function main() {
     await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery-night.png') });
     check('no console errors (scenery)', sc.errors.length === 0, sc.errors.join(' | '));
     await sc.ctx.close();
+
+    // ------------------------------------------------ street names on the map, streets in the search box
+    const st = await openPage(browser, { width: 1440, height: 900 }, 'ruas');
+    const sp = st.page;
+    await sp.evaluate(() => window.__demo.map.jumpTo({ center: [-48.8457, -26.3035], zoom: 17, pitch: 55, bearing: 0 }));
+    await waitIdle(sp);
+    const namesNow = () =>
+      sp.evaluate(() => {
+        const m = window.__demo.map;
+        const fs = m.queryRenderedFeatures({ layers: ['road-names'] });
+        return {
+          drawn: fs.length,
+          names: [...new Set(fs.map((f) => f.properties.name))],
+          text: m.getPaintProperty('road-names', 'text-color'),
+          halo: m.getPaintProperty('road-names', 'text-halo-color'),
+        };
+      });
+    const namesDay = await namesNow();
+    const fontUrl = await sp.evaluate(() => Object.values(window.__demo.map.getStyle()['font-faces'] ?? {})[0] ?? null);
+    const fonts = st.requests.filter((u) => /\.woff2(\?|$)/.test(u));
+    const ownOrigin = (u) => new URL(u).origin === new URL(URL_).origin;
+    // drawn above the 3D city: after every extrusion layer (buildings, roofs, trees, developments…)
+    const names3d = await sp.evaluate(() => {
+      const layers = window.__demo.map.getStyle().layers;
+      const at = layers.findIndex((l) => l.id === 'road-names');
+      const extrusions = layers.map((l, i) => [l, i]).filter(([l]) => l.type === 'fill-extrusion');
+      return { at, extrusions: extrusions.length, above: extrusions.every(([, i]) => i < at), clipMaskBelow: layers.findIndex((l) => l.id === 'clip-mask') < at };
+    });
+    check(`street names at the default 3D close-up (Centro, zoom 17, pitch 55): at least ${MIN_NAMES_3D} labels, drawn above every 3D layer`,
+      namesDay.drawn >= MIN_NAMES_3D && names3d.extrusions > 0 && names3d.above && names3d.clipMaskBelow,
+      `${namesDay.drawn} labels; ${JSON.stringify(names3d)}`);
+    check('street names are drawn up close (Centro, zoom 17), with the site\'s own font file',
+      namesDay.drawn > 0 && namesDay.names.every((n) => typeof n === 'string' && n.trim() === n && n.length > 2) &&
+        typeof fontUrl === 'string' && ownOrigin(fontUrl) && fonts.includes(fontUrl) && fonts.every(ownOrigin),
+      `${namesDay.drawn} labels, ${namesDay.names.length} names (${namesDay.names.slice(0, 4).join(', ')}…); fonts: ${fonts.map((u) => u.replace(URL_, '')).join(', ')}`);
+    await sp.evaluate(() => window.__demo.map.jumpTo({ zoom: 15.5 }));
+    await waitIdle(sp);
+    const namesFar = await renderedCount(sp, 'road-names');
+    check('street names: none from afar (zoom 15.5)', namesFar === 0, `${namesFar} labels`);
+    await sp.evaluate(() => window.__demo.map.jumpTo({ zoom: 17 }));
+    await sp.click('.time-of-day button:has-text("Noite")');
+    await sleep(300);
+    await waitIdle(sp);
+    const namesNight = await namesNow();
+    check('street names at night: light text on a dark halo',
+      namesNight.drawn > 0 && namesNight.text !== namesDay.text && namesNight.halo !== namesDay.halo,
+      `day ${namesDay.text}/${namesDay.halo} → night ${namesNight.text}/${namesNight.halo}, ${namesNight.drawn} labels`);
+    await sp.click('.time-of-day button:has-text("Manhã")');
+    await sp.click('.overview-btn');
+    await sleep(300);
+    await waitIdle(sp);
+
+    // a neighbourhood: typing only suggests it, ↓ + Enter adds it as a pending chip, Backspace takes it back
+    const bairroOpts = await suggestions(sp, 'Glo');
+    const chipsWhileTyping = await sp.locator('.f-bairro-chip').count();
+    const gloriaOpt = bairroOpts.find((o) => o.name === 'Glória' && o.group === 'Bairros');
+    const toGloria = !!gloriaOpt && (await arrowTo(sp, gloriaOpt.id));
+    await sp.keyboard.press('Enter');
+    await sleep(200);
+    const bairroChosen = await sp.evaluate(() => ({
+      chips: [...document.querySelectorAll('.f-bairro-chip')].map((c) => c.firstChild.textContent.trim()),
+      pendingHint: !document.querySelector('.f-pending').hidden,
+      search: location.search,
+      typed: document.querySelector('#f-bairro-input').value,
+    }));
+    await sp.keyboard.press('Backspace');
+    await sleep(200);
+    const bairroUndone = await sp.evaluate(() => document.querySelectorAll('.f-bairro-chip').length === 0 && document.querySelector('.f-pending').hidden);
+    check('search box: a neighbourhood is suggested while typing, added as a pending chip with ↓ + Enter, removed with Backspace',
+      toGloria && chipsWhileTyping === 0 && bairroChosen.chips.join() === 'Glória' && bairroChosen.pendingHint && bairroChosen.search === '' &&
+        bairroChosen.typed === '' && bairroUndone,
+      JSON.stringify({ options: bairroOpts.map((o) => `${o.group}: ${o.name}`).slice(0, 5), ...bairroChosen, bairroUndone }));
+
+    // a street: ↓ + Enter takes the map there and lights it, with its card; the search stays as it was
+    const zoomBefore = await sp.evaluate(() => window.__demo.map.getZoom());
+    const xvOpts = await suggestions(sp, 'xv de nov');
+    // one option per bairro the street crosses (ruas.json has one row per name and place); the Centro one is chosen
+    const xvSubs = xvOpts.filter((o) => o.name === XV && o.group === 'Ruas').map((o) => o.sub.replace(/ · ir para a rua$/, '')).sort();
+    const xvPlaces = streetRows(XV).map((r) => r.place).sort();
+    check('search box: a street through several bairros is offered once per bairro (Rua XV de Novembro)',
+      xvPlaces.length >= 4 && xvPlaces.includes('Centro, Joinville') && JSON.stringify(xvSubs) === JSON.stringify(xvPlaces),
+      `${JSON.stringify(xvSubs)} vs ruas.json ${JSON.stringify(xvPlaces)}`);
+    const xvOpt = xvOpts.find((o) => o.name === XV && o.group === 'Ruas' && o.sub.startsWith('Centro, Joinville'));
+    const toXv = !!xvOpt && (await arrowTo(sp, xvOpt.id));
+    await axe(sp, 'busca: lista de ruas');
+    await sp.keyboard.press('Enter');
+    await sleep(300);
+    await waitIdle(sp);
+    const xvState = await streetState(sp);
+    const inBox = ([x, y], [w, s, e, n], pad = 1e-4) => w - pad <= x && x <= e + pad && s - pad <= y && y <= n + pad;
+    check('search box: a street chosen with ↓ + Enter takes the map to it (zoom ≥ 16, names showing, inside its Centro stretch), lit, with its card; no search is made',
+      toXv && zoomBefore < 16 && xvState.zoom >= 16 && xvState.names > 0 && xvState.search === '' && !xvState.pendingHint && !xvState.listOpen &&
+        xvState.card === XV && xvState.place === 'Centro, Joinville' && xvState.lit === XV && !!XV_CENTRO && inBox(xvState.center, XV_CENTRO.bbox) &&
+        xvState.note === null && xvState.litDrawn.length === 1 && xvState.litDrawn[0] === XV,
+      JSON.stringify({ option: xvOpt, zoomBefore: Math.round(zoomBefore * 100) / 100, ...xvState }));
+    await axe(sp, 'busca: rua escolhida');
+    const litDay = await sp.evaluate(() => window.__demo.map.getPaintProperty('road-highlight', 'line-color'));
+    await sp.click('.time-of-day button:has-text("Noite")');
+    await sleep(300);
+    await waitIdle(sp);
+    const litNight = await sp.evaluate(() => ({
+      color: window.__demo.map.getPaintProperty('road-highlight', 'line-color'),
+      drawn: window.__demo.map.queryRenderedFeatures({ layers: ['road-highlight'] }).length,
+    }));
+    check('the lit street keeps showing at night, in the night colour', litNight.drawn > 0 && litNight.color !== litDay, `${litDay} → ${JSON.stringify(litNight)}`);
+    await axe(sp, 'busca: rua escolhida (noite)');
+    await suggestions(sp, 'xv de nov');
+    await axe(sp, 'busca: lista de ruas (noite)');
+    await sp.keyboard.press('Escape');
+    await sp.keyboard.press('Escape');
+    await sp.click('.time-of-day button:has-text("Manhã")');
+    await sp.click('.street-card .street-card-close');
+    await sleep(300);
+    await waitIdle(sp);
+    const xvClosed = await streetState(sp);
+    check('closing the street card turns the light off and gives focus back to the box',
+      xvClosed.card === null && xvClosed.lit === null && xvClosed.litDrawn.length === 0 && xvClosed.focus === 'f-bairro-input', JSON.stringify(xvClosed));
+    check('no console errors (ruas)', st.errors.length === 0, st.errors.join(' | '));
+    await st.ctx.close();
 
     // ------------------------------------------------ mobile
     const m = await openPage(browser, { width: 390, height: 844 }, 'mobile');
@@ -1048,6 +1377,65 @@ async function main() {
       mDev.open && mDev.top > 300 && mDev.top < 600 && mDev.overflow <= 0, JSON.stringify(mDev));
     await axe(mp, 'celular: espelho de vendas');
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-development.png') });
+    // a street chosen on a small screen: the filters close, its card is a bar at the bottom, clear of the results pill
+    await mp.goto(URL_);
+    await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await waitIdle(mp);
+    await mp.click('.filters-toggle');
+    await sleep(300);
+    const mXvOpts = await suggestions(mp, 'xv de nov');
+    const mListFits = await mp.evaluate(() => {
+      const r = document.querySelector('#f-place-list').getBoundingClientRect();
+      return r.left >= 0 && r.right <= window.innerWidth && document.documentElement.scrollWidth - window.innerWidth <= 0;
+    });
+    await axe(mp, 'celular: lista de ruas');
+    const mXv = mXvOpts.find((o) => o.name === XV && o.sub.startsWith('Centro, Joinville'));
+    if (mXv) await mp.click(`#${mXv.id}`);
+    await sleep(300);
+    await waitIdle(mp);
+    const mStreet = await mp.evaluate((point) => {
+      const rect = (sel) => {
+        const r = document.querySelector(sel).getBoundingClientRect();
+        return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) };
+      };
+      const card = rect('.street-card');
+      const pill = rect('#results');
+      const zoomCtl = rect('.maplibregl-ctrl-bottom-right');
+      return {
+        filtersOpen: document.body.classList.contains('filters-open'),
+        toggle: document.querySelector('.filters-toggle').getAttribute('aria-expanded'),
+        card,
+        pill,
+        clearOfPill: card.top >= pill.bottom || card.bottom <= pill.top,
+        inside: card.left >= 0 && card.right <= window.innerWidth && card.bottom <= window.innerHeight,
+        controlsAbove: zoomCtl.bottom <= card.top,
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        focus: document.activeElement?.className ?? null,
+        lit: window.__demo.highlightedStreet,
+        // where the stretch's point is on screen: the framing keeps it above the card, on the map
+        litAt: (() => {
+          const m = window.__demo.map;
+          const p = m.project(point);
+          const c = m.getCanvas().getBoundingClientRect();
+          const el = document.elementFromPoint(p.x + c.left, p.y + c.top);
+          return { x: Math.round(p.x + c.left), y: Math.round(p.y + c.top), onMap: el === m.getCanvas(), drawn: m.queryRenderedFeatures([[p.x - 30, p.y - 30], [p.x + 30, p.y + 30]], { layers: ['road-highlight'] }).length };
+        })(),
+      };
+    }, XV_CENTRO?.point ?? [0, 0]);
+    check('mobile: the lit street is framed above its card, not hidden by it (Centro stretch of XV de Novembro)',
+      !!XV_CENTRO && mStreet.litAt.y > 0 && mStreet.litAt.y < mStreet.card.top && mStreet.litAt.x > 0 && mStreet.litAt.x < 390 &&
+        mStreet.litAt.onMap && mStreet.litAt.drawn > 0,
+      JSON.stringify({ litAt: mStreet.litAt, cardTop: mStreet.card.top }));
+    check('mobile: choosing a street closes the filters; its card sits at the bottom, inside the screen and clear of the results pill',
+      !!mXv && mListFits && !mStreet.filtersOpen && mStreet.toggle === 'false' && mStreet.clearOfPill && mStreet.inside && mStreet.controlsAbove &&
+        mStreet.overflow <= 0 && mStreet.focus === 'street-card' && mStreet.lit === XV,
+      JSON.stringify({ listFits: mListFits, ...mStreet }));
+    await axe(mp, 'celular: rua escolhida');
+    await mp.click('.street-card .street-card-close');
+    await sleep(300);
+    const mClosed = await mp.evaluate(() => ({ card: !document.querySelector('.street-card').hidden, focus: document.activeElement?.className ?? null }));
+    check('mobile: closing the street card gives focus back to the filters button',
+      !mClosed.card && mClosed.focus === 'filters-toggle', JSON.stringify(mClosed));
     check('no console errors (mobile)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
   } finally {

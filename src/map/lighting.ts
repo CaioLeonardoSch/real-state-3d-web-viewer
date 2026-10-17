@@ -49,6 +49,10 @@ export interface Theme {
   light: { color: string; intensity: number; position: [number, number, number] };
   sky: { sky: string; horizon: string };
   scenery: Scenery;
+  /** Street names up close (drawn over the 3D city): text with a wide halo that keeps it readable over roofs and trees. */
+  streetName: { text: string; halo: string };
+  /** The street chosen in the search, lit along its length (translucent). */
+  streetHighlight: string;
   /** Where the sun is (building shadows); themes made by hand may leave it out. */
   sun?: SunInfo;
 }
@@ -150,6 +154,9 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         // Sun is below the horizon: a dim, cool, top-down "moonlight" so volumes stay legible.
         light: { color: '#9fb4ff', intensity: 0.35, position: [1.5, 210, 30] },
         sky: { sky: '#0b1020', horizon: '#1d2740' },
+        // light text on a dark halo, as the neighbourhood labels at night
+        streetName: { text: '#dde3ee', halo: '#10162a' },
+        streetHighlight: '#ffad42',
         // street lamps light up: luminaires bright, warm pools of light on the street
         scenery: {
           asphalt: '#262d3d',
@@ -207,6 +214,9 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         position: sunToLightPosition(sun),
       },
       sky: warm ? { sky: '#a9c9e8', horizon: '#f2dcc0' } : { sky: '#9cc8f0', horizon: '#e4eef6' },
+      // dark grey text on a light halo: readable over roofs, trees, asphalt and the tan dirt roads
+      streetName: { text: '#3f4652', halo: warm ? '#f8f3ea' : '#f7f6f2' },
+      streetHighlight: '#f28c18',
       scenery: warm ? { ...DAY_SCENERY, sidewalk: '#f4efe6', asphalt: '#b9b8b6' } : DAY_SCENERY,
     },
   };

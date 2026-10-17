@@ -87,3 +87,4 @@ jobs:
             public/data/bairros.geojson
             public/data/bairros-areas.geojson
             public/data/boundary.geojson
+            public/data/ruas.json

@@ -50,6 +50,16 @@ describe('busca do site', () => {
     expect(chips[2].without.criteria.bairros).toEqual([]);
   });
 
+  it('rua da URL vira um chip removível (não filtra escondido)', () => {
+    const s = queryToSearch('?bairro=Gl%C3%B3ria&rua=Rua+XV+de+Novembro', { sort: 'relevance', view: 'grade' }, new Set());
+    expect(s.criteria.street).toBe('Rua XV de Novembro');
+    const chips = chipsOf(s);
+    expect(chips.map((c) => c.label)).toEqual(['Glória', 'Rua XV de Novembro']);
+    expect(chips[1].without.criteria).toEqual({ ...s.criteria, street: null });
+    // a name without its type says what it is
+    expect(chipsOf(queryToSearch('?rua=XV+de+Novembro', { sort: 'relevance', view: 'grade' }, new Set())).map((c) => c.label)).toEqual(['Rua: XV de Novembro']);
+  });
+
   it('bairros mais procurados, paginação e título', () => {
     expect(bairroCounts(list, false)).toEqual([{ name: 'Glória', count: 2 }, { name: 'América', count: 1 }]);
     expect(pageOf([1, 2, 3, 4, 5], 9, 2)).toEqual({ items: [5], page: 3, pages: 3 });

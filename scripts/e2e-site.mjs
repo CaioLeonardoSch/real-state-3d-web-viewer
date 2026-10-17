@@ -189,6 +189,16 @@ async function main() {
     check('busca sem resultado sugere qual filtro tirar', (await page.locator('.empty [data-tip]').count()) > 0);
     await page.locator('.empty [data-tip]').first().click();
     check('a sugestão refaz a busca', (await cardCount(page)) > 0);
+    // a street searched on the map (?rua=) comes as a chip that can be taken off (no demo listing shows its street)
+    await page.goto(`${BASE}?p=imoveis&rua=${encodeURIComponent('Rua XV de Novembro')}`);
+    await page.waitForSelector('main.page-imoveis');
+    const streetChips = await page.locator('.chips .chip').allTextContents();
+    const streetTitle = await title(page);
+    await page.click('.chips .chip:has-text("Rua XV de Novembro")');
+    await page.waitForFunction((n) => document.querySelector('#r-title').textContent.startsWith(`${n} `), forSale.length);
+    check('rua vinda do mapa (?rua=) vira um chip, e tirá-lo volta a todos os imóveis',
+      streetChips.length === 1 && streetChips[0].includes('Rua XV de Novembro') && streetTitle.startsWith('Nenhum') && !page.url().includes('rua='),
+      JSON.stringify({ streetChips, streetTitle, url: page.url() }));
     // pagination and list view
     await page.goto(`${BASE}?p=imoveis`);
     await page.waitForSelector('main.page-imoveis');

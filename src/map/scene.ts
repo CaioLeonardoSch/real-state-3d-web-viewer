@@ -19,6 +19,7 @@ import { M_PER_DEG, shadowOffset, shadowRing } from './shadows';
 import { dirtRoad, pavingStones, waterFacets, type TextureImage } from './textures';
 import { craneParts } from './crane';
 import { osmNumericId } from '../data/osmId';
+import interMedium from '@fontsource/inter/files/inter-latin-500-normal.woff2?url';
 
 const OSM_ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL)';
@@ -61,6 +62,19 @@ const LAMP_CORE_M = 4.5;
 const LAMP_POOL_OPACITY = 0.6;
 const LAMP_CORE_OPACITY = 0.85;
 const LAMP_STRENGTH: ExpressionSpecification = ['coalesce', ['get', 'k'], 1];
+/**
+ * Street names, drawn by the style from this zoom (the neighbourhood labels end at BAIRRO_LABEL_ZOOMS[1], so the two
+ * never meet). The glyphs come from the Inter file the site already serves (no glyph files, no other origin): MapLibre
+ * downloads it the first time a name is drawn and rasterises the letters in the browser.
+ */
+const Z_STREET_NAMES = 16;
+const STREET_FONT = 'Inter Medium';
+/** The street chosen in the search is lit within its bounding box grown by this much (m), this much wider than the road. */
+const STREET_HIGHLIGHT_MARGIN_M = 60;
+const STREET_HIGHLIGHT_EXTRA_M = 5;
+/** Least width (px) of the street highlight at zoom 16 and 17, and its opacity (the name stays readable on it). */
+const STREET_HIGHLIGHT_MIN_PX: [number, number] = [14, 20];
+const STREET_HIGHLIGHT_OPACITY = 0.65;
 /** Canopy mass of woods (m), as in scripts/lib/scenery.mjs. */
 const WOOD_CANOPY_M = 6;
 /**
@@ -111,6 +125,7 @@ const ROAD_WIDTH_M: ExpressionSpecification = [
   4,
 ];
 const MAJOR_ROADS = ['primary', 'secondary', 'tertiary'];
+const MINOR_ROADS = ['residential', 'unclassified', 'living_street'];
 const FOOT_ROADS = ['footway', 'path', 'steps', 'cycleway', 'pedestrian'];
 /** Streets drawn with sidewalks up close (where the illustrative lamps stand). */
 const SIDEWALK_ROADS = ['primary', 'secondary', 'tertiary', 'primary_link', 'secondary_link', 'tertiary_link', 'residential', 'unclassified', 'living_street'];
@@ -127,6 +142,7 @@ const CLIP_LAYERS = [
   'roads-paving',
   'roads-dirt',
   'roads-lanes',
+  'road-names',
   'lamp-glow',
   'lamp-core',
   'buildings-flat',
@@ -176,6 +192,25 @@ export interface PickResult {
   building?: { osmId: string; residential: boolean; height: number; geometry: Polygon | MultiPolygon };
   /** Buildings are only pickable up close (3D, zoom ≥ Z_3D_START). */
   tooFar?: boolean;
+}
+
+/** A street of the search, as the search hands it to the map: its name and the bounding box of its segments. */
+export interface StreetRef {
+  name: string;
+  bbox: [number, number, number, number];
+}
+
+/**
+ * Filter of the 'road-highlight' layer: the segments named as the street within its bounding box grown by
+ * STREET_HIGHLIGHT_MARGIN_M (a street of the same name elsewhere stays unlit); nothing for null.
+ */
+export function streetHighlightFilter(street: StreetRef | null): FilterSpecification {
+  if (!street) return false;
+  const [w, s, e, n] = street.bbox;
+  const dy = STREET_HIGHLIGHT_MARGIN_M / M_PER_DEG;
+  const dx = dy / Math.cos((((s + n) / 2) * Math.PI) / 180);
+  const ring = [[w - dx, s - dy], [e + dx, s - dy], [e + dx, n + dy], [w - dx, n + dy], [w - dx, s - dy]];
+  return ['all', ['==', ['get', 'name'], street.name], ['within', { type: 'Polygon', coordinates: [ring] }]];
 }
 
 /** Colour of the place being chosen for a new listing (distinct from the listing accent). */
@@ -376,7 +411,10 @@ export class Scene {
     ];
   }
 
-  /** Place names as HTML labels (the style has no fonts): cities/districts from afar, then neighbourhoods. */
+  /**
+   * Place names as HTML labels: cities/districts from afar, then neighbourhoods (street names, closer, are drawn by
+   * the style: 'road-names').
+   */
   private addBairroLabels(): void {
     const labels = this.data.bairros.features.map((f) => {
       const kind = f.properties.kind ?? 'bairro';
@@ -426,8 +464,9 @@ export class Scene {
 
   /**
    * Base map, bottom to top: ground, green areas, water, roads by pavement (sidewalks, paving stones, dirt, lane
-   * marks up close), boundaries, night light pools, buildings, then the low-poly scenery (canopy of woods, trees,
-   * street lamps). Each layer's own filter is kept in `baseFilters`, so the neighbourhood cut can be added to it.
+   * marks up close), boundaries, night light pools, flat buildings, the street chosen in the search and the street
+   * names (on the ground), then the 3D buildings and the low-poly scenery (canopy of woods, trees, street lamps).
+   * Each layer's own filter is kept in `baseFilters`, so the neighbourhood cut can be added to it.
    */
   private baseLayers(t: Theme): LayerSpecification[] {
     const sc = t.scenery;
@@ -611,6 +650,23 @@ export class Scene {
         },
       },
       {
+        // the street chosen in the search (highlightStreet): a soft band wider than the road, under the names (drawn
+        // over everything at the end of the style); it lies after the shadows and the light pools, so neither darkens
+        // nor tints it
+        id: 'road-highlight',
+        type: 'line',
+        source: 'osm',
+        'source-layer': 'roads',
+        filter: streetHighlightFilter(null),
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': t.streetHighlight,
+          'line-opacity': STREET_HIGHLIGHT_OPACITY,
+          'line-blur': ['interpolate', ['linear'], ['zoom'], 14, 1, 17, 2.5],
+          'line-width': this.streetHighlightWidth(),
+        },
+      },
+      {
         // "bairro" filter: the ground beyond 100 m of the chosen neighbourhoods, in the background colour (big
         // woods and long roads would otherwise stick out); 3D layers are cut by their filters
         id: 'clip-mask',
@@ -700,6 +756,58 @@ export class Scene {
     return layers;
   }
 
+  /**
+   * Width of the street highlight: a few pixels from afar, at least STREET_HIGHLIGHT_MIN_PX at zoom 16-17 (where the
+   * search frames a street; the road alone is a thin line there, on phones too), the road's real width plus
+   * STREET_HIGHLIGHT_EXTRA_M up close.
+   */
+  private streetHighlightWidth(): ExpressionSpecification {
+    const real = (z: number): ExpressionSpecification => ['*', ['+', ROAD_WIDTH_M, STREET_HIGHLIGHT_EXTRA_M], this.pxPerM0 * 2 ** z];
+    const [min16, min17] = STREET_HIGHLIGHT_MIN_PX;
+    return ['interpolate', ['exponential', 2], ['zoom'], 12, 4, 14, 8, 16, ['max', real(16), min16], 17, ['max', real(17), min17], 22, real(22)];
+  }
+
+  /**
+   * Street names up close. The letters stand upright towards the viewer (pitch alignment 'viewport') while the name
+   * still follows the street (rotation alignment 'map'): lying on the ground they were foreshortened and unreadable
+   * at the usual 3D pitch. The layer is drawn over the 3D layers, so a building or a tree in front does not cut a name;
+   * the bairro mask does not cover it there, the cut is its CLIP_LAYERS filter. MapLibre's collision drops the names
+   * that would overlap (with some room around each, text-padding); main streets are placed first.
+   */
+  private streetNamesLayer(t: Theme): LayerSpecification {
+    const filter: FilterSpecification = ['has', 'name'];
+    // not in baseLayers: its own filter is kept here for the bairro cut (applyFilter)
+    this.baseFilters.set('road-names', filter);
+    return {
+      id: 'road-names',
+      type: 'symbol',
+      source: 'osm',
+      'source-layer': 'roads',
+      minzoom: Z_STREET_NAMES,
+      filter,
+      layout: {
+        'symbol-placement': 'line',
+        'symbol-spacing': 320,
+        'symbol-sort-key': ['match', ['get', 'highway'], ['motorway', 'trunk', ...MAJOR_ROADS], 0, MINOR_ROADS, 1, 2],
+        'text-field': ['get', 'name'],
+        'text-font': [STREET_FONT],
+        'text-size': ['interpolate', ['linear'], ['zoom'], Z_STREET_NAMES, 12, 19, 15],
+        'text-letter-spacing': 0.03,
+        'text-max-angle': 35,
+        'text-padding': 6,
+        'text-pitch-alignment': 'viewport',
+        'text-rotation-alignment': 'map',
+        'text-keep-upright': true,
+      },
+      paint: {
+        'text-color': t.streetName.text,
+        'text-halo-color': t.streetName.halo,
+        'text-halo-width': 1.6,
+        'text-halo-blur': 0.3,
+      },
+    };
+  }
+
   private greenColor(t: Theme): ExpressionSpecification {
     const g = t.scenery.greens;
     return ['match', ['get', 'k'], 'grass', g.grass, 'wood', g.wood, 'scrub', g.scrub, 'wetland', g.wetland, 'farm', g.farm, g.park];
@@ -750,7 +858,11 @@ export class Scene {
 
     return {
       version: 8,
-      // No glyphs or sprites. Base map: one local PMTiles file (vector tiles, loaded by range requests).
+      // No sprites and no glyphs URL: the only text, the street names, is drawn from this font file (absolute URL,
+      // resolved as the data files are: the page may live in a subfolder or an iframe).
+      // Its latin subset covers the names; any other letter falls back to the browser's sans-serif.
+      'font-faces': { [STREET_FONT]: new URL(interMedium, location.href).href },
+      // Base map: one local PMTiles file (vector tiles, loaded by range requests).
       sources: {
         osm: {
           type: 'vector',
@@ -913,6 +1025,8 @@ export class Scene {
             'circle-stroke-opacity': this.pinFade(0.9),
           },
         },
+        // over the 3D layers (developments are added before 'listing-pins-dimmed'), under the listing pins
+        this.streetNamesLayer(t),
         {
           id: 'listing-pins',
           type: 'circle',
@@ -1161,6 +1275,35 @@ export class Scene {
   }
 
   /**
+   * Frames a street chosen in the search: its whole length when that still shows the street names (zoom
+   * Z_STREET_NAMES and closer), otherwise a close-up of `point` (a point on the street) at which they show.
+   * `extra.bottom` (px) is added to the bottom padding (e.g. a card over the bottom of the map on phones): the street
+   * is framed in the part of the map above it.
+   */
+  frameStreet(bbox: [number, number, number, number], point: [number, number], extra: { bottom?: number } = {}): void {
+    const below = Math.max(0, extra.bottom ?? 0);
+    const base = this.cameraPadding();
+    const padding = { ...base, bottom: base.bottom + below };
+    const camera = this.map.cameraForBounds(bbox, { padding });
+    if (camera?.zoom !== undefined && camera.zoom >= Z_STREET_NAMES)
+      this.map.fitBounds(bbox, { padding, maxZoom: 17.5, pitch: 55, duration: 1200 });
+    else
+      this.map.flyTo({
+        center: point,
+        zoom: Z_STREET_NAMES + 0.3,
+        pitch: 55,
+        duration: 1200,
+        // the point in the middle of the part of the map above the card (cameraPadding clears it at the next framing)
+        ...(below ? { padding: { top: 0, left: 0, right: 0, bottom: below } } : {}),
+      });
+  }
+
+  /** Lights the street chosen in the search (only its own segments, see streetHighlightFilter); null clears it. */
+  highlightStreet(street: StreetRef | null): void {
+    this.map.setFilter('road-highlight', streetHighlightFilter(street));
+  }
+
+  /**
    * Padding for framing. Clears the map's own padding first: a padding passed to flyTo elsewhere
    * (development close-ups) stays on the map and would add up with this one.
    */
@@ -1200,6 +1343,9 @@ export class Scene {
     m.setPaintProperty('roads', 'line-color', this.roadColor(t));
     m.setPaintProperty('roads-sidewalk', 'line-color', sc.sidewalk);
     m.setPaintProperty('roads-lanes', 'line-color', sc.laneMark);
+    m.setPaintProperty('road-highlight', 'line-color', t.streetHighlight);
+    m.setPaintProperty('road-names', 'text-color', t.streetName.text);
+    m.setPaintProperty('road-names', 'text-halo-color', t.streetName.halo);
     m.setPaintProperty('trees', 'fill-extrusion-color', this.treeColor(t));
     m.setPaintProperty('roofs', 'fill-extrusion-color', this.roofColor(t));
     m.setPaintProperty('lamps', 'fill-extrusion-color', this.lampColor(sc));

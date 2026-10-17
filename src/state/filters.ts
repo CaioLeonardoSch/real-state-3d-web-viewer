@@ -1,4 +1,5 @@
 import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types';
+import { publicStreet, sameStreet } from '../data/streets';
 
 export interface FilterCriteria {
   /** 'rent' = listings for rent, prices are monthly rents; null = for sale (the default). */
@@ -7,6 +8,11 @@ export interface FilterCriteria {
   types: ListingType[];
   /** Neighbourhoods (any of them; empty = all). The map is cut to them plus 100 m around. */
   bairros: string[];
+  /**
+   * A street, by its name on the map ("Rua XV de Novembro"): listings whose public address shows that street
+   * (however it was typed). A listing that shows only its neighbourhood never matches. null = any street.
+   */
+  street: string | null;
   priceMin: number | null;
   priceMax: number | null;
   bedroomsMin: number | null;
@@ -30,6 +36,7 @@ export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   transaction: null,
   types: [],
   bairros: [],
+  street: null,
   priceMin: null,
   priceMax: null,
   bedroomsMin: null,
@@ -75,6 +82,11 @@ export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
   if (c.bairros.length > 0) {
     const b = l.address?.bairro;
     if (!b || !c.bairros.some((x) => normalizeName(x) === normalizeName(b))) return false;
+  }
+  if (c.street !== null) {
+    // only the street the listing shows to the public (privacy gate)
+    const s = publicStreet(l);
+    if (!s || !sameStreet(s, c.street)) return false;
   }
   if (c.priceMin !== null && price < c.priceMin) return false;
   if (c.priceMax !== null && price > c.priceMax) return false;
