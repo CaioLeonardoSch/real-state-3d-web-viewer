@@ -226,6 +226,25 @@ export interface SceneEvents {
   onListingHover?: (listingId: string | null, point?: { x: number; y: number }) => void;
 }
 
+/** Pitch of the opening view: lower on phones, where a steep camera shows mostly sky and hides the far listings. */
+const overviewPitch = () => (window.matchMedia('(max-width: 720px)').matches ? 45 : 58);
+
+/** MapLibre's own texts (buttons, and the messages of the embedded map's cooperativeGestures), in Portuguese. */
+const MAP_TEXTS = {
+  'AttributionControl.ToggleAttribution': 'Mostrar ou esconder os créditos',
+  'FullscreenControl.Enter': 'Tela cheia',
+  'FullscreenControl.Exit': 'Sair da tela cheia',
+  'Map.Title': 'Mapa',
+  'Marker.Title': 'Marcador',
+  'NavigationControl.ResetBearing': 'Voltar para o norte',
+  'NavigationControl.ZoomIn': 'Aproximar',
+  'NavigationControl.ZoomOut': 'Afastar',
+  'Popup.Close': 'Fechar',
+  'CooperativeGesturesHandler.WindowsHelpText': 'Use Ctrl + rolagem para dar zoom no mapa',
+  'CooperativeGesturesHandler.MacHelpText': 'Use ⌘ + rolagem para dar zoom no mapa',
+  'CooperativeGesturesHandler.MobileHelpText': 'Use dois dedos para mover o mapa',
+};
+
 export class Scene {
   readonly map: MlMap;
   private listingFeatures: Feature<Polygon | MultiPolygon, ListingFeatureProps>[] = [];
@@ -252,6 +271,8 @@ export class Scene {
     private theme: Theme,
     private events: SceneEvents,
     listings: Listing[] = data.listings.listings,
+    /** Embedded in a page (client site): one finger and the plain wheel scroll the page, not the map. */
+    opts: { cooperative?: boolean } = {},
   ) {
     this.listings = listings;
     this.pxPerM0 = 512 / (40075016.686 * Math.cos(((data.meta.center?.[1] ?? -26.3) * Math.PI) / 180));
@@ -266,9 +287,11 @@ export class Scene {
       style: this.buildStyle(),
       bounds: [w, s, e, n],
       fitBoundsOptions: { padding: 40 },
-      pitch: 58,
+      pitch: overviewPitch(),
       bearing: -20,
       maxPitch: 75,
+      cooperativeGestures: !!opts.cooperative,
+      locale: MAP_TEXTS,
       minZoom: 9.8,
       maxZoom: 19.5,
       maxBounds: [w - padX, s - padY, e + padX, n + padY],
@@ -1250,7 +1273,7 @@ export class Scene {
   showOverview(animate: boolean): void {
     const all = this.unionBounds(this.listings);
     if (!all) return;
-    this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: 58, bearing: -20, animate, duration: 1200 });
+    this.map.fitBounds(all, { padding: this.cameraPadding(), pitch: overviewPitch(), bearing: -20, animate, duration: 1200 });
   }
 
   private unionBounds(listings: Listing[]): LngLatBounds | null {

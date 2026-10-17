@@ -277,9 +277,11 @@ async function main() {
       topbar: getComputedStyle(document.querySelector('.topbar')).display,
       ids: window.__demo.listingIds.length,
       otherLit: other.some((id) => window.__demo.isMatched(id)),
+      cooperative: window.__demo.map.cooperativeGestures.isEnabled(),
+      hint: !!document.querySelector('.map-hint'),
     }), A.filter((l) => l.type !== 'house').map((l) => l.id));
-    check('mapa 3D embutido: só os imóveis desta imobiliária, sem a barra do mapa, e só os resultados da busca acesos',
-      emb.embed && emb.topbar === 'none' && emb.ids === A.length && !emb.otherLit, JSON.stringify(emb));
+    check('mapa 3D embutido: só os imóveis desta imobiliária, sem a barra do mapa, só os resultados acesos; um dedo rola a página',
+      emb.embed && emb.topbar === 'none' && emb.ids === A.length && !emb.otherLit && emb.cooperative && !emb.hint, JSON.stringify(emb));
     // changing the search lights other listings without reloading the map
     await page.click('[data-view=mapa]');
     await page.click('.search-top [data-st=under_construction]');

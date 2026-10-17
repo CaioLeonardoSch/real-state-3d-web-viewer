@@ -259,6 +259,11 @@ async function main() {
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
     check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
+    const hint = await page.textContent('.map-hint span').catch(() => null);
+    await page.click('.map-hint button');
+    const hintGone = await page.evaluate(() => !document.querySelector('.map-hint') && localStorage.getItem('mapa3d-dica-vista') === '1');
+    check('first visit: one-line navigation hint, gone for good on "Entendi"', /roda do mouse/.test(hint ?? '') && hintGone, hint ?? 'no hint');
+    check('desktop: buttons of the map in Portuguese', (await page.getAttribute('.maplibregl-ctrl-zoom-in', 'title')) === 'Aproximar');
     await axe(page, 'mapa');
     const initialList = await page.evaluate(() => ({
       heading: document.querySelector('#results .results-title')?.textContent,
@@ -1302,6 +1307,8 @@ async function main() {
     const mp = m.page;
     const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check('mobile: no horizontal overflow', overflow <= 0, `${overflow}px`);
+    const mPitch = await mp.evaluate(() => window.__demo.map.getPitch());
+    check('mobile: opens less tilted (more of the city on a tall screen)', Math.abs(mPitch - 45) < 1 && Math.abs(initialCam.pitch - 58) < 1, `${mPitch} / desktop ${initialCam.pitch}`);
     check('mobile: filters collapsed behind toggle', !(await mp.isVisible('#filters')) && (await mp.isVisible('.filters-toggle')));
     await axe(mp, 'celular');
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-map.png') });

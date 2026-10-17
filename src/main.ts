@@ -34,6 +34,7 @@ import { DevelopmentLayer } from './map/developmentLayer';
 import { DevelopmentPanel } from './ui/developmentPanel';
 import { countByStatus } from './data/developments';
 import { RemoteBackend, backendConfig } from './backend/remote';
+import { mountMapHint } from './ui/mapHint';
 import { AccountPanel } from './ui/account';
 import { withPriceChange } from './state/priceChange';
 import { today } from './data/listingText';
@@ -234,7 +235,8 @@ async function main() {
       else tooltip.hide();
       results.highlight(l ? l.id : null);
     },
-  }, listings);
+  }, listings, { cooperative: !!embed });
+  if (!embed) mountMapHint($('.stage'), scene.map);
 
   function openListing(id: string, fly: boolean) {
     const l = listings.find((x) => x.id === id);

@@ -2259,3 +2259,40 @@ body.panel-body {
     padding: 12px 16px 20px;
   }
 }
+
+/* first visit: how to move the map (src/ui/mapHint.ts) */
+.map-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(480px, calc(100% - 24px));
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.map-hint .link-btn {
+  flex: none;
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  /* the list and the time of day take the top; the zoom buttons, the bottom right corner */
+  .map-hint {
+    top: auto;
+    bottom: 36px;
+    left: 8px;
+    right: 56px;
+    transform: none;
+    width: auto;
+    max-width: none;
+  }
+}

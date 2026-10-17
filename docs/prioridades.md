@@ -48,7 +48,7 @@ Uso no dia a dia, dados, conversão e confiabilidade.
 | 16 | ~~View pública sem altura e andares do prédio quando o endereço é oculto~~ **Feito em 17/10** | Médio: privacidade do endereço | Pequeno | Baixo | — | A11 |
 | 17 | ~~Leitura pública de imobiliárias só pelos campos do site (view), não pela tabela inteira~~ **Feito em 17/10:** por permissão de coluna, não por view | Baixo a médio | Pequeno | Baixo: conferir quem lê `organizations` hoje | — | A12 |
 | 18 | Cache das páginas do cliente na borda, com invalidação ao publicar, e dados já no HTML para o navegador não repetir a consulta | Médio: custo e velocidade com tráfego | Médio | Médio | 5, 8 | A13, I9 |
-| 19 | Mapa: dica de navegação na primeira visita, `cooperativeGestures` no mapa embutido, menos inclinação ao abrir no celular | Médio: primeira impressão e rolagem no celular | Pequeno | Baixo | — | A14 |
+| 19 | ~~Mapa: dica de navegação na primeira visita, `cooperativeGestures` no mapa embutido, menos inclinação ao abrir no celular~~ **Feito em 17/10** (ver A14) | Médio: primeira impressão e rolagem no celular | Pequeno | Baixo | — | A14 |
 | 20 | Testes em Android de entrada e com leitor de tela (NVDA, VoiceOver, TalkBack) | Médio: desempenho real do 3D e acessibilidade | Pequeno | Baixo | Aparelhos | Lista antes do lançamento, I7 |
 | 21 | Teste de invasão por terceiros e "Security Advisor" do Supabase sem alertas | Médio | Pequeno (contratação) | Baixo | 1, 3, 14 a 17 | I11, backend §10 |
 | 22 | Decidir se a verificação em duas etapas vira obrigatória para donos e administradores | Médio | Pequeno | Baixo | Decisão do dono do produto | Backend §10 |

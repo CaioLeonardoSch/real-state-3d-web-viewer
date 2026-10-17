@@ -240,6 +240,11 @@ Interface · média · média (hipótese) · pequeno.
 - No site, o mapa da ficha fica num iframe e responde a toque de um dedo.
 - **Recomendação:** `cooperativeGestures` no embed, uma dica de uma linha na primeira visita e menos inclinação na
   abertura no celular; testar em aparelho real.
+- **Feito em 17/10:** na primeira visita, uma dica de uma linha explica como mover, dar zoom, girar e inclinar (texto
+  próprio para toque); some no primeiro movimento do mapa ou em "Entendi" e não volta nesse navegador
+  (`src/ui/mapHint.ts`). O mapa embutido no site usa `cooperativeGestures`: um dedo e a roda do mouse rolam a página, e o
+  mapa pede dois dedos ou Ctrl + rolagem, com as mensagens em português, assim como os botões do mapa. No celular, a
+  abertura e a "Visão geral" inclinam 45° em vez de 58°. Falta testar em aparelho real.
 
 ### A15. Qualidade e CI [prioridade 9]
 
