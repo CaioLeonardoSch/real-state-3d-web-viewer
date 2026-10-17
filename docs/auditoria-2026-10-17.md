@@ -136,6 +136,14 @@ Negócio e dados · alta · alta · médio.
 - Cobertura, sala, loja, galpão, chácara e kitnet ficam fora, e a importação XML de uma imobiliária real perde parte
   do estoque.
 - **Recomendação:** ampliar o enum seguindo o VRSync; o mapa usa só o ponto e o contorno, então o tipo é rótulo.
+- **Feito em 17/10** (`supabase/migrations/20261026000001_more_listing_types.sql`): o enum ganhou cobertura,
+  kitnet ou studio, chácara ou sítio, sala comercial, loja e galpão. `mapPropertyType` lê esses tipos do VRSync
+  (Penthouse, Kitnet/Studio/Flat/Loft, Farm/Ranch/Chácara/Sítio, Office/Business, Store/Retail/Loja,
+  Warehouse/Industrial/Galpão); Hotel e outros seguem como "tipo não suportado". Os filtros mostram os quatro tipos
+  de sempre e os novos em "Mais filtros → Outros tipos"; cada tipo tem endereço próprio na URL (`tipo=cobertura`,
+  `tipo=sala-comercial`…). No formulário, andar da unidade, andares e torres valem para os tipos em prédio
+  (apartamento, cobertura, studio, sala); área do terreno para os de lote próprio; sala, loja e galpão não pedem
+  quartos e já vêm com finalidade comercial. Na ficha, nos cartões e no Google, os quartos somem nesses tipos.
 
 ### A7. Espelho de vendas só na demonstração [prioridades 4 e 28]
 
@@ -262,7 +270,7 @@ Interface · média · média (hipótese) · pequeno.
 | Contas, convites, papéis, duas etapas, lixeira, auditoria | Implementado; depende do Supabase |
 | Contatos com aviso por e-mail | Implementado; depende do Resend; lista limitada a 200 (A8) |
 | CAPTCHA | Pronto, desligado por padrão |
-| Importação XML | Parcial: comando manual com a chave de serviço; tipos não suportados descartados (A6) |
+| Importação XML | Parcial: comando manual com a chave de serviço; os dez tipos do enum são lidos, os outros descartados (A6) |
 | Site white label, editor, histórico de versões | Implementado |
 | SEO no domínio do cliente | Código pronto, não publicado (A5) |
 | Espelho de vendas | Só demonstração (A7) |

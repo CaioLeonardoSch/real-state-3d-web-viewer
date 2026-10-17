@@ -1,5 +1,5 @@
 import type { Agency, Amenity, ListingStatus, ListingType } from '../data/types';
-import { AMENITIES, AMENITY_LABELS, LISTING_STATUSES, LISTING_TYPES, STATUS_LABELS, TYPE_LABELS } from '../data/types';
+import { AMENITIES, AMENITY_LABELS, LISTING_STATUSES, LISTING_TYPES, MAIN_LISTING_TYPES, STATUS_LABELS, TYPE_LABELS } from '../data/types';
 import { ADVANCED_FIELDS, EMPTY_CRITERIA, countActive, normalizeName, type FilterCriteria, type FilterStore } from '../state/filters';
 import { sameCriteria } from '../state/url';
 import { StreetFinder, findBairros, type StreetEntry } from '../data/streets';
@@ -72,7 +72,7 @@ export function mountFilters(
         <label><input type="radio" name="transaction" value="rent"><span>Alugar</span></label>
       </div>
     </fieldset>
-    ${chips('type', 'Tipo', LISTING_TYPES, TYPE_LABELS)}
+    ${chips('type', 'Tipo', MAIN_LISTING_TYPES, TYPE_LABELS)}
     <div class="f-field f-bairro">
       <label for="f-bairro-input">${streets ? 'Bairro ou rua' : 'Bairro'}</label>
       <div class="f-bairro-box">
@@ -105,6 +105,7 @@ export function mountFilters(
           ${agencies.map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`).join('')}
         </select>
       </label>
+      ${chips('type', 'Outros tipos', LISTING_TYPES.filter((t) => !MAIN_LISTING_TYPES.includes(t)), TYPE_LABELS)}
       ${chips('status', 'Situação', LISTING_STATUSES, STATUS_LABELS)}
       ${chips('reducedOnly', 'Ofertas', ['1'], { 1: 'Preço reduzido' })}
       ${chips('feature', 'Comodidades (todas as marcadas)', AMENITIES, AMENITY_LABELS)}
@@ -412,7 +413,8 @@ export function mountFilters(
   };
   const refreshHint = () => {
     pendingHint.hidden = sameCriteria(store.getPending(), store.getApplied());
-    const n = countActive(store.getPending(), ADVANCED_FIELDS);
+    // a type of "Outros tipos" (inside the panel) counts like the other filters there
+    const n = countActive(store.getPending(), ADVANCED_FIELDS) + (store.getPending().types.some((t) => !MAIN_LISTING_TYPES.includes(t)) ? 1 : 0);
     moreToggle.textContent = n ? `Mais filtros (${n})` : 'Mais filtros';
   };
 

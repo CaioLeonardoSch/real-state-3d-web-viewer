@@ -105,10 +105,10 @@
     </Listing>
     <Listing>
       <ListingID>SL-4004</ListingID>
-      <Title>Sala comercial</Title>
+      <Title>Quarto de hotel</Title>
       <TransactionType>For Rent</TransactionType>
       <Details>
-        <PropertyType>Commercial / Office</PropertyType>
+        <PropertyType>Commercial / Hotel</PropertyType>
         <RentalPrice currency="BRL">2000</RentalPrice>
         <LivingArea unit="square metres">40</LivingArea>
       </Details>

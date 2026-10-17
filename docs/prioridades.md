@@ -40,7 +40,7 @@ Uso no dia a dia, dados, conversão e confiabilidade.
 | # | Item | Impacto | Esforço | Risco | Dependências | Origem |
 |---|---|---|---|---|---|---|
 | 10 | Validar preço e interesse com 2 ou 3 imobiliárias piloto, antes dos itens grandes | Alto: decide o que entra em P2 | Pequeno a médio | Baixo | 2, 4 | Lista antes do lançamento, backend §11 |
-| 11 | Mais tipos de imóvel (cobertura, sala, loja, galpão, chácara, kitnet…) e o mapeamento do VRSync | Alto: a importação hoje descarta parte do estoque | Médio | Baixo | — | A6 |
+| 11 | ~~Mais tipos de imóvel (cobertura, sala, loja, galpão, chácara, kitnet…) e o mapeamento do VRSync~~ **Feito em 17/10** (ver A6) | Alto: a importação hoje descarta parte do estoque | Médio | Baixo | — | A6 |
 | 12 | Importar e revisar com o cliente o primeiro feed XML real (fotos reais na galeria) | Alto: prova o fluxo com dados de verdade | Pequeno | Médio | 5, 10, 11 | Lista antes do lançamento |
 | 13 | Gestão sem o mapa: lista "Meus anúncios" (situação, publicar e despublicar, rascunho, destaque) e contatos paginados com filtro e exportação | Alto: trabalho diário do corretor | Médio | Baixo | 5 | A8 |
 | 14 | Limite de envios: IP do último salto confiável, cliques no WhatsApp fora da conta, Turnstile ligado (e conferir o `hostname`). **Parte feita em 17/10:** cliques no WhatsApp com limite próprio (20 em 10 min), fora da conta das mensagens; o Turnstile confere o site de origem. **Falta:** o IP do último salto confiável (conferir no Supabase de produção quais cabeçalhos chegam) e ligar o Turnstile em produção (item 3) | Médio: contorno do limite e bloqueio de visitantes legítimos | Pequeno | Baixo | 3 | A9 |

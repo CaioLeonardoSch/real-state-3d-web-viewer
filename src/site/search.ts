@@ -1,6 +1,6 @@
 // Search of a client's site: the map's criteria (src/state/filters.ts, neighbourhoods included) plus reference code
 // and suites, with page and view. Kept in the address bar so any search can be shared or bookmarked.
-import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, type Listing } from '../data/types';
+import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, TYPE_PLURALS, type Listing } from '../data/types';
 import { hasStreetType } from '../data/streets';
 import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName, type FilterCriteria } from '../state/filters';
 import { DEFAULT_SORT, sortListings, type SortKey } from '../state/sort';
@@ -139,7 +139,7 @@ export function resultsTitle(count: number, s: SiteSearch): string {
   const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
   const kind =
     s.criteria.types.length === 1
-      ? { apartment: plural(count, 'apartamento', 'apartamentos'), house: plural(count, 'casa', 'casas'), semi_detached: plural(count, 'geminado', 'geminados'), land: plural(count, 'terreno', 'terrenos') }[s.criteria.types[0]]
+      ? plural(count, ...TYPE_PLURALS[s.criteria.types[0]])
       : plural(count, 'imóvel', 'imóveis');
   const launch = s.criteria.statuses.length === 1 && s.criteria.statuses[0] === 'under_construction' ? ' em lançamento' : '';
   const place = s.criteria.bairros.length === 1 ? ` em ${s.criteria.bairros[0]}` : '';

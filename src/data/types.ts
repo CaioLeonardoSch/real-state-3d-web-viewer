@@ -1,8 +1,31 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { parseProgress, type ConstructionProgress } from './construction.ts';
 
-export const LISTING_TYPES = ['apartment', 'house', 'semi_detached', 'land'] as const;
+export const LISTING_TYPES = [
+  'apartment',
+  'house',
+  'semi_detached',
+  'land',
+  'penthouse',
+  'studio',
+  'farm',
+  'office',
+  'store',
+  'warehouse',
+] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
+/** The types shown first in the filters (the others under "Mais filtros"). */
+export const MAIN_LISTING_TYPES: readonly ListingType[] = ['apartment', 'house', 'semi_detached', 'land'];
+
+/** A unit inside a building (floor of the unit, floors and towers of the building). */
+export const inBuilding = (t: ListingType): boolean => t === 'apartment' || t === 'penthouse' || t === 'studio' || t === 'office';
+/** A building on its own lot (the lot's area is asked). */
+export const onOwnLot = (t: ListingType): boolean =>
+  t === 'house' || t === 'semi_detached' || t === 'farm' || t === 'store' || t === 'warehouse';
+/** Bedrooms make sense (homes, not land or commercial spaces). */
+export const hasBedrooms = (t: ListingType): boolean => t !== 'land' && !isCommercialType(t);
+/** Commercial by nature: the usage defaults to commercial. */
+export const isCommercialType = (t: ListingType): boolean => t === 'office' || t === 'store' || t === 'warehouse';
 
 export const LISTING_STATUSES = ['ready', 'under_construction'] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
@@ -233,6 +256,26 @@ export const TYPE_LABELS: Record<ListingType, string> = {
   house: 'Casa',
   semi_detached: 'Geminado',
   land: 'Terreno',
+  penthouse: 'Cobertura',
+  studio: 'Kitnet ou studio',
+  farm: 'Chácara ou sítio',
+  office: 'Sala comercial',
+  store: 'Loja',
+  warehouse: 'Galpão',
+};
+
+/** Plural, lower case ("34 apartamentos"). */
+export const TYPE_PLURALS: Record<ListingType, [string, string]> = {
+  apartment: ['apartamento', 'apartamentos'],
+  house: ['casa', 'casas'],
+  semi_detached: ['geminado', 'geminados'],
+  land: ['terreno', 'terrenos'],
+  penthouse: ['cobertura', 'coberturas'],
+  studio: ['kitnet ou studio', 'kitnets e studios'],
+  farm: ['chácara ou sítio', 'chácaras e sítios'],
+  office: ['sala comercial', 'salas comerciais'],
+  store: ['loja', 'lojas'],
+  warehouse: ['galpão', 'galpões'],
 };
 
 export const STATUS_LABELS: Record<ListingStatus, string> = {

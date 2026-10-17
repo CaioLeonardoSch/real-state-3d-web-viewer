@@ -28,6 +28,10 @@ import {
   type Listing,
   type ListingStatus,
   type ListingType,
+  hasBedrooms,
+  inBuilding,
+  isCommercialType,
+  onOwnLot,
   type Photo,
   type RentGuarantee,
   type Transaction,
@@ -40,7 +44,33 @@ import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type Placement
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
 
 const METERS_PER_FLOOR = 3;
-const TYPE_SLUG: Record<ListingType, string> = { apartment: 'apto', house: 'casa', semi_detached: 'geminado', land: 'terreno' };
+const TYPE_SLUG: Record<ListingType, string> = {
+  apartment: 'apto',
+  house: 'casa',
+  semi_detached: 'geminado',
+  land: 'terreno',
+  penthouse: 'cobertura',
+  studio: 'studio',
+  farm: 'chacara',
+  office: 'sala',
+  store: 'loja',
+  warehouse: 'galpao',
+};
+/** Start of the automatic title ("Apartamento 2 quartos", "Galpão de 800 m²"). */
+const TITLE_KIND: Record<ListingType, string> = {
+  apartment: 'Apartamento',
+  house: 'Casa',
+  semi_detached: 'Geminado',
+  land: 'Terreno',
+  penthouse: 'Cobertura',
+  studio: 'Studio',
+  farm: 'Chácara',
+  office: 'Sala comercial',
+  store: 'Loja',
+  warehouse: 'Galpão',
+};
+/** data-for="…" with the types a field applies to. */
+const forTypes = (test: (t: ListingType) => boolean) => `data-for="${LISTING_TYPES.filter(test).join(' ')}"`;
 
 export interface AddListingDeps {
   agencies: Agency[];
@@ -208,7 +238,9 @@ export class AddListingPanel {
     const field = (label: string, input: string, attrs = '') => `<label class="a-field" ${attrs}>${label}${input}</label>`;
     const num = (name: string, placeholder = '') => `<input name="${name}" inputmode="numeric" placeholder="${placeholder}">`;
     const count = (name: string, value: number) => `<input name="${name}" type="number" min="0" max="10" value="${value}">`;
-    const buildingOnly = 'data-for="apartment house semi_detached"';
+    const buildingOnly = forTypes((t) => t !== 'land');
+    const homeOnly = forTypes(hasBedrooms);
+    const unitOnly = forTypes(inBuilding);
     this.el.innerHTML = `
       <div class="add-head">
         <h2 id="add-title">${this.editing ? 'Editar anúncio' : 'Anunciar imóvel'}</h2>
@@ -248,15 +280,15 @@ export class AddListingPanel {
           <label class="a-field a-wide">Título<input name="title" maxlength="80" placeholder="ex.: Apartamento com sacada 2 quartos"></label>
           ${field('<span data-area-label>Área útil (m²) *</span>', num('areaM2'))}
           ${field('Área total (m²)', num('totalAreaM2', 'opcional'), buildingOnly)}
-          ${field('Área do terreno (m²)', num('landAreaM2', 'opcional'), 'data-for="house semi_detached"')}
-          ${field('Quartos', count('bedrooms', 2), buildingOnly)}
-          ${field('Suítes', count('suites', 0), buildingOnly)}
+          ${field('Área do terreno (m²)', num('landAreaM2', 'opcional'), forTypes(onOwnLot))}
+          ${field('Quartos', count('bedrooms', 2), homeOnly)}
+          ${field('Suítes', count('suites', 0), homeOnly)}
           ${field('Banheiros', count('bathrooms', 1), buildingOnly)}
           ${field('Vagas', count('parkingSpots', 1), buildingOnly)}
           ${field('Vagas cobertas', count('coveredParking', 0), buildingOnly)}
-          ${field('Andar da unidade', num('unitFloor', 'ex.: 7'), 'data-for="apartment"')}
-          ${field('Andares do edifício', num('floors', 'opcional'), 'data-for="apartment"')}
-          ${field('Torres', num('towers', '1'), 'data-for="apartment"')}
+          ${field('Andar da unidade', num('unitFloor', 'ex.: 7'), unitOnly)}
+          ${field('Andares do edifício', num('floors', 'opcional'), unitOnly)}
+          ${field('Torres', num('towers', '1'), unitOnly)}
           ${field('Ano de construção', num('yearBuilt', 'ou de entrega'), buildingOnly)}
           ${field('Obra', `<select name="status">${options(LISTING_STATUSES, STATUS_LABELS)}</select>`, buildingOnly)}
           ${field('Andares já construídos', num('floorsBuilt', 'ex.: 6'), 'data-obra hidden')}
@@ -338,7 +370,11 @@ export class AddListingPanel {
     this.el.querySelectorAll('[data-action="close"]').forEach((b) => b.addEventListener('click', () => this.close()));
     this.el.querySelector('[data-action="pick"]')!.addEventListener('click', () => this.startPick());
     this.el.querySelector('[data-action="cancel-pick"]')!.addEventListener('click', () => this.cancelPick());
-    input('type').addEventListener('change', () => this.onTypeChange());
+    input('type').addEventListener('change', () => {
+      // offices, stores and warehouses are commercial; a change back to a home goes back to residential
+      (form.elements.namedItem('usage') as HTMLSelectElement).value = isCommercialType(this.type) ? 'commercial' : 'residential';
+      this.onTypeChange();
+    });
     input('transaction').addEventListener('change', () => this.onTransactionChange());
     input('areaM2').addEventListener('change', () => this.onAreaChange());
     input('floors').addEventListener('change', () => this.refreshPreview());
@@ -594,7 +630,7 @@ export class AddListingPanel {
     const { scene } = this.deps;
     if (!this.place) return scene.setPickPreview(null);
     if (this.place.kind === 'land') return scene.setPickPreview(this.place.lot, 0.5);
-    const floors = this.type === 'apartment' ? parseNumberInput(this.value('floors')) : null;
+    const floors = inBuilding(this.type) ? parseNumberInput(this.value('floors')) : null;
     scene.setPickPreview(this.place.geometry, floors ? floors * METERS_PER_FLOOR : this.place.height);
   }
 
@@ -635,16 +671,16 @@ export class AddListingPanel {
     const rentPrice = tx !== 'sale' ? num('rentPrice') : null;
     const areaM2 = num('areaM2');
     const totalAreaM2 = building ? num('totalAreaM2') : null;
-    const landAreaM2 = type === 'house' || type === 'semi_detached' ? num('landAreaM2') : null;
-    const floors = type === 'apartment' ? num('floors') : null;
-    const unitFloor = type === 'apartment' ? num('unitFloor') : null;
-    const towers = type === 'apartment' ? num('towers') : null;
+    const landAreaM2 = onOwnLot(type) ? num('landAreaM2') : null;
+    const floors = inBuilding(type) ? num('floors') : null;
+    const unitFloor = inBuilding(type) ? num('unitFloor') : null;
+    const towers = inBuilding(type) ? num('towers') : null;
     const yearBuilt = building ? num('yearBuilt') : null;
     const underConstruction = building && this.value('status') === 'under_construction';
     const floorsBuilt = underConstruction ? num('floorsBuilt') : null;
     const month = this.value('constructionMonth');
     const [bedrooms, suites, bathrooms, parkingSpots, coveredParking] = building
-      ? ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking'].map(count)
+      ? ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking'].map((n) => (!hasBedrooms(type) && (n === 'bedrooms' || n === 'suites') ? 0 : count(n)))
       : [0, 0, 0, 0, 0];
     const display = this.value('addressDisplay') as AddressDisplay;
     const address: Address = Object.fromEntries(
@@ -697,10 +733,11 @@ export class AddListingPanel {
     const opt = <T>(key: string, v: T | null | undefined | '') => (v === null || v === undefined || v === '' ? {} : { [key]: v });
     const iptu = num('iptu');
     const date = today();
-    const kind = { apartment: 'Apartamento', house: 'Casa', semi_detached: 'Geminado' } as const;
     const title =
       this.value('title') ||
-      (type === 'land' ? `Terreno de ${formatArea(areaM2!)}` : `${kind[type]} ${bedrooms} ${bedrooms === 1 ? 'quarto' : 'quartos'}`);
+      (hasBedrooms(type)
+        ? `${TITLE_KIND[type]} ${bedrooms} ${bedrooms === 1 ? 'quarto' : 'quartos'}`
+        : `${TITLE_KIND[type]} de ${formatArea(areaM2!)}`);
     const listing: Listing = {
       id,
       type,

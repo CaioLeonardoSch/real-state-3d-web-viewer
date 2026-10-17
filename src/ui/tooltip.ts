@@ -1,5 +1,5 @@
 import type { Listing } from '../data/types';
-import { AVAILABILITY_LABELS, TYPE_LABELS, isForSale, priceReduction } from '../data/types';
+import { AVAILABILITY_LABELS, TYPE_LABELS, hasBedrooms, isForSale, priceReduction } from '../data/types';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 
 const OFFSET = 14; // px from the cursor
@@ -17,7 +17,7 @@ export class HoverTooltip {
     if (this.currentId !== l.id) {
       this.currentId = l.id;
       const facts = [TYPE_LABELS[l.type], formatArea(l.areaM2)];
-      if (l.type !== 'land') facts.push(l.bedrooms === 1 ? '1 quarto' : `${l.bedrooms} quartos`);
+      if (hasBedrooms(l.type)) facts.push(l.bedrooms === 1 ? '1 quarto' : `${l.bedrooms} quartos`);
       this.el.innerHTML = `
         <strong class="tt-price">${formatBRL(l.price)}${isForSale(l) ? '' : '/mês'}${
           priceReduction(l) ? ` <span class="price-cut">−${priceReduction(l)!.percent}%</span>` : ''

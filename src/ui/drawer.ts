@@ -1,4 +1,4 @@
-import type { Agency, Listing } from '../data/types';
+import { hasBedrooms, type Agency, type Listing } from '../data/types';
 import {
   AMENITY_LABELS,
   AVAILABILITIES,
@@ -176,7 +176,9 @@ export class Drawer {
       ...opt(l.landAreaM2 && building, ['Área do terreno', formatArea(l.landAreaM2 ?? 0)]),
       ...(building
         ? ([
-            ['Quartos', l.suites ? `${l.bedrooms} (${l.suites} ${l.suites === 1 ? 'suíte' : 'suítes'})` : String(l.bedrooms)],
+            ...(hasBedrooms(l.type)
+              ? [['Quartos', l.suites ? `${l.bedrooms} (${l.suites} ${l.suites === 1 ? 'suíte' : 'suítes'})` : String(l.bedrooms)]]
+              : []),
             ['Banheiros', String(l.bathrooms)],
             ['Vagas', l.coveredParking ? `${l.parkingSpots} (${l.coveredParking} cobertas)` : String(l.parkingSpots)],
           ] as [string, string][])

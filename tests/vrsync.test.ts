@@ -10,7 +10,7 @@ describe('VRSync feed', () => {
   it('reads the supported listings and explains the skipped ones', () => {
     expect(feed.listings.map((l) => l.referenceCode)).toEqual(['AP-1001', 'CA-2002', 'TE-3003']);
     expect(feed.skipped).toEqual([
-      { referenceCode: 'SL-4004', title: 'Sala comercial', reason: 'tipo não suportado: Commercial / Office' },
+      { referenceCode: 'SL-4004', title: 'Quarto de hotel', reason: 'tipo não suportado: Commercial / Hotel' },
       { referenceCode: 'AP-5005', title: 'Apartamento sem preço', reason: 'sem preço de venda' },
     ]);
     expect(feed.warnings).toEqual([{ referenceCode: 'TE-3003', message: 'sem fotos' }]);
@@ -35,11 +35,37 @@ describe('VRSync feed', () => {
     expect(feed.listings[2]).toMatchObject({ type: 'land', areaM2: 360, bedrooms: 0, addressDisplay: 'street', point: [-48.840821, -26.274791] });
   });
   it('property types', () => {
-    expect(mapPropertyType('Residential / Penthouse')?.type).toBe('apartment');
+    expect(mapPropertyType('Residential / Apartment')?.type).toBe('apartment');
+    expect(mapPropertyType('Residential / Duplex')?.type).toBe('apartment');
+    expect(mapPropertyType('Residential / Penthouse')?.type).toBe('penthouse');
+    expect(mapPropertyType('Residential / Kitnet')?.type).toBe('studio');
+    expect(mapPropertyType('Residential / Flat')?.type).toBe('studio');
     expect(mapPropertyType('Residential / Sobrado')?.type).toBe('semi_detached');
     expect(mapPropertyType('Residential / Condo')?.type).toBe('house');
+    expect(mapPropertyType('Residential / Farm Ranch')).toEqual({ type: 'farm', usage: 'residential' });
+    expect(mapPropertyType('Residential / Agricultural')).toBeNull();
     expect(mapPropertyType('Commercial / Land Lot')).toEqual({ type: 'land', usage: 'commercial' });
-    expect(mapPropertyType('Residential / Farm Ranch')).toBeNull();
+    expect(mapPropertyType('Commercial / Office')).toEqual({ type: 'office', usage: 'commercial' });
+    expect(mapPropertyType('Commercial / Business')?.type).toBe('office');
+    expect(mapPropertyType('Commercial / Loja')?.type).toBe('store');
+    expect(mapPropertyType('Commercial / Retail')?.type).toBe('store');
+    expect(mapPropertyType('Commercial / Industrial')?.type).toBe('warehouse');
+    expect(mapPropertyType('Commercial / Warehouse')?.type).toBe('warehouse');
+    expect(mapPropertyType('Commercial / Hotel')).toBeNull();
     expect(() => parseVrsync('<rss/>')).toThrow(/VRSync/);
+  });
+  it('new types: floors only for units in a building, bedrooms not for commercial spaces', () => {
+    const item = (ref: string, type: string) => `<Listing><ListingID>${ref}</ListingID><Title>${ref}</Title><TransactionType>For Sale</TransactionType>
+      <Details><PropertyType>${type}</PropertyType><ListPrice>500000</ListPrice><LivingArea>80</LivingArea><Bedrooms>2</Bedrooms>
+      <UnitFloor>9</UnitFloor><Floors>12</Floors></Details><Location><City>Joinville</City></Location></Listing>`;
+    const f = parseVrsync(
+      `<ListingDataFeed><Listings>${item('CO-1', 'Residential / Penthouse')}${item('SA-1', 'Commercial / Office')}${item('GA-1', 'Commercial / Industrial')}</Listings></ListingDataFeed>`,
+    );
+    expect(f.skipped).toEqual([]);
+    expect(f.listings.map((l) => [l.type, l.usage, l.unitFloor, l.floors])).toEqual([
+      ['penthouse', 'residential', 9, 12],
+      ['office', 'commercial', 9, 12],
+      ['warehouse', 'commercial', null, null],
+    ]);
   });
 });

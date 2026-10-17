@@ -2,7 +2,7 @@
 // re-type its listings. Pure (no I/O): scripts/import-xml.mjs places each listing on the map, downloads the photos
 // and saves. Runs in Node directly (type imports and explicit .ts paths only).
 import { XMLParser } from 'fast-xml-parser';
-import type { AddressDisplay, Amenity, Highlight, ListingType, Transaction } from '../data/types.ts';
+import { hasBedrooms, inBuilding, type AddressDisplay, type Amenity, type Highlight, type ListingType, type Transaction } from '../data/types.ts';
 
 export interface ImportedListing {
   /** ListingID of the feed: kept as the reference code, so a new import updates instead of duplicating. */
@@ -84,11 +84,23 @@ const stripHtml = (s: string) =>
 export function mapPropertyType(t: string): { type: ListingType; usage: 'residential' | 'commercial' } | null {
   const [group, kind] = t.split('/').map((s) => s.trim().toLowerCase());
   const usage = group === 'commercial' ? 'commercial' : 'residential';
-  if (/land|lot|terreno/.test(kind ?? '')) return { type: 'land', usage };
+  const k = kind ?? '';
+  if (/land|lot|terreno/.test(k)) return { type: 'land', usage };
+  if (/farm|ranch|ch[aá]cara|s[ií]tio|fazenda/.test(k)) return { type: 'farm', usage };
+  if (group === 'commercial') {
+    if (/office|sala|business|consult/.test(k)) return { type: 'office', usage };
+    if (/store|loja|retail|shop|ponto/.test(k)) return { type: 'store', usage };
+    if (/warehouse|galp[aã]o|industrial|dep[oó]sito|shed/.test(k)) return { type: 'warehouse', usage };
+    if (/building|pr[eé]dio/.test(k)) return { type: 'office', usage };
+    if (/home|house|casa/.test(k)) return { type: 'house', usage };
+    return null;
+  }
   if (group !== 'residential') return null;
-  if (/apartment|penthouse|flat|kitnet|studio|loft|duplex|triplex/.test(kind ?? '')) return { type: 'apartment', usage };
-  if (/sobrado|townhouse|village/.test(kind ?? '')) return { type: 'semi_detached', usage };
-  if (/home|house|condo|casa/.test(kind ?? '')) return { type: 'house', usage };
+  if (/penthouse|cobertura/.test(k)) return { type: 'penthouse', usage };
+  if (/kitnet|studio|flat|loft/.test(k)) return { type: 'studio', usage };
+  if (/apartment|duplex|triplex/.test(k)) return { type: 'apartment', usage };
+  if (/sobrado|townhouse|village/.test(k)) return { type: 'semi_detached', usage };
+  if (/home|house|condo|casa/.test(k)) return { type: 'house', usage };
   return null;
 }
 
@@ -172,7 +184,7 @@ export function parseVrsync(xml: string): FeedResult {
       ),
     ];
     const contact = (it.ContactInfo ?? {}) as Record<string, Node>;
-    const bedrooms = kind.type === 'land' ? 0 : (int(d.Bedrooms) ?? 0);
+    const bedrooms = hasBedrooms(kind.type) ? (int(d.Bedrooms) ?? 0) : 0;
     const parking = kind.type === 'land' ? 0 : (int(d.Garage) ?? 0);
     const tax = int(d.YearlyTax) ?? int(d.Iptu);
     const cep = text(loc.PostalCode).replace(/\D/g, '');
@@ -192,14 +204,14 @@ export function parseVrsync(xml: string): FeedResult {
       totalAreaM2: kind.type !== 'land' && num(d.TotalArea) && num(d.TotalArea)! >= areaM2 ? Math.round(num(d.TotalArea)!) : null,
       landAreaM2: kind.type === 'land' ? Math.round(areaM2) : lot ? Math.round(lot) : null,
       bedrooms,
-      suites: kind.type === 'land' ? null : (() => {
+      suites: !hasBedrooms(kind.type) ? null : (() => {
         const s = int(d.Suites);
         return s === null ? null : Math.min(s, bedrooms);
       })(),
       bathrooms: kind.type === 'land' ? 0 : (int(d.Bathrooms) ?? 0),
       parkingSpots: parking,
-      unitFloor: kind.type === 'apartment' ? int(d.UnitFloor) : null,
-      floors: kind.type === 'apartment' ? int(d.Floors) : null,
+      unitFloor: inBuilding(kind.type) ? int(d.UnitFloor) : null,
+      floors: inBuilding(kind.type) ? int(d.Floors) : null,
       yearBuilt: (() => {
         const y = int(d.YearBuilt);
         return y && y > 1800 && y < 2100 ? y : null;

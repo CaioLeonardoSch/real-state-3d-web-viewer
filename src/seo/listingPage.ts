@@ -3,7 +3,7 @@
 // types.ts), so Node runs it directly.
 import type { Listing } from '../data/types.ts';
 import { photoSrcset } from '../utils/images.ts';
-import { AMENITY_LABELS, HIGHLIGHT_LABELS, STATUS_LABELS, TRANSACTION_LABELS, TYPE_LABELS } from '../data/types.ts';
+import { AMENITY_LABELS, HIGHLIGHT_LABELS, STATUS_LABELS, TRANSACTION_LABELS, TYPE_LABELS, hasBedrooms, inBuilding, isCommercialType } from '../data/types.ts';
 
 export interface PageContext {
   /** Absolute URL of the site root, ending with "/". */
@@ -71,7 +71,7 @@ function shownAddress(l: Listing): { line: string | null; street?: string; local
 
 export function description(l: Listing, agency: string): string {
   const parts = [TYPE_LABELS[l.type], area(l.areaM2)];
-  if (l.type !== 'land') parts.push(`${l.bedrooms} ${l.bedrooms === 1 ? 'quarto' : 'quartos'}`);
+  if (hasBedrooms(l.type)) parts.push(`${l.bedrooms} ${l.bedrooms === 1 ? 'quarto' : 'quartos'}`);
   if (l.parkingSpots) parts.push(`${l.parkingSpots} ${l.parkingSpots === 1 ? 'vaga' : 'vagas'}`);
   const where = l.address?.bairro ? ` no ${l.address.bairro}` : '';
   const price = l.transaction === 'rent' ? `${brl(l.rentPrice ?? l.price)}/mês` : brl(l.price);
@@ -82,7 +82,8 @@ export function description(l: Listing, agency: string): string {
 /** schema.org data (RealEstateListing + Offer) that search engines read. */
 export function structuredData(l: Listing, ctx: PageContext, url: string): object {
   const addr = shownAddress(l);
-  const kind = l.type === 'apartment' ? 'Apartment' : l.type === 'land' ? 'Place' : 'SingleFamilyResidence';
+  const kind =
+    l.type === 'land' || l.type === 'farm' || isCommercialType(l.type) ? 'Place' : inBuilding(l.type) ? 'Apartment' : 'SingleFamilyResidence';
   const rent = l.transaction === 'rent';
   const center = !l.approximateLocation && l.footprint ? centroid(l.footprint.type === 'Polygon' ? l.footprint.coordinates[0] : l.footprint.coordinates[0][0]) : null;
   return {
@@ -108,7 +109,7 @@ export function structuredData(l: Listing, ctx: PageContext, url: string): objec
     },
     about: {
       '@type': kind,
-      ...(l.type !== 'land' ? { numberOfRooms: l.bedrooms, numberOfBathroomsTotal: l.bathrooms } : {}),
+      ...(hasBedrooms(l.type) ? { numberOfRooms: l.bedrooms, numberOfBathroomsTotal: l.bathrooms } : {}),
       floorSize: { '@type': 'QuantitativeValue', value: l.areaM2, unitCode: 'MTK' },
       address: {
         '@type': 'PostalAddress',
@@ -145,7 +146,9 @@ export function renderListingPage(l: Listing, ctx: PageContext): string {
     ...(l.totalAreaM2 ? ([['Área total', area(l.totalAreaM2)]] as [string, string][]) : []),
     ...(l.type !== 'land'
       ? ([
-          ['Quartos', l.suites ? `${l.bedrooms} (${l.suites} ${l.suites === 1 ? 'suíte' : 'suítes'})` : String(l.bedrooms)],
+          ...(hasBedrooms(l.type)
+            ? [['Quartos', l.suites ? `${l.bedrooms} (${l.suites} ${l.suites === 1 ? 'suíte' : 'suítes'})` : String(l.bedrooms)]]
+            : []),
           ['Banheiros', String(l.bathrooms)],
           ['Vagas', String(l.parkingSpots)],
           ['Obra', STATUS_LABELS[l.status]],

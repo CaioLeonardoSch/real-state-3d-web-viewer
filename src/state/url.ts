@@ -38,6 +38,12 @@ const TYPE_SLUGS: Record<ListingType, string> = {
   house: 'casa',
   semi_detached: 'geminado',
   land: 'terreno',
+  penthouse: 'cobertura',
+  studio: 'kitnet',
+  farm: 'chacara',
+  office: 'sala-comercial',
+  store: 'loja',
+  warehouse: 'galpao',
 };
 const SLUG_TO_TYPE = new Map(LISTING_TYPES.map((t) => [TYPE_SLUGS[t], t]));
 

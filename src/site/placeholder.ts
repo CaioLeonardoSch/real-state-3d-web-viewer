@@ -1,6 +1,6 @@
 // Illustration for listings without photos (the demo listings have none): a simple drawing of the property type
 // in the site's colours, clearly not a photo. Deterministic per listing, so the page does not flicker.
-import type { Listing } from '../data/types';
+import { inBuilding, type Listing } from '../data/types';
 import { mix } from './config';
 
 function hash(s: string): number {
@@ -17,7 +17,7 @@ export function placeholderPhoto(l: Pick<Listing, 'id' | 'type' | 'floors'>, pri
   const light = mix(body, '#ffffff', 0.55);
   const shift = (h % 60) - 30;
   let shape = '';
-  if (l.type === 'apartment') {
+  if (inBuilding(l.type)) {
     const floors = Math.min(14, Math.max(5, l.floors ?? 6 + (h % 7)));
     const top = 200 - floors * 11;
     shape = `<rect x="${150 + shift}" y="${top}" width="100" height="${floors * 11 + 20}" fill="${body}"/>`;
@@ -25,7 +25,7 @@ export function placeholderPhoto(l: Pick<Listing, 'id' | 'type' | 'floors'>, pri
       for (let c = 0; c < 4; c++)
         shape += `<rect x="${158 + shift + c * 23}" y="${top + 6 + f * 11}" width="14" height="6" fill="${light}" opacity="${(h >> (f + c)) & 1 ? 0.95 : 0.55}"/>`;
     shape += `<rect x="${60 + shift / 2}" y="140" width="70" height="80" fill="${mix(body, sky, 0.45)}"/><rect x="${270 + shift / 3}" y="120" width="60" height="100" fill="${mix(body, sky, 0.6)}"/>`;
-  } else if (l.type === 'land') {
+  } else if (l.type === 'land' || l.type === 'farm') {
     shape = `<path d="M40 215 L120 175 L320 180 L370 215 Z" fill="${mix(ground, body, 0.25)}"/><path d="M120 175 L320 180" stroke="${light}" stroke-dasharray="6 6" stroke-width="2"/><rect x="${215 + shift}" y="160" width="3" height="30" fill="${body}"/><path d="M${218 + shift} 160 l22 7 -22 7z" fill="${light}"/>`;
   } else {
     const w = l.type === 'semi_detached' ? 180 : 140;

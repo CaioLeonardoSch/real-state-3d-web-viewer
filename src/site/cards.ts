@@ -1,6 +1,6 @@
 // Listing cards of the client's site (grid and list), in the style the market expects: photo carousel, code,
 // favourite and compare, type, neighbourhood, specs with icons and the price (with a verified reduction).
-import { AVAILABILITY_LABELS, TYPE_LABELS, isForRent, isForSale, priceIn, priceReduction, type Listing, type Photo } from '../data/types';
+import { AVAILABILITY_LABELS, TYPE_LABELS, hasBedrooms, isForRent, isForSale, priceIn, priceReduction, type Listing, type Photo } from '../data/types';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 import { photoSrcset } from '../utils/images';
 import type { SiteConfig } from './config';
@@ -42,7 +42,7 @@ export function specsHtml(l: Listing, full = false): string {
   const items: [keyof typeof ICONS, string, string][] = [];
   items.push(['area', formatArea(l.areaM2), l.type === 'land' ? 'de terreno' : 'de área']);
   if (l.type !== 'land') {
-    items.push(['bed', String(l.bedrooms), l.bedrooms === 1 ? 'quarto' : 'quartos']);
+    if (hasBedrooms(l.type)) items.push(['bed', String(l.bedrooms), l.bedrooms === 1 ? 'quarto' : 'quartos']);
     if (l.suites) items.push(['suite', String(l.suites), l.suites === 1 ? 'suíte' : 'suítes']);
     if (full || !l.suites) items.push(['bath', String(l.bathrooms), l.bathrooms === 1 ? 'banheiro' : 'banheiros']);
     items.push(['car', String(l.parkingSpots), l.parkingSpots === 1 ? 'vaga' : 'vagas']);

@@ -122,4 +122,10 @@ describe('rua na URL', () => {
     expect(sameCriteria({ ...EMPTY_CRITERIA, street: 'Rua A' }, EMPTY_CRITERIA)).toBe(false);
     expect(sameCriteria({ ...EMPTY_CRITERIA, street: 'Rua A' }, { ...EMPTY_CRITERIA, street: 'Rua A' })).toBe(true);
   });
+  it('the new property types have their own slugs', () => {
+    const state = { criteria: { ...EMPTY_CRITERIA, types: ['penthouse' as const, 'studio' as const, 'office' as const, 'warehouse' as const] }, listingId: null, sort: 'price-asc' as const, developmentId: null, unitId: null };
+    const search = stateToSearch(state);
+    expect(search).toBe('?tipo=cobertura%2Ckitnet%2Csala-comercial%2Cgalpao');
+    expect(searchToState(search, known).criteria.types).toEqual(state.criteria.types);
+  });
 });
