@@ -1,4 +1,22 @@
-import type { Listing } from './types';
+import type { Address, AddressDisplay, Listing } from './types';
+
+/** Address fields the public may see for each choice. The CEP is never shown (same rule as the public_listings view). */
+const PUBLIC_ADDRESS_FIELDS: Record<AddressDisplay, readonly (keyof Address)[]> = {
+  full: ['street', 'number', 'complement', 'bairro', 'city'],
+  street: ['street', 'bairro', 'city'],
+  neighborhood: ['bairro', 'city'],
+};
+
+/**
+ * The part of an address that may be published for the advertiser's choice; a missing (or unknown) choice counts as
+ * `neighborhood`, as in `addressLabel`. Any field not listed above is dropped.
+ */
+export function publicAddress(address: Address, display: AddressDisplay | undefined): Address {
+  const fields = display && Object.hasOwn(PUBLIC_ADDRESS_FIELDS, display) ? PUBLIC_ADDRESS_FIELDS[display] : PUBLIC_ADDRESS_FIELDS.neighborhood;
+  const out: Address = {};
+  for (const k of fields) if (address[k] != null) out[k] = address[k];
+  return out;
+}
 
 /** Address as the advertiser chose to show it (full, street only, or neighbourhood only); null when unknown. */
 export function addressLabel(l: Listing): string | null {

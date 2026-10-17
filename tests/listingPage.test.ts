@@ -38,6 +38,11 @@ describe('listing pages for search engines', () => {
     expect(hidden).not.toContain('Rua A');
     expect(hidden).not.toContain('89201');
     expect(ld(hidden).about.geo).toBeUndefined();
+    // no choice recorded counts as "only the neighbourhood", even with the exact building on the map
+    const unset = renderListingPage({ ...base, addressDisplay: undefined }, ctx);
+    expect(unset).not.toContain('Rua A');
+    expect(unset).not.toContain('89201');
+    expect(ld(unset).about.address).toMatchObject({ addressLocality: 'Joinville' });
     const rent = renderListingPage({ ...base, transaction: 'rent', price: 3500, rentPrice: 3500 }, ctx);
     expect(rent).toContain('R$ 3.500<small>/mês</small>');
     expect(ld(rent).offers.priceSpecification.unitCode).toBe('MON');
