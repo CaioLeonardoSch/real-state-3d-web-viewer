@@ -1,9 +1,12 @@
-# Publica o site no GitHub Pages a cada push no main (ou manualmente, em Actions → "Publicar no GitHub Pages").
+# Publica o site no GitHub Pages depois que o CI (ci.yml) passa num push no main, ou manualmente, em Actions →
+# "Publicar no GitHub Pages". Com o CI vermelho, nada vai ao ar.
 # Na primeira vez: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 name: Publicar no GitHub Pages
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
   # de hora em hora: as páginas dos anúncios novos do backend (para o Google) entram na publicação seguinte
@@ -23,10 +26,17 @@ concurrency:
 jobs:
   build:
     # a execução de hora em hora só faz sentido com o backend configurado
-    if: github.event_name != 'schedule' || vars.VITE_SUPABASE_URL != ''
+    # depois do CI: só se ele passou num push (não num pull request)
+    if: >-
+      (github.event_name != 'schedule' || vars.VITE_SUPABASE_URL != '') &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # o commit que o CI testou (sem ele, o checkout pegaria o main do momento)
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22

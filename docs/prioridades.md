@@ -31,7 +31,7 @@ Segurança, integridade ou funcionamento que impedem um piloto com clientes reai
 | 6 | LGPD: política e termos por cliente, texto de consentimento versionado no servidor, prazo de retenção com anonimização, exportação e exclusão a pedido, contrato de tratamento com cada imobiliária | Alto: requisito legal para receber contatos | Médio | Baixo | Advogado; definir controlador e operador | B2, A4, backend §10 |
 | 7 | Autorização da Prefeitura para o cadastro (SIMGeo) e para publicar as alturas sob ODbL | Alto: 93% das alturas dependem disso | Pequeno (o trabalho), espera longa | Médio: sem autorização, as alturas voltam a 6 m | Pedido à SEPUR.UGP; advogado | Avaliação, "Riscos" |
 | 8 | Hospedagem com vários domínios: projeto na Cloudflare Pages, domínio de um cliente com HTTPS (Cloudflare for SaaS), `PLATFORM_HOSTS`, Search Console | Alto: sem isso não há site de cliente nem SEO no ar | Médio | Médio | Escolha da hospedagem; um cliente piloto | B1, B3, A5 |
-| 9 | Operação mínima: Sentry, monitor de disponibilidade, Supabase de homologação, e2e e lint no CI, `main` sem publicar direto em produção | Alto: hoje um erro em produção passa despercebido | Pequeno a médio | Baixo | 8 | B3, I14, A15, backend §10 |
+| 9 | Operação mínima: Sentry, monitor de disponibilidade, Supabase de homologação, ~~e2e no CI, `main` sem publicar direto em produção~~ (**feito em 17/10:** `ci.yml`, e o Pages só publica com o CI verde), lint no CI (falta configurar o ESLint) | Alto: hoje um erro em produção passa despercebido | Pequeno a médio | Baixo | 8 | B3, I14, A15, backend §10 |
 
 ## P1: fundamentais
 

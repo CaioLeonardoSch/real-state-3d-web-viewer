@@ -10,7 +10,8 @@ destacados e clicáveis.
 ![Desktop, manhã](docs/screenshots/desktop-morning.png)
 
 **Online:** https://caioleonardosch.github.io/real-state-3d-web-viewer/ (publicado pelo workflow
-`.github/workflows/pages.yml` a cada push no `main`; na primeira vez é preciso escolher, em Settings → Pages →
+`.github/workflows/pages.yml` depois que o CI (`.github/workflows/ci.yml`: testes, build, navegador e backend)
+passa num push no `main`; na primeira vez é preciso escolher, em Settings → Pages →
 Build and deployment, a fonte "GitHub Actions").
 
 ## Como instalar e rodar

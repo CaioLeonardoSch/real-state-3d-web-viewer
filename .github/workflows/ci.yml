@@ -1,0 +1,53 @@
+# Testes a cada push e pull request: tipos, testes unitários, o build e os testes no navegador (mapa e site), e o
+# backend com o Supabase local (permissões, volume e o fluxo completo no navegador). A publicação no GitHub Pages
+# (pages.yml) só roda depois que este workflow passa no main.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# um push novo no mesmo branch cancela a execução anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: Tipos, testes, build e navegador
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      # inclui tsc --noEmit (site e scripts) e as páginas estáticas dos anúncios
+      - run: npm run build
+      - run: npm run verify:e2e
+      - run: npm run verify:site
+
+  backend:
+    name: Backend (Supabase local)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:start
+      - run: npm run test:backend
+      - run: npm run verify:backend

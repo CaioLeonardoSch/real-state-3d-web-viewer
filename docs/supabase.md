@@ -277,7 +277,8 @@ Os testes geram os códigos do aplicativo autenticador com `scripts/lib/totp.mjs
 usam um verificador falso do Turnstile (só o token `token-valido` passa). Depois de mudar `supabase/config.toml` (por
 exemplo, ao ligar o TOTP), o Supabase local precisa ser reiniciado para ler a configuração nova.
 
-O workflow `.github/workflows/backend.yml` roda os testes do backend no GitHub a cada mudança no esquema.
+O workflow `.github/workflows/ci.yml` roda os testes do backend (`test:backend` e `verify:backend`) no GitHub a cada
+push e pull request, junto com os do site; a publicação só sai com ele verde.
 
 ## Mudanças no esquema
 
