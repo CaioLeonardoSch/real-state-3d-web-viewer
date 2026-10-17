@@ -18,8 +18,11 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
       req.on('data', (c) => (body += c));
       req.on('end', () => {
         if (req.url === '/siteverify') {
-          const ok = new URLSearchParams(body).get('response') === 'token-valido';
-          res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(ok ? { success: true, action: 'lead' } : { success: false, 'error-codes': ['invalid-input-response'] }));
+          // 'token-valido' was solved on the test site (127.0.0.1); 'token-outro-site', on another one
+          const response = new URLSearchParams(body).get('response');
+          const ok = response === 'token-valido' || response === 'token-outro-site';
+          const hostname = response === 'token-outro-site' ? 'outro-site.com.br' : '127.0.0.1';
+          res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(ok ? { success: true, action: 'lead', hostname } : { success: false, 'error-codes': ['invalid-input-response'] }));
           return;
         }
         appendFileSync(mailLog, body.replace(/\n/g, ' ') + '\n');

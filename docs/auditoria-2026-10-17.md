@@ -151,6 +151,13 @@ Segurança e interface · média · média · pequeno.
 - O limite é de 5 envios em 10 minutos por IP na plataforma inteira, contando os cliques no WhatsApp. Atrás de CGNAT
   de operadora móvel, visitantes diferentes dividem o mesmo IP (hipótese de bloqueio falso).
 - **Recomendação:** usar o último salto confiável, não contar `whatsapp` no limite e ligar o Turnstile em produção.
+- **Parte feita em 17/10** (`20261024000002_audit_small_fixes.sql`): os cliques no WhatsApp têm limite próprio, 20 em
+  10 minutos (acima disso o clique só não é registrado), e não contam mais no limite de 5 mensagens. A função
+  `submit-lead` confere se o token do Turnstile foi resolvido no mesmo site que enviou o pedido (cabeçalho `Origin`).
+- **Ficou em aberto:** a origem por IP. Trocar o primeiro valor de `x-forwarded-for` pelo último sem saber quais
+  proxies o Supabase hospedado põe na frente pode fazer todos os visitantes dividirem o mesmo IP (o do proxy) e
+  bloquear o site inteiro depois de 5 mensagens. Conferir no projeto de produção se `cf-connecting-ip` chega (se
+  chegar, o furo não existe ali) antes de mudar.
 
 ### A10. Administrador rebaixa um dono quando há mais de um [prioridade 15]
 
@@ -161,6 +168,9 @@ Segurança · baixa a média · média · pequeno.
 - Administradores também incluem qualquer `user_id` direto em `memberships`, sem convite.
 - Sem teste em `rls.test.ts`.
 - **Recomendação:** no `USING`, `role <> 'owner' or member_role(org_id) = 'owner'`; inclusão direta só pelo suporte.
+- **Feito em 17/10:** o `USING` agora exige ser dono para alterar a linha de um dono; pelo site só se muda a coluna
+  `role` (permissão de coluna), então não dá para trocar a pessoa de uma linha; incluir direto só pela equipe. Teste em
+  `rls.test.ts`.
 
 ### A11. Endereço oculto identificável pelos atributos [prioridade 16]
 
@@ -170,6 +180,8 @@ Privacidade · média · média · pequeno.
   `building_height_m`, `floors` e `unit_floor`, além do círculo de 150 m. Um prédio alto e único no raio fica
   identificável.
 - **Recomendação:** anular altura e andares do prédio quando `address_display <> 'full'`.
+- **Feito em 17/10:** `building_height_m`, `floors` e `unit_floor` saem nulos sem o endereço completo. Os andares já
+  construídos de uma obra continuam públicos (também estão em `construction_history`): sem o total, dizem pouco.
 
 ### A12. Tabela de imobiliárias com leitura pública total [prioridade 17]
 
@@ -178,6 +190,9 @@ Segurança e negócio · baixa a média · alta · pequeno.
 - `organizations: leitura pública` (`init.sql:268`, `using (true)`) permite listar todos os clientes da plataforma e
   qualquer coluna que entrar no futuro (plano, cobrança).
 - **Recomendação:** expor só uma view com nome, slug, CRECI, domínio e configuração do site.
+- **Feito em 17/10, por permissão de coluna:** o público lê só `id`, `name`, `slug`, `creci`, `branding` e
+  `custom_domain`; uma coluna nova fica fechada até ser liberada de propósito. Uma view mudaria todas as leituras
+  (mapa, prerender, editor) sem ganho: a lista de clientes continua pública, como os próprios sites.
 
 ### A13. Cada visita ao site faz duas consultas completas, sem cache [prioridade 18]
 

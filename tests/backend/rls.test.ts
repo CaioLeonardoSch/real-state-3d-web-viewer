@@ -336,6 +336,18 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
     });
 
+    it('limite: cliques no WhatsApp não tiram a vez das mensagens e têm limite próprio', async () => {
+      const clear = () => service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
+      await clear();
+      const click = () => anon().rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp' });
+      for (let i = 0; i < 6; i++) expect((await click()).error).toBeNull();
+      expect((await anon().rpc('submit_lead', lead(listingId))).error).toBeNull();
+      for (let i = 0; i < 16; i++) expect((await click()).error).toBeNull(); // 22 cliques: acima de 20, não registra
+      const n = (await service().from('leads').select('id', { count: 'exact', head: true }).eq('listing_id', listingId).eq('source', 'whatsapp').gt('created_at', '2021-01-01')).count;
+      expect(n).toBe(20);
+      await clear();
+    });
+
     it.skipIf(!env.MAIL_LOG)('CAPTCHA ligado: só pela função, que confere o token e grava com o IP do visitante', async () => {
       const setCaptcha = (value: string) => service().from('private_settings').upsert({ key: 'lead_captcha', value });
       const salt = (await service().from('private_settings').select('value').eq('key', 'lead_salt').single()).data!.value;
@@ -343,7 +355,7 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       const viaFunction = (token: string, args: Record<string, unknown>, fn = 'submit_lead') =>
         fetch(`${URL_}/functions/v1/submit-lead`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.7' },
+          headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.7', Origin: 'http://127.0.0.1:4179' },
           body: JSON.stringify({ fn, args, captcha_token: token }),
         });
       await service().from('leads').update({ created_at: '2020-01-01' }).neq('id', '00000000-0000-0000-0000-000000000000');
@@ -356,6 +368,7 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
         expect((await bruno.client.rpc('submit_lead', lead(listingId))).error?.message).toMatch(/verificação anti-robô/);
         expect((await anon().rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp' })).error).toBeNull(); // clique, sem dados
         expect((await viaFunction('token-invalido', lead(listingId))).status).toBe(403);
+        expect((await viaFunction('token-outro-site', lead(listingId))).status).toBe(403); // resolvido em outro site
         const ok = await viaFunction('token-valido', lead(listingId, { p_name: 'Com verificação' }));
         expect(ok.status).toBe(200);
         const { id } = await ok.json();
@@ -444,6 +457,9 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect((await carla.client.from('organizations').update({ branding: {} }).eq('id', orgA).select('id')).data ?? []).toHaveLength(0);
       const pub = await anon().from('organizations').select('name, slug, branding, custom_domain').eq('id', orgA).single();
       expect(pub.data!.branding).toEqual(config);
+      // só as colunas do site; o resto (e o que entrar no futuro) fica fechado
+      expect((await anon().from('organizations').select('created_at').eq('id', orgA)).error).not.toBeNull();
+      expect((await anon().from('organizations').select('*').eq('id', orgA)).error).not.toBeNull();
     });
 
     it('cada publicação do site entra no histórico, que só donos e administradores leem (as 30 últimas)', async () => {
@@ -602,8 +618,9 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
   });
 
   it('o público lê pela view, sem o endereço exato quando o anunciante escolheu esconder', async () => {
-    const full = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'full' })).select('id').single();
-    const street = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'street' })).select('id').single();
+    const tall = { building_height_m: 42.5, floors: 14, unit_floor: 12 };
+    const full = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'full', ...tall })).select('id').single();
+    const street = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'street', ...tall })).select('id').single();
     // um campo que a view não conhece (ponto de referência) também não pode aparecer
     const hoodAddress = { ...listingRow(orgA).address, reference: 'Em frente à padaria' };
     const hood = await ana.client
@@ -620,6 +637,7 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(f.address).toMatchObject({ street: 'Rua das Flores', number: '100' });
     expect(f.address.cep).toBeUndefined();
     expect(f.location).toEqual({ type: 'Point', coordinates: [-48.85, -26.3] });
+    expect(f).toMatchObject({ building_height_m: 42.5, floors: 14, unit_floor: 12 });
 
     const s = await get(street.data!.id);
     expect(s.address).toEqual({ street: 'Rua das Flores', bairro: 'Centro', city: 'Joinville' });
@@ -627,6 +645,8 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(s.footprint).toBeNull();
     expect(s.approximate_location).toBe(true);
     expect(s.approx_radius_m).toBe(150);
+    // altura e andares apontariam o prédio dentro do círculo
+    expect(s).toMatchObject({ building_height_m: null, floors: null, unit_floor: null });
     // centro deslocado de 50 a 149 m: nunca o ponto real, sempre dentro do círculo
     const [lon, lat] = s.location.coordinates;
     const dist = Math.hypot((lon + 48.85) * 111320 * Math.cos((26.3 * Math.PI) / 180), (lat + 26.3) * 110540);
@@ -733,6 +753,29 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     const own = `${orgA}/${brunos}/minha-${tag}.jpg`;
     expect((await bruno.client.storage.from('listing-photos').upload(own, jpg)).error).toBeNull();
     expect((await ana.client.storage.from('listing-photos').remove([own])).data).toHaveLength(1);
+  });
+
+  it('administrador não rebaixa dono, não troca a pessoa de uma linha e não inclui ninguém sem convite', async () => {
+    const dani = await userClient('dani');
+    const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: dani.email, role: 'owner' }).select('token').single();
+    await accept(dani, inv.data!.token);
+    await ana.client.from('memberships').update({ role: 'admin' }).eq('org_id', orgA).eq('user_id', bruno.id);
+    try {
+      const demote = await bruno.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', dani.id).select();
+      expect(demote.data ?? []).toHaveLength(0);
+      const swap = await bruno.client.from('memberships').update({ user_id: carla.id }).eq('org_id', orgA).eq('user_id', bruno.id);
+      expect(swap.error).not.toBeNull();
+      const add = await bruno.client.from('memberships').insert({ org_id: orgA, user_id: carla.id, role: 'agent' });
+      expect(add.error).not.toBeNull();
+      const roles = (await service().from('memberships').select('user_id, role').eq('org_id', orgA)).data!;
+      expect(roles.find((r) => r.user_id === dani.id)?.role).toBe('owner');
+      expect(roles.some((r) => r.user_id === carla.id)).toBe(false);
+      // a dona continua mudando o papel de outra dona
+      expect((await ana.client.from('memberships').update({ role: 'admin' }).eq('org_id', orgA).eq('user_id', dani.id).select()).data).toHaveLength(1);
+    } finally {
+      await ana.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', bruno.id);
+      await service().from('memberships').delete().eq('org_id', orgA).eq('user_id', dani.id);
+    }
   });
 
   it('corretor não se promove nem inclui pessoas', async () => {
