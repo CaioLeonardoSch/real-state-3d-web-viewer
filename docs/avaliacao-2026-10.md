@@ -595,6 +595,10 @@ não se paga em Joinville**:
 
 ## Lista antes do lançamento
 
+> **17/10/2026:** esta lista, os itens em aberto acima e os achados da auditoria de 17/10
+> ([`auditoria-2026-10-17.md`](auditoria-2026-10-17.md)) foram consolidados numa ordem única de prioridade em
+> [`prioridades.md`](prioridades.md). Use aquela lista para decidir o que fazer primeiro.
+
 Ordem sugerida. As estimativas são de trabalho de uma pessoa.
 
 - [ ] Validar preço e interesse com 2 ou 3 imobiliárias piloto, antes de investir nos itens grandes.

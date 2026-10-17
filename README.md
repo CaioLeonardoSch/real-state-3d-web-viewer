@@ -630,6 +630,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 
 ## Próximos passos (não implementados)
 
+A lista completa do que falta, em ordem de prioridade (com impacto, esforço, risco e dependências), está em
+[`docs/prioridades.md`](docs/prioridades.md). A auditoria que a originou está em
+[`docs/auditoria-2026-10-17.md`](docs/auditoria-2026-10-17.md).
+
 - Modelo 3D detalhado de um prédio "hero" com janelas por unidade e janelas acesas à noite, com Three.js como camada
   customizada do MapLibre (o `fill-extrusion` não suporta isso).
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
