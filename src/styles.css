@@ -454,6 +454,7 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   margin-bottom: 6px;
 }
 .lead-item select,
+.listing-row select,
 .lead-item textarea {
   width: 100%;
   padding: 4px 6px;
@@ -2166,4 +2167,95 @@ body.embed .site-page-link {
 }
 .captcha-box:empty {
   display: none;
+}
+
+/* "Contatos" and "Meus anúncios": filter, count, paging and the rows of the listings */
+.list-filter {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr;
+  gap: 8px;
+  margin: 6px 0;
+}
+.list-filter select,
+.list-filter input {
+  width: 100%;
+}
+.list-count {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 6px;
+}
+.listing-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.listing-row {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+.listing-row.is-draft {
+  border-left-color: var(--line);
+  border-left-style: dashed;
+}
+.listing-row.saved {
+  background: var(--accent-soft);
+}
+.listing-row small {
+  display: block;
+  margin: 2px 0 6px;
+}
+.draft-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--line);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* painel.html: the same account panel as a page of its own, without the map */
+body.panel-body {
+  height: auto;
+  min-height: 100%;
+}
+.panel-page {
+  box-sizing: border-box;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 16px 40px;
+}
+.panel-back {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.panel-sheet {
+  padding: 14px 18px 24px;
+  border-radius: 12px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 520px) {
+  .panel-page {
+    padding: 8px 0 24px;
+  }
+  .panel-back {
+    padding: 0 16px;
+  }
+  .panel-sheet {
+    border-radius: 0;
+    padding: 12px 16px 20px;
+  }
 }

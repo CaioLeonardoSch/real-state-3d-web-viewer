@@ -237,6 +237,7 @@ export function listingToRow(l: Listing, orgId: string, location: [number, numbe
     exclusive: l.exclusive ?? false,
     availability: l.availability ?? 'active',
     highlight: l.highlight ?? 'standard',
+    published: !l.draft,
   };
 }
 

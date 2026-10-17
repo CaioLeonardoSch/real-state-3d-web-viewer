@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { freshTotp } from '../../scripts/lib/totp.mjs';
+import { RemoteBackend } from '../../src/backend/remote';
 
 // tests run in Node; the project's tsconfig has only browser types
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
@@ -22,6 +23,8 @@ interface User {
   email: string;
 }
 const service = () => createClient(URL_!, SERVICE, opts);
+/** The app's back end over a test session (its constructor is private: the app only builds it with connect). */
+const backendOf = (u: User) => new (RemoteBackend as unknown as new (c: SupabaseClient) => RemoteBackend)(u.client);
 
 async function userClient(name: string): Promise<User> {
   const admin = createClient(URL_!, SERVICE, opts);
@@ -321,6 +324,31 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect((await ana.client.from('audit_log').select('id').eq('table_name', 'leads')).data).toHaveLength(0);
     });
 
+    it('lista em páginas, com total, filtro de situação e busca; a planilha traz todos; cliques no WhatsApp à parte', async () => {
+      const name = `Paginado ${tag}`;
+      const rows = Array.from({ length: 35 }, (_, i) => ({
+        org_id: orgA, listing_id: listingId, listing_title: 'Apartamento de teste', assigned_to: bruno.id, source: 'form',
+        name: `${name} ${i}`, email: `p${i}-${tag}@x.com`, status: i < 5 ? 'won' : i < 10 ? 'visit' : 'new',
+        created_at: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(),
+      }));
+      expect((await service().from('leads').insert(rows)).error).toBeNull();
+      const b = backendOf(bruno);
+      const first = await b.leads(orgA, { q: name });
+      expect(first.total).toBe(35);
+      expect(first.leads).toHaveLength(30);
+      expect(first.leads[0].name).toBe(`${name} 34`); // mais novo primeiro
+      const rest = await b.leads(orgA, { q: name }, 30);
+      expect(rest.leads.map((l) => l.name)).toEqual([4, 3, 2, 1, 0].map((i) => `${name} ${i}`));
+      expect((await b.leads(orgA, { q: name, status: 'won' })).total).toBe(5);
+      expect((await b.leads(orgA, { q: name, status: 'open' })).total).toBe(30);
+      expect((await b.leads(orgA, { q: `p7-${tag}@x.com` })).leads.map((l) => l.name)).toEqual([`${name} 7`]);
+      expect((await b.leads(orgA, { q: `${name}),id.not.is.null,(name` })).total).toBe(0); // a busca não vira filtro
+      expect(await b.allLeads(orgA, { q: name })).toHaveLength(35);
+      expect((await backendOf(carla).leads(orgA, { q: name })).total).toBe(0);
+      expect(await b.whatsappClicks(orgA)).toBeGreaterThanOrEqual(1);
+      expect((await b.leads(orgA)).leads.every((l) => l.source !== 'whatsapp')).toBe(true);
+    });
+
     it('limite: a mesma pessoa no mesmo anúncio, 3 por dia', async () => {
       const same = lead(listingId, { p_email: `repetido-${tag}@x.com`, p_phone: null });
       // origem compartilhada pelos testes: limpa os recentes para não bater no limite de 5 em 10 minutos
@@ -615,6 +643,24 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await upd(carla.client, mine.data!.id)).data).toHaveLength(0);
     const del = await carla.client.from('listings').delete().eq('id', mine.data!.id).select('id');
     expect(del.data).toHaveLength(0);
+  });
+
+  it('meus anúncios: rascunhos na lista; publicar e despublicar só quem criou ou o admin', async () => {
+    const title = `Lista ${tag}`;
+    const draft = (await bruno.client.from('listings').insert(listingRow(orgA, { title: `${title} rascunho`, published: false })).select('id').single()).data!.id;
+    const anas = (await ana.client.from('listings').insert(listingRow(orgA, { title: `${title} da Ana`, reference_code: `REF-${tag}` })).select('id').single()).data!.id;
+    const b = backendOf(bruno);
+    const all = await b.listingsTable(orgA, { q: title });
+    expect(all.total).toBe(2);
+    expect(all.rows.find((r) => r.id === draft)).toMatchObject({ published: false, createdBy: bruno.id, bairro: 'Centro' });
+    expect((await b.listingsTable(orgA, { q: title, state: 'draft' })).rows.map((r) => r.id)).toEqual([draft]);
+    expect((await b.listingsTable(orgA, { q: `REF-${tag}` })).rows.map((r) => r.id)).toEqual([anas]);
+    await b.updateListing(draft, { published: true, highlight: 'featured' });
+    expect((await anon().from('public_listings').select('id').eq('id', draft)).data).toHaveLength(1);
+    await expect(b.updateListing(anas, { published: false })).rejects.toThrow(/sem permissão/);
+    await backendOf(ana).updateListing(draft, { published: false });
+    expect((await anon().from('public_listings').select('id').eq('id', draft)).data).toHaveLength(0);
+    expect((await backendOf(carla).listingsTable(orgA, { q: title })).total).toBe(0);
   });
 
   it('o público lê pela view, sem o endereço exato quando o anunciante escolheu esconder', async () => {

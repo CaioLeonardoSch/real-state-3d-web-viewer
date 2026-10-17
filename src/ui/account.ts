@@ -1,6 +1,9 @@
 import {
   LEAD_STATUS_LABELS,
   type Invitation,
+  type LeadFilter,
+  type ListingFilter,
+  type ListingTableRow,
   type Lead,
   type LeadStatus,
   type Member,
@@ -15,7 +18,9 @@ import {
 import { whatsappLink } from '../data/listingText';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
-import { escapeHtml } from '../utils/format';
+import { leadsCsv } from '../backend/leadsCsv';
+import { AVAILABILITIES, AVAILABILITY_LABELS, HIGHLIGHTS, HIGHLIGHT_LABELS, TYPE_LABELS, type Availability, type Highlight } from '../data/types';
+import { escapeHtml, formatBRL } from '../utils/format';
 
 /** "Imobiliária Exemplo Ltda." → "imobiliaria-exemplo-ltda" (address of the client's site). */
 export function slugify(name: string): string {
@@ -38,9 +43,23 @@ const ORG_KEY = 'mapa3d:org';
 /** Roles `me` may give to someone: only owners (and the support staff, who act as owners) create owners. */
 const assignable = (me: Role): Role[] => (me === 'owner' ? ['agent', 'admin', 'owner'] : me === 'admin' ? ['agent', 'admin'] : []);
 
+/** The management page (painel.html): the account, the listings and the contacts without the 3D map. */
+export const panelUrl = () => new URL(`${import.meta.env.BASE_URL}painel.html`, location.href).href;
+
+/** Saves a text file the browser builds (the contacts spreadsheet). */
+function download(text: string, name: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /**
- * Login, invitations and the client ("imobiliária") the user works for; team management for owners and admins;
- * new clients for the platform's support staff. Only shown when a back end is configured.
+ * Login, invitations and the client ("imobiliária") the user works for; the client's listings and contacts; team
+ * management for owners and admins; new clients for the platform's support staff. Only shown when a back end is
+ * configured. With no toggle button it is the whole page (painel.html): always open, nothing to close.
  */
 export class AccountPanel {
   private orgs: Org[] = [];
@@ -68,19 +87,33 @@ export class AccountPanel {
   openListing: (id: string) => void = () => {};
   private note = '';
   private isOpen = false;
+  /** Filters of "Contatos" and "Meus anúncios" (kept across re-renders). */
+  private leadFilter: LeadFilter = {};
+  private listingFilter: ListingFilter = {};
+  /** The team, for the "Responsável" of the contacts (administrators only). */
+  private teamMembers: Member[] = [];
+  /** Latest request of each list: an older answer arriving late is dropped. */
+  private loads = new Map<string, number>();
 
   constructor(
     private el: HTMLElement,
-    private toggle: HTMLButtonElement,
+    private toggle: HTMLButtonElement | null,
     private backend: RemoteBackend,
     /** Called after login, logout or a change of client: reload what the user may edit. */
     private onChange: () => void,
   ) {
-    toggle.hidden = false;
-    toggle.addEventListener('click', () => (this.isOpen ? this.close() : this.open()));
-    document.addEventListener('keydown', (e) => {
-      if (this.isOpen && e.key === 'Escape') this.close();
-    });
+    if (toggle) {
+      toggle.hidden = false;
+      toggle.addEventListener('click', () => (this.isOpen ? this.close() : this.open()));
+      document.addEventListener('keydown', (e) => {
+        if (this.isOpen && e.key === 'Escape') this.close();
+      });
+    } else {
+      // the page: open from the start, with the day-to-day lists unfolded
+      this.isOpen = true;
+      el.hidden = false;
+      this.openSections = new Set(['listings', 'leads']);
+    }
     backend.onAuthChange(() => void this.refresh(true));
   }
 
@@ -136,6 +169,7 @@ export class AccountPanel {
   }
 
   private renderToggle(): void {
+    if (!this.toggle) return;
     const label = this.email ? (this.org?.name ?? 'Minha conta') : 'Entrar';
     this.toggle.textContent = label;
     if (this.newLeads > 0) {
@@ -168,12 +202,12 @@ export class AccountPanel {
     this.note = note;
     this.isOpen = true;
     this.el.hidden = false;
-    this.toggle.setAttribute('aria-expanded', 'true');
+    this.toggle?.setAttribute('aria-expanded', 'true');
     void this.render().then(() => this.el.querySelector<HTMLElement>('input, select, button.btn-primary')?.focus());
   }
 
   close(): void {
-    if (!this.isOpen) return;
+    if (!this.isOpen || !this.toggle) return;
     this.isOpen = false;
     this.el.hidden = true;
     this.toggle.setAttribute('aria-expanded', 'false');
@@ -183,8 +217,8 @@ export class AccountPanel {
   // ---------------------------------------------------------------- rendering
 
   private async render(): Promise<void> {
-    const head = `<div class="add-head"><h2 id="account-title">${this.email ? 'Minha conta' : 'Entrar'}</h2>
-      <button type="button" class="icon-btn" data-action="close" aria-label="Fechar">×</button></div>
+    const head = `<div class="add-head"><h2 id="account-title">${this.email ? (this.toggle ? 'Minha conta' : 'Gestão') : 'Entrar'}</h2>
+      ${this.toggle ? '<button type="button" class="icon-btn" data-action="close" aria-label="Fechar">×</button>' : ''}</div>
       ${this.note ? `<p class="account-note" role="status">${escapeHtml(this.note)}</p>` : ''}`;
     if (!this.email) return this.renderLogin(head);
     if (this.mfa.pending) return this.renderCode(head);
@@ -212,13 +246,15 @@ export class AccountPanel {
       ${offers.length ? this.offersHtml(offers) : ''}
       ${this.org ? this.orgHtml() : offers.length ? '' : `<p class="account-empty">Sua conta ainda não está ligada a nenhuma imobiliária.
         Peça o link de convite ao administrador da sua imobiliária.</p>`}
-      ${this.org && canManage ? this.teamHtml(members, invites) : ''}
+      ${this.org ? this.sectionHtml('listings', 'Meus anúncios') : ''}
       ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
+      ${this.org && canManage ? this.teamHtml(members, invites) : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
       ${this.staff ? this.staffHtml() : ''}
       ${canManage || this.staffMember || this.mfa.enabled ? this.mfaHtml() : ''}
       <div class="a-actions account-signout"><button type="button" class="btn-secondary" data-action="signout">Sair</button></div>`;
+    this.teamMembers = members;
     this.bindClose();
     this.bindLoggedIn(members);
     this.bindMfa();
@@ -341,11 +377,8 @@ export class AccountPanel {
     if (!body || !this.org) return;
     try {
       if (key === 'trash') this.renderTrash(body, await this.backend.trash(this.org.id));
-      else if (key === 'leads') {
-        const admin = this.org.role === 'owner' || this.org.role === 'admin';
-        const [leads, members] = await Promise.all([this.backend.leads(this.org.id), admin ? this.backend.members(this.org.id) : Promise.resolve([])]);
-        this.renderLeads(body, leads, members);
-      }
+      else if (key === 'leads') await this.loadLeads(body, more);
+      else if (key === 'listings') await this.loadListings(body, more);
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -356,11 +389,90 @@ export class AccountPanel {
     }
   }
 
-  private renderLeads(body: HTMLElement, leads: Lead[], members: Member[]): void {
-    const admin = this.org!.role === 'owner' || this.org!.role === 'admin';
+  /** Starts a list request; `current()` says whether it is still the latest one of that list. */
+  private ticket(key: string): () => boolean {
+    const n = (this.loads.get(key) ?? 0) + 1;
+    this.loads.set(key, n);
+    return () => this.loads.get(key) === n;
+  }
+
+  /** Filter form of a list: changes reload the list from the start (typing waits a moment). */
+  private bindFilter(body: HTMLElement, key: string, apply: (fd: FormData) => void): void {
+    const form = body.querySelector<HTMLFormElement>(`form[data-filter="${key}"]`)!;
+    let timer: number | undefined;
+    const reload = () => {
+      apply(new FormData(form));
+      void this.loadSection(key);
+    };
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      reload();
+    });
+    form.addEventListener('change', reload);
+    form.querySelector('input[type="search"]')?.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(reload, 350);
+    });
+  }
+
+  /** "Contatos": the messages, a page at a time, with a filter and the spreadsheet of what the filter shows. */
+  private async loadLeads(body: HTMLElement, more: boolean): Promise<void> {
+    const org = this.org!;
+    const admin = org.role === 'owner' || org.role === 'admin';
+    const current = this.ticket('leads');
+    if (!body.querySelector('form[data-filter="leads"]')) {
+      const f = this.leadFilter;
+      const statuses = (Object.keys(LEAD_STATUS_LABELS) as LeadStatus[])
+        .map((k) => `<option value="${k}" ${f.status === k ? 'selected' : ''}>${LEAD_STATUS_LABELS[k]}</option>`)
+        .join('');
+      body.innerHTML = `${admin ? '<p class="a-hint">Você vê os contatos de todos os corretores. Cada corretor vê os dos próprios anúncios.</p>' : ''}
+        <p class="a-hint" data-clicks hidden></p>
+        <form class="list-filter" data-filter="leads" role="search" novalidate>
+          <label class="a-field">Situação<select name="status"><option value="">Todas</option>
+            <option value="open" ${f.status === 'open' ? 'selected' : ''}>Em aberto</option>${statuses}</select></label>
+          <label class="a-field">Buscar<input name="q" type="search" value="${escapeHtml(f.q ?? '')}" placeholder="nome, e-mail, telefone, anúncio"></label>
+        </form>
+        <p class="list-count muted small" role="status"></p>
+        <ul class="lead-list"></ul>
+        <div class="list-actions">
+          <button type="button" class="btn-secondary" data-action="more" hidden>Ver mais</button>
+          <button type="button" class="link-btn" data-action="export">Baixar planilha (CSV)</button>
+        </div>`;
+      this.bindFilter(body, 'leads', (fd) => (this.leadFilter = { status: String(fd.get('status') ?? '') as LeadFilter['status'], q: String(fd.get('q') ?? '') }));
+      body.querySelector('[data-action="more"]')!.addEventListener('click', () => void this.loadSection('leads', true));
+      const exportBtn = body.querySelector<HTMLButtonElement>('[data-action="export"]')!;
+      exportBtn.addEventListener('click', () =>
+        this.act(exportBtn, async () => {
+          const all = await this.backend.allLeads(org.id, this.leadFilter);
+          download(leadsCsv(all, this.teamMembers), `contatos-${org.slug}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
+        }),
+      );
+    }
+    const list = body.querySelector<HTMLElement>('.lead-list')!;
+    const offset = more ? list.children.length : 0;
+    const [page, clicks] = await Promise.all([this.backend.leads(org.id, this.leadFilter, offset), more ? null : this.backend.whatsappClicks(org.id)]);
+    if (!current()) return;
+    if (clicks !== null) {
+      const p = body.querySelector<HTMLElement>('[data-clicks]')!;
+      p.hidden = !clicks;
+      p.textContent = `${clicks} ${clicks === 1 ? 'clique' : 'cliques'} no WhatsApp dos anúncios (a conversa segue no WhatsApp).`;
+    }
+    const html = page.leads.map((l) => this.leadHtml(l, this.teamMembers, admin)).join('');
+    if (more) list.insertAdjacentHTML('beforeend', html);
+    else list.innerHTML = html;
+    list.querySelectorAll<HTMLElement>('li[data-lead]:not([data-bound])').forEach((li) => this.bindLead(li));
+    const filtered = !!(this.leadFilter.status || this.leadFilter.q?.trim());
+    body.querySelector('.list-count')!.textContent = page.total
+      ? `${page.total} ${page.total === 1 ? 'contato' : 'contatos'}${filtered ? ' com esse filtro' : ''}${list.children.length < page.total ? `, mostrando ${list.children.length}` : ''}.`
+      : filtered
+        ? 'Nenhum contato com esse filtro.'
+        : 'Nenhuma mensagem ainda. Os contatos enviados pelos anúncios e pelo site aparecem aqui e chegam por e-mail.';
+    body.querySelector<HTMLElement>('[data-action="more"]')!.hidden = list.children.length >= page.total;
+    body.querySelector<HTMLElement>('[data-action="export"]')!.hidden = !page.total;
+  }
+
+  private leadHtml(l: Lead, members: Member[], admin: boolean): string {
     const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    // messages (on a listing or through the site); WhatsApp clicks are only counted
-    const form = leads.filter((l) => l.source !== 'whatsapp');
     const DETAIL_LABELS: Record<string, string> = { finalidade: 'Quer', tipo: 'Tipo', bairro: 'Bairro', valor: 'Valor pretendido', area: 'Área', quartos: 'Quartos', assunto: 'Assunto' };
     const origin = (l: Lead) =>
       l.source === 'owner'
@@ -368,18 +480,9 @@ export class AccountPanel {
         : l.source === 'contact'
           ? '<span class="lead-origin">Contato pelo site</span>'
           : `<button type="button" class="link-btn lead-listing" data-open="${l.listingId ?? ''}" ${l.listingId ? '' : 'disabled'}>${escapeHtml(l.listingTitle ?? 'anúncio removido')}</button>`;
-    const clicks = leads.length - form.length;
     const statusOptions = (cur: LeadStatus) =>
       (Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${LEAD_STATUS_LABELS[k]}</option>`).join('');
-    body.innerHTML = `${
-      admin ? '<p class="a-hint">Você vê os contatos de todos os corretores. Cada corretor vê os dos próprios anúncios.</p>' : ''
-    }
-      ${clicks ? `<p class="a-hint">${clicks} ${clicks === 1 ? 'clique' : 'cliques'} no WhatsApp dos anúncios (a conversa segue no WhatsApp).</p>` : ''}
-      ${
-        form.length
-          ? `<ul class="lead-list">${form
-              .map((l) => {
-                const wa = l.phone ? whatsappLink(l.phone, `Olá, ${l.name?.split(' ')[0] ?? ''}! Aqui é da ${this.org!.name}, sobre ${
+    const wa = l.phone ? whatsappLink(l.phone, `Olá, ${l.name?.split(' ')[0] ?? ''}! Aqui é da ${this.org!.name}, sobre ${
                   l.source === 'owner' ? 'o imóvel que você quer anunciar' : l.source === 'contact' ? 'sua mensagem pelo site' : `"${l.listingTitle ?? 'o imóvel'}"`
                 }.`) : null;
                 return `<li class="lead-item status-${l.status}" data-lead="${l.id}">
@@ -411,11 +514,11 @@ export class AccountPanel {
                   <label class="a-field">Anotações<textarea name="notes" rows="2" maxlength="4000" placeholder="Retornar, visita marcada…">${escapeHtml(l.notes ?? '')}</textarea></label>
                   ${admin ? `<button type="button" class="link-btn btn-danger-text" data-delete-lead="${l.id}">Excluir (pedido do cliente, LGPD)</button>` : ''}
                 </li>`;
-              })
-              .join('')}</ul>`
-          : '<p class="muted small">Nenhuma mensagem ainda. Os contatos enviados pelos anúncios e pelo site aparecem aqui e chegam por e-mail.</p>'
-      }`;
-    const save = async (li: HTMLElement, patch: Parameters<RemoteBackend['updateLead']>[1]) => {
+  }
+
+  private bindLead(li: HTMLElement): void {
+    li.dataset.bound = '';
+    const save = async (patch: Parameters<RemoteBackend['updateLead']>[1]) => {
       try {
         await this.backend.updateLead(li.dataset.lead!, patch);
         li.classList.add('saved');
@@ -429,30 +532,155 @@ export class AccountPanel {
         window.alert((ex as Error).message);
       }
     };
-    body.querySelectorAll<HTMLElement>('li[data-lead]').forEach((li) => {
-      li.querySelector<HTMLSelectElement>('select[name="status"]')!.addEventListener('change', (e) =>
-        save(li, { status: (e.target as HTMLSelectElement).value as LeadStatus }),
-      );
-      li.querySelector<HTMLSelectElement>('select[name="assigned"]')?.addEventListener('change', (e) =>
-        save(li, { assignedTo: (e.target as HTMLSelectElement).value || null }),
-      );
-      const notes = li.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')!;
-      notes.addEventListener('change', () => save(li, { notes: notes.value }));
-      li.querySelector<HTMLButtonElement>('[data-open]')?.addEventListener('click', (e) => {
-        const id = (e.currentTarget as HTMLButtonElement).dataset.open;
-        if (id) {
-          this.close();
-          this.openListing(id);
+    li.querySelector<HTMLSelectElement>('select[name="status"]')!.addEventListener('change', (e) =>
+      save({ status: (e.target as HTMLSelectElement).value as LeadStatus }),
+    );
+    li.querySelector<HTMLSelectElement>('select[name="assigned"]')?.addEventListener('change', (e) =>
+      save({ assignedTo: (e.target as HTMLSelectElement).value || null }),
+    );
+    const notes = li.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')!;
+    notes.addEventListener('change', () => save({ notes: notes.value }));
+    li.querySelector<HTMLButtonElement>('[data-open]')?.addEventListener('click', (e) => {
+      const id = (e.currentTarget as HTMLButtonElement).dataset.open;
+      if (id) {
+        this.close();
+        this.openListing(id);
+      }
+    });
+    li.querySelector<HTMLButtonElement>('[data-delete-lead]')?.addEventListener('click', async () => {
+      if (!window.confirm('Excluir este contato e os dados do cliente? Use quando a pessoa pedir a exclusão (LGPD).')) return;
+      try {
+        await this.backend.deleteLead(li.dataset.lead!);
+        li.remove();
+      } catch (ex) {
+        window.alert((ex as Error).message);
+      }
+    });
+  }
+
+  /** "Meus anúncios": the client's listings with their state, published or draft, and the quick actions. */
+  private async loadListings(body: HTMLElement, more: boolean): Promise<void> {
+    const org = this.org!;
+    const admin = org.role === 'owner' || org.role === 'admin';
+    const current = this.ticket('listings');
+    if (!body.querySelector('form[data-filter="listings"]')) {
+      const f = this.listingFilter;
+      const states: [NonNullable<ListingFilter['state']>, string][] = [
+        ['', 'Todos'],
+        ['published', 'Publicados'],
+        ['draft', 'Rascunhos'],
+        ['reserved', 'Reservados'],
+        ['sold', 'Vendidos'],
+      ];
+      body.innerHTML = `<form class="list-filter" data-filter="listings" role="search" novalidate>
+          <label class="a-field">Mostrar<select name="state">${states
+            .map(([v, label]) => `<option value="${v}" ${(f.state ?? '') === v ? 'selected' : ''}>${label}</option>`)
+            .join('')}</select></label>
+          <label class="a-field">Buscar<input name="q" type="search" value="${escapeHtml(f.q ?? '')}" placeholder="título ou código"></label>
+        </form>
+        <p class="list-count muted small" role="status"></p>
+        <ul class="listing-rows"></ul>
+        <div class="list-actions"><button type="button" class="btn-secondary" data-action="more" hidden>Ver mais</button></div>`;
+      this.bindFilter(body, 'listings', (fd) => (this.listingFilter = { state: String(fd.get('state') ?? '') as ListingFilter['state'], q: String(fd.get('q') ?? '') }));
+      body.querySelector('[data-action="more"]')!.addEventListener('click', () => void this.loadSection('listings', true));
+    }
+    const list = body.querySelector<HTMLElement>('.listing-rows')!;
+    const offset = more ? list.children.length : 0;
+    const page = await this.backend.listingsTable(org.id, this.listingFilter, offset);
+    if (!current()) return;
+    const html = page.rows.map((r) => this.listingRowHtml(r, admin || r.createdBy === this.userId)).join('');
+    if (more) list.insertAdjacentHTML('beforeend', html);
+    else list.innerHTML = html;
+    list.querySelectorAll<HTMLElement>('li[data-listing]:not([data-bound])').forEach((li) => this.bindListingRow(li, page.rows.find((r) => r.id === li.dataset.listing)));
+    const filtered = !!(this.listingFilter.state || this.listingFilter.q?.trim());
+    body.querySelector('.list-count')!.textContent = page.total
+      ? `${page.total} ${page.total === 1 ? 'anúncio' : 'anúncios'}${filtered ? ' com esse filtro' : ''}${list.children.length < page.total ? `, mostrando ${list.children.length}` : ''}.`
+      : filtered
+        ? 'Nenhum anúncio com esse filtro.'
+        : `Nenhum anúncio ainda. Para anunciar, abra o mapa e use "+ Anunciar".`;
+    body.querySelector<HTMLElement>('[data-action="more"]')!.hidden = list.children.length >= page.total;
+  }
+
+  private listingRowHtml(r: ListingTableRow, canEdit: boolean): string {
+    const price = r.transaction === 'rent' ? `${formatBRL(r.rentPrice ?? r.price)}/mês` : formatBRL(r.price);
+    const day = new Date(r.updatedAt).toLocaleDateString('pt-BR');
+    const facts = [r.referenceCode, TYPE_LABELS[r.type], r.bairro, price, `alterado em ${day}`].filter(Boolean).map((x) => escapeHtml(String(x)));
+    const select = <T extends string>(name: string, label: string, values: readonly T[], labels: Record<T, string>, cur: T) =>
+      `<label class="a-field">${label}<select name="${name}" ${canEdit ? '' : 'disabled'}>${values
+        .map((v) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${labels[v]}</option>`)
+        .join('')}</select></label>`;
+    return `<li class="listing-row${r.published ? '' : ' is-draft'}" data-listing="${escapeHtml(r.id)}">
+      <div class="lead-head"><strong>${escapeHtml(r.title)}</strong>${r.published ? '' : '<span class="draft-badge">Rascunho</span>'}</div>
+      <small class="muted">${facts.join(' · ')}</small>
+      <div class="lead-controls">
+        ${select('availability', 'Situação', AVAILABILITIES, AVAILABILITY_LABELS, r.availability)}
+        ${select('highlight', 'Destaque', HIGHLIGHTS, HIGHLIGHT_LABELS, r.highlight)}
+      </div>
+      <div class="list-actions">
+        ${canEdit ? `<button type="button" class="btn-secondary" data-action="publish">${r.published ? 'Despublicar' : 'Publicar'}</button>` : ''}
+        <button type="button" class="link-btn" data-action="open">Ver no mapa</button>
+        ${canEdit ? '<button type="button" class="link-btn btn-danger-text" data-action="trash">Excluir</button>' : '<small class="muted">Só quem criou o anúncio ou um administrador altera.</small>'}
+      </div>
+    </li>`;
+  }
+
+  private bindListingRow(li: HTMLElement, row: ListingTableRow | undefined): void {
+    li.dataset.bound = '';
+    if (!row) return;
+    const id = row.id;
+    const saved = () => {
+      li.classList.add('saved');
+      setTimeout(() => li.classList.remove('saved'), 1200);
+      this.onChange();
+    };
+    const fail = (ex: unknown) => window.alert((ex as Error).message);
+    for (const name of ['availability', 'highlight'] as const) {
+      const sel = li.querySelector<HTMLSelectElement>(`select[name="${name}"]`)!;
+      sel.addEventListener('change', async () => {
+        sel.disabled = true;
+        try {
+          await this.backend.updateListing(id, name === 'availability' ? { availability: sel.value as Availability } : { highlight: sel.value as Highlight });
+          saved();
+        } catch (ex) {
+          sel.value = row[name];
+          fail(ex);
+        } finally {
+          sel.disabled = false;
         }
       });
-      li.querySelector<HTMLButtonElement>('[data-delete-lead]')?.addEventListener('click', async () => {
-        if (!window.confirm('Excluir este contato e os dados do cliente? Use quando a pessoa pedir a exclusão (LGPD).')) return;
-        try {
-          await this.backend.deleteLead(li.dataset.lead!);
-          li.remove();
-        } catch (ex) {
-          window.alert((ex as Error).message);
-        }
+    }
+    const publish = li.querySelector<HTMLButtonElement>('[data-action="publish"]');
+    publish?.addEventListener('click', async () => {
+      const next = !row.published;
+      if (!next && !window.confirm(`Despublicar "${row.title}"? Ele sai do site e do mapa e fica como rascunho, só para a equipe.`)) return;
+      publish.disabled = true;
+      try {
+        await this.backend.updateListing(id, { published: next });
+        row.published = next;
+        publish.textContent = next ? 'Despublicar' : 'Publicar';
+        li.classList.toggle('is-draft', !next);
+        const head = li.querySelector('.lead-head')!;
+        head.querySelector('.draft-badge')?.remove();
+        if (!next) head.insertAdjacentHTML('beforeend', '<span class="draft-badge">Rascunho</span>');
+        saved();
+      } catch (ex) {
+        fail(ex);
+      } finally {
+        publish.disabled = false;
+      }
+    });
+    li.querySelector('[data-action="open"]')!.addEventListener('click', () => {
+      this.close();
+      this.openListing(id);
+    });
+    const trash = li.querySelector<HTMLButtonElement>('[data-action="trash"]');
+    trash?.addEventListener('click', () => {
+      if (!window.confirm(`Excluir "${row.title}"? Ele vai para a lixeira e pode ser restaurado por 30 dias.`)) return;
+      void this.act(trash, async () => {
+        await this.backend.trashListing(id);
+        this.note = 'Anúncio movido para a lixeira.';
+        this.onChange();
+        await this.render();
       });
     });
   }
@@ -599,7 +827,7 @@ export class AccountPanel {
         org.role === 'owner' || org.role === 'admin'
           ? ` · <a href="${escapeHtml(this.siteUrl(org.slug, true))}" target="_blank" rel="noopener" data-action="customize">Personalizar o site ↗</a>`
           : ''
-      }</p></section>`;
+      }${this.toggle ? ` · <a href="${escapeHtml(panelUrl())}" target="_blank" rel="noopener">Gestão em página inteira ↗</a>` : ''}</p></section>`;
   }
 
   /** The client's site (site.html), optionally with the "Personalizar site" editor open. */
@@ -802,7 +1030,7 @@ export class AccountPanel {
   }
 
   private bindClose(): void {
-    this.el.querySelector('[data-action="close"]')!.addEventListener('click', () => this.close());
+    this.el.querySelector('[data-action="close"]')?.addEventListener('click', () => this.close());
   }
 
   /** A button/select action with a busy state; errors go to the panel's note. */

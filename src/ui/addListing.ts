@@ -192,6 +192,8 @@ export class AddListingPanel {
     this.el.querySelector<HTMLElement>('[data-exclusive]')!.hidden = !l.exclusive;
     set('availability', l.availability);
     set('highlight', l.highlight);
+    const draft = f.elements.namedItem('draft') as HTMLInputElement | null;
+    if (draft) draft.checked = !!l.draft;
     this.photos = (l.photos ?? []).map((p) => ({ ...p }));
     this.floorPlan = l.floorPlanImage ?? null;
     this.renderPhotos();
@@ -350,6 +352,7 @@ export class AddListingPanel {
           <legend>Publicação</legend>
           ${field('Situação do anúncio', `<select name="availability">${options(AVAILABILITIES, AVAILABILITY_LABELS, 'active')}</select>`)}
           ${field('Tipo de destaque', `<select name="highlight">${options(HIGHLIGHTS, HIGHLIGHT_LABELS, 'standard')}</select>`)}
+          ${remoteOrg ? '<label class="a-check a-wide"><input type="checkbox" name="draft"> Salvar como rascunho (só a equipe vê)</label>' : ''}
           <p class="a-hint a-wide">Datas de publicação e de atualização são registradas automaticamente. O preço reduzido aparece
             quando você baixa o preço de um anúncio já publicado (no painel do imóvel); o histórico de preços fica registrado.</p>
         </fieldset>
@@ -792,7 +795,7 @@ export class AddListingPanel {
       ...(editing?.previousPrice ? { previousPrice: editing.previousPrice, priceReducedAt: editing.priceReducedAt } : {}),
       ...((editing ? editing.fictional : !remote) ? { fictional: true as const } : {}),
       ...(editing?.remote ? { remote: true as const } : {}),
-      ...(editing?.draft ? { draft: true as const } : {}),
+      ...((remote ? (this.form.elements.namedItem('draft') as HTMLInputElement | null)?.checked : editing?.draft) ? { draft: true as const } : {}),
       description: this.value('description') || (remote || editing ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
       userAdded: true,
     };

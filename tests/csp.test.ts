@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import headersTemplate from '../public/_headers?raw';
 import indexHtml from '../index.html?raw';
 import siteHtml from '../site.html?raw';
+import panelHtml from '../painel.html?raw';
 import { appCsp, cspMeta, listingCsp, originOf, renderHeaders, styleHash } from '../scripts/lib/csp.mjs';
 import { LISTING_PAGE_CSS, renderListingPage } from '../src/seo/listingPage';
 import type { Listing } from '../src/data/types';
@@ -59,7 +60,7 @@ describe('Content-Security-Policy', () => {
   });
 
   it('no inline scripts or event-handler attributes in the pages and templates (the policy would block them)', () => {
-    for (const html of [indexHtml, siteHtml]) {
+    for (const html of [indexHtml, siteHtml, panelHtml]) {
       expect([...html.matchAll(/<script\b([^>]*)>/g)].every((m) => /\bsrc=/.test(m[1]) || /application\/ld\+json/.test(m[1]))).toBe(true);
       expect(html).not.toMatch(/\son[a-z]+\s*=/i);
     }

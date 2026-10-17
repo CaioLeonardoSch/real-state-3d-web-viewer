@@ -112,7 +112,8 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   a descrição, as fotos e o resto vêm quando a ficha é aberta. Assim o limite de 1.000 linhas por consulta do
   Supabase não esconde anúncios nem fotos (teste com 5.000 em `tests/backend/volume.test.ts`).
 
-Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
+Com backend, a gestão (meus anúncios, contatos com filtro e planilha, lixeira, equipe) abre no painel do mapa ou em
+página própria, `painel.html`, que não carrega o mapa. Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
 `npm run db:start`, `npm run test:backend` e `npm run verify:backend`.
 
 ## Site de cada imobiliária (white label)
@@ -434,6 +435,7 @@ src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugest�
 src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação (suncalc)
 src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
 src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, páginas, editor
+src/panel/      gestão em página própria (painel.html), sem o mapa
 src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
 scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)
 docs/           screenshots e análise da concorrência (docs/analise-concorrencia.md)

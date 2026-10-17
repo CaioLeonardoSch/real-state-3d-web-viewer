@@ -150,6 +150,63 @@ function fail(error: { message: string; code?: string } | null, what: string): v
   throw new Error(`${what}: ${msg}`);
 }
 
+/** Contacts per page in "Contatos" and listings per page in "Meus anúncios". */
+export const LEADS_PAGE = 30;
+export const LISTINGS_PAGE = 30;
+/** "Em aberto": waiting for an answer or under way. */
+export const OPEN_LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'visit', 'proposal'];
+
+export interface LeadFilter {
+  /** A status, or 'open' for the ones still under way. */
+  status?: LeadStatus | 'open' | '';
+  /** Part of the name, e-mail, phone, listing or message. */
+  q?: string;
+}
+
+export interface ListingFilter {
+  state?: 'published' | 'draft' | 'reserved' | 'sold' | '';
+  /** Part of the title or the reference code. */
+  q?: string;
+}
+
+/** One line of "Meus anúncios". */
+export interface ListingTableRow {
+  id: string;
+  title: string;
+  type: Listing['type'];
+  transaction: NonNullable<Listing['transaction']>;
+  price: number;
+  rentPrice: number | null;
+  availability: NonNullable<Listing['availability']>;
+  highlight: NonNullable<Listing['highlight']>;
+  published: boolean;
+  referenceCode: string | null;
+  createdBy: string | null;
+  updatedAt: string;
+  bairro: string | null;
+}
+
+/** Text typed in a search box, safe inside a PostgREST or=(…) filter (its commas, parentheses and wildcards removed). */
+export function searchTerm(q: string | undefined): string {
+  return (q ?? '').replace(/[,()*%\\"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+}
+
+const toLead = (r: Record<string, any>): Lead => ({
+  id: r.id,
+  listingId: r.listing_id,
+  listingTitle: r.listing_title,
+  assignedTo: r.assigned_to,
+  source: r.source,
+  details: r.details ?? null,
+  name: r.name,
+  email: r.email,
+  phone: r.phone,
+  message: r.message,
+  status: r.status,
+  notes: r.notes,
+  createdAt: r.created_at,
+});
+
 export class RemoteBackend {
   private constructor(private sb: SupabaseClient) {}
 
@@ -486,8 +543,13 @@ export class RemoteBackend {
   }
 
   /** Status and price changes from "Gerenciar anúncio" (the server records the history and the reduction). */
-  async updateListing(id: string, patch: { price?: number; rentPrice?: number; availability?: Listing['availability'] }): Promise<void> {
+  async updateListing(
+    id: string,
+    patch: { price?: number; rentPrice?: number; availability?: Listing['availability']; highlight?: Listing['highlight']; published?: boolean },
+  ): Promise<void> {
     const row: Record<string, unknown> = {};
+    if (patch.highlight !== undefined) row.highlight = patch.highlight;
+    if (patch.published !== undefined) row.published = patch.published;
     if (patch.price !== undefined) row.price = patch.price;
     if (patch.rentPrice !== undefined) row.rent_price = patch.rentPrice;
     if (patch.availability !== undefined) row.availability = patch.availability;
@@ -594,24 +656,69 @@ export class RemoteBackend {
     void this.sb.rpc('submit_lead', { p_listing: listingId, p_source: 'whatsapp' }).then(() => {}, () => {});
   }
 
-  async leads(orgId: string): Promise<Lead[]> {
-    const { data, error } = await this.sb.from('leads').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(200);
+  /**
+   * A page of the messages (form, site contact, owner offers) the user may see, newest first, with the total that
+   * matches the filter. WhatsApp clicks are not messages: whatsappClicks counts them.
+   */
+  async leads(orgId: string, filter: LeadFilter = {}, offset = 0, limit = LEADS_PAGE): Promise<{ leads: Lead[]; total: number }> {
+    let q = this.sb.from('leads').select('*', { count: 'exact' }).eq('org_id', orgId).neq('source', 'whatsapp');
+    if (filter.status === 'open') q = q.in('status', OPEN_LEAD_STATUSES);
+    else if (filter.status) q = q.eq('status', filter.status);
+    const term = searchTerm(filter.q);
+    if (term) q = q.or(['name', 'email', 'phone', 'listing_title', 'message'].map((c) => `${c}.ilike.*${term}*`).join(','));
+    const { data, error, count } = await q.order('created_at', { ascending: false }).order('id').range(offset, offset + limit - 1);
     fail(error, 'Não foi possível ler os contatos');
-    return (data ?? []).map((r) => ({
-      id: r.id,
-      listingId: r.listing_id,
-      listingTitle: r.listing_title,
-      assignedTo: r.assigned_to,
-      source: r.source,
-      details: r.details ?? null,
-      name: r.name,
-      email: r.email,
-      phone: r.phone,
-      message: r.message,
-      status: r.status,
-      notes: r.notes,
-      createdAt: r.created_at,
-    }));
+    return { leads: (data ?? []).map(toLead), total: count ?? 0 };
+  }
+
+  /** Every message that matches the filter (for the spreadsheet), in pages under the server's row limit. */
+  async allLeads(orgId: string, filter: LeadFilter = {}): Promise<Lead[]> {
+    const out: Lead[] = [];
+    for (;;) {
+      const page = await this.leads(orgId, filter, out.length, 1000);
+      out.push(...page.leads);
+      if (page.leads.length < 1000 || out.length >= page.total) return out;
+    }
+  }
+
+  /** WhatsApp clicks on the client's listings that the user may see. */
+  async whatsappClicks(orgId: string): Promise<number> {
+    const { count, error } = await this.sb.from('leads').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('source', 'whatsapp');
+    fail(error, 'Não foi possível ler os contatos');
+    return count ?? 0;
+  }
+
+  /** A page of the client's listings for "Meus anúncios" (drafts included), last changed first. */
+  async listingsTable(orgId: string, filter: ListingFilter = {}, offset = 0, limit = LISTINGS_PAGE): Promise<{ rows: ListingTableRow[]; total: number }> {
+    let q = this.sb
+      .from('my_listings')
+      .select('id, title, type, transaction, price, rent_price, availability, highlight, published, reference_code, created_by, updated_at, address', { count: 'exact' })
+      .eq('org_id', orgId);
+    if (filter.state === 'published') q = q.eq('published', true);
+    else if (filter.state === 'draft') q = q.eq('published', false);
+    else if (filter.state === 'reserved' || filter.state === 'sold') q = q.eq('availability', filter.state);
+    const term = searchTerm(filter.q);
+    if (term) q = q.or(`title.ilike.*${term}*,reference_code.ilike.*${term}*`);
+    const { data, error, count } = await q.order('updated_at', { ascending: false }).order('id').range(offset, offset + limit - 1);
+    fail(error, 'Não foi possível ler os anúncios');
+    return {
+      rows: (data ?? []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        type: r.type,
+        transaction: r.transaction,
+        price: r.price,
+        rentPrice: r.rent_price,
+        availability: r.availability,
+        highlight: r.highlight,
+        published: r.published,
+        referenceCode: r.reference_code,
+        createdBy: r.created_by,
+        updatedAt: r.updated_at,
+        bairro: r.address?.bairro ?? null,
+      })),
+      total: count ?? 0,
+    };
   }
 
   async updateLead(id: string, patch: { status?: LeadStatus; notes?: string; assignedTo?: string | null }): Promise<void> {

@@ -313,6 +313,32 @@ try {
     badge === '1' && leadUi.items === 1 && leadUi.name === 'Maria Compradora' && leadUi.wa.startsWith('https://wa.me/5547988887777') &&
       /1 clique no WhatsApp/.test(leadUi.clicks),
     JSON.stringify({ badge, ...leadUi }));
+
+  // ---- painel.html: the same management on a page of its own, without the map (same session)
+  const panel = await page.context().newPage();
+  const panelErrs = [];
+  panel.on('pageerror', (e) => panelErrs.push(String(e)));
+  await panel.goto(`${URL_}painel.html`);
+  await panel.waitForSelector(`#account-panel .listing-row[data-listing="${id}"]`, { timeout: 20000 });
+  // the count comes with the list (the panel may draw itself again when the session is read)
+  await panel.waitForFunction(() => /contato/.test(document.querySelector('#account-panel details[data-section="leads"] .list-count')?.textContent ?? ''), null, { timeout: 20000 });
+  const pUi = await panel.evaluate(() => ({
+    title: document.querySelector('#account-title')?.textContent,
+    map: !!document.querySelector('#map'),
+    count: document.querySelector('#account-panel details[data-section="leads"] .list-count')?.textContent ?? '',
+  }));
+  await panel.fill('#account-panel form[data-filter="leads"] input[name="q"]', 'ninguém com esse nome');
+  await panel.waitForFunction(() => !document.querySelector('#account-panel .lead-item'), null, { timeout: 15000 });
+  await panel.fill('#account-panel form[data-filter="leads"] input[name="q"]', 'Maria');
+  await panel.waitForSelector('#account-panel .lead-item', { timeout: 15000 });
+  const [csvFile] = await Promise.all([panel.waitForEvent('download'), panel.click('#account-panel [data-action="export"]')]);
+  const csv = readFileSync(await csvFile.path(), 'utf8');
+  await Promise.all([panel.waitForURL(/index\.html\?imovel=/), panel.click(`#account-panel .listing-row[data-listing="${id}"] [data-action="open"]`)]);
+  check('painel.html: gestão sem o mapa — anúncios e contatos, busca, planilha (CSV) e "Ver no mapa"',
+    pUi.title === 'Gestão' && !pUi.map && /1 contato/.test(pUi.count) && csv.startsWith('\uFEFFData;Nome') && csv.includes('Maria Compradora') &&
+      panel.url().includes(`imovel=${id}`) && panelErrs.length === 0,
+    JSON.stringify({ ...pUi, maria: csv.includes('Maria Compradora'), url: panel.url(), errs: panelErrs }));
+  await panel.close();
   await page.keyboard.press('Escape');
   await page.click(`#results button[data-id="${id}"]`);
   await sleep(600);

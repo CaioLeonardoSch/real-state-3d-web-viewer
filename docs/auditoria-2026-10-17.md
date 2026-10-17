@@ -161,6 +161,13 @@ Interface e negócio · alta · alta · médio.
 - Não há lista "Meus anúncios" com situação e ações.
 - O rascunho existe no banco, mas o formulário nunca envia `published`.
 - Os contatos são só os 200 últimos (`remote.ts:596`), sem filtro, busca nem exportação.
+- **Feito em 17/10:** a gestão também abre em página própria, `painel.html` (`src/panel/main.ts`), sem WebGL e sem o
+  mapa; o painel do mapa tem o link "Gestão em página inteira". "Meus anúncios" lista os anúncios do cliente, rascunhos
+  incluídos, com filtro (publicados, rascunhos, reservados, vendidos), busca por título ou código, situação, destaque,
+  publicar e despublicar e excluir; só quem criou ou um administrador altera. O formulário tem "Salvar como rascunho" e
+  envia `published`. Os contatos vêm em páginas de 30 com total, filtro de situação ("Em aberto" junta as etapas em
+  andamento) e busca por nome, e-mail, telefone, anúncio ou mensagem; "Baixar planilha (CSV)" exporta todos os do
+  filtro, em páginas abaixo do limite do servidor, com proteção contra fórmulas (`src/backend/leadsCsv.ts`).
 
 ### A9. Limite de envios por IP contornável e sujeito a bloqueio falso [prioridade 14]
 
@@ -268,7 +275,7 @@ Interface · média · média (hipótese) · pequeno.
 | Mapa 3D, filtros, recorte por bairro, busca por rua, URL compartilhável | Implementado |
 | Ficha do imóvel | Implementada; planta e simulação fictícias em produção (A2) |
 | Contas, convites, papéis, duas etapas, lixeira, auditoria | Implementado; depende do Supabase |
-| Contatos com aviso por e-mail | Implementado; depende do Resend; lista limitada a 200 (A8) |
+| Contatos com aviso por e-mail | Implementado; depende do Resend; lista em páginas, com filtro e planilha (A8) |
 | CAPTCHA | Pronto, desligado por padrão |
 | Importação XML | Parcial: comando manual com a chave de serviço; os dez tipos do enum são lidos, os outros descartados (A6) |
 | Site white label, editor, histórico de versões | Implementado |

@@ -107,7 +107,7 @@ export default defineConfig(({ mode }) => {
     plugins: [securityPolicy(), production(env.VITE_DEMO_LISTINGS !== 'false'), clientDomains(env)],
     build: {
       // index.html: the 3D map (also embedded by the sites); site.html: a client's site (white label)
-      rollupOptions: { input: { main: 'index.html', site: 'site.html' } },
+      rollupOptions: { input: { main: 'index.html', site: 'site.html', painel: 'painel.html' } },
     },
     test: {
       include: ['tests/**/*.test.ts'],
