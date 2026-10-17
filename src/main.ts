@@ -104,6 +104,8 @@ async function main() {
   const agencies = [...data.listings.agencies];
   // demo listings (listings.json); a client's site can hide them with VITE_DEMO_LISTINGS=false
   const ofSite = (list: Listing[]) => (embed?.agency ? list.filter((l) => l.agency === embed.agency) : list);
+  // inside a client's site the server sends only that client's listings
+  const siteOrg = embed?.agency && /^[0-9a-f-]{36}$/i.test(embed.agency) ? embed.agency : null;
   const baseListings = ofSite(data.listings.listings);
   // With a back end (Supabase), listings come from it; without one, "Anunciar" keeps them in this browser.
   let remote: RemoteBackend | null = null;
@@ -111,7 +113,7 @@ async function main() {
   if (backendConfig) {
     try {
       remote = await RemoteBackend.connect(backendConfig.url, backendConfig.key);
-      const r = await remote.loadListings();
+      const r = await remote.loadListings(siteOrg);
       remoteListings = ofSite(r.listings);
       mergeAgencies(r.agencies);
     } catch (err) {
@@ -245,6 +247,7 @@ async function main() {
     if (fly) scene.flyToListing(l);
     scene.select(id);
     const index = currentList.findIndex((x) => x.id === id);
+    if (l.partial) loadDetail(l);
     drawer.open(
       l,
       index < 0
@@ -261,6 +264,27 @@ async function main() {
     // history would mix with the site's.
     if (wasOpen || embed) replaceUrl();
     else history.pushState({ drawer: true, pristine: true } satisfies HistoryState, '', urlFor(id));
+  }
+
+  // A summary from the back end opens at once; its description and photos follow. Only the last listing opened
+  // is shown when its details arrive.
+  let detailToken = 0;
+  function loadDetail(l: Listing) {
+    if (!remote) return;
+    const token = ++detailToken;
+    remote.listingDetail(l.id, Boolean(l.userAdded)).then(
+      (full) => {
+        if (token !== detailToken || drawer.currentId !== l.id) return;
+        if (!full) return drawer.detailFailed(l.id, 'Este anúncio saiu do ar.');
+        // the same object everywhere (map, list, filters) gets the details
+        Object.assign(l, full);
+        delete l.partial;
+        drawer.refresh(l);
+      },
+      (err: Error) => {
+        if (token === detailToken) drawer.detailFailed(l.id, `${err.message}. Feche e abra o anúncio de novo.`);
+      },
+    );
   }
 
   const filtersUi = mountFilters($<HTMLFormElement>('#filters'), store, agencies, data.meta.bairros, {
@@ -431,7 +455,7 @@ async function main() {
   /** Reloads the back end's listings (after login, logout or a change) and refreshes the map and list. */
   async function reloadRemote() {
     if (!remote) return;
-    const r = await remote.loadListings();
+    const r = await remote.loadListings(siteOrg);
     mergeAgencies(r.agencies);
     remoteListings = ofSite(r.listings);
     listingsChanged();

@@ -74,6 +74,26 @@ export interface PhotoRow {
   is_floor_plan: boolean;
 }
 
+/**
+ * Summary of a listing for the map (map_listings / my_map_listings): the row without description, video, tour and
+ * advertiser and without empty (null) fields, plus the client's name and the cover photo. The rest comes when the
+ * listing is opened.
+ */
+export type SummaryRow = Omit<ListingRow, 'description' | 'video_url' | 'tour_url' | 'advertiser'> & {
+  org_name?: string;
+  cover?: string;
+  cover_thumb?: string;
+};
+
+/** A summary as a Listing marked `partial` (no description, only the cover photo). */
+export function summaryToListing(r: SummaryRow, photoUrl: (path: string) => string, mine: boolean): Listing {
+  const cover: PhotoRow[] = r.cover
+    ? [{ listing_id: r.id, path: r.cover, thumb_path: r.cover_thumb ?? null, caption: null, position: 0, is_floor_plan: false }]
+    : [];
+  const row: ListingRow = { ...r, description: '', video_url: null, tour_url: null, advertiser: null };
+  return { ...rowToListing(row, cover, photoUrl, mine), partial: true };
+}
+
 const num = (v: number | string | null | undefined) => (v === null || v === undefined ? undefined : Number(v));
 const opt = <K extends string, V>(key: K, v: V | null | undefined) =>
   (v === null || v === undefined ? {} : { [key]: v }) as Partial<Record<K, V>>;

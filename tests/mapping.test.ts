@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dataUrlToBlob, listingToRow, rowToListing, toEwkt, type ListingRow } from '../src/backend/mapping';
+import { dataUrlToBlob, listingToRow, rowToListing, summaryToListing, toEwkt, type ListingRow, type SummaryRow } from '../src/backend/mapping';
 import type { Listing } from '../src/data/types';
 
 const row = (extra: Partial<ListingRow> = {}): ListingRow => ({
@@ -57,6 +57,19 @@ describe('rowToListing', () => {
       footprint: undefined, footprint_geojson: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } });
     const l = rowToListing(mine, [], String, true);
     expect(l).toMatchObject({ userAdded: true, draft: true, footprint: { type: 'Polygon' } });
+  });
+});
+
+describe('summaryToListing', () => {
+  it('a map summary (empty fields left out) has only the cover and is marked partial', () => {
+    const { description: _d, video_url: _v, tour_url: _t, advertiser: _a, ...rest } = row();
+    const summary = { ...rest, condo_fee: undefined, previous_price: undefined, cover: 'a.jpg', cover_thumb: 'a-mini.jpg', org_name: 'A' };
+    const l = summaryToListing(summary as unknown as SummaryRow, (p) => `https://cdn/${p}`, false);
+    expect(l).toMatchObject({ partial: true, description: '', price: 500000, photos: [{ src: 'https://cdn/a.jpg', thumb: 'https://cdn/a-mini.jpg' }] });
+    expect(l.condoFee).toBeUndefined();
+    expect(l.previousPrice).toBeUndefined();
+    expect(l.advertiser).toBeUndefined();
+    expect(summaryToListing({ ...rest } as SummaryRow, String, false).photos).toBeUndefined();
   });
 });
 

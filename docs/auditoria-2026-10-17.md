@@ -69,6 +69,19 @@ Arquitetura e dados · **crítica com backend** · alta · médio a grande.
   - o embed filtrado por `org_id` no servidor.
 - **Pronto quando:** um teste de backend com 2.000 anúncios × 10 fotos recebe todas as fotos, e o mapa abre com
   5.000 anúncios baixando só o resumo.
+- **Feito em 17/10, com resumo e ficha sob demanda** (`supabase/migrations/20261025000001_map_listings.sql`):
+  - `map_listings(p_org)` devolve num JSON só (não cortado) o resumo de cada anúncio publicado: tudo o que mapa,
+    lista, dica e filtros usam, mais o nome do cliente e a capa (miniatura), sem descrição, vídeo, tour e anunciante;
+    `p_org` filtra o embed de um cliente no servidor;
+  - `my_map_listings()` faz o mesmo com os anúncios dos clientes de quem entrou (rascunhos e local exato);
+  - ao abrir a ficha, `listingDetail` lê o anúncio e todas as suas fotos (e o histórico de preço, se for seu); a
+    ficha mostra "Carregando fotos e detalhes…" e, se outro anúncio for aberto antes, a resposta antiga é ignorada;
+  - `tests/backend/volume.test.ts`: 5.000 anúncios, 2.000 com 10 fotos; a consulta comum para em 1.000 e o resumo
+    traz os 5.000, com a capa certa, em ~0,6 s; as 10 fotos vêm ao abrir; o resumo tem ~780 bytes por anúncio
+    (3,9 MB para 5.000, ~250 KB com gzip). `verify:backend` passou com esses 5.000 anúncios no banco.
+  - **Fica para depois:** os filtros continuam no navegador (o mapa acinzenta o que não bate, então precisa de todos
+    os resumos), e `listings_in_bbox` segue sem uso. Bem acima de 5.000 anúncios, o próximo passo é carregar o
+    resumo por área do mapa.
 
 ### A2. O build de produção mostra conteúdo fictício em anúncios reais [prioridade 2]
 

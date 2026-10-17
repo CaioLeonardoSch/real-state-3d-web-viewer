@@ -144,6 +144,20 @@ export class Drawer {
     return this.openId;
   }
 
+  /** Renders the open listing again (its details arrived). */
+  refresh(l: Listing): void {
+    if (this.openId !== l.id) return;
+    const top = this.el.scrollTop;
+    this.open(l, this.nav);
+    this.el.scrollTop = top;
+  }
+
+  /** The details of the open listing could not be loaded. */
+  detailFailed(id: string, message: string): void {
+    const el = this.openId === id ? this.el.querySelector('.detail-loading') : null;
+    if (el) el.textContent = message;
+  }
+
   open(l: Listing, nav: DrawerNav | null = null): void {
     const freshOpen = this.openId === null;
     this.openId = l.id;
@@ -299,7 +313,11 @@ export class Drawer {
           ? `<ul class="amenities" aria-label="Comodidades">${l.features.map((f) => `<li>${AMENITY_LABELS[f]}</li>`).join('')}</ul>`
           : ''
       }
-      <p class="description">${escapeHtml(l.description)}</p>
+      ${
+        l.partial
+          ? '<p class="description detail-loading" role="status">Carregando fotos e detalhes…</p>'
+          : `<p class="description">${escapeHtml(l.description)}</p>`
+      }
       ${
         (video && !embed) || tour
           ? `<p class="media-links">${video && !embed ? `<a href="${escapeHtml(video)}" target="_blank" rel="noopener">▶ Ver vídeo</a>` : ''}${
@@ -309,7 +327,7 @@ export class Drawer {
       }
       ${
         // the generated plan and the payment simulation are invented: only the demonstration shows them, never a real listing
-        l.floorPlanImage || !DEMO
+        l.floorPlanImage || l.partial || !DEMO
           ? ''
           : `<figure class="floorplan">
         ${floorPlanSvg(l)}
@@ -331,7 +349,7 @@ export class Drawer {
         <p class="muted small">Sem juros nem correção. Valores apenas para demonstração; não é proposta de financiamento.</p>
       </section>` : ''}
       ${
-        l.userAdded
+        l.userAdded && !l.partial
           ? `<section class="manage">
               <h3>Gerenciar anúncio</h3>
               <button type="button" class="btn-primary manage-edit" data-action="edit">Editar anúncio</button>

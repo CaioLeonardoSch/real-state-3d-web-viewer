@@ -161,6 +161,8 @@ export interface Listing {
   remote?: true;
   /** Not published yet (back end only). */
   draft?: true;
+  /** Summary from the back end (no description, only the cover photo): the rest loads when the listing opens. */
+  partial?: true;
 
   // ---- deal (absent = sale)
   transaction?: Transaction;

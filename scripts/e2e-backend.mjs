@@ -19,6 +19,8 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** The open listing's details (description, photos, history) arrived from the server. */
+const detailReady = (p) => p.waitForFunction(() => !!document.querySelector('#drawer.open') && !document.querySelector('#drawer .detail-loading'), null, { timeout: 15000 });
 /** Authenticator-app codes already typed: the next one waits for a new code (Supabase may refuse a repeat). */
 const usedCodes = new Set();
 
@@ -236,6 +238,7 @@ try {
   await page.fill('#add-panel input[name="whatsapp"]', '(47) 90000-1111');
   await page.click('#add-panel button:has-text("Salvar anúncio")');
   await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa publicada no backend', null, { timeout: 20000 });
+  await detailReady(page);
   await waitIdle(page);
   const saved = await page.evaluate(() => ({
     badge: document.querySelector('#drawer .badge-user')?.textContent,
@@ -255,6 +258,7 @@ try {
   }), id);
   await visitor.page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(visitor.page);
   const pubDrawer = await visitor.page.evaluate(() => ({
     address: document.querySelector('#drawer .drawer-address')?.textContent,
     mine: !!document.querySelector('#drawer .badge-user'),
@@ -312,11 +316,13 @@ try {
   await page.keyboard.press('Escape');
   await page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(page);
 
   // ---- lower the price (server records the history and the reduction)
   await page.fill('#drawer .manage-form input[name="price"]', '800000');
   await page.click('#drawer .manage-form button[type="submit"]');
   await page.waitForFunction(() => !!document.querySelector('#drawer .price-was s'), null, { timeout: 15000 });
+  await detailReady(page);
   const managed = await page.evaluate(() => ({
     was: document.querySelector('#drawer .price-was s')?.textContent,
     cut: document.querySelector('#drawer .price-cut')?.textContent,
@@ -327,6 +333,7 @@ try {
   await visitor.page.waitForSelector('body[data-ready="true"]');
   await visitor.page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(visitor.page);
   const pubCut = await visitor.page.evaluate(() => ({
     was: document.querySelector('#drawer .price-was s')?.textContent,
     history: document.querySelectorAll('#drawer .price-history li').length,
@@ -345,6 +352,7 @@ try {
   await page.selectOption('#add-panel select[name="addressDisplay"]', 'street');
   await page.click('#add-panel button:has-text("Salvar alterações")');
   await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa editada no backend', null, { timeout: 20000 });
+  await detailReady(page);
   const editedMine = await page.evaluate(() => ({
     pos: document.querySelector('#drawer .gal-pos')?.textContent,
     strip: [...document.querySelectorAll('#drawer .gal-strip img')].map((i) => i.getAttribute('src')),
@@ -359,6 +367,7 @@ try {
   await visitor.page.waitForSelector('body[data-ready="true"]');
   await visitor.page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(visitor.page);
   const pubEdited = await visitor.page.evaluate(() => ({
     title: document.querySelector('#drawer h2')?.textContent,
     address: document.querySelector('#drawer .drawer-address')?.textContent,
@@ -423,6 +432,7 @@ try {
   page.on('dialog', (d) => d.accept());
   await page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(page);
   const trashLabel = await page.textContent('#drawer [data-action="delete"]');
   await page.click('#drawer [data-action="delete"]');
   await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
@@ -442,6 +452,7 @@ try {
   await page.keyboard.press('Escape');
   await page.click(`#results button[data-id="${id}"]`);
   await sleep(600);
+  await detailReady(page);
   await page.click('#drawer [data-action="delete"]');
   await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
   await page.click('.account-toggle');

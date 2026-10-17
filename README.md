@@ -107,6 +107,10 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
 - **Páginas para o Google:** `npm run build` gera uma página estática por anúncio (`dist/imovel/…/`), o
   `sitemap.xml` e a prévia com foto para links compartilhados (`scripts/prerender.mjs`).
 
+- **Carga do mapa:** o mapa recebe numa resposta só um resumo de cada anúncio (`map_listings`, com a foto de capa);
+  a descrição, as fotos e o resto vêm quando a ficha é aberta. Assim o limite de 1.000 linhas por consulta do
+  Supabase não esconde anúncios nem fotos (teste com 5.000 em `tests/backend/volume.test.ts`).
+
 Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
 `npm run db:start`, `npm run test:backend` e `npm run verify:backend`.
 

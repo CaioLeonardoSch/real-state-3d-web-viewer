@@ -3,7 +3,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Agency, Listing, Photo } from '../data/types';
 import type { AuditEntry } from './audit';
-import { dataUrlToBlob, listingToRow, rowToListing, type ListingRow, type PhotoRow } from './mapping';
+import { dataUrlToBlob, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
 
@@ -357,46 +357,48 @@ export class RemoteBackend {
 
   private photoUrl = (path: string) => this.sb.storage.from(PHOTOS).getPublicUrl(path).data.publicUrl;
 
-  private async photosFor(ids: string[]): Promise<PhotoRow[]> {
-    if (!ids.length) return [];
-    const { data, error } = await this.sb
-      .from('listing_photos')
-      .select('listing_id, path, thumb_path, large_path, caption, position, is_floor_plan')
-      .in('listing_id', ids);
-    fail(error, 'Não foi possível ler as fotos');
-    return data ?? [];
-  }
-
   /**
-   * Published listings for everyone, plus the current user's clients' listings (drafts included, exact location,
-   * editable). Also returns the clients as agencies, for names in the UI.
+   * Summaries of the published listings for everyone (of one client only, when given), plus the current user's
+   * clients' listings (drafts included, exact location, editable). Each comes in a single response, so the
+   * server's row limit does not cut them; the description, photos and the rest come with listingDetail.
+   * Also returns the clients as agencies, for names in the UI.
    */
-  async loadListings(): Promise<{ listings: Listing[]; agencies: Agency[] }> {
+  async loadListings(orgId: string | null = null): Promise<{ listings: Listing[]; agencies: Agency[] }> {
     const [pub, mine] = await Promise.all([
-      this.sb.from('public_listings').select('*'),
-      (async () => ((await this.session()) ? this.sb.from('my_listings').select('*') : { data: [], error: null }))(),
+      this.sb.rpc('map_listings', orgId ? { p_org: orgId } : {}),
+      (async () => ((await this.session()) ? this.sb.rpc('my_map_listings') : { data: [], error: null }))(),
     ]);
     fail(pub.error, 'Não foi possível carregar os anúncios');
     fail(mine.error, 'Não foi possível carregar seus anúncios');
-    const mineRows = (mine.data ?? []) as ListingRow[];
+    const mineRows = ((mine.data ?? []) as SummaryRow[]).filter((r) => !orgId || r.org_id === orgId);
     const mineIds = new Set(mineRows.map((r) => r.id));
-    const pubRows = ((pub.data ?? []) as ListingRow[]).filter((r) => !mineIds.has(r.id));
-    const [photos, history] = await Promise.all([
-      this.photosFor([...mineRows, ...pubRows].map((r) => r.id)),
-      this.historyFor(mineRows.map((r) => r.id)),
+    const pubRows = ((pub.data ?? []) as SummaryRow[]).filter((r) => !mineIds.has(r.id));
+    const agencies = new Map<string, string>();
+    for (const r of [...pubRows, ...mineRows]) if (r.org_name) agencies.set(r.org_id, r.org_name);
+    return {
+      listings: [
+        ...pubRows.map((r) => summaryToListing(r, this.photoUrl, false)),
+        ...mineRows.map((r) => summaryToListing(r, this.photoUrl, true)),
+      ],
+      agencies: [...agencies].map(([id, name]) => ({ id, name })),
+    };
+  }
+
+  /** Everything about one listing (description, all photos, video, advertiser; the price history when it is mine). */
+  async listingDetail(id: string, mine: boolean): Promise<Listing | null> {
+    const [row, photos, history] = await Promise.all([
+      this.sb.from(mine ? 'my_listings' : 'public_listings').select('*').eq('id', id).maybeSingle(),
+      this.sb
+        .from('listing_photos')
+        .select('listing_id, path, thumb_path, large_path, caption, position, is_floor_plan')
+        .eq('listing_id', id),
+      mine ? this.historyFor([id]) : Promise.resolve(new Map<string, PricePoint[]>()),
     ]);
-    const listings = [
-      ...pubRows.map((r) => rowToListing(r, photos, this.photoUrl, false)),
-      ...mineRows.map((r) => ({ ...rowToListing(r, photos, this.photoUrl, true), priceHistory: history.get(r.id) ?? [] })),
-    ];
-    const orgIds = [...new Set(listings.map((l) => l.agency))];
-    let agencies: Agency[] = [];
-    if (orgIds.length) {
-      const { data, error } = await this.sb.from('organizations').select('id, name').in('id', orgIds);
-      fail(error, 'Não foi possível ler as imobiliárias');
-      agencies = (data ?? []).map((o) => ({ id: o.id, name: o.name }));
-    }
-    return { listings, agencies };
+    fail(row.error, 'Não foi possível abrir o anúncio');
+    fail(photos.error, 'Não foi possível ler as fotos');
+    if (!row.data) return null;
+    const l = rowToListing(row.data as ListingRow, (photos.data ?? []) as PhotoRow[], this.photoUrl, mine);
+    return mine ? { ...l, priceHistory: history.get(id) ?? [] } : l;
   }
 
   /** Saves a new listing and uploads its photos (data URLs prepared by the form). Returns the new id. */
