@@ -43,6 +43,7 @@ import type { PickResult, Scene } from '../map/scene';
 import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type PlacementChecker } from '../utils/placement';
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
 import { REGION } from '../config/region';
+import { exclusivityDocProblem } from '../backend/mapping';
 
 const METERS_PER_FLOOR = 3;
 const TYPE_SLUG: Record<ListingType, string> = {
@@ -85,9 +86,9 @@ export interface AddListingDeps {
   /** Neighbourhood containing a point (fills the address). */
   bairroAt: (lngLat: [number, number]) => string | null;
   /** Saves the new listing (`center`: exact point of the place); resolves to an error message, or null on success. */
-  onSave: (l: Listing, center: [number, number]) => Promise<string | null>;
+  onSave: (l: Listing, center: [number, number], exclusivityDoc?: File) => Promise<string | null>;
   /** Saves an edited listing (same id); resolves to an error message, or null on success. */
-  onUpdate: (l: Listing, center: [number, number]) => Promise<string | null>;
+  onUpdate: (l: Listing, center: [number, number], exclusivityDoc?: File) => Promise<string | null>;
   /** With the back end: name of the client the listing is saved for (replaces the agency choice). */
   remoteOrgName?: () => string | null;
   onExport: () => void;
@@ -191,6 +192,17 @@ export class AddListingPanel {
     set('referenceCode', l.referenceCode);
     (f.elements.namedItem('exclusive') as HTMLInputElement).checked = !!l.exclusive;
     this.el.querySelector<HTMLElement>('[data-exclusive]')!.hidden = !l.exclusive;
+    const review = l.exclusivityReview;
+    if (review) {
+      const box = this.el.querySelector<HTMLElement>('[data-exclusive-status]')!;
+      box.hidden = false;
+      box.textContent =
+        review.status === 'verified'
+          ? 'Exclusividade conferida pelo suporte. Enviar outro documento faz uma nova conferência.'
+          : review.status === 'refused'
+            ? `O suporte recusou o documento${review.note ? `: ${review.note}` : ''}. Envie outro para nova conferência.`
+            : 'Documento enviado. Aguardando a conferência do suporte; o selo aparece depois.';
+    }
     set('availability', l.availability);
     set('highlight', l.highlight);
     const draft = f.elements.namedItem('draft') as HTMLInputElement | null;
@@ -345,8 +357,9 @@ export class AddListingPanel {
           ${field('Telefone', `<input name="phone" type="tel" maxlength="20">`)}
           ${field('E-mail', `<input name="email" type="email" maxlength="80">`)}
           <label class="a-check a-wide"><input type="checkbox" name="exclusive"> Tenho autorização de venda com exclusividade</label>
-          <label class="a-field a-wide" data-exclusive hidden>Documento de autorização (PDF ou imagem; conferido antes de publicar)
-            <input name="exclusivityDoc" type="file" accept="application/pdf,image/*"></label>
+          <label class="a-field a-wide" data-exclusive hidden>Documento de autorização (PDF, JPG ou PNG, até 10 MB; o selo “Exclusivo” aparece depois da conferência do suporte)
+            <input name="exclusivityDoc" type="file" accept="application/pdf,image/jpeg,image/png"></label>
+          <p class="a-hint a-wide" data-exclusive-status role="status" hidden></p>
         </fieldset>
 
         <fieldset class="a-section">
@@ -734,6 +747,8 @@ export class AddListingPanel {
     const price = Math.round((tx === 'rent' ? rentPrice : salePrice)!);
     const doc = (this.form.elements.namedItem('exclusivityDoc') as HTMLInputElement).files?.[0];
     const exclusive = (this.form.elements.namedItem('exclusive') as HTMLInputElement).checked;
+    const docProblem = exclusive && doc ? exclusivityDocProblem(doc) : null;
+    if (docProblem) return this.showError(docProblem);
     const opt = <T>(key: string, v: T | null | undefined | '') => (v === null || v === undefined || v === '' ? {} : { [key]: v });
     const iptu = num('iptu');
     const date = today();
@@ -805,7 +820,8 @@ export class AddListingPanel {
     btn.disabled = true;
     btn.textContent = 'Salvando…';
     try {
-      const error = editing ? await this.deps.onUpdate(listing, place.center) : await this.deps.onSave(listing, place.center);
+      const file = exclusive ? doc : undefined;
+      const error = editing ? await this.deps.onUpdate(listing, place.center, file) : await this.deps.onSave(listing, place.center, file);
       if (error) return this.showError(error);
       this.close();
     } finally {

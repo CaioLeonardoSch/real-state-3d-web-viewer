@@ -224,6 +224,45 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await anon().from('audit_log').select('id')).data ?? []).toHaveLength(0);
   });
 
+  it('exclusividade: o documento vai para o bucket privado e só o suporte confere; trocar o documento confere de novo', async () => {
+    const l = await bruno.client.from('listings').insert(listingRow(orgA, { exclusive: true, exclusive_verified: true })).select('id, exclusive_verified').single();
+    const id = l.data!.id as string;
+    expect(l.data!.exclusive_verified).toBe(false); // o anunciante não se autoconfere
+    const path = `${orgA}/${id}/autorizacao.pdf`;
+    const pdf = new Blob(['%PDF-1.4 teste'], { type: 'application/pdf' });
+    expect((await bruno.client.storage.from('exclusivity-docs').upload(path, pdf, { contentType: 'application/pdf' })).error).toBeNull();
+    // outra imobiliária não envia para a pasta da A, e o caminho tem de ser do próprio anúncio
+    expect((await carla.client.storage.from('exclusivity-docs').upload(`${orgA}/${id}/x.pdf`, pdf, { contentType: 'application/pdf' })).error).not.toBeNull();
+    expect((await bruno.client.from('listings').update({ exclusivity_doc: `${orgA}/outro/x.pdf` }).eq('id', id)).error?.message).toMatch(/exclusivity_doc_check/);
+    expect((await bruno.client.from('listings').update({ exclusivity_doc: path, exclusivity_reviewed_at: new Date().toISOString() }).eq('id', id)).error).toBeNull();
+    // o corretor não confere nem lê a fila; a dona lê o documento (link temporário), outra imobiliária não
+    expect((await bruno.client.rpc('review_exclusivity', { p_listing: id, p_ok: true })).error?.message).toMatch(/suporte/);
+    expect((await bruno.client.rpc('exclusivity_queue')).error).not.toBeNull();
+    expect((await ana.client.storage.from('exclusivity-docs').createSignedUrl(path, 60)).error).toBeNull();
+    expect((await carla.client.storage.from('exclusivity-docs').createSignedUrl(path, 60)).data).toBeNull();
+    const queue = await staff.client.rpc('exclusivity_queue');
+    expect(queue.data.find((q: { id: string }) => q.id === id)).toMatchObject({ org_name: 'Imobiliária A', doc: path });
+    expect((await staff.client.storage.from('exclusivity-docs').createSignedUrl(path, 60)).error).toBeNull();
+    // recusar pede o motivo, que a imobiliária lê
+    expect((await staff.client.rpc('review_exclusivity', { p_listing: id, p_ok: false, p_note: ' ' })).error?.message).toMatch(/motivo/);
+    expect((await staff.client.rpc('review_exclusivity', { p_listing: id, p_ok: false, p_note: 'Documento sem assinatura' })).error).toBeNull();
+    let row = (await bruno.client.from('my_listings').select('exclusive_verified, exclusivity_note, exclusivity_reviewed_at').eq('id', id).single()).data!;
+    expect(row).toMatchObject({ exclusive_verified: false, exclusivity_note: 'Documento sem assinatura' });
+    expect(row.exclusivity_reviewed_at).not.toBeNull();
+    expect((await staff.client.rpc('exclusivity_queue')).data.map((q: { id: string }) => q.id)).not.toContain(id);
+    expect((await staff.client.rpc('review_exclusivity', { p_listing: id, p_ok: true })).error).toBeNull();
+    expect((await anon().from('public_listings').select('exclusive').eq('id', id).single()).data!.exclusive).toBe(true);
+    // editar outro campo mantém a conferência; trocar o documento volta para a fila
+    await bruno.client.from('listings').update({ title: 'Exclusivo editado', exclusive_verified: false }).eq('id', id);
+    expect((await anon().from('public_listings').select('exclusive').eq('id', id).single()).data!.exclusive).toBe(true);
+    const path2 = `${orgA}/${id}/nova.pdf`;
+    await bruno.client.storage.from('exclusivity-docs').upload(path2, pdf, { contentType: 'application/pdf' });
+    await bruno.client.from('listings').update({ exclusivity_doc: path2 }).eq('id', id);
+    row = (await bruno.client.from('my_listings').select('exclusive_verified, exclusivity_note, exclusivity_reviewed_at').eq('id', id).single()).data!;
+    expect(row).toMatchObject({ exclusive_verified: false, exclusivity_note: null, exclusivity_reviewed_at: null });
+    expect((await staff.client.rpc('exclusivity_queue')).data.map((q: { id: string }) => q.id)).toContain(id);
+  });
+
   it('lixeira: some do público, aparece na lixeira com quem excluiu, e pode ser restaurado', async () => {
     const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
     const id = l.data!.id;

@@ -546,12 +546,12 @@ async function main() {
   }
 
   /** Full edit from the "Anunciar" form in edit mode (same id). */
-  async function saveEditedListing(l: Listing, center: [number, number]): Promise<string | null> {
+  async function saveEditedListing(l: Listing, center: [number, number], doc?: File): Promise<string | null> {
     const before = listings.find((x) => x.id === l.id);
     if (!before) return 'Este anúncio não existe mais.';
     if (remote && l.remote) {
       try {
-        await remote.updateListingFull(l, center);
+        await remote.updateListingFull(l, center, doc);
         await reloadRemote();
       } catch (err) {
         return (err as Error).message;
@@ -587,12 +587,12 @@ async function main() {
     newId: (slug) => newListingId(slug, known.listingIds),
     bairroAt: (p) => scene.bairroAt(p),
     remoteOrgName: () => (remote ? (account?.currentOrg?.name ?? null) : null),
-    onSave: async (l, center) => {
+    onSave: async (l, center, doc) => {
       if (remote) {
         const org = account?.currentOrg;
         if (!org) return 'Entre na sua conta e cadastre a imobiliária para anunciar.';
         try {
-          const id = await remote.createListing(l, org.id, center);
+          const id = await remote.createListing(l, org.id, center, doc);
           await reloadRemote();
           announce(`Anúncio "${l.title}" publicado.`);
           setTimeout(() => openListing(id, true), 0);

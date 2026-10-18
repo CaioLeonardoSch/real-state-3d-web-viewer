@@ -189,6 +189,10 @@ README). O que muda com backend:
 - **Fotos e planta** vão para o storage (R2/Supabase) com miniaturas; no protótipo ficam reduzidas no `localStorage`.
 - **Vídeo** continua sendo um link do YouTube/Vimeo exibido embutido (padrão dos portais); não hospedamos vídeo.
 - **Documento de exclusividade** é enviado e conferido por uma pessoa antes de o anúncio ganhar a marca "Exclusivo".
+  **Feito em 17/10:** o arquivo vai para o bucket privado `exclusivity-docs` em `<cliente>/<anúncio>/`; o suporte
+  confere em Minha conta → "Exclusividades a conferir" (`exclusivity_queue` e `review_exclusivity`, só para a equipe
+  com o segundo fator). Recusar exige o motivo, que o anunciante vê ao editar. Só a conferência muda o resultado:
+  trocar o documento ou tirar a exclusividade volta para "a conferir".
 - **Histórico de preço** é gravado pelo sistema a cada mudança e fica visível só para o anunciante. O preço riscado
   ("de R$ X por R$ Y") só aparece a partir de um preço que esteve de fato publicado na plataforma: o anunciante não
   digita o "preço anterior". O valor do desconto em si é decidido entre vendedor e corretor; a plataforma só garante

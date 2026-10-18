@@ -6,6 +6,7 @@ import {
   type ListingTableRow,
   type ListingFeed,
   type ListingStats,
+  type ExclusivityItem,
   type Lead,
   type LeadStatus,
   type Member,
@@ -239,6 +240,8 @@ export class AccountPanel {
     const [members, invites] = this.org && canManage
       ? await Promise.all([this.backend.members(this.org.id), this.backend.invitations(this.org.id)])
       : [[], []];
+    // the support team's queue; a failure here must not hide the rest of the panel
+    const queue = this.staff ? await this.backend.exclusivityQueue().catch(() => null) : [];
     // the invitation from the link, when it is for this account and not in the list yet
     let offers = [...this.pending];
     const link = this.linkInfo;
@@ -266,12 +269,13 @@ export class AccountPanel {
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
       ${this.org && canManage ? this.sectionHtml('feed', 'Importação automática (XML)') : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
-      ${this.staff ? this.staffHtml() : ''}
+      ${this.staff ? this.staffHtml() + this.exclusivityHtml(queue) : ''}
       ${canManage || this.staffMember || this.mfa.enabled ? this.mfaHtml() : ''}
       <div class="a-actions account-signout"><button type="button" class="btn-secondary" data-action="signout">Sair</button></div>`;
     this.teamMembers = members;
     this.bindClose();
     this.bindLoggedIn(members);
+    this.bindExclusivity(queue ?? []);
     this.bindMfa();
     this.bindSections();
   }
@@ -1171,6 +1175,69 @@ export class AccountPanel {
         <div class="a-actions a-wide"><button type="submit" class="btn-primary">Cadastrar imobiliária</button></div>
       </form>
       <div class="org-result" hidden></div></section>`;
+  }
+
+  /** Support: exclusive listings whose authorisation document waits to be checked. */
+  private exclusivityHtml(queue: ExclusivityItem[] | null): string {
+    const when = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
+    const body = !queue
+      ? '<p class="a-error">Não foi possível ler a fila agora.</p>'
+      : !queue.length
+        ? '<p class="muted small">Nenhum documento esperando conferência.</p>'
+        : `<ul class="exclusivity-queue">${queue
+            .map(
+              (q) => `<li data-listing="${escapeHtml(q.id)}">
+          <p><strong>${escapeHtml(q.title)}</strong>${q.referenceCode ? ` · cód. ${escapeHtml(q.referenceCode)}` : ''}<br>
+            <span class="muted small">${escapeHtml(q.orgName)} · enviado em ${when(q.sentAt)}</span></p>
+          <div class="a-actions">
+            <button type="button" class="btn-secondary" data-doc="${escapeHtml(q.doc)}">Ver documento</button>
+            <button type="button" class="btn-primary" data-review="ok">Confirmar</button>
+            <button type="button" class="btn-secondary" data-review="no">Recusar com motivo</button>
+          </div></li>`,
+            )
+            .join('')}</ul>`;
+    return `<section class="account-section"><h3>Suporte: exclusividades a conferir${queue?.length ? ` (${queue.length})` : ''}</h3>
+      <p class="a-hint">Confira se o documento autoriza a venda com exclusividade deste imóvel. O selo “Exclusivo” só aparece no público depois de confirmado.</p>
+      ${body}</section>`;
+  }
+
+  private bindExclusivity(queue: ExclusivityItem[]): void {
+    this.el.querySelectorAll<HTMLLIElement>('.exclusivity-queue li').forEach((li) => {
+      const item = queue.find((q) => q.id === li.dataset.listing);
+      if (!item) return;
+      const docBtn = li.querySelector<HTMLButtonElement>('[data-doc]')!;
+      docBtn.addEventListener('click', () => {
+        // opened now (inside the click) so the browser does not block it; the address comes after
+        const win = window.open('', '_blank');
+        if (win) win.opener = null;
+        void this.act(docBtn, async () => {
+          try {
+            const url = await this.backend.exclusivityDocUrl(item.doc);
+            if (win) win.location.href = url;
+            else window.location.href = url;
+          } catch (ex) {
+            win?.close();
+            throw ex;
+          }
+        });
+      });
+      li.querySelectorAll<HTMLButtonElement>('[data-review]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const ok = b.dataset.review === 'ok';
+          let note = '';
+          if (!ok) {
+            note = window.prompt(`Motivo da recusa de "${item.title}" (a imobiliária vai ler):`)?.trim() ?? '';
+            if (!note) return;
+          } else if (!window.confirm(`Confirmar a exclusividade de "${item.title}"? O selo aparece no público.`)) return;
+          void this.act(b, async () => {
+            await this.backend.reviewExclusivity(item.id, ok, note);
+            this.note = ok ? 'Exclusividade confirmada.' : 'Exclusividade recusada; a imobiliária vê o motivo ao editar o anúncio.';
+            this.onChange();
+            await this.render();
+          });
+        }),
+      );
+    });
   }
 
   /** Link box with copy and WhatsApp buttons, shown after creating an invitation. */

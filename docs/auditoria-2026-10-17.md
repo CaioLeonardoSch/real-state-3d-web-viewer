@@ -273,7 +273,8 @@ Interface · média · média (hipótese) · pequeno.
 - **Painel da conta no pacote do mapa:** `AccountPanel` é importado direto em `src/main.ts:37` e vai para todo
   visitante (M5) [prioridade 30].
 - **Documento de exclusividade:** o formulário guarda só o nome do arquivo; o bucket `exclusivity-docs` não recebe
-  nada e a conferência depende de intervenção manual [prioridade 34].
+  nada e a conferência depende de intervenção manual [prioridade 34]. **Feito em 17/10:** o arquivo vai para o
+  bucket privado e o suporte confere na tela, com fila, link temporário e recusa com motivo.
 - **`robots.txt` da demonstração** fica em `/real-state-3d-web-viewer/robots.txt`, onde os robôs não leem. Só afeta
   a demonstração.
 - **`.pmtiles` no git:** ~25 MB por mês no histórico [prioridade 32].
@@ -294,7 +295,7 @@ Interface · média · média (hipótese) · pequeno.
 | Site white label, editor, histórico de versões | Implementado |
 | SEO no domínio do cliente | Código pronto, não publicado (A5) |
 | Espelho de vendas | Só demonstração (A7). **Feito em 17/10:** no banco, com reservas e planilha |
-| Documento de exclusividade | Só interface |
+| Documento de exclusividade | Só interface. **Feito em 17/10:** envio e conferência pelo suporte |
 | Rascunho de anúncio | Só no banco, sem interface |
 | Busca por área (`listings_in_bbox`) | Só no banco, sem uso |
 | Agendamento de visita, alertas, IA, serviços por perto | Pedido de visita feito em 17/10 (item 26); o resto não existe |

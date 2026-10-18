@@ -63,7 +63,7 @@ são opcionais e sem limite de quantidade.
 | Imóvel | tipo, finalidade (residencial/comercial), área útil e total, área do terreno, quartos, suítes, banheiros, vagas e vagas cobertas, andar da unidade, andares do edifício, torres, ano de construção (ou de entrega), obra, comodidades, descrição |
 | Endereço | CEP (preenche rua, bairro e cidade pelo ViaCEP), rua, número, complemento, bairro (preenchido pelo ponto escolhido no mapa), cidade e **o que mostrar ao público**: endereço completo, só a rua ou só o bairro. Sem o endereço completo, o mapa mostra o raio de 150 m em vez do prédio |
 | Mídia | fotos (sem mínimo nem máximo; capa escolhida, legendas), planta (imagem, entra no fim da galeria), vídeo (link do YouTube ou Vimeo, exibido embutido no anúncio) e link de tour 360° |
-| Anunciante | imobiliária, CRECI, código de referência, contato, WhatsApp, telefone, e-mail, exclusividade (com o documento de autorização, que seria conferido pelo backend) |
+| Anunciante | imobiliária, CRECI, código de referência, contato, WhatsApp, telefone, e-mail, exclusividade (com o documento de autorização, enviado ao armazenamento privado e conferido pelo suporte antes do selo) |
 | Publicação | situação (ativo, reservado, vendido), tipo de destaque (padrão, destaque, super destaque); datas de publicação e atualização automáticas |
 
 As fotos são reduzidas no navegador (JPEG, lado maior de 960 px) porque o `localStorage` comporta poucos MB; com

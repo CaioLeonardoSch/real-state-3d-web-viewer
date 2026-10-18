@@ -308,6 +308,18 @@ body[data-tod='night'] .f-pending {
   margin: 0 0 8px;
   font-size: 14px;
 }
+.exclusivity-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.exclusivity-queue li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.exclusivity-queue p {
+  margin: 0 0 6px;
+}
 .account-section h4 {
   margin: 10px 0 4px;
   font-size: 12px;

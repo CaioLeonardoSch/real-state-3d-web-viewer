@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dataUrlToBlob, listingToRow, rowToListing, summaryToListing, toEwkt, type ListingRow, type SummaryRow } from '../src/backend/mapping';
+import { dataUrlToBlob, exclusivityDocProblem, listingToRow, rowToListing, summaryToListing, toEwkt, type ListingRow, type SummaryRow } from '../src/backend/mapping';
 import type { Listing } from '../src/data/types';
 
 const row = (extra: Partial<ListingRow> = {}): ListingRow => ({
@@ -102,5 +102,23 @@ describe('writing', () => {
     const b = dataUrlToBlob('data:image/png;base64,iVBORw0KGgo=');
     expect(b.type).toBe('image/png');
     expect(new Uint8Array(await b.arrayBuffer()).slice(0, 4)).toEqual(new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+  });
+});
+
+describe('exclusividade', () => {
+  const url = (p: string) => p;
+  const ex = { exclusive: true, exclusivity_doc: 'o1/l1/a.pdf' };
+  it('mostra o resultado da conferência só nos anúncios da própria imobiliária', () => {
+    expect(rowToListing(row({ ...ex, exclusive_verified: false }), [], url, true).exclusivityReview).toEqual({ status: 'pending' });
+    expect(rowToListing(row({ ...ex, exclusive_verified: true }), [], url, true).exclusivityReview).toEqual({ status: 'verified' });
+    const refused = rowToListing(row({ ...ex, exclusivity_reviewed_at: '2026-11-01T10:00:00Z', exclusivity_note: 'Sem assinatura' }), [], url, true);
+    expect(refused).toMatchObject({ exclusivityDoc: 'o1/l1/a.pdf', exclusivityReview: { status: 'refused', note: 'Sem assinatura' } });
+    expect(rowToListing(row(ex), [], url, false).exclusivityReview).toBeUndefined();
+    expect(rowToListing(row({ exclusive: true }), [], url, true).exclusivityReview).toBeUndefined();
+  });
+  it('aceita PDF, JPG e PNG de até 10 MB', () => {
+    expect(exclusivityDocProblem({ type: 'application/pdf', size: 1000 })).toBeNull();
+    expect(exclusivityDocProblem({ type: 'image/webp', size: 1000 })).toMatch(/PDF, JPG ou PNG/);
+    expect(exclusivityDocProblem({ type: 'image/png', size: 11 * 1024 * 1024 })).toMatch(/10 MB/);
   });
 });

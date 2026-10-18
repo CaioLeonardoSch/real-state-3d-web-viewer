@@ -58,6 +58,10 @@ export interface ListingRow {
   lot?: Polygon | null;
   // my_listings
   published?: boolean;
+  exclusive_verified?: boolean;
+  exclusivity_doc?: string | null;
+  exclusivity_reviewed_at?: string | null;
+  exclusivity_note?: string | null;
   location_geojson?: Point | null;
   footprint_geojson?: Polygon | MultiPolygon | null;
   lot_geojson?: Polygon | null;
@@ -99,6 +103,13 @@ const opt = <K extends string, V>(key: K, v: V | null | undefined) =>
   (v === null || v === undefined ? {} : { [key]: v }) as Partial<Record<K, V>>;
 const day = (ts: string) => ts.slice(0, 10);
 const round6 = (p: Position) => [Number(p[0].toFixed(6)), Number(p[1].toFixed(6))] as [number, number];
+
+/** Where the support team's check of the exclusivity document stands. */
+export function exclusivityReview(r: ListingRow): NonNullable<Listing['exclusivityReview']> {
+  if (r.exclusive_verified) return { status: 'verified' };
+  if (r.exclusivity_reviewed_at) return { status: 'refused', ...opt('note', r.exclusivity_note) };
+  return { status: 'pending' };
+}
 
 /**
  * A row as the app's Listing. `mine`: the row comes from my_listings (exact location known, editable).
@@ -168,6 +179,7 @@ export function rowToListing(r: ListingRow, photos: PhotoRow[], photoUrl: (path:
     ...(r.advertiser && Object.keys(r.advertiser).length ? { advertiser: r.advertiser } : {}),
     ...opt('referenceCode', r.reference_code),
     ...(r.exclusive ? { exclusive: true } : {}),
+    ...(mine && r.exclusive && r.exclusivity_doc ? { exclusivityDoc: r.exclusivity_doc, exclusivityReview: exclusivityReview(r) } : {}),
     availability: r.availability,
     highlight: r.highlight,
     publishedAt: day(r.published_at),
@@ -249,4 +261,15 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Blob([bytes], { type });
+}
+
+/** What the private bucket takes (the bucket enforces the same limits). */
+export const DOC_TYPES: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
+export const DOC_MAX_BYTES = 10 * 1024 * 1024;
+
+/** Friendly reason why `f` cannot be sent as the exclusivity document, or null when it can. */
+export function exclusivityDocProblem(f: { type: string; size: number }): string | null {
+  if (!DOC_TYPES[f.type]) return 'O documento de exclusividade deve ser PDF, JPG ou PNG.';
+  if (f.size > DOC_MAX_BYTES) return 'O documento de exclusividade passa de 10 MB.';
+  return null;
 }

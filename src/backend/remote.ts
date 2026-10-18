@@ -6,7 +6,7 @@ import type { AuditEntry } from './audit';
 import type { Development, UnitStatus } from '../data/developments';
 import { hasDrawing, rowsToDevelopment, type DevelopmentRow, type UnitRow } from './developments';
 import type { TeamUnit, UnitImportRow } from './unitsCsv';
-import { dataUrlToBlob, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
+import { DOC_TYPES, dataUrlToBlob, exclusivityDocProblem, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
 
@@ -16,6 +16,16 @@ export interface Org {
   slug: string;
   /** Effective role; the platform's support staff act as owner of every client. */
   role: Role;
+}
+
+export interface ExclusivityItem {
+  id: string;
+  orgName: string;
+  title: string;
+  referenceCode: string | null;
+  /** Path in the private bucket. */
+  doc: string;
+  sentAt: string;
 }
 
 export interface Member {
@@ -122,6 +132,7 @@ const codeError = (message: string) =>
   /invalid|expired|code|challenge/i.test(message) ? 'Código incorreto ou vencido. Confira o aplicativo e digite o código atual.' : message;
 
 const PHOTOS = 'listing-photos';
+const EXCLUSIVITY = 'exclusivity-docs';
 const SITE_ASSETS = 'site-assets';
 
 /** A client as its public site sees it. */
@@ -536,12 +547,13 @@ export class RemoteBackend {
   }
 
   /** Saves a new listing and uploads its photos (data URLs prepared by the form). Returns the new id. */
-  async createListing(l: Listing, orgId: string, location: [number, number]): Promise<string> {
+  async createListing(l: Listing, orgId: string, location: [number, number], doc?: File): Promise<string> {
     const { data, error } = await this.sb.from('listings').insert(listingToRow(l, orgId, location)).select('id').single();
     fail(error, 'Não foi possível salvar o anúncio');
     const id = data!.id as string;
     try {
       await this.syncPhotos(id, orgId, l.photos ?? [], l.floorPlanImage ?? null);
+      if (doc && l.exclusive) await this.sendExclusivityDoc(id, orgId, doc);
     } catch (err) {
       // no half-saved listing: remove it (its photo rows go with it)
       await this.removeFiles(orgId, id);
@@ -556,12 +568,51 @@ export class RemoteBackend {
    * kept photos get the new order and captions, new ones are uploaded, removed ones are deleted.
    * The database records the price history and the reduction.
    */
-  async updateListingFull(l: Listing, location: [number, number]): Promise<void> {
+  async updateListingFull(l: Listing, location: [number, number], doc?: File): Promise<void> {
     const { org_id: orgId, ...row } = listingToRow(l, l.agency, location);
     const { data, error } = await this.sb.from('listings').update(row).eq('id', l.id).select('id');
     fail(error, 'Não foi possível salvar');
     if (!data?.length) throw new Error('Não foi possível salvar: sem permissão para editar este anúncio.');
     await this.syncPhotos(l.id, orgId as string, l.photos ?? [], l.floorPlanImage ?? null);
+    if (doc && l.exclusive) await this.sendExclusivityDoc(l.id, orgId as string, doc);
+  }
+
+  /** Uploads the exclusivity document to the private bucket; the listing goes back to "a conferir". */
+  private async sendExclusivityDoc(id: string, orgId: string, doc: File): Promise<void> {
+    const problem = exclusivityDocProblem(doc);
+    if (problem) throw new Error(problem);
+    const path = `${orgId}/${id}/${crypto.randomUUID()}.${DOC_TYPES[doc.type]}`;
+    const up = await this.sb.storage.from(EXCLUSIVITY).upload(path, doc, { contentType: doc.type });
+    fail(up.error, 'Não foi possível enviar o documento de exclusividade');
+    const { data, error } = await this.sb.from('listings').update({ exclusivity_doc: path }).eq('id', id).select('id');
+    fail(error, 'Não foi possível registrar o documento de exclusividade');
+    if (!data?.length) throw new Error('Não foi possível registrar o documento de exclusividade.');
+  }
+
+  /** Support staff only: exclusive listings whose document still has to be checked. */
+  async exclusivityQueue(): Promise<ExclusivityItem[]> {
+    const { data, error } = await this.sb.rpc('exclusivity_queue');
+    fail(error, 'Não foi possível ler as exclusividades a conferir');
+    return ((data ?? []) as { id: string; org_name: string; title: string; reference_code: string | null; doc: string; updated_at: string }[]).map((r) => ({
+      id: r.id,
+      orgName: r.org_name,
+      title: r.title,
+      referenceCode: r.reference_code,
+      doc: r.doc,
+      sentAt: r.updated_at,
+    }));
+  }
+
+  /** Short-lived link to read a document of the private bucket (support staff and the agency's admins). */
+  async exclusivityDocUrl(path: string): Promise<string> {
+    const { data, error } = await this.sb.storage.from(EXCLUSIVITY).createSignedUrl(path, 300);
+    fail(error, 'Não foi possível abrir o documento');
+    return data!.signedUrl;
+  }
+
+  /** Support staff only: confirms the exclusivity or refuses it with the reason the agency will read. */
+  async reviewExclusivity(id: string, ok: boolean, note = ''): Promise<void> {
+    fail((await this.sb.rpc('review_exclusivity', { p_listing: id, p_ok: ok, p_note: note })).error, 'Não foi possível registrar a conferência');
   }
 
   private async upload(dataUrl: string, path: string): Promise<string> {

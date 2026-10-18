@@ -221,7 +221,10 @@ export interface Listing {
   referenceCode?: string;
   /** Exclusive sale authorisation (the document is checked by the back end). */
   exclusive?: boolean;
+  /** Path of the authorisation document in the private bucket (only for the agency's own listings). */
   exclusivityDoc?: string;
+  /** Result of the support team's check of that document (own listings). */
+  exclusivityReview?: { status: 'pending' | 'verified' | 'refused'; note?: string };
   // ---- control
   availability?: Availability;
   /** YYYY-MM-DD */
