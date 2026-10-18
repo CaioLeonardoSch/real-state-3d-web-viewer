@@ -4,6 +4,7 @@ import {
   type LeadFilter,
   type ListingFilter,
   type ListingTableRow,
+  type ListingFeed,
   type ListingStats,
   type Lead,
   type LeadStatus,
@@ -254,6 +255,7 @@ export class AccountPanel {
       ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
+      ${this.org && canManage ? this.sectionHtml('feed', 'Importação automática (XML)') : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
       ${this.staff ? this.staffHtml() : ''}
       ${canManage || this.staffMember || this.mfa.enabled ? this.mfaHtml() : ''}
@@ -384,6 +386,7 @@ export class AccountPanel {
       else if (key === 'leads') await this.loadLeads(body, more);
       else if (key === 'listings') await this.loadListings(body, more);
       else if (key === 'stats') await this.loadStats(body, more);
+      else if (key === 'feed') this.renderFeed(body, await this.backend.listingFeed(this.org.id));
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -741,6 +744,82 @@ export class AccountPanel {
         this.note = 'Anúncio movido para a lixeira.';
         this.onChange();
         await this.render();
+      });
+    });
+  }
+
+  /** "Importação automática (XML)": the address of the CRM's feed, read every 6 hours, and how the last reading went. */
+  private renderFeed(body: HTMLElement, feed: ListingFeed | null): void {
+    const org = this.org!;
+    const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const s = feed?.lastSummary;
+    const items = (list: { referenceCode: string; text: string }[], total: number) =>
+      `<ul class="feed-msgs">${list.map((m) => `<li><strong>${escapeHtml(m.referenceCode)}</strong> ${escapeHtml(m.text)}</li>`).join('')}${
+        total > list.length ? `<li class="muted">e mais ${total - list.length}</li>` : ''
+      }</ul>`;
+    const last = !feed?.lastRunAt
+      ? `<p class="a-hint">${feed ? 'Ainda não foi lido.' : ''}</p>`
+      : `<div class="feed-last feed-${feed.lastStatus}" role="status">
+          <p><strong>Última leitura: ${when(feed.lastRunAt)}</strong> · ${
+            feed.lastStatus === 'erro'
+              ? `não importou: ${escapeHtml(feed.lastError ?? 'falha na leitura')}`
+              : `${s!.created} novos, ${s!.updated} atualizados, ${s!.trashed} para a lixeira${s!.skipped ? `, ${s!.skipped} ignorados` : ''}`
+          }</p>
+          ${s?.errorCount ? `<details><summary>${s.errorCount} com erro</summary>${items(s.errors, s.errorCount)}</details>` : ''}
+          ${s?.skipped ? `<details><summary>${s.skipped} ignorados</summary>${items(s.skippedList, s.skipped)}</details>` : ''}
+          ${s?.warningCount ? `<details><summary>${s.warningCount} avisos</summary>${items(s.warnings, s.warningCount)}</details>` : ''}
+        </div>`;
+    const waiting = feed?.requestedAt && (!feed.lastRunAt || feed.requestedAt > feed.lastRunAt);
+    body.innerHTML = `<p class="a-hint">Informe o endereço do XML que o seu sistema (CRM) já gera para o ZAP, VivaReal ou OLX
+        (formato VRSync). Os anúncios são lidos a cada 6 horas: novos entram publicados, os existentes são atualizados
+        pelo código de referência. O que a equipe fizer pela tela fica: anúncio despublicado continua despublicado, o
+        que foi para a lixeira não volta e o local ajustado não muda.</p>
+      <form class="add-form account-form" data-form="feed" novalidate>
+        <label class="a-field a-wide">Endereço do XML<input name="url" type="url" inputmode="url" maxlength="500" placeholder="https://…/feed.xml" value="${escapeHtml(feed?.url ?? '')}" required></label>
+        <label class="a-check a-wide"><input type="checkbox" name="enabled" ${!feed || feed.enabled ? 'checked' : ''}> <span>Importação ativa</span></label>
+        <label class="a-check a-wide"><input type="checkbox" name="sync" ${!feed || feed.sync ? 'checked' : ''}> <span>Mandar para a lixeira o que sair do XML (dá para restaurar por 30 dias)</span></label>
+        <p class="a-error a-wide" role="alert" hidden></p>
+        <div class="a-actions a-wide">
+          <button type="submit" class="btn-primary">Salvar</button>
+          <button type="button" class="btn-secondary" data-action="import-now" ${feed?.enabled === false ? 'disabled' : ''}>Importar agora</button>
+          ${feed ? '<button type="button" class="link-btn" data-action="remove-feed">Remover</button>' : ''}
+        </div>
+      </form>
+      ${waiting ? '<p class="account-note" role="status">Importação pedida: começa em até 1 hora.</p>' : ''}
+      ${last}`;
+    const form = body.querySelector<HTMLFormElement>('form[data-form="feed"]')!;
+    const errorEl = form.querySelector<HTMLElement>('.a-error')!;
+    const save = async (importNow: boolean, control: HTMLButtonElement) => {
+      const fd = new FormData(form);
+      const url = String(fd.get('url') ?? '').trim();
+      errorEl.hidden = true;
+      if (!/^https?:\/\/\S+$/.test(url)) {
+        errorEl.textContent = 'Informe o endereço completo do XML, começando por https://';
+        errorEl.hidden = false;
+        return;
+      }
+      control.disabled = true;
+      try {
+        await this.backend.saveListingFeed(org.id, { url, enabled: !!fd.get('enabled'), sync: !!fd.get('sync') }, importNow);
+        await this.loadSection('feed');
+      } catch (ex) {
+        errorEl.textContent = (ex as Error).message;
+        errorEl.hidden = false;
+        control.disabled = false;
+      }
+    };
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void save(false, form.querySelector<HTMLButtonElement>('button[type="submit"]')!);
+    });
+    const now = form.querySelector<HTMLButtonElement>('[data-action="import-now"]')!;
+    now.addEventListener('click', () => void save(true, now));
+    const remove = form.querySelector<HTMLButtonElement>('[data-action="remove-feed"]');
+    remove?.addEventListener('click', () => {
+      if (!window.confirm('Parar a importação automática? Os anúncios já importados continuam como estão.')) return;
+      void this.act(remove, async () => {
+        await this.backend.removeListingFeed(org.id);
+        await this.loadSection('feed');
       });
     });
   }

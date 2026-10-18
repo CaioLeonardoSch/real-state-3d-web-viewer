@@ -1,5 +1,6 @@
 // XML import (scripts/import-xml.mjs) against the local Supabase: first import, then a second one that changes a
 // price, drops a photo and leaves a listing out (--sync). Photos come from a local image server, with GPS in EXIF.
+// Then the scheduled import (scripts/import-feeds.mjs), reading the feed from the same server.
 import { execFile } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
@@ -23,6 +24,8 @@ describe.skipIf(!URL_)('importação do XML (VRSync)', () => {
   let slug: string;
   let brokerId: string;
   const brokerEmail = `corretor-xml-${tag}@teste.local`;
+  /** What the server answers at /feed.xml (null: 404). */
+  let served: string | null = null;
   const dir = mkdtempSync(path.join(os.tmpdir(), 'xml-'));
   const sample = readFileSync('tests/fixtures/vrsync-exemplo.xml', 'utf8');
   const feedFile = (xml: string) => {
@@ -43,7 +46,13 @@ describe.skipIf(!URL_)('importação do XML (VRSync)', () => {
       .jpeg()
       .withExif({ IFD3: { GPSLatitudeRef: 'S', GPSLatitude: '26/1 18/1 0/1', GPSLongitudeRef: 'W', GPSLongitude: '48/1 50/1 0/1' } })
       .toBuffer();
-    server = http.createServer((_req, res) => res.writeHead(200, { 'Content-Type': 'image/jpeg' }).end(jpeg)).listen(0, '127.0.0.1');
+    server = http
+      .createServer((req, res) => {
+        if (req.url !== '/feed.xml') return res.writeHead(200, { 'Content-Type': 'image/jpeg' }).end(jpeg);
+        if (served === null) return res.writeHead(404).end('não encontrado');
+        res.writeHead(200, { 'Content-Type': 'application/xml' }).end(served.replace(/__FOTOS__/g, base).replace(/__CORRETOR__/g, brokerEmail));
+      })
+      .listen(0, '127.0.0.1');
     await new Promise((r) => server.once('listening', r));
     base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
     slug = `imob-xml-${tag}`;
@@ -121,4 +130,65 @@ describe.skipIf(!URL_)('importação do XML (VRSync)', () => {
     expect(r.updated.map((u: { referenceCode: string }) => u.referenceCode)).toContain('AP-1001');
     expect((await byRef('AP-1001')).updated_at).toBe(before);
   }, 120_000);
+
+  it('respeita a tela: despublicado continua, local ajustado fica, lixeira da equipe não volta; a do importador volta', async () => {
+    const ap = await byRef('AP-1001');
+    const casa = await byRef('CA-2002');
+    const moved = await db()
+      .from('listings')
+      .update({ published: false, placement_locked: true, location: 'SRID=4326;POINT(-48.846 -26.304)', building_osm_id: null, footprint: null, building_height_m: null, address_display: 'street' })
+      .eq('id', ap.id);
+    expect(moved.error).toBeNull();
+    await db().from('listings').update({ deleted_at: new Date().toISOString(), deleted_by: brokerId }).eq('id', casa.id);
+    const before = (await byRef('AP-1001')).location;
+    const r = await importFeed(feedFile(sample), '--sync');
+    expect(r.updated.map((u: { referenceCode: string }) => u.referenceCode)).toEqual(['AP-1001', 'TE-3003']);
+    expect(r.skipped.find((s: { referenceCode: string }) => s.referenceCode === 'CA-2002')?.reason).toMatch(/lixeira/);
+    expect(await byRef('AP-1001')).toMatchObject({ published: false, location: before, building_osm_id: null, price: 780000 });
+    expect((await byRef('TE-3003')).deleted_at).toBeNull();
+    expect((await byRef('CA-2002')).deleted_at).not.toBeNull();
+    await db().from('listings').update({ deleted_at: null, published: true }).in('id', [ap.id, casa.id]);
+  }, 120_000);
+
+  it('feed que some pela metade não esvazia o site sem --force', async () => {
+    const extra = await db()
+      .from('listings')
+      .insert(['X-1', 'X-2', 'X-3', 'X-4'].map((ref) => ({
+        org_id: orgId, import_source: 'xml', type: 'house', title: `Importado ${ref}`, price: 400000, area_m2: 90,
+        location: 'SRID=4326;POINT(-48.85 -26.3)', address_display: 'neighborhood', reference_code: ref,
+      })))
+      .select('id');
+    expect(extra.error).toBeNull();
+    const r = await importFeed(feedFile(sample), '--sync');
+    expect(r.suspect).toBe(true);
+    expect(r.trashed).toEqual([]);
+    expect((await byRef('X-1')).deleted_at).toBeNull();
+    await db().from('listings').delete().in('id', extra.data!.map((x) => x.id));
+  }, 120_000);
+
+  it('importação agendada: lê o endereço cadastrado, grava o resultado; feed fora do ar ou vazio não mexe em nada', async () => {
+    const schedule = () => run('node', ['scripts/import-feeds.mjs', '--local', '--org', orgId], { timeout: 180_000 });
+    const feedRow = async () => (await db().from('listing_feeds').select('*').eq('org_id', orgId).single()).data!;
+    expect((await db().from('listing_feeds').insert({ org_id: orgId, url: `${base}/feed.xml`, requested_at: new Date().toISOString() })).error).toBeNull();
+
+    served = sample.replace('<ListPrice currency="BRL">780000</ListPrice>', '<ListPrice currency="BRL">760000</ListPrice>');
+    await schedule();
+    let f = await feedRow();
+    expect(f).toMatchObject({ last_status: 'ok', last_error: null });
+    expect(f.last_summary).toMatchObject({ created: 0, updated: 3, trashed: 0, skipped: 2, errorCount: 0 });
+    expect(Date.parse(f.last_run_at)).toBeGreaterThan(Date.parse(f.requested_at));
+    expect((await byRef('AP-1001')).price).toBe(760000);
+
+    served = null;
+    await schedule();
+    f = await feedRow();
+    expect(f).toMatchObject({ last_status: 'erro', last_error: expect.stringMatching(/HTTP 404/) });
+
+    served = '<?xml version="1.0"?><ListingDataFeed><Listings></Listings></ListingDataFeed>';
+    await schedule();
+    f = await feedRow();
+    expect(f).toMatchObject({ last_status: 'erro', last_error: expect.stringMatching(/nenhum anúncio/) });
+    const alive = await db().from('listings').select('id', { count: 'exact', head: true }).eq('org_id', orgId).is('deleted_at', null);
+    expect(alive.count).toBe(4); // os 3 do XML e o cadastrado pela tela
+  }, 240_000);
 });

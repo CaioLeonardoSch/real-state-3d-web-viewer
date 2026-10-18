@@ -26,6 +26,7 @@
     "db:reset": "supabase db reset",
     "verify:backend": "node scripts/e2e-backend.mjs",
     "import:xml": "node scripts/import-xml.mjs",
+    "import:feeds": "node scripts/import-feeds.mjs",
     "verify:site": "node scripts/e2e-site.mjs"
   },
   "dependencies": {

@@ -201,6 +201,29 @@ export interface ListingStats {
   messages: number;
 }
 
+/** Scheduled XML import of a client (administrators): the feed address and the outcome of its last reading. */
+export interface ListingFeed {
+  url: string;
+  enabled: boolean;
+  sync: boolean;
+  requestedAt: string | null;
+  lastRunAt: string | null;
+  lastStatus: 'ok' | 'avisos' | 'erro' | null;
+  lastSummary: {
+    created: number;
+    updated: number;
+    trashed: number;
+    skipped: number;
+    suspect: boolean;
+    warnings: { referenceCode: string; text: string }[];
+    warningCount: number;
+    errors: { referenceCode: string; text: string }[];
+    errorCount: number;
+    skippedList: { referenceCode: string; text: string }[];
+  } | null;
+  lastError: string | null;
+}
+
 /** A random id of this browser, so the server counts a visitor once a day (no personal data; stays on the device). */
 function visitorId(): string {
   try {
@@ -707,6 +730,38 @@ export class RemoteBackend {
       whatsapp: Number(r.whatsapp),
       messages: Number(r.messages),
     }));
+  }
+
+  async listingFeed(orgId: string): Promise<ListingFeed | null> {
+    const { data, error } = await this.sb.from('listing_feeds').select('*').eq('org_id', orgId).maybeSingle();
+    fail(error, 'Não foi possível ler a importação automática');
+    if (!data) return null;
+    return {
+      url: data.url,
+      enabled: data.enabled,
+      sync: data.sync,
+      requestedAt: data.requested_at,
+      lastRunAt: data.last_run_at,
+      lastStatus: data.last_status,
+      lastSummary: data.last_summary,
+      lastError: data.last_error,
+    };
+  }
+
+  /** Saves the feed; `importNow` also asks the next hourly run to read it (the server stamps the time). */
+  async saveListingFeed(orgId: string, f: { url: string; enabled: boolean; sync: boolean }, importNow = false): Promise<void> {
+    const row = { url: f.url.trim(), enabled: f.enabled, sync: f.sync, ...(importNow ? { requested_at: new Date().toISOString() } : {}) };
+    // update, or insert the first time (an upsert would also rewrite org_id, which the team may not change)
+    const upd = await this.sb.from('listing_feeds').update(row).eq('org_id', orgId).select('org_id');
+    fail(upd.error, 'Não foi possível salvar a importação automática');
+    if (upd.data?.length) return;
+    const { error } = await this.sb.from('listing_feeds').insert({ org_id: orgId, ...row });
+    fail(error, 'Não foi possível salvar a importação automática');
+  }
+
+  async removeListingFeed(orgId: string): Promise<void> {
+    const { error } = await this.sb.from('listing_feeds').delete().eq('org_id', orgId);
+    fail(error, 'Não foi possível remover a importação automática');
   }
 
   /** Records a click on "Conversar no WhatsApp" (no personal data: the conversation happens in WhatsApp). */

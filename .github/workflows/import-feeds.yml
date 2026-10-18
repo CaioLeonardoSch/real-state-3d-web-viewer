@@ -1,0 +1,38 @@
+# Importação agendada do XML (scripts/import-feeds.mjs): de hora em hora, lê os feeds que os administradores
+# cadastraram em "Minha conta" → "Importação automática (XML)". Cada feed é lido a cada 6 horas, ou na hora seguinte
+# a um "Importar agora".
+#
+# Precisa da variável VITE_SUPABASE_URL (a mesma do site) e do segredo SUPABASE_SERVICE_ROLE_KEY (Settings →
+# Secrets and variables → Actions → Secrets). Sem o backend configurado, o job não roda.
+name: Importar XML
+
+on:
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-feeds
+  cancel-in-progress: false
+
+jobs:
+  importar:
+    if: vars.VITE_SUPABASE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run import:feeds
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

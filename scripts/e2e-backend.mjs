@@ -169,6 +169,23 @@ try {
       /Dona Teste convidou você para a equipe da Imobiliária Teste Ação, como corretor/.test(brokerMail?.text ?? ''),
     JSON.stringify({ inviteNote, owner: ownerMail?.subject, broker: brokerMail?.text?.split('\n')[0] }));
 
+  // ---- "Importação automática (XML)": the owner sets the CRM's feed and asks for a reading now
+  await owner.page.click('#account-panel details[data-section="feed"] summary');
+  await owner.page.fill('#account-panel form[data-form="feed"] input[name="url"]', 'crm.exemplo/feed.xml');
+  await owner.page.click('#account-panel form[data-form="feed"] [data-action="import-now"]');
+  const feedErr = await owner.page.textContent('#account-panel form[data-form="feed"] .a-error');
+  await owner.page.fill('#account-panel form[data-form="feed"] input[name="url"]', 'https://crm.exemplo/feed.xml');
+  await owner.page.click('#account-panel form[data-form="feed"] [data-action="import-now"]');
+  await owner.page.waitForSelector('#account-panel details[data-section="feed"] .account-note', { timeout: 15000 });
+  const feedUi = await owner.page.evaluate(() => ({
+    note: document.querySelector('#account-panel details[data-section="feed"] .account-note')?.textContent ?? '',
+    url: document.querySelector('#account-panel form[data-form="feed"] input[name="url"]')?.value,
+    remove: !!document.querySelector('#account-panel [data-action="remove-feed"]'),
+  }));
+  check('importação automática: o dono informa o endereço do XML e pede "Importar agora" (endereço sem https recusado)',
+    /https:\/\//.test(feedErr ?? '') && /até 1 hora/.test(feedUi.note) && feedUi.url === 'https://crm.exemplo/feed.xml' && feedUi.remove,
+    JSON.stringify({ feedErr, ...feedUi }));
+
   // ---- the broker joins through the link and announces
   const { page, errors } = await open(browser, brokerLink);
   const rows = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
@@ -316,6 +333,8 @@ try {
     badge === '1' && leadUi.items === 1 && leadUi.name === 'Maria Compradora' && leadUi.wa.startsWith('https://wa.me/5547988887777') &&
       /1 clique no WhatsApp/.test(leadUi.clicks),
     JSON.stringify({ badge, ...leadUi }));
+
+  check('o corretor não vê a importação automática (só administradores)', !(await page.$('#account-panel details[data-section="feed"]')));
 
   // ---- "Desempenho dos anúncios": the visitor's view, WhatsApp click and message on the broker's listing
   await page.click('#account-panel details[data-section="stats"] summary');

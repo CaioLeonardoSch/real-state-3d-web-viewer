@@ -284,7 +284,7 @@ Interface · média · média (hipótese) · pequeno.
 | Contas, convites, papéis, duas etapas, lixeira, auditoria | Implementado; depende do Supabase |
 | Contatos com aviso por e-mail | Implementado; depende do Resend; lista em páginas, com filtro e planilha (A8) |
 | CAPTCHA | Pronto, desligado por padrão |
-| Importação XML | Parcial: comando manual com a chave de serviço; os dez tipos do enum são lidos, os outros descartados (A6) |
+| Importação XML | Parcial: comando manual com a chave de serviço; os dez tipos do enum são lidos, os outros descartados (A6). **Feito em 17/10:** importação agendada pelo endereço do feed, cadastrado pelo administrador em Minha conta |
 | Site white label, editor, histórico de versões | Implementado |
 | SEO no domínio do cliente | Código pronto, não publicado (A5) |
 | Espelho de vendas | Só demonstração (A7) |

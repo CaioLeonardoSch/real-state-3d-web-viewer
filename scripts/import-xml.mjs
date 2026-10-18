@@ -5,12 +5,15 @@
 //   npm run import:xml -- --org <slug-ou-id> --file feed.xml        (or --url https://crm.../feed.xml)
 //   options: --sync      trash listings imported before that are no longer in the feed
 //            --dry-run   only report what would change
+//            --force     with --sync, trash even when the feed drops more than 30% of the imported listings
 //            --local     use the local Supabase (npm run db:start) instead of SUPABASE_URL
 //
 // Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (service key: support only, never in the site).
 // For each listing: matched by its ListingID (reference code), so importing again updates instead of duplicating;
 // placed on its building of the map by the feed's coordinates (or shown approximate in its neighbourhood);
 // photos downloaded, shrunk (1600 px + 320 px thumbnail) and stripped of metadata such as GPS position.
+// What the team did on screen stays: a listing hidden (draft) stays hidden, one a person sent to the trash is not
+// brought back, and one whose place was adjusted keeps it. scripts/import-feeds.mjs runs this on a schedule.
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -50,8 +53,27 @@ const db = createClient(url, key, { auth: { persistSession: false } });
 // ---------------------------------------------------------------- feed
 const orgArg = opt('org');
 if (!orgArg) fail('informe --org <slug ou id da imobiliária>');
-const xml = opt('file') ? await readFile(opt('file'), 'utf8') : opt('url') ? await (await fetch(opt('url'))).text() : fail('informe --file ou --url');
-const feed = parseVrsync(xml);
+async function download(feedUrl) {
+  let r;
+  try {
+    r = await fetch(feedUrl, { signal: AbortSignal.timeout(60000) });
+  } catch (err) {
+    fail(`não foi possível baixar o XML (${err.cause?.message ?? err.message})`);
+  }
+  if (!r.ok) fail(`o endereço do XML respondeu HTTP ${r.status}`);
+  const text = await r.text();
+  if (text.length > 50 * 1024 * 1024) fail('o XML tem mais de 50 MB');
+  return text;
+}
+const xml = opt('file') ? await readFile(opt('file'), 'utf8') : opt('url') ? await download(opt('url')) : fail('informe --file ou --url');
+let feed;
+try {
+  feed = parseVrsync(xml);
+} catch (err) {
+  fail(`o arquivo não é um XML VRSync (${err.message})`);
+}
+// an empty answer (CRM down, wrong address) must not look like "every listing left the feed"
+if (!feed.listings.length && !feed.skipped.length) fail('o XML não tem nenhum anúncio; confira o endereço do feed');
 
 const isUuid = /^[0-9a-f-]{36}$/.test(orgArg);
 const { data: org } = await db.from('organizations').select('id, name, creci').eq(isUuid ? 'id' : 'slug', orgArg).maybeSingle();
@@ -64,7 +86,7 @@ const memberByEmail = new Map((profiles ?? []).flatMap((p) => (p.email ? [[p.ema
 
 const { data: existingRows, error: exErr } = await db
   .from('listings')
-  .select('id, reference_code, import_source, deleted_at, price, title')
+  .select('id, reference_code, import_source, deleted_at, deleted_by, published, placement_locked, price, title')
   .eq('org_id', org.id)
   .not('reference_code', 'is', null);
 if (exErr) fail(exErr.message);
@@ -187,7 +209,13 @@ async function syncPhotos(listingId, l, report) {
 
 // ---------------------------------------------------------------- import
 const report = { org: org.name, created: [], updated: [], trashed: [], skipped: feed.skipped, warnings: [...feed.warnings], errors: [] };
+const PLACEMENT = ['address_display', 'location', 'building_osm_id', 'footprint', 'building_height_m', 'lot'];
 for (const l of feed.listings) {
+  const old = existing.get(l.referenceCode);
+  if (old?.deleted_at && old.deleted_by) {
+    report.skipped.push({ referenceCode: l.referenceCode, title: l.title, reason: 'alguém da equipe mandou para a lixeira: não foi restaurado (restaure pela Lixeira para voltar a importar)' });
+    continue;
+  }
   const where = await place(l);
   if (where.error) {
     report.errors.push({ referenceCode: l.referenceCode, message: where.error });
@@ -240,7 +268,10 @@ for (const l of feed.listings) {
     reference_code: l.referenceCode,
     deleted_at: null,
   };
-  const old = existing.get(l.referenceCode);
+  if (old) {
+    delete row.published; // hidden on screen (draft) stays hidden
+    if (old.placement_locked) for (const k of PLACEMENT) delete row[k]; // place adjusted on screen stays
+  }
   if (DRY) {
     (old ? report.updated : report.created).push({ referenceCode: l.referenceCode, title: l.title });
     continue;
@@ -268,8 +299,18 @@ for (const l of feed.listings) {
 // listings imported before and gone from the feed: to the trash (restorable for 30 days)
 if (flag('sync')) {
   const inFeed = new Set(feed.listings.map((l) => l.referenceCode));
-  const gone = existingRows.filter((r) => r.import_source === 'xml' && !r.deleted_at && !inFeed.has(r.reference_code));
-  for (const r of gone) {
+  const imported = existingRows.filter((r) => r.import_source === 'xml' && !r.deleted_at);
+  const gone = imported.filter((r) => !inFeed.has(r.reference_code));
+  // a feed cut in half by the CRM would empty the site: above 30% (and more than 3), nothing goes without --force
+  const suspect = gone.length > 3 && gone.length > imported.length * 0.3 && !flag('force');
+  if (suspect) {
+    report.warnings.push({
+      referenceCode: '—',
+      message: `${gone.length} de ${imported.length} anúncios importados saíram do XML de uma vez: nada foi para a lixeira. Se for isso mesmo, rode com --force (ou apague pela tela)`,
+    });
+    report.suspect = true;
+  }
+  for (const r of suspect ? [] : gone) {
     if (!DRY) await db.from('listings').update({ deleted_at: new Date().toISOString() }).eq('id', r.id);
     report.trashed.push({ referenceCode: r.reference_code, title: r.title });
   }

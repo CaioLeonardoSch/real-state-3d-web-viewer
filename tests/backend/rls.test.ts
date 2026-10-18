@@ -487,6 +487,36 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(mail.text).toMatch(/como corretor\(a\)/);
   }, 30_000);
 
+  it('importação automática: só administradores cadastram o feed; o resultado só o agendador grava; "Importar agora" na hora do servidor', async () => {
+    expect((await bruno.client.from('listing_feeds').insert({ org_id: orgA, url: 'https://crm.exemplo/feed.xml' })).error).not.toBeNull();
+    const early = new Date(Date.now() - 86_400_000).toISOString();
+    const ins = await ana.client.from('listing_feeds').insert({ org_id: orgA, url: 'https://crm.exemplo/feed.xml', requested_at: early }).select('*').single();
+    expect(ins.error).toBeNull();
+    expect(Date.parse(ins.data!.requested_at)).toBeGreaterThan(Date.now() - 60_000);
+    expect((await ana.client.from('listing_feeds').insert({ org_id: orgA, url: 'ftp://x' })).error).not.toBeNull();
+    expect((await ana.client.from('listing_feeds').update({ last_status: 'ok' }).eq('org_id', orgA)).error).not.toBeNull();
+    expect((await bruno.client.from('listing_feeds').select('org_id').eq('org_id', orgA)).data).toHaveLength(0);
+    expect((await backendOf(ana).listingFeed(orgA))).toMatchObject({ url: 'https://crm.exemplo/feed.xml', enabled: true, sync: true, lastRunAt: null });
+    await backendOf(ana).saveListingFeed(orgA, { url: 'https://crm.exemplo/outro.xml', enabled: false, sync: false }, true);
+    expect(await backendOf(ana).listingFeed(orgA)).toMatchObject({ url: 'https://crm.exemplo/outro.xml', enabled: false, sync: false });
+    await backendOf(ana).removeListingFeed(orgA);
+    expect(await backendOf(ana).listingFeed(orgA)).toBeNull();
+  });
+
+  it('local ajustado pela tela num anúncio importado fica travado para as próximas importações', async () => {
+    const imp = await service().from('listings').insert(listingRow(orgA, { import_source: 'xml', reference_code: `TRAVA-${tag}`, created_by: ana.id })).select('id').single();
+    expect(imp.error).toBeNull();
+    const id = imp.data!.id;
+    const read = async () => (await service().from('listings').select('placement_locked').eq('id', id).single()).data!.placement_locked;
+    await ana.client.from('listings').update({ title: 'Outro título', location: point(-48.85, -26.3) }).eq('id', id);
+    expect(await read()).toBe(false); // mesmo lugar: nada muda
+    await ana.client.from('listings').update({ location: point(-48.851, -26.301) }).eq('id', id);
+    expect(await read()).toBe(true);
+    await ana.client.from('listings').update({ placement_locked: false }).eq('id', id);
+    expect(await read()).toBe(true);
+    await service().from('listings').delete().eq('id', id);
+  });
+
   describe('site do cliente', () => {
     const consent = 'Concordo em compartilhar meus dados com a Imobiliária A.';
     const siteLead = (source: string, extra: Record<string, unknown> = {}) => ({

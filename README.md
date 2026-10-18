@@ -104,8 +104,9 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   uma lixeira (30 dias para restaurar), e os administradores leem o histórico de alterações em frases. O visitante
   manda mensagem ou pede uma visita (dia e período) pelo anúncio, com a autorização da LGPD; o contato chega ao
   corretor na conta e por e-mail. Os
-  convites vão por e-mail, e a equipe de suporte importa os anúncios do CRM do cliente pelo XML (VRSync), ver
-  [`docs/importacao-xml.md`](docs/importacao-xml.md).
+  convites vão por e-mail, e os anúncios do CRM do cliente entram pelo XML (VRSync): o administrador informa o
+  endereço do feed em Minha conta e ele é lido a cada 6 horas (workflow "Importar XML"), ou o suporte importa pela
+  linha de comando, ver [`docs/importacao-xml.md`](docs/importacao-xml.md).
 - **Páginas para o Google:** `npm run build` gera uma página estática por anúncio (`dist/imovel/…/`), o
   `sitemap.xml` e a prévia com foto para links compartilhados (`scripts/prerender.mjs`).
 

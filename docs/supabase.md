@@ -122,7 +122,10 @@ servidor `smtp.resend.com`, porta 465, usuário `resend`, senha = a chave do Res
 
 ## 6. Importação dos anúncios por XML
 
-Ver [`importacao-xml.md`](importacao-xml.md).
+Ver [`importacao-xml.md`](importacao-xml.md). Para a importação automática (o administrador informa o endereço do
+feed em Minha conta), crie no GitHub o segredo **`SUPABASE_SERVICE_ROLE_KEY`** (Settings → Secrets and variables →
+Actions → Secrets) com a chave `service_role` do projeto. O workflow "Importar XML" roda de hora em hora quando a
+variável `VITE_SUPABASE_URL` está definida; sem o segredo, ele falha e nenhum feed é lido.
 
 ## 7. Páginas para o Google
 
