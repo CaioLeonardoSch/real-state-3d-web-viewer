@@ -61,6 +61,8 @@ jobs:
         run: npm run data:heights
       - name: Gera os tiles (pico de ~4,3 GB de memória)
         run: npm run data:tiles
+      - name: Gera a lista de serviços próximos (escolas, saúde, mercados…)
+        run: npm run data:services
       # os anúncios de demonstração continuam nos prédios certos? (só avisa: o relatório lista os afetados)
       - name: Confere os anúncios de demonstração
         run: npm run validate:data
@@ -104,3 +106,4 @@ jobs:
             public/data/bairros-areas.geojson
             public/data/boundary.geojson
             public/data/ruas.json
+            public/data/servicos.json

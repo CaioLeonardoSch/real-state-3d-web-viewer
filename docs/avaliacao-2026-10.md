@@ -370,6 +370,10 @@ Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um
      - Centro, Itinga e Parque Guarani existem em Joinville e em Araquari: o recorte por bairro inclui as duas
        cidades, igual no mapa e nas sugestões.
 3. **Serviços por perto (cerca de 1 semana).**
+   - **Feito em 17/10:** a primeira versão, só com o OSM (809 pontos em Joinville: 293 escolas, 103 de saúde, 103
+     farmácias, 129 mercados, 37 padarias e 144 parques): "Por perto" na ficha e o filtro "Perto de (até 500 m)".
+     As distâncias são calculadas no navegador a partir de `public/data/servicos.json` (46 KB), sem banco. Faltam os
+     ícones no mapa e os dados da Prefeitura, do INEP e do CNES; as padarias são o que mais falta no OSM.
    - **Dados, todos abertos:**
      - equipamentos públicos da Prefeitura (`SEPUR/equipamento_publicos_2026_*`: escolas, saúde, lazer, cultura);
      - escolas do INEP e unidades de saúde do CNES, que têm coordenadas;

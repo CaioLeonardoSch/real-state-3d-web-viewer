@@ -8,7 +8,7 @@ Default input: the extract named in region.json (osmExtract), in .cache/osm-pbf/
 
 Writes GeoJSON to .cache/region/ (not versioned: tens of MB): bairros, boundary (union of the chosen
 neighbourhoods), buildings, roads (with surface and lighting tags), water, green (with its kind), trees and street
-lamps mapped in OSM, plus meta.json. scripts/build-tiles.mjs turns them into
+lamps mapped in OSM, services (schools, health, pharmacies, markets, bakeries, parks), plus meta.json. scripts/build-tiles.mjs turns them into
 public/data/*.pmtiles; the listing/development generators read them directly.
 
 Requires: pip install osmium shapely
@@ -41,6 +41,19 @@ GREEN = {
     ('landuse', 'farmland'): 'farm', ('landuse', 'orchard'): 'farm',
 }
 WATERWAYS = {'river', 'stream', 'canal'}
+# services near a listing ("Por perto"): schools, health, pharmacies, markets, bakeries and parks
+SERVICES = {
+    ('amenity', 'school'): 'school', ('amenity', 'kindergarten'): 'school', ('amenity', 'college'): 'school',
+    ('amenity', 'university'): 'school', ('amenity', 'hospital'): 'health', ('amenity', 'clinic'): 'health',
+    ('amenity', 'doctors'): 'health', ('amenity', 'pharmacy'): 'pharmacy', ('shop', 'supermarket'): 'market',
+    ('shop', 'convenience'): 'market', ('shop', 'greengrocer'): 'market', ('shop', 'bakery'): 'bakery',
+    ('shop', 'pastry'): 'bakery', ('leisure', 'park'): 'park',
+}
+
+
+def service_kind(t):
+    return next((SERVICES[(k, t.get(k))] for k in ('amenity', 'shop', 'leisure') if (k, t.get(k)) in SERVICES), None)
+
 # ~ 60 m around the region, so streets and rivers on its edge are complete
 MARGIN_DEG = 0.0006
 
@@ -116,12 +129,25 @@ def in_bbox(g):
 
 
 # ---------------------------------------------------------------- 2. features
-buildings, roads, water, green, trees, lamps = [], [], [], [], [], []
-keys = ('building', 'highway', 'natural', 'waterway', 'leisure', 'landuse')
+buildings, roads, water, green, trees, lamps, services = [], [], [], [], [], [], []
+keys = ('building', 'highway', 'natural', 'waterway', 'leisure', 'landuse', 'amenity', 'shop')
+
+
+def add_service(t, osm_id, x, y):
+    kind = service_kind(t)
+    if kind and minx <= x <= maxx and miny <= y <= maxy and region_buf.contains(Point(x, y)):
+        props = {'osmId': osm_id, 'kind': kind}
+        if t.get('name'):
+            props['name'] = t['name']
+        services.append({'type': 'Feature', 'properties': props,
+                         'geometry': {'type': 'Point', 'coordinates': [round(x, 6), round(y, 6)]}})
+
+
 fp = osmium.FileProcessor(SRC).with_areas(osmium.filter.KeyFilter(*keys)).with_filter(osmium.filter.KeyFilter(*keys))
 for o in fp:
     t = o.tags
     if o.is_node():
+        add_service(t, f'node/{o.id}', o.location.lon, o.location.lat)
         # mapped trees and street lamps (few in OSM; the tile builder adds illustrative ones)
         kind = 'tree' if t.get('natural') == 'tree' else 'lamp' if t.get('highway') == 'street_lamp' else None
         if kind:
@@ -139,6 +165,9 @@ for o in fp:
             continue
         if not in_bbox(g):
             continue
+        if service_kind(t):
+            p = g.representative_point()
+            add_service(t, area_id(a), p.x, p.y)
         if 'building' in t:
             # a building belongs to the region when its centre is inside it
             if not region_prep.contains(g.representative_point()):
@@ -236,6 +265,7 @@ write('trees.geojson', trees)
 write('canopy.geojson', canopy)
 write('bairros-buffer.geojson', bairro_buffers)
 write('lamps.geojson', lamps)
+write('services.geojson', services)
 header_ts = osmium.io.Reader(SRC, osmium.osm.osm_entity_bits.NOTHING).header().get('osmosis_replication_timestamp', '')
 c = region.centroid
 meta = {

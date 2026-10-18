@@ -1,3 +1,4 @@
+import type { ServiceKind } from './services';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { parseProgress, type ConstructionProgress } from './construction.ts';
 
@@ -225,6 +226,8 @@ export interface Listing {
   exclusivityDoc?: string;
   /** Result of the support team's check of that document (own listings). */
   exclusivityReview?: { status: 'pending' | 'verified' | 'refused'; note?: string };
+  /** Straight-line distance (m) to the closest mapped service of each kind, up to 500 m (set in the browser). */
+  nearby?: Partial<Record<ServiceKind, number>>;
   /** Own listing waiting for the support team's approval, or refused by it (hidden from the public). */
   moderation?: { status: 'pending' | 'rejected'; note?: string };
   // ---- control

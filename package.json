@@ -15,6 +15,7 @@
     "data:cadastre": "node scripts/download-cadastre.mjs",
     "data:heights": "node scripts/estimate-heights.mjs",
     "data:tiles": "node --max-old-space-size=6144 scripts/build-tiles.mjs",
+    "data:services": "node scripts/build-services.mjs",
     "map:changes": "node scripts/map-changes.mjs",
     "data:listings": "node scripts/generate-listings.mjs",
     "data:developments": "node scripts/generate-developments.mjs",

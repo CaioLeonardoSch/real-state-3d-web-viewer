@@ -1,6 +1,7 @@
 import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types';
 import { EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters';
 import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort';
+import { SERVICE_KINDS, type ServiceKind } from '../data/services';
 
 /** What the address bar stores: applied filters and the open listing. */
 export interface UrlState {
@@ -21,6 +22,16 @@ export interface KnownIds {
   /** Known neighbourhood names (the URL may spell them without accents); absent = any name. */
   bairros?: readonly string[];
 }
+
+const SERVICE_SLUGS: Record<ServiceKind, string> = {
+  school: 'escola',
+  health: 'saude',
+  pharmacy: 'farmacia',
+  market: 'mercado',
+  bakery: 'padaria',
+  park: 'parque',
+};
+const SLUG_TO_SERVICE = new Map(SERVICE_KINDS.map((k) => [SERVICE_SLUGS[k], k] as const));
 
 const SORT_SLUGS: Record<SortKey, string> = {
   'price-asc': 'menor-preco',
@@ -106,6 +117,7 @@ export function stateToSearch(state: UrlState): string {
   if (c.features.length) p.set('comodidades', c.features.map((f) => AMENITY_SLUGS[f]).join(','));
   if (c.agency !== null) p.set('imob', c.agency);
   if (c.reducedOnly) p.set('reduzido', '1');
+  if (c.near.length) p.set('perto', c.near.map((k) => SERVICE_SLUGS[k]).join(','));
   if (state.sort !== DEFAULT_SORT) p.set('ordem', SORT_SLUGS[state.sort]);
   const s = p.toString();
   return s ? `?${s}` : '';
@@ -135,6 +147,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     features: parseList(p.get('comodidades'), SLUG_TO_AMENITY),
     agency: agency && known.agencyIds.has(agency) ? agency : null,
     reducedOnly: p.get('reduzido') === '1' ? true : null,
+    near: parseList(p.get('perto'), SLUG_TO_SERVICE),
   };
   for (const [field, param] of NUMBER_PARAMS) {
     const n = nonNegative(p.get(param));

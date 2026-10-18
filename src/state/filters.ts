@@ -1,5 +1,6 @@
 import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types';
 import { publicStreet, sameStreet } from '../data/streets';
+import { NEAR_M, type ServiceKind } from '../data/services';
 
 export interface FilterCriteria {
   /** 'rent' = listings for rent, prices are monthly rents; null = for sale (the default). */
@@ -30,6 +31,8 @@ export interface FilterCriteria {
   agency: string | null;
   /** true = only listings whose price was reduced. */
   reducedOnly: true | null;
+  /** Services that must be mapped within NEAR_M (straight line) of the listing; empty = no requirement. */
+  near: ServiceKind[];
 }
 
 export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
@@ -49,6 +52,7 @@ export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   features: [],
   agency: null,
   reducedOnly: null,
+  near: [],
 }) as FilterCriteria;
 
 /** Criteria shown under "Mais filtros" (the form counts how many of them are active). */
@@ -61,6 +65,7 @@ export const ADVANCED_FIELDS = [
   'features',
   'agency',
   'reducedOnly',
+  'near',
 ] as const satisfies readonly RelaxableField[];
 
 /** Price the criteria compare: sale price, or monthly rent when searching for rentals. */
@@ -100,6 +105,8 @@ export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
   if (c.features.some((f) => !l.features.includes(f))) return false;
   if (c.agency !== null && l.agency !== c.agency) return false;
   if (c.reducedOnly && !(l.previousPrice && l.previousPrice > l.price)) return false;
+  // distances come with the services file (main.ts); until then nothing matches
+  if (c.near.some((k) => !((l.nearby?.[k] ?? Infinity) <= NEAR_M))) return false;
   return true;
 }
 
@@ -152,12 +159,12 @@ export class FilterStore {
 }
 
 export function cloneCriteria(c: FilterCriteria): FilterCriteria {
-  return { ...c, types: [...c.types], bairros: [...c.bairros], statuses: [...c.statuses], features: [...c.features] };
+  return { ...c, types: [...c.types], bairros: [...c.bairros], statuses: [...c.statuses], features: [...c.features], near: [...c.near] };
 }
 
 export type RelaxableField = keyof FilterCriteria;
 export const RELAXABLE_FIELDS: readonly RelaxableField[] = Object.keys(EMPTY_CRITERIA) as RelaxableField[];
-const LIST_FIELDS = new Set<RelaxableField>(['types', 'bairros', 'statuses', 'features']);
+const LIST_FIELDS = new Set<RelaxableField>(['types', 'bairros', 'statuses', 'features', 'near']);
 
 export interface RelaxSuggestion {
   field: RelaxableField;

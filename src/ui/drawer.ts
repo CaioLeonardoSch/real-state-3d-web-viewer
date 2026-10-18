@@ -23,6 +23,7 @@ import { REPORT_REASONS, type ReportReason } from '../backend/mapping';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
 import { DEMO } from '../data/demo';
+import { NEARBY_MAX_M, SERVICE_COLORS, SERVICE_KINDS, SERVICE_LABELS, formatDistance, type NearbyService, type ServiceKind } from '../data/services';
 import { financingHtml, wireFinancing } from './financingSim';
 import { readVisit, visitFieldsHtml, wireVisitFields } from './visitRequest';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
@@ -59,6 +60,8 @@ export class Drawer {
   contact: ContactHandlers | null = null;
   /** Report about the listing (back end only); resolves to an error message or null. */
   report: ((l: Listing, reason: ReportReason, details: string) => Promise<string | null>) | null = null;
+  /** Closest services of each kind (null while servicos.json is not loaded). */
+  nearby: ((l: Listing) => Partial<Record<ServiceKind, NearbyService>> | null) | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
 
@@ -313,6 +316,7 @@ export class Drawer {
           : ''
       }
       ${this.progressHtml(l)}
+      ${this.nearbyHtml(l)}
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
       ${
         l.features.length
@@ -480,6 +484,25 @@ export class Drawer {
   }
 
   /** "Denunciar": sold, outdated, wrong or fake listings of other advertisers (the support team reads them). */
+  /** "Por perto": the closest school, market… within 2 km, in a straight line. */
+  private nearbyHtml(l: Listing): string {
+    const near = this.nearby?.(l);
+    if (!near) return '';
+    const about = l.approximateLocation ? 'cerca de ' : '';
+    const rows = SERVICE_KINDS.map((k) => {
+      const s = near[k];
+      const what = s
+        ? `${about}${formatDistance(s.distanceM)}${s.name ? ` <small>${escapeHtml(s.name)}</small>` : ''}`
+        : `<span class="muted">nenhum mapeado até ${formatDistance(NEARBY_MAX_M)}</span>`;
+      return `<li><span class="nearby-dot" style="background:${SERVICE_COLORS[k]}" aria-hidden="true"></span><strong>${SERVICE_LABELS[k]}</strong> ${what}</li>`;
+    }).join('');
+    return `<section class="nearby">
+      <h3>Por perto</h3>
+      <ul>${rows}</ul>
+      <p class="nearby-note">Distâncias em linha reta${l.approximateLocation ? ', medidas do centro do círculo' : ''}. Fonte: OpenStreetMap (pode faltar algum comércio).</p>
+    </section>`;
+  }
+
   private reportHtml(l: Listing): string {
     if (!this.report || !l.remote || l.userAdded) return '';
     return `<details class="report-box">

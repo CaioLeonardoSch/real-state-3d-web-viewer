@@ -65,6 +65,12 @@ describe('URL state', () => {
     expect(searchToState('?reduzido=1', known)).toEqual(state);
     expect(searchToState('?reduzido=sim', known).criteria.reducedOnly).toBeNull();
   });
+  it('round-trips the "perto de" filter', () => {
+    const state = { criteria: { ...EMPTY_CRITERIA, near: ['school' as const, 'market' as const] }, listingId: null, sort: 'price-asc' as const, developmentId: null, unitId: null };
+    expect(stateToSearch(state)).toBe('?perto=escola%2Cmercado');
+    expect(searchToState('?perto=escola%2Cmercado', known)).toEqual(state);
+    expect(searchToState('?perto=escola,shopping', known).criteria.near).toEqual(['school']);
+  });
   it('round-trips the rent search', () => {
     const state = { criteria: { ...EMPTY_CRITERIA, transaction: 'rent' as const }, listingId: null, sort: 'relevance' as const, developmentId: null, unitId: null };
     expect(stateToSearch(state)).toBe('?negocio=alugar&ordem=destaques');

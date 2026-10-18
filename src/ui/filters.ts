@@ -4,6 +4,10 @@ import { ADVANCED_FIELDS, EMPTY_CRITERIA, countActive, normalizeName, type Filte
 import { sameCriteria } from '../state/url';
 import { StreetFinder, findBairros, type StreetEntry } from '../data/streets';
 import { escapeHtml, parseNumberInput } from '../utils/format';
+import { NEAR_M, SERVICE_LABELS, type ServiceKind } from '../data/services';
+
+/** Kinds offered in the "até 500 m de…" filter (bakeries are the worst mapped in OSM: left out). */
+const NEAR_FILTER_KINDS: ServiceKind[] = ['school', 'market', 'pharmacy', 'health', 'park'];
 
 /** Free-typed numeric fields: [criteria field, label, placeholder]. */
 const NUMBER_INPUTS = {
@@ -109,6 +113,7 @@ export function mountFilters(
       ${chips('status', 'Situação', LISTING_STATUSES, STATUS_LABELS)}
       ${chips('reducedOnly', 'Ofertas', ['1'], { 1: 'Preço reduzido' })}
       ${chips('feature', 'Comodidades (todas as marcadas)', AMENITIES, AMENITY_LABELS)}
+      ${chips('near', `Até ${NEAR_M} m de (em linha reta; dados do OpenStreetMap)`, NEAR_FILTER_KINDS, SERVICE_LABELS)}
     </div>
   `;
 
@@ -138,6 +143,7 @@ export function mountFilters(
       features: fd.getAll('feature').map(String) as Amenity[],
       agency: agency === '' ? null : agency,
       reducedOnly: fd.get('reducedOnly') ? true : null,
+      near: fd.getAll('near').map(String) as ServiceKind[],
       street: str('street').trim() || null,
     };
   };
@@ -149,6 +155,7 @@ export function mountFilters(
     check('status', c.statuses);
     check('feature', c.features);
     check('reducedOnly', c.reducedOnly ? ['1'] : []);
+    check('near', c.near);
     for (const k of [...Object.keys(NUMBER_INPUTS), ...Object.keys(MIN_SELECTS)] as (NumberInput | MinSelect)[])
       field<HTMLInputElement>(k).value = c[k]?.toString() ?? '';
     field<HTMLSelectElement>('agency').value = c.agency ?? '';

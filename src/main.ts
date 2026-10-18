@@ -8,6 +8,7 @@ import type { StreetEntry, StreetFinder } from './data/streets';
 import type { MultiPolygon, Polygon } from 'geojson';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import type { Listing } from './data/types';
+import { NEARBY_MAX_M, ServiceIndex, listingPoint, nearbyDistances, type ServicesFile } from './data/services';
 import { Scene, type StreetRef } from './map/scene';
 import { themeFor, type TimeOfDay } from './map/lighting';
 import {
@@ -457,8 +458,33 @@ async function main() {
 
   // ------------------------------------------------------------ listings added in this browser
   /** Refreshes map, list and known ids after a listing is added or removed. */
+  // ------------------------------------------------------------ services nearby (servicos.json)
+  // Loaded in the background: the "perto de" filter and the drawer's "Por perto" read it once it arrives.
+  let services: ServiceIndex | null = null;
+  const setNearby = (list: Listing[]) => {
+    if (services) for (const l of list) l.nearby = nearbyDistances(services, l);
+  };
+  drawer.nearby = (l) => {
+    const p = services && listingPoint(l);
+    return p ? services!.nearest(p, NEARBY_MAX_M) : null;
+  };
+  fetch(new URL(`${import.meta.env.BASE_URL}data/servicos.json`, location.href))
+    .then((r) => (r.ok ? (r.json() as Promise<ServicesFile>) : Promise.reject(new Error(`servicos.json: ${r.status}`))))
+    .then((file) => {
+      services = new ServiceIndex(file);
+      setNearby(listings);
+      if (store.getApplied().near.length) {
+        showResults();
+        scene.setMatched(new Set(currentList.map((l) => l.id)));
+      }
+      const open = drawer.currentId && listings.find((l) => l.id === drawer.currentId);
+      if (open) drawer.refresh(open);
+    })
+    .catch((err: Error) => console.error(err));
+
   function listingsChanged() {
     listings = [...baseListings, ...remoteListings, ...userListings];
+    setNearby(listings);
     known.agencyIds = new Set(agencies.map((a) => a.id));
     known.listingIds = new Set(listings.map((l) => l.id));
     scene.setListings(listings);

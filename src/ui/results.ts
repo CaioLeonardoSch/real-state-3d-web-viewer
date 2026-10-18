@@ -53,6 +53,7 @@ const FIELD_LABELS: Record<RelaxableField, string> = {
   features: 'as comodidades',
   agency: 'o filtro de imobiliária',
   reducedOnly: 'o filtro de preço reduzido',
+  near: 'o filtro de serviços por perto',
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

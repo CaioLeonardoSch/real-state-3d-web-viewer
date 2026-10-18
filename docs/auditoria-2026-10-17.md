@@ -298,7 +298,7 @@ Interface · média · média (hipótese) · pequeno.
 | Documento de exclusividade | Só interface. **Feito em 17/10:** envio e conferência pelo suporte |
 | Rascunho de anúncio | Só no banco, sem interface |
 | Busca por área (`listings_in_bbox`) | Só no banco, sem uso |
-| Agendamento de visita, alertas, IA, serviços por perto | Pedido de visita feito em 17/10 (item 26); o resto não existe |
+| Agendamento de visita, alertas, IA, serviços por perto | Pedido de visita feito em 17/10 (item 26); **Feito em 17/10:** serviços por perto do OSM na ficha e na busca (item 36); alertas e IA não existem |
 
 ## Testes: o que falta cobrir primeiro
 

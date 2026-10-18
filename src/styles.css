@@ -2492,3 +2492,29 @@ body.panel-body {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
+
+/* "Por perto" in the listing panel */
+.nearby ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.nearby li small {
+  color: var(--muted);
+  margin-left: 4px;
+}
+.nearby-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.nearby-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
