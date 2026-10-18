@@ -7,7 +7,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LISTING_PAGE_CSS, pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
+import { LISTING_PAGE_CSS, pageCode, pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
+import { NOT_FOUND_CSS, NOT_FOUND_SCRIPT, renderNotFoundPage } from '../src/seo/platformPages.ts';
 import { rowToListing } from '../src/backend/mapping.ts';
 import { listingCsp, styleHash } from './lib/csp.mjs';
 import { REGION } from './lib/region.mjs';
@@ -48,6 +49,7 @@ if (url && key) {
 // the same policy goes into dist/_headers (vite.config.ts); the <meta> copy covers hosts without headers
 const csp = listingCsp({ supabaseUrl: url, styleHashes: [styleHash(LISTING_PAGE_CSS)], meta: true });
 const index = {};
+const codes = {};
 const sitemap = [{ loc: SITE_URL }];
 for (const l of pages) {
   const rel = pagePath(l);
@@ -55,9 +57,14 @@ for (const l of pages) {
   await mkdir(path.join(DIST, rel), { recursive: true });
   await writeFile(path.join(DIST, rel, 'index.html'), html);
   index[l.id] = rel;
+  codes[pageCode(l.id)] = rel;
   if (!l.fictional) sitemap.push({ loc: `${SITE_URL}${rel}`, ...(l.updatedAt ? { lastmod: l.updatedAt } : {}) });
 }
 await writeFile(path.join(DIST, 'data', 'pages.json'), JSON.stringify(index));
+// an old title of a page moves to the current one, a listing that left answers 404 (src/seo/platformPages.ts)
+await writeFile(path.join(DIST, 'data', 'page-codes.json'), JSON.stringify(codes));
+const notFoundCsp = `default-src 'none'; script-src ${styleHash(NOT_FOUND_SCRIPT)}; style-src ${styleHash(NOT_FOUND_CSS)}; connect-src 'self'; base-uri 'none'; form-action 'none'`;
+await writeFile(path.join(DIST, '404.html'), renderNotFoundPage({ siteUrl: SITE_URL, siteName: SITE_NAME, csp: notFoundCsp }));
 await writeFile(path.join(DIST, 'sitemap.xml'), renderSitemap(sitemap));
 await writeFile(path.join(DIST, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}sitemap.xml\n`);
 console.log(`Páginas: ${pages.length} (${sitemap.length - 1} no sitemap); ${SITE_URL}`);

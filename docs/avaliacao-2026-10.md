@@ -106,7 +106,8 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
   - Testado em unidade, no navegador (e2e com um domínio `.localhost`) e com o `wrangler`, que roda o runtime da
     Cloudflare na máquina.
   - O corpo da página continua montado pelo JavaScript. O Google o executa, e o cabeçalho já traz o essencial para
-    os outros robôs e para a prévia do WhatsApp.
+    os outros robôs e para a prévia do WhatsApp. **Feito em 17/10:** o servidor também manda o conteúdo da página
+    (`src/seo/siteBody.ts`), que o site substitui ao carregar.
   - **Falta:** publicar num projeto real, com o domínio de um cliente, e cadastrar o sitemap no Search Console.
 
 ### B2. LGPD (1 a 2 semanas, mais a revisão de um advogado)
@@ -181,7 +182,7 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 | I9. Escala com backend | **Parte corrigida:** o site abre com uma chamada só (`site_bootstrap`), sem o `.in()` de URL longa nem o limite de 1.000 linhas, e o cliente do Supabase baixa junto com o módulo que o usa; com o backend, o JavaScript do site soma cerca de 89 KB compactados (28 do site, 6 do acesso ao backend e 55 do cliente do Supabase). **Falta:** cada visita ainda baixa todos os anúncios do cliente, o que serve até algumas centenas; não foi medido com milhares |
 | I10. Editor | **Corrigido:** "Voltar ao original" não pergunta mais "Sair do site?"; histórico das 30 últimas publicações, com volta a uma versão anterior (c672119); o mapa da pré-visualização não recarrega a cada edição |
 | I11. CAPTCHA, CSP, 2FA e teste de invasão | **Parte corrigida:** CSP e cabeçalhos, verificação em duas etapas (TOTP, obrigatória para o suporte), CAPTCHA (Turnstile) pronto para ligar e revisão do storage. **Falta:** o teste de invasão feito por terceiros |
-| I12. Endereço da página estática muda com o título; vendidos somem sem redirecionamento | **Corrigido nos domínios dos clientes:** o endereço termina no código do anúncio, então um título novo leva ao endereço atual com 301, e um anúncio que saiu do ar responde 404 com noindex. As páginas estáticas do domínio da plataforma continuam como antes |
+| I12. Endereço da página estática muda com o título; vendidos somem sem redirecionamento | **Corrigido nos domínios dos clientes:** o endereço termina no código do anúncio, então um título novo leva ao endereço atual com 301, e um anúncio que saiu do ar responde 404 com noindex. **Feito em 17/10:** nas páginas estáticas do domínio da plataforma também (301 pela função da Cloudflare, `404.html` com noindex) |
 | I13. Fotos limitadas a 960 px, sem `srcset` | **Corrigido:** 480, 1024 e 1920 px, com `srcset` e `sizes` nos cards, na galeria e nas páginas estáticas; o importador XML gera os mesmos tamanhos (5a2d8b2) |
 | I14. Testes do site, e2e fora do CI, sem lint nem regressão visual | **Parte:** testes de obra, relatório do mapa e mapeamento; axe no e2e do site e do mapa; testes do servidor de páginas, do histórico, das duas etapas e do storage. **Falta:** e2e no CI, lint e regressão visual |
 

@@ -133,7 +133,9 @@ conforme a busca), ficha do imóvel com o prédio no mapa, favoritos, comparaç�
   `organizations.branding`.
 - No domínio do cliente, cada página sai do servidor com título, descrição, canônico e dados estruturados, em
   endereços limpos (`/imoveis`, `/imovel/<título>-<código>`), com `sitemap.xml` e `robots.txt` do cliente
-  (`src/seo/siteServer.ts`; na Cloudflare Pages, `functions/[[path]].ts`).
+  (`src/seo/siteServer.ts`; na Cloudflare Pages, `functions/[[path]].ts`). O corpo também já vem com o conteúdo
+  (título, preço, dados e descrição do anúncio; links para todos os anúncios na lista), para robôs que não rodam
+  JavaScript (`src/seo/siteBody.ts`); o site o substitui quando carrega.
 - Código em `src/site/`; decisões e comparação com o mercado no item 12 de [`docs/backend.md`](docs/backend.md).
 
 ## Empreendimentos: espelho de vendas 3D

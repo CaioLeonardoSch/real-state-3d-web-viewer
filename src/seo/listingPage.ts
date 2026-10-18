@@ -37,7 +37,7 @@ footer{color:#666;font-size:12px}
 `;
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const brl = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
+export const brl = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
 const area = (v: number) => `${Math.round(v).toLocaleString('pt-BR')} m²`;
 
 /** "Casa com piscina 3 quartos" → "casa-com-piscina-3-quartos". */
@@ -55,12 +55,16 @@ export function slugify(text: string): string {
 
 /** Path of the listing page under the site root, e.g. "imovel/casa-com-piscina-3-quartos-5c1e9a2b/". */
 export function pagePath(l: Pick<Listing, 'id' | 'title'>): string {
-  const short = /^[0-9a-f-]{36}$/.test(l.id) ? l.id.slice(0, 8) : l.id;
-  return `imovel/${slugify(l.title)}-${slugify(short)}/`;
+  return `imovel/${slugify(l.title)}-${pageCode(l.id)}/`;
+}
+
+/** End of a static page's address, which finds the listing whatever its title (platformPages.ts). */
+export function pageCode(id: string): string {
+  return slugify(/^[0-9a-f-]{36}$/.test(id) ? id.slice(0, 8) : id);
 }
 
 /** Address as the advertiser allows it to be shown. */
-function shownAddress(l: Listing): { line: string | null; street?: string; locality?: string; region: string; postal?: string } {
+export function shownAddress(l: Listing): { line: string | null; street?: string; locality?: string; region: string; postal?: string } {
   const a = l.address ?? {};
   // no choice recorded: only the neighbourhood, as in addressLabel and publicAddress
   const display = l.addressDisplay ?? 'neighborhood';
@@ -131,16 +135,10 @@ function centroid(ring: number[][]): [number, number] {
   return [Number((sum[0] / n).toFixed(6)), Number((sum[1] / n).toFixed(6))];
 }
 
-/** Full HTML of a listing page. Demo listings are marked noindex (fictional data must not reach search results). */
-export function renderListingPage(l: Listing, ctx: PageContext): string {
-  const url = `${ctx.siteUrl}${pagePath(l)}`;
-  const mapUrl = `${ctx.siteUrl}?imovel=${encodeURIComponent(l.id)}`;
-  const desc = description(l, ctx.agencyName);
-  const addr = shownAddress(l);
+/** The listing's facts (label, value), as the page lists them. */
+export function listingFacts(l: Listing): [string, string][] {
   const rent = l.transaction === 'rent';
-  const price = rent ? `${brl(l.rentPrice ?? l.price)}<small>/mês</small>` : brl(l.price);
-  const reduced = !rent && l.previousPrice && l.previousPrice > l.price ? `<s>${brl(l.previousPrice)}</s> ` : '';
-  const facts: [string, string][] = [
+  return [
     ['Tipo', TYPE_LABELS[l.type]],
     ['Negócio', TRANSACTION_LABELS[l.transaction ?? 'sale']],
     [l.type === 'land' ? 'Área do lote' : 'Área útil', area(l.areaM2)],
@@ -161,6 +159,18 @@ export function renderListingPage(l: Listing, ctx: PageContext): string {
     ...(rent || l.transaction === 'both' ? [] : ([['Preço por m²', `${brl(l.price / l.areaM2)}/m²`]] as [string, string][])),
     ...(l.referenceCode ? ([['Código', l.referenceCode]] as [string, string][]) : []),
   ];
+}
+
+/** Full HTML of a listing page. Demo listings are marked noindex (fictional data must not reach search results). */
+export function renderListingPage(l: Listing, ctx: PageContext): string {
+  const url = `${ctx.siteUrl}${pagePath(l)}`;
+  const mapUrl = `${ctx.siteUrl}?imovel=${encodeURIComponent(l.id)}`;
+  const desc = description(l, ctx.agencyName);
+  const addr = shownAddress(l);
+  const rent = l.transaction === 'rent';
+  const price = rent ? `${brl(l.rentPrice ?? l.price)}<small>/mês</small>` : brl(l.price);
+  const reduced = !rent && l.previousPrice && l.previousPrice > l.price ? `<s>${brl(l.previousPrice)}</s> ` : '';
+  const facts = listingFacts(l);
   const wa = l.advertiser?.whatsapp?.replace(/\D/g, '');
   const waLink =
     wa && wa.length >= 10

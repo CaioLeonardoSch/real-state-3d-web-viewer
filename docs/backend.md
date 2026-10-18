@@ -450,6 +450,14 @@ monta é `src/seo/siteServer.ts`, com uma consulta ao banco (`site_bootstrap`) p
   alteração), e `/robots.txt`.
 - **Endereços antigos** (`site.html?p=...`, `?id=`, título antigo, barra no fim) vão para o novo com 301. O que não
   existe responde 404, com `noindex`.
+- **Corpo da página** (feito em 17/10): `src/seo/siteBody.ts` põe em `#site` o título, o preço, os dados, a
+  descrição e a primeira foto da ficha, os links de todos os anúncios na lista (até 500) e os 12 mais recentes na
+  inicial, com o menu e os contatos. Robôs sem JavaScript leem o conteúdo e seguem os links; o site o substitui
+  quando o script roda.
+- **Páginas estáticas do domínio da plataforma** (`dist/imovel/<título>-<código>/`, feito em 17/10): título antigo
+  responde 301 para o atual na Cloudflare Pages (`functions/[[path]].ts` com `data/page-codes.json`, testado com o
+  `wrangler`); anúncio que saiu do site responde 404 com `noindex` (`dist/404.html`). No GitHub Pages, que não tem
+  funções, o script do `404.html` leva ao endereço atual.
 - **Compartilhar e WhatsApp** usam o endereço da ficha no domínio do cliente. O mapa da ficha já era o do próprio
   site (filtrado pelo cliente).
 - O site só usa esses endereços quando o servidor marca a página (`<meta name="site-paths">`). Na demonstração e no

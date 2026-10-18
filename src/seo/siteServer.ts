@@ -10,6 +10,7 @@ import { SOCIALS, normalizeSiteConfig, socialUrl, telHref, type SiteConfig } fro
 import { listingPath, pageMeta, parsePath, routePath, type PageMeta, type Route } from '../site/routes.ts';
 import { escapeHtml } from '../utils/format.ts';
 import { description, renderSitemap, structuredData } from './listingPage.ts';
+import { renderSiteBody } from './siteBody.ts';
 
 export interface SiteEnv {
   SUPABASE_URL: string;
@@ -70,8 +71,8 @@ function agencyData(c: SiteConfig, origin: string): object {
 
 const json = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c');
 
-/** The site's HTML with the page's own head. */
-function render(shell: string, m: PageMeta, tags: string[]): string {
+/** The site's HTML with the page's own head, and its content in #site (siteBody.ts) until the script runs. */
+function render(shell: string, m: PageMeta, tags: string[], body: string): string {
   // functions as replacements: a price ("R$ 1$") must not be read as a replacement pattern
   return (
     shell
@@ -80,6 +81,7 @@ function render(shell: string, m: PageMeta, tags: string[]): string {
       .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(m.title)}</title>`)
       .replace(/(<meta name="description" content=")[^"]*"/, (_, start: string) => `${start}${escapeHtml(m.description.slice(0, 300))}"`)
       .replace('</head>', () => `  ${tags.join('\n    ')}\n  </head>`)
+      .replace(/(<div id="site"[^>]*>)(?:\s*<p class="site-loading">[^<]*<\/p>\s*)?<\/div>/, (_, open: string) => `${open}${body}</div>`)
   );
 }
 
@@ -167,5 +169,6 @@ export async function handleSiteRequest(req: Request, env: SiteEnv, shell: () =>
   for (const h of ['content-length', 'content-encoding', 'etag', 'last-modified']) headers.delete(h);
   headers.set('content-type', 'text/html; charset=utf-8');
   headers.set('cache-control', 'public, max-age=0, must-revalidate');
-  return new Response(req.method === 'HEAD' ? null : render(await res.text(), m, tags), { status: found ? 200 : 404, headers });
+  const body = renderSiteBody(c, found ? { route: page.route, listing: l } : { route: page ? 'imovel' : 'nao-encontrada' }, m, site.listings);
+  return new Response(req.method === 'HEAD' ? null : render(await res.text(), m, tags, body), { status: found ? 200 : 404, headers });
 }

@@ -96,6 +96,30 @@ img {
   text-align: center;
   color: var(--s-muted);
 }
+/* content sent by the server (src/seo/siteBody.ts), until the site's script renders the page */
+.ssr-header,
+.ssr-footer {
+  padding: 16px 20px;
+}
+.ssr-header ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.ssr img {
+  max-width: 100%;
+  height: auto;
+}
+.ssr-facts div {
+  display: flex;
+  gap: 8px;
+}
+.ssr-facts dd {
+  margin: 0;
+}
 .skip {
   position: absolute;
   left: -999px;

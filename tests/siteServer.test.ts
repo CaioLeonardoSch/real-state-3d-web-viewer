@@ -95,6 +95,28 @@ describe('servidor das páginas no domínio do cliente', () => {
     expect(ld).toContain(canonical);
   });
 
+  it('o corpo já vem com o conteúdo, para quem não roda JavaScript', async () => {
+    const ficha = (await ask('https://casanova.com.br/imovel/apartamento-3-quartos-no-centro-ap-102')).html;
+    const body = /<div id="site">([\s\S]*)<\/div><\/body>/.exec(ficha)![1];
+    expect(body).toContain('<h1>Apartamento 3 quartos no Centro</h1>');
+    expect(body).toContain('R$ 500.000');
+    expect(body).toContain('<dt>Quartos</dt><dd>3 (1 suíte)</dd>');
+    expect(body).toContain('Sol da manhã.');
+    expect(body).toContain('src="https://db.exemplo.com/storage/v1/object/public/listing-photos/o1/l1/a.webp"');
+    expect(body).toContain('<a href="/sobre">Sobre nós</a>');
+    // the list links every listing, by its current address
+    const lista = (await ask('https://casanova.com.br/imoveis')).html;
+    expect(lista).toContain('<a href="/imovel/apartamento-3-quartos-no-centro-ap-102">Apartamento 3 quartos no Centro</a>');
+    expect(lista).toContain('<a href="/imovel/casa-com-piscina-a1b2c3d4">Casa com piscina</a>');
+    expect((await ask('https://casanova.com.br/')).html).toContain('<h2>Imóveis recentes</h2>');
+    expect((await ask('https://casanova.com.br/imovel/vendido-zz9')).html).toContain('<h1>Imóvel não encontrado</h1>');
+    // text from the advertiser is escaped
+    const evil = row({ title: '<img src=x onerror=alert(1)>', description: '<script>x</script>' });
+    const html = (await ask('https://casanova.com.br/imoveis', { ...BOOT, listings: [evil] })).html;
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
   it('endereços antigos e títulos antigos vão para o endereço atual (301)', async () => {
     const id = row().id;
     const cases: [string, string][] = [
