@@ -76,8 +76,9 @@ export const SHADOW_OPACITY = 0.3;
 /** Layers whose volumes cast shadows (all standing on the ground), and their height in metres. */
 export const SHADOW_CASTERS: { layer: string; height: (p: Record<string, unknown>) => number }[] = [
   { layer: 'context-buildings', height: (p) => Number(p.height) },
-  { layer: 'listing-buildings', height: (p) => Number(p.built ?? p.height) },
-  { layer: 'listing-dimmed', height: (p) => (p.kind === 'building' ? Number(p.height) : 0) },
+  // a unit (base above the ground) casts the shadow of its whole building
+  { layer: 'listing-buildings', height: (p) => Number(p.shellH ?? p.built ?? p.height) },
+  { layer: 'listing-dimmed', height: (p) => (p.kind === 'building' ? Number(p.shellH ?? p.height) : 0) },
   // developments (src/map/developmentLayer.ts): the tower, or its floors while it is open
   { layer: 'dev-towers', height: (p) => Number(p.height) },
   { layer: 'dev-blocks', height: (p) => Number(p.top) },
@@ -133,6 +134,7 @@ export const CLIP_LAYERS = [
   'trees',
   'lamps',
   'listing-dimmed',
+  'listing-shell-dimmed',
   'listing-approx-fill',
   'listing-approx-line',
   'listing-pins-dimmed',

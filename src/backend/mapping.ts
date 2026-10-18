@@ -27,6 +27,9 @@ export interface ListingRow {
   parking_spots: number;
   covered_parking: number | null;
   unit_floor: number | null;
+  /** The unit's "final" and the units per floor (20261104000001_unit_layouts.sql). */
+  unit_position?: number | null;
+  units_per_floor?: number | null;
   floors: number | null;
   towers: number | null;
   year_built: number | null;
@@ -163,6 +166,8 @@ export function rowToListing(r: ListingRow, photos: PhotoRow[], photoUrl: (path:
     ...(r.address && Object.keys(r.address).length ? { address: r.address } : {}),
     addressDisplay: r.address_display,
     ...opt('unitFloor', r.unit_floor),
+    ...opt('unitPosition', r.unit_position),
+    ...opt('unitsPerFloor', r.units_per_floor),
     ...opt('towers', r.towers),
     ...opt('suites', r.suites),
     ...opt('coveredParking', r.covered_parking),
@@ -229,6 +234,8 @@ export function listingToRow(l: Listing, orgId: string, location: [number, numbe
     parking_spots: l.parkingSpots,
     covered_parking: l.coveredParking ?? null,
     unit_floor: l.unitFloor ?? null,
+    unit_position: l.unitPosition ?? null,
+    units_per_floor: l.unitsPerFloor ?? null,
     floors: l.floors ?? null,
     towers: l.towers ?? null,
     year_built: l.yearBuilt ?? null,

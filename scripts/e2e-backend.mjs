@@ -436,6 +436,25 @@ try {
     pubEdited.title === 'Casa editada no backend' && /Rua do Teste/.test(pubEdited.address ?? '') && !/123/.test(pubEdited.address ?? '') && pubEdited.approx,
     JSON.stringify(pubEdited));
 
+  // ---- building layout (item 45): only a published listing with the full address records it, readable by anyone
+  {
+    const anon = createClient(status.API_URL, status.ANON_KEY, { auth: { persistSession: false } });
+    const osm = `way/9${Date.now() % 1e9}`;
+    const before = (await svc.from('listings').select('address_display, building_osm_id, floors').eq('id', id).single()).data;
+    const unit = { building_osm_id: osm, floors: 8, units_per_floor: 4, unit_floor: 3, unit_position: 2 };
+    await svc.from('listings').update({ ...unit, address_display: 'street' }).eq('id', id);
+    const hidden = (await anon.from('building_layouts').select('osm_id').eq('osm_id', osm)).data;
+    const upd = await svc.from('listings').update({ address_display: 'full' }).eq('id', id);
+    const shown = (await anon.from('building_layouts').select('floors, units_per_floor').eq('osm_id', osm)).data;
+    const pub = (await anon.from('public_listings').select('unit_position, units_per_floor').eq('id', id)).data;
+    const bad = await svc.from('listings').update({ unit_position: 5 }).eq('id', id);
+    await svc.from('listings').update({ ...before, units_per_floor: null, unit_floor: null, unit_position: null }).eq('id', id);
+    check('o layout do prédio (andares × unidades) só fica público com o endereço completo; a unidade cabe no andar',
+      hidden?.length === 0 && !upd.error && shown?.[0]?.floors === 8 && shown[0].units_per_floor === 4 &&
+        pub?.[0]?.unit_position === 2 && !!bad.error,
+      JSON.stringify({ hidden, shown, pub, bad: bad.error?.code, upd: upd.error?.message }));
+  }
+
   // ---- the client's own domain, while the listing is published: pages ready for search engines and link previews
   // (src/seo/siteServer.ts)
   const domain = `imob-${tag}.localhost`; // under .localhost the browser reaches this machine, with no DNS

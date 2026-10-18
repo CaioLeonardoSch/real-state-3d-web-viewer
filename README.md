@@ -567,9 +567,21 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Anunciar imóvel**: o painel abre à direita. Durante a escolha no mapa ele vira uma faixa com a instrução, o
   cursor vira mira e cliques no mapa não abrem anúncios. Esc cancela a escolha (ou fecha o painel). O local
   escolhido aparece em azul (`pick-preview`); apartamentos usam a altura `pavimentos × 3 m`, se informada.
-  Prédios com nome, não residenciais ou já anunciados são recusados com o motivo. Sem título, o anúncio recebe um
+  Prédios com nome, não residenciais ou já anunciados sem a unidade são recusados com o motivo. Sem título, o anúncio recebe um
   título automático ("Casa 3 quartos", "Terreno de 300 m²"). Um anúncio recém-salvo é aberto mesmo que os filtros
   aplicados o escondam.
+- **Anunciar pela unidade**: num apartamento, informados os pavimentos e as **unidades por andar** (até 12), o
+  formulário mostra a grade do prédio, do último andar ao primeiro, com o número de cada unidade ("402" = 4º andar,
+  2º final). Clicar numa unidade preenche o andar, e o mapa destaca só ela, no andar dela, com o resto do prédio
+  translúcido. Depois de salvo, o mapa desenha o prédio inteiro esmaecido e a unidade na cor do anúncio. Vários
+  anúncios no mesmo prédio são aceitos quando cada um marca a sua unidade (a já anunciada fica riscada na grade), e
+  o layout (andares × unidades) informado pelo primeiro é reaproveitado pelos próximos. **Limites:** a posição é um
+  palpite (faixas iguais ao longo do lado maior do prédio); a planta real vem da construtora. Sem o backend, o
+  layout fica neste navegador; com ele, na tabela `building_layouts`, que só recebe o prédio de um anúncio publicado
+  com o endereço completo.
+
+![Escolha da unidade na grade do prédio](docs/screenshots/desktop-unit-pick.png)
+
 - **Títulos e descrições** são genéricos e não citam nomes de ruas, para não sugerir endereço real.
 - **Filtros principais**: tipo, preço mín./máx., quartos mín. e área mín.
 - **"Mais filtros"** (seção recolhível; o botão mostra quantos estão ativos, ex.: "Mais filtros (2)"): banheiros mín.,
@@ -774,7 +786,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 108 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 109 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
   - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa
@@ -802,6 +814,8 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - "Mais filtros": abre, conta os critérios ativos ("Mais filtros (2)"), filtra por comodidade + banheiros e grava
     `?banheiros=2&comodidades=piscina`;
   - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
+  - "Anunciar pela unidade": num apartamento com 6 pavimentos e 3 unidades por andar a grade mostra 18 unidades;
+    o clique na 402 a marca, preenche o andar e destaca a faixa da unidade no prédio;
   - "Anunciar": cadastro incompleto (sem CRECI) é recusado; casa num prédio cinza e terreno num espaço
     livre são salvos, abertos e aparecem na lista, com galeria, endereço só da rua e link de WhatsApp; baixar o
     preço no "Gerenciar anúncio" mostra o preço riscado e o histórico (só para o anunciante); "Editar anúncio" abre o
@@ -816,7 +830,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 - `npm run verify:site` (site das imobiliárias), 29 checagens: busca com chips e URL, bairro sem acento, favoritos,
   comparação, ficha com preço, contato e disponibilidade, mapa só quando aparece, formulários, mapa embutido (só os
   imóveis da imobiliária, mantendo `embed` e `site` no endereço), editor, outra imobiliária e celular.
-- `npm run verify:backend` (Supabase local), 27 checagens: do suporte criando a imobiliária até o site personalizado
+- `npm run verify:backend` (Supabase local), 40 checagens: do suporte criando a imobiliária até o site personalizado
   pelo dono. Na rodada de 14/10 passou na segunda execução; na primeira, a criação da imobiliária estourou o
   limite de 15 s logo no início, com o Supabase recém-acionado.
 - Screenshots em `docs/screenshots/`.

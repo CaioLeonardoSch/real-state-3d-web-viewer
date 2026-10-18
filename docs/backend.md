@@ -215,6 +215,12 @@ README). O que muda com backend:
    número de andares, unidades por andar e a posição de cada uma: o cadastro da Prefeitura dá a área construída, mas
    não a distribuição. Para prédios novos vem da construtora; para antigos, do próprio anunciante (um editor simples
    de "andares × unidades por andar × posição do final") e vai sendo reaproveitado pelos próximos anúncios do prédio.
+   **Feito em 18/10 (a parte do anunciante):** colunas `unit_position` e `units_per_floor` em `listings` (a
+   unidade precisa caber no andar) e a tabela `building_layouts` (andares × unidades por prédio do OSM, leitura
+   pública), preenchida por um gatilho só a partir de um anúncio publicado com o endereço completo, para não revelar
+   o prédio de um endereço oculto; `public_listings` mostra a unidade só com o endereço completo. A posição de cada
+   final é um palpite (faixas iguais ao longo do lado maior); a planta da construtora e a busca do prédio pelo nome
+   ainda faltam.
 2. **Espelho de vendas com a identidade de cada construtora e empreendimento** (cores, logotipo, fontes, materiais do
    lançamento), além da disponibilidade ao vivo para corretores credenciados.
 3. **Camadas da Prefeitura como opções ligáveis**: mancha de inundação, zoneamento e lote real, desligadas por padrão

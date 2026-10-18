@@ -3,6 +3,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Agency, Listing, Photo } from '../data/types';
 import type { AuditEntry } from './audit';
+import { validLayout, type BuildingLayout } from '../map/unitLayout';
 import type { Development, UnitStatus } from '../data/developments';
 import { hasDrawing, rowsToDevelopment, type DevelopmentRow, type UnitRow } from './developments';
 import type { TeamUnit, UnitImportRow } from './unitsCsv';
@@ -568,6 +569,14 @@ export class RemoteBackend {
     if (!row.data) return null;
     const l = rowToListing(row.data as ListingRow, (photos.data ?? []) as PhotoRow[], this.photoUrl, mine);
     return mine ? { ...l, priceHistory: history.get(id) ?? [] } : l;
+  }
+
+  /** Floors × units per floor given by an earlier listing of the building (20261104000001_unit_layouts.sql). */
+  async buildingLayout(osmId: string): Promise<BuildingLayout | null> {
+    const { data, error } = await this.sb.from('building_layouts').select('floors, units_per_floor').eq('osm_id', osmId).maybeSingle();
+    if (error || !data) return null;
+    const layout = { floors: data.floors as number, unitsPerFloor: data.units_per_floor as number };
+    return validLayout(layout) ? layout : null;
   }
 
   /** Saves a new listing and uploads its photos (data URLs prepared by the form). Returns the new id. */

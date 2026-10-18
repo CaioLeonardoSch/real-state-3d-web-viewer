@@ -38,6 +38,7 @@ import { countByStatus, type Development } from './data/developments';
 import { backendConfig } from './backend/config';
 import type { RemoteBackend } from './backend/remote';
 import { mountMapHint } from './ui/mapHint';
+import { saveLayout, savedLayout, validLayout } from './map/unitLayout';
 import { AreaDrawer, growRing } from './map/drawArea';
 import { CLIP_BUFFER_M } from './map/baseStyle';
 import type { AccountPanel } from './ui/account';
@@ -688,7 +689,15 @@ async function main() {
     agencies,
     scene,
     checker: new PlacementChecker(data, (layer, bbox) => scene.tileFeaturesIn(layer, bbox)),
-    listingOnBuilding: (osmId) => listings.find((l) => l.buildingOsmId === osmId),
+    listingsOnBuilding: (osmId) => listings.filter((l) => l.buildingOsmId === osmId),
+    // the layout an earlier listing of the building gave: on the map, in this browser, or in the database
+    buildingLayout: async (osmId) => {
+      const known = listings.find((l) => l.buildingOsmId === osmId && validLayout({ floors: l.floors, unitsPerFloor: l.unitsPerFloor }));
+      if (known) return { floors: known.floors!, unitsPerFloor: known.unitsPerFloor! };
+      return remote ? remote.buildingLayout(osmId) : savedLayout(osmId);
+    },
+    // with the back end, saving the listing stores it (building_layouts)
+    saveBuildingLayout: (osmId, layout) => (remote ? undefined : saveLayout(osmId, layout)),
     otherLots: (exceptId) => listings.flatMap((l) => (l.lotPolygon && l.id !== exceptId ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),
     bairroAt: (p) => scene.bairroAt(p),

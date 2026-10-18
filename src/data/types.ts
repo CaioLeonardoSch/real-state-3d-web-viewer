@@ -202,6 +202,13 @@ export interface Listing {
   // ---- unit and building
   /** Floor of the unit (apartments). */
   unitFloor?: number;
+  /**
+   * Where the unit is on its floor: its "final" (1 = unit 01, so 701 on the 7th floor), counted along the building's
+   * long side, out of `unitsPerFloor` (src/map/unitLayout.ts). The map then shows the unit itself, not the whole building.
+   */
+  unitPosition?: number;
+  /** Units per floor of the building (with `floors`, the layout reused by the building's next listings). */
+  unitsPerFloor?: number;
   towers?: number;
   suites?: number;
   /** How many of `parkingSpots` are covered. */
@@ -360,6 +367,10 @@ export function validateListingsFile(raw: unknown): ListingsFile {
     };
     ['rentPrice', 'condoFee', 'unitFloor', 'suites', 'coveredParking'].forEach((k) => optInt(k));
     optInt('towers', 1);
+    optInt('unitPosition', 1);
+    optInt('unitsPerFloor', 1);
+    if (l.unitPosition !== undefined && !(isInt(l.unitsPerFloor) && (l.unitPosition as number) <= (l.unitsPerFloor as number)))
+      errors.push(`${at}.unitPosition needs unitsPerFloor`);
     optInt('yearBuilt', 1800);
     if (l.transaction !== undefined && !TRANSACTIONS.includes(l.transaction as Transaction)) errors.push(`${at}.transaction invalid`);
     if (l.transaction === 'rent' || l.transaction === 'both') {

@@ -1455,6 +1455,50 @@ body[data-tod='night'] .btn-danger {
 .a-place {
   grid-column: 1 / -1;
 }
+.a-units[hidden] {
+  display: none;
+}
+.a-unit-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow: auto;
+}
+.a-unit-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.a-unit-floor {
+  flex: 0 0 30px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  padding-right: 4px;
+}
+.a-unit-row button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.a-unit-row button[aria-pressed='true'] {
+  background: #2f7de1;
+  border-color: #2f7de1;
+  color: #fff;
+}
+.a-unit-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
 .a-place {
   border: 1px dashed #2f7de1;
   border-radius: 10px;

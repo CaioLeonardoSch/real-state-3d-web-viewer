@@ -40,6 +40,7 @@ import {
 import { formatCep, safeUrl, today } from '../data/listingText';
 import { makeThumb, photoVersions, resizeImage } from '../utils/images';
 import type { PickResult, Scene } from '../map/scene';
+import { MAX_FLOORS, MAX_UNITS_PER_FLOOR, floorBand, unitNumber, unitStrip, validLayout, type BuildingLayout } from '../map/unitLayout';
 import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type PlacementChecker } from '../utils/placement';
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
 import { REGION } from '../config/region';
@@ -78,8 +79,12 @@ export interface AddListingDeps {
   agencies: Agency[];
   scene: Scene;
   checker: PlacementChecker;
-  /** Listing already using this OSM building, if any. */
-  listingOnBuilding: (osmId: string) => Listing | undefined;
+  /** Listings already in this OSM building (several only when each is a unit). */
+  listingsOnBuilding: (osmId: string) => Listing[];
+  /** Floors × units per floor already given for this building (by an earlier listing), if any. */
+  buildingLayout: (osmId: string) => Promise<BuildingLayout | null>;
+  /** Keeps the layout for the building's next listings. */
+  saveBuildingLayout: (osmId: string, layout: BuildingLayout) => void;
   /** Lots of the other land listings (a new lot must not overlap them); `exceptId`: the listing being edited. */
   otherLots: (exceptId?: string) => (Polygon | MultiPolygon)[];
   newId: (slug: string) => string;
@@ -176,7 +181,7 @@ export class AddListingPanel {
     set('areaM2', l.areaM2);
     set('totalAreaM2', l.totalAreaM2);
     if (l.type !== 'land') set('landAreaM2', l.landAreaM2);
-    for (const k of ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking', 'unitFloor', 'floors', 'towers', 'yearBuilt'] as const)
+    for (const k of ['bedrooms', 'suites', 'bathrooms', 'parkingSpots', 'coveredParking', 'unitFloor', 'floors', 'unitsPerFloor', 'unitPosition', 'towers', 'yearBuilt'] as const)
       set(k, l[k]);
     set('status', l.status);
     set('floorsBuilt', l.construction?.floorsBuilt);
@@ -240,6 +245,7 @@ export class AddListingPanel {
     this.isOpen = false;
     this.deps.scene.stopPicking();
     this.deps.scene.setPickPreview(null);
+    this.deps.scene.setPickUnit(null);
     this.el.hidden = true;
     this.el.classList.remove('picking');
     document.body.classList.remove('add-open');
@@ -313,6 +319,12 @@ export class AddListingPanel {
           ${field('Vagas cobertas', count('coveredParking', 0), buildingOnly)}
           ${field('Andar da unidade', num('unitFloor', 'ex.: 7'), unitOnly)}
           ${field('Andares do edifício', num('floors', 'opcional'), unitOnly)}
+          ${field('Unidades por andar', num('unitsPerFloor', 'opcional'), unitOnly)}
+          <div class="a-units a-wide" ${unitOnly}>
+            <input type="hidden" name="unitPosition">
+            <p class="a-hint a-units-hint" aria-live="polite"></p>
+            <div class="a-unit-grid" role="group" aria-label="Unidades do prédio, do último andar ao primeiro"></div>
+          </div>
           ${field('Torres', num('towers', '1'), unitOnly)}
           ${field('Ano de construção', num('yearBuilt', 'ou de entrega'), buildingOnly)}
           ${field('Obra', `<select name="status">${options(LISTING_STATUSES, STATUS_LABELS)}</select>`, buildingOnly)}
@@ -404,7 +416,17 @@ export class AddListingPanel {
     });
     input('transaction').addEventListener('change', () => this.onTransactionChange());
     input('areaM2').addEventListener('change', () => this.onAreaChange());
-    input('floors').addEventListener('change', () => this.refreshPreview());
+    input('floors').addEventListener('input', () => this.refreshUnits());
+    input('unitsPerFloor').addEventListener('input', () => this.refreshUnits());
+    input('unitFloor').addEventListener('input', () => this.refreshUnits());
+    this.el.querySelector('.a-unit-grid')!.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-floor]');
+      if (!b || b.disabled) return;
+      input('unitFloor').value = b.dataset.floor!;
+      input('unitPosition').value = b.dataset.pos!;
+      this.refreshUnits();
+      this.el.querySelector<HTMLButtonElement>(`.a-unit-grid button[data-floor="${b.dataset.floor}"][data-pos="${b.dataset.pos}"]`)?.focus();
+    });
     (form.elements.namedItem('status') as HTMLSelectElement).addEventListener('change', () => this.refreshObra());
     input('cep').addEventListener('input', () => this.onCepInput());
     input('photos').addEventListener('change', () => void this.addPhotos());
@@ -614,8 +636,9 @@ export class AddListingPanel {
       // residential rule (scripts/lib/residential.mjs), computed when the tiles were built
       if (!p.building.residential)
         return this.pickHint('Esse prédio não é residencial no OpenStreetMap (ou tem nome próprio). Escolha outro.');
-      const taken = this.deps.listingOnBuilding(p.building.osmId);
-      if (taken && taken.id !== this.editing?.id) return this.pickHint(`Esse prédio já tem um anúncio: "${taken.title}". Escolha outro.`);
+      // a building takes several listings only when each one is a unit (item 45)
+      const taken = this.deps.listingsOnBuilding(p.building.osmId).find((l) => l.id !== this.editing?.id && !l.unitPosition);
+      if (taken) return this.pickHint(`Esse prédio já tem um anúncio: "${taken.title}". Escolha outro.`);
       const { geometry, height, osmId } = p.building;
       const center = turfCentroid({ type: 'Feature', properties: {}, geometry }).geometry.coordinates as [number, number];
       this.setPlace({ kind: 'building', osmId, center, geometry, height });
@@ -649,16 +672,101 @@ export class AddListingPanel {
     this.place = place;
     const bairro = this.form.elements.namedItem('bairro') as HTMLInputElement;
     if (place && !bairro.value.trim()) bairro.value = this.deps.bairroAt(place.center) ?? '';
-    this.refreshPreview();
+    this.layoutNote = '';
+    this.refreshUnits();
     this.renderPlaceStatus();
+    if (place?.kind === 'building') void this.loadLayout(place.osmId);
+  }
+
+  /** What the form says about the building's layout (given by an earlier listing). */
+  private layoutNote = '';
+
+  /** Fills floors × units per floor with what an earlier listing of the building gave (empty fields only). */
+  private async loadLayout(osmId: string): Promise<void> {
+    const layout = await this.deps.buildingLayout(osmId).catch(() => null);
+    if (!layout || this.place?.kind !== 'building' || this.place.osmId !== osmId) return;
+    const set = (name: string, v: number) => {
+      const el = this.form.elements.namedItem(name) as HTMLInputElement;
+      if (!el.value.trim()) el.value = String(v);
+    };
+    set('floors', layout.floors);
+    set('unitsPerFloor', layout.unitsPerFloor);
+    this.layoutNote = `Este prédio já foi informado por outro anúncio: ${layout.floors} andares × ${layout.unitsPerFloor} unidades por andar.`;
+    this.refreshUnits();
+  }
+
+  /** The layout typed in the form, when it is complete and valid. */
+  private layout(): BuildingLayout | null {
+    const l = { floors: parseNumberInput(this.value('floors')) ?? undefined, unitsPerFloor: parseNumberInput(this.value('unitsPerFloor')) ?? undefined };
+    return validLayout(l) ? l : null;
+  }
+
+  /** The unit chosen on the grid: floor and position, when they fit the layout. */
+  private chosenUnit(layout: BuildingLayout | null): { floor: number; position: number } | null {
+    const floor = parseNumberInput(this.value('unitFloor'));
+    const position = parseNumberInput(this.value('unitPosition'));
+    if (!layout || floor === null || position === null || !Number.isInteger(floor) || floor < 0 || floor > layout.floors) return null;
+    return Number.isInteger(position) && position >= 1 && position <= layout.unitsPerFloor ? { floor, position } : null;
+  }
+
+  /** Grid of the building's units ("Anunciar pela unidade"): floors top to bottom, units by their "final". */
+  private refreshUnits(): void {
+    const box = this.el.querySelector<HTMLElement>('.a-units');
+    if (box) {
+      const grid = box.querySelector<HTMLElement>('.a-unit-grid')!;
+      const hint = box.querySelector<HTMLElement>('.a-units-hint')!;
+      const layout = this.place?.kind === 'building' ? this.layout() : null;
+      const chosen = this.chosenUnit(layout);
+      if (!chosen) (this.form.elements.namedItem('unitPosition') as HTMLInputElement).value = '';
+      if (this.place?.kind !== 'building') hint.textContent = 'Escolha o prédio no mapa para marcar a unidade nele.';
+      else if (!layout)
+        hint.textContent = `${this.layoutNote ? `${this.layoutNote} ` : ''}Informe os andares (1 a ${MAX_FLOORS}) e as unidades por andar (1 a ${MAX_UNITS_PER_FLOOR}) para escolher a unidade no prédio (opcional).`;
+      else
+        hint.textContent = `${this.layoutNote ? `${this.layoutNote} ` : ''}${
+          chosen ? `Unidade ${unitNumber(chosen.floor, chosen.position)} marcada em azul no prédio.` : 'Clique na unidade anunciada: ela fica marcada no prédio.'
+        } As unidades são contadas ao longo do lado maior do prédio.`;
+      if (!layout || this.place?.kind !== 'building') grid.innerHTML = '';
+      else {
+        const osmId = this.place.osmId;
+        const taken = new Map(
+          this.deps.listingsOnBuilding(osmId)
+            .filter((l) => l.id !== this.editing?.id && l.unitPosition && l.unitFloor !== undefined)
+            .map((l) => [`${l.unitFloor}-${l.unitPosition}`, l.title]),
+        );
+        const rows: string[] = [];
+        for (let f = layout.floors; f >= 1; f--) {
+          const cells: string[] = [];
+          for (let u = 1; u <= layout.unitsPerFloor; u++) {
+            const n = unitNumber(f, u);
+            const other = taken.get(`${f}-${u}`);
+            const on = chosen?.floor === f && chosen.position === u;
+            cells.push(
+              `<button type="button" data-floor="${f}" data-pos="${u}" aria-pressed="${on}" ${other ? 'disabled' : ''}
+                aria-label="Unidade ${n}, ${f}º andar${other ? `, já anunciada (${escapeHtml(other)})` : ''}">${n}</button>`,
+            );
+          }
+          rows.push(`<div class="a-unit-row"><span class="a-unit-floor" aria-hidden="true">${f}º</span>${cells.join('')}</div>`);
+        }
+        grid.innerHTML = rows.join('');
+      }
+    }
+    this.refreshPreview();
   }
 
   private refreshPreview(): void {
     const { scene } = this.deps;
+    scene.setPickUnit(null);
     if (!this.place) return scene.setPickPreview(null);
     if (this.place.kind === 'land') return scene.setPickPreview(this.place.lot, 0.5);
     const floors = inBuilding(this.type) ? parseNumberInput(this.value('floors')) : null;
-    scene.setPickPreview(this.place.geometry, floors ? floors * METERS_PER_FLOOR : this.place.height);
+    const height = floors ? floors * METERS_PER_FLOOR : this.place.height;
+    scene.setPickPreview(this.place.geometry, height);
+    const layout = inBuilding(this.type) ? this.layout() : null;
+    const unit = this.chosenUnit(layout);
+    const strip = unit && layout ? unitStrip(this.place.geometry, unit.position, layout.unitsPerFloor) : null;
+    if (!strip || !unit) return;
+    const { base, top } = floorBand(unit.floor, METERS_PER_FLOOR);
+    scene.setPickUnit(strip, base, Math.min(top, height));
   }
 
   private renderPlaceStatus(problem?: string): void {
@@ -701,6 +809,9 @@ export class AddListingPanel {
     const landAreaM2 = onOwnLot(type) ? num('landAreaM2') : null;
     const floors = inBuilding(type) ? num('floors') : null;
     const unitFloor = inBuilding(type) ? num('unitFloor') : null;
+    const unitsPerFloor = inBuilding(type) ? num('unitsPerFloor') : null;
+    const layout = inBuilding(type) && this.place?.kind === 'building' ? this.layout() : null;
+    const unit = this.chosenUnit(layout);
     const towers = inBuilding(type) ? num('towers') : null;
     const yearBuilt = building ? num('yearBuilt') : null;
     const underConstruction = building && this.value('status') === 'under_construction';
@@ -733,6 +844,16 @@ export class AddListingPanel {
     }
     if (floors !== null && (!Number.isInteger(floors) || floors < 1 || floors > 40)) problems.push('andares do edifício vão de 1 a 40');
     if (unitFloor !== null && (!Number.isInteger(unitFloor) || unitFloor > (floors ?? 40))) problems.push('o andar da unidade passa do número de andares');
+    if (unitsPerFloor !== null && (!Number.isInteger(unitsPerFloor) || unitsPerFloor < 1 || unitsPerFloor > MAX_UNITS_PER_FLOOR))
+      problems.push(`unidades por andar vão de 1 a ${MAX_UNITS_PER_FLOOR}`);
+    if (unitsPerFloor !== null && floors === null) problems.push('com as unidades por andar, informe também os andares do edifício');
+    if (this.place?.kind === 'building') {
+      const others = this.deps.listingsOnBuilding(this.place.osmId).filter((l) => l.id !== this.editing?.id);
+      // a second listing in the building has to be a unit, and not one already listed
+      if (others.length && !unit) problems.push('esse prédio já tem anúncios: marque a unidade na grade de unidades');
+      if (unit && others.some((l) => l.unitFloor === unit.floor && l.unitPosition === unit.position))
+        problems.push(`a unidade ${unitNumber(unit.floor, unit.position)} já está anunciada`);
+    }
     if (towers !== null && (!Number.isInteger(towers) || towers < 1 || towers > 20)) problems.push('torres vão de 1 a 20');
     if (yearBuilt !== null && (!Number.isInteger(yearBuilt) || yearBuilt < 1850 || yearBuilt > year + 6)) problems.push('ano de construção inválido');
     if (floorsBuilt !== null && (!Number.isInteger(floorsBuilt) || floorsBuilt < 0 || floorsBuilt > (floors ?? 40)))
@@ -786,6 +907,7 @@ export class AddListingPanel {
       parkingSpots,
       ...(building ? { suites, coveredParking } : {}),
       ...opt('unitFloor', unitFloor),
+      ...(unit && layout ? { unitPosition: unit.position, unitsPerFloor: layout.unitsPerFloor } : opt('unitsPerFloor', unitsPerFloor)),
       ...opt('towers', towers),
       ...opt('yearBuilt', yearBuilt),
       usage: this.value('usage') as Usage,
@@ -833,6 +955,7 @@ export class AddListingPanel {
       const file = exclusive ? doc : undefined;
       const error = editing ? await this.deps.onUpdate(listing, place.center, file) : await this.deps.onSave(listing, place.center, file);
       if (error) return this.showError(error);
+      if (layout && place.kind === 'building') this.deps.saveBuildingLayout(place.osmId, layout);
       this.close();
     } finally {
       this.saving = false;

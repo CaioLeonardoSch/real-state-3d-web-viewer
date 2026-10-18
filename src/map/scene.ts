@@ -41,6 +41,7 @@ import {
   Z_STREET_NAMES,
 } from './baseStyle';
 import { craneParts } from './crane';
+import { floorBand, unitStrip } from './unitLayout';
 import { osmNumericId } from '../data/osmId';
 import interMedium from '@fontsource/inter/files/inter-latin-500-normal.woff2?url';
 import { REGION } from '../config/region';
@@ -68,6 +69,10 @@ interface ListingFeatureProps {
   matched: boolean;
   /** Under construction: height already built (m); the rest is drawn translucent. */
   built?: number;
+  /** A unit (src/map/unitLayout.ts): where its floor starts (m); the building around it is drawn translucent. */
+  base?: number;
+  /** A unit: the height of its building (for the shadow). */
+  shellH?: number;
 }
 
 /** Layers whose features are clickable listings (filters keep only matched ones). */
@@ -141,6 +146,8 @@ const MAP_TEXTS = {
 export class Scene {
   readonly map: MlMap;
   private listingFeatures: Feature<Polygon | MultiPolygon, ListingFeatureProps>[] = [];
+  /** Listings shown as a unit: their whole building (drawn translucent around the unit), by feature id. */
+  private unitShells = new Map<number, { osmId: string; geometry: Polygon | MultiPolygon; height: number }>();
   private featureIdByListing = new Map<string, number>();
   private hoveredId: number | null = null;
   private selectedId: number | null = null;
@@ -407,6 +414,7 @@ export class Scene {
         // buildings under construction: the part still to build (translucent) and a tower crane
         construction: { type: 'geojson', data: this.constructionCollection() },
         'pick-preview': { type: 'geojson', data: EMPTY_FC },
+        'pick-unit': { type: 'geojson', data: EMPTY_FC },
         // neighbourhood(s) the map is cut to (filter "bairro"), and the ground outside them plus 100 m (masked)
         'clip-area': { type: 'geojson', data: EMPTY_FC },
         'clip-mask': { type: 'geojson', data: EMPTY_FC },
@@ -453,8 +461,21 @@ export class Scene {
           filter: ['all', dimFilter, ['in', ['get', 'kind'], ['literal', ['building', 'land']]]],
           paint: {
             'fill-extrusion-color': t.dimmed,
+            'fill-extrusion-base': FEATURE_BASE,
             'fill-extrusion-height': ['get', 'height'],
             'fill-extrusion-opacity': 0.4,
+          },
+        },
+        {
+          // the building of a dimmed listing shown as a unit
+          id: 'listing-shell-dimmed',
+          type: 'fill-extrusion',
+          source: 'construction',
+          filter: ['all', ['==', ['get', 'shell'], true], ['==', ['get', 'matched'], false]],
+          paint: {
+            'fill-extrusion-color': t.dimmed,
+            'fill-extrusion-height': ['get', 'h'],
+            'fill-extrusion-opacity': 0.25,
           },
         },
         {
@@ -558,6 +579,19 @@ export class Scene {
           },
         },
         {
+          // the unit chosen in the building (the building turns translucent around it)
+          id: 'pick-unit',
+          type: 'fill-extrusion',
+          source: 'pick-unit',
+          paint: {
+            'fill-extrusion-color': PICK_COLOR,
+            'fill-extrusion-base': ['get', 'base'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-opacity': 1,
+            'fill-extrusion-vertical-gradient': false,
+          },
+        },
+        {
           id: 'listing-pins-dimmed',
           type: 'circle',
           source: 'listing-pins-dimmed',
@@ -624,6 +658,7 @@ export class Scene {
   private buildListingFeatures(): void {
     this.listingFeatures = [];
     this.featureIdByListing.clear();
+    this.unitShells.clear();
     this.listings.forEach((l, i) => {
       const id = i + 1;
       this.featureIdByListing.set(l.id, id);
@@ -647,6 +682,18 @@ export class Scene {
       const props: ListingFeatureProps = { listingId: l.id, kind, height, matched: true };
       if (kind === 'building' && l.status === 'under_construction' && l.construction)
         props.built = Math.min(height, l.construction.floorsBuilt * METERS_PER_FLOOR);
+      else if (kind === 'building' && l.unitPosition && l.unitsPerFloor && l.unitFloor !== undefined) {
+        // listed by the unit: only its floor and stretch of the building is highlighted
+        const strip = unitStrip(geometry, l.unitPosition, l.unitsPerFloor);
+        if (strip) {
+          const { base, top } = floorBand(l.unitFloor, l.floors ? height / l.floors : METERS_PER_FLOOR);
+          this.unitShells.set(id, { osmId: l.buildingOsmId ?? l.id, geometry, height });
+          geometry = strip;
+          props.base = base;
+          props.height = Math.min(top, height);
+          props.shellH = height;
+        }
+      }
       this.listingFeatures.push({ type: 'Feature', id, properties: props, geometry });
     });
   }
@@ -699,6 +746,15 @@ export class Scene {
       const seed = [...p.listingId].reduce((a, c) => a + c.charCodeAt(0), 0);
       features.push(...craneParts([w + (e - w) * 0.15, s + (n - s) * 0.2], p.height, (seed % 360) * (Math.PI / 180), { part: 'crane', matched: p.matched }));
     }
+    // listings shown as a unit: the building around them, translucent (once per building, matched first)
+    const shells = new Map<string, Feature>();
+    for (const f of [...this.listingFeatures].sort((a, b) => Number(b.properties.matched) - Number(a.properties.matched))) {
+      const shell = this.unitShells.get(f.id as number);
+      if (!shell || shells.has(shell.osmId)) continue;
+      const p = f.properties;
+      shells.set(shell.osmId, { type: 'Feature', id: f.id, properties: { part: 'ghost', shell: true, listingId: p.listingId, matched: p.matched, kind: 'building', b: 0, h: shell.height }, geometry: shell.geometry });
+    }
+    features.push(...shells.values());
     return { type: 'FeatureCollection', features };
   }
 
@@ -849,6 +905,15 @@ export class Scene {
       ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { height }, geometry }] }
       : EMPTY_FC;
     (this.map.getSource('pick-preview') as GeoJSONSource | undefined)?.setData(fc);
+  }
+
+  /** Shows (or clears) the unit chosen in the previewed building, from `base` to `height` metres. */
+  setPickUnit(geometry: Polygon | MultiPolygon | null, base = 0, height = 0): void {
+    const fc: FeatureCollection = geometry
+      ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { base, height }, geometry }] }
+      : EMPTY_FC;
+    (this.map.getSource('pick-unit') as GeoJSONSource | undefined)?.setData(fc);
+    if (this.map.getLayer('pick-preview')) this.map.setPaintProperty('pick-preview', 'fill-extrusion-opacity', geometry ? 0.3 : 0.9);
   }
 
   /** After a move: lifts the camera when it ended up inside or just above a building (see cameraGuard.ts). */
@@ -1022,6 +1087,7 @@ export class Scene {
     m.setPaintProperty('buildings-flat', 'fill-color', t.context);
     m.setPaintProperty('bairros-line', 'line-color', t.boundary);
     m.setPaintProperty('listing-dimmed', 'fill-extrusion-color', t.dimmed);
+    m.setPaintProperty('listing-shell-dimmed', 'fill-extrusion-color', t.dimmed);
     m.setPaintProperty('listing-buildings', 'fill-extrusion-color', listingBuildingHover);
     m.setPaintProperty('listing-land', 'fill-extrusion-color', landHover);
     m.setPaintProperty('listing-outline', 'line-color', t.accentStrong);

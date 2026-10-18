@@ -892,6 +892,32 @@ async function main() {
     await page.keyboard.press('Escape');
     await sleep(300);
 
+    // an apartment marks its unit: floors × units per floor draw a grid, and the map lights only that unit
+    await closeUp();
+    await waitIdle(page);
+    await page.click('.add-toggle');
+    await page.selectOption('#add-panel select[name="type"]', 'apartment');
+    await page.click('#add-panel [data-action="pick"]');
+    await sleep(200);
+    const aptBuilding = await pickOnMap('building');
+    await page.fill('#add-panel input[name="floors"]', '6');
+    await page.fill('#add-panel input[name="unitsPerFloor"]', '3');
+    await page.click('#add-panel .a-unit-grid button[data-floor="4"][data-pos="2"]');
+    await sleep(200);
+    const unitPick = await page.evaluate(() => ({
+      cells: document.querySelectorAll('#add-panel .a-unit-grid button').length,
+      rows: document.querySelectorAll('#add-panel .a-unit-row').length,
+      pressed: document.querySelector('#add-panel .a-unit-grid [aria-pressed="true"]')?.textContent,
+      floor: document.querySelector('#add-panel input[name="unitFloor"]').value,
+      drawn: window.__demo.map.getSource('pick-unit').serialize().data?.features?.length ?? 0,
+    }));
+    check('an apartment picks its unit on the floors × units grid, and the map draws only that unit',
+      !!aptBuilding && unitPick.cells === 18 && unitPick.rows === 6 && unitPick.pressed === '402' && unitPick.floor === '4' && unitPick.drawn === 1,
+      JSON.stringify(unitPick));
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-unit-pick.png') });
+    await page.click('#add-panel [data-action="close"]');
+    await sleep(200);
+
     await closeUp();
     await waitIdle(page);
     await page.click('.add-toggle');
