@@ -449,7 +449,7 @@ src/data/       tipos, validação em tempo de carga, carregamento
 src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
                 anúncios salvos no navegador (userListings)
 src/map/        cena MapLibre (destaque, hover, câmera, sombras), estilo do mapa base (baseStyle.ts) e iluminação
-src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
+src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite e régua de hora e época
 src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, editor; páginas em pages/
 src/panel/      gestão em página própria (painel.html), sem o mapa
 src/utils/      simulação de financiamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
@@ -608,6 +608,11 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   `font-faces` do MapLibre: a fonte Inter 500 (só latim, 24 KB, servida pelo próprio site) é desenhada no navegador,
   sem arquivos de glifos. Aparecem do zoom 16 em diante, deitados ao longo da rua e de frente para a câmera, acima dos
   prédios. O nome das ruas só existe no zoom 15 de `joinville.pmtiles` (+190 KB).
+- **Sol**: "Hora e época", ao lado de Manhã/Tarde/Noite, abre uma régua de hora e estação que move o sol, a luz e a
+  sombra dos prédios. Na ficha, "Sol do imóvel" mostra as horas de sol direto de cada fachada no inverno e no verão,
+  no andar da unidade, descontando os prédios em volta (`src/map/sunHours.ts`).
+- **Câmera acima dos telhados**: ao fim de cada movimento, se a câmera ficou dentro ou rente a um prédio, ela se
+  inclina para cima ou se afasta (`src/map/cameraGuard.ts`); a vista da janela é a exceção.
 - **Serviços por perto**: a ficha mostra o mais próximo de cada tipo (escola, saúde, farmácia, mercado, padaria,
   parque) até 2 km, em linha reta, e a busca filtra "Perto de (até 500 m)" (`?perto=escola,mercado`). A lista
   (`public/data/servicos.json`, 46 KB) é baixada em segundo plano e as distâncias são calculadas no navegador. Onde o

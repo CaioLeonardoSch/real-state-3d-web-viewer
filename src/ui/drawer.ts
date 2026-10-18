@@ -23,6 +23,7 @@ import { REPORT_REASONS, type ReportReason } from '../backend/mapping';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
 import { DEMO } from '../data/demo';
+import { SIDE_LABELS, STOREY_M, SUN_RADIUS_M, formatHours, type SunTable } from '../map/sunHours';
 import { NEARBY_MAX_M, SERVICE_COLORS, SERVICE_KINDS, SERVICE_LABELS, formatDistance, type NearbyService, type ServiceKind } from '../data/services';
 import { financingHtml, wireFinancing } from './financingSim';
 import { readVisit, visitFieldsHtml, wireVisitFields } from './visitRequest';
@@ -62,6 +63,8 @@ export class Drawer {
   report: ((l: Listing, reason: ReportReason, details: string) => Promise<string | null>) | null = null;
   /** Closest services of each kind (null while servicos.json is not loaded). */
   nearby: ((l: Listing) => Partial<Record<ServiceKind, NearbyService>> | null) | null = null;
+  /** Hours of sun on each side of the listing's building at its floor (null without a footprint or map tiles). */
+  sunHours: ((l: Listing, floor: number) => SunTable | null) | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
 
@@ -317,6 +320,7 @@ export class Drawer {
       }
       ${this.progressHtml(l)}
       ${this.nearbyHtml(l)}
+      ${this.sunHtml(l)}
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
       ${
         l.features.length
@@ -387,6 +391,7 @@ export class Drawer {
     this.bindGallery(l);
     this.bindLeadForm(l);
     this.bindReport(l);
+    this.bindSun(l);
     wireFinancing(this.el);
     this.el.querySelector('.btn-whatsapp')?.addEventListener('click', () => {
       if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
@@ -484,6 +489,42 @@ export class Drawer {
   }
 
   /** "Denunciar": sold, outdated, wrong or fake listings of other advertisers (the support team reads them). */
+  /** Floor the sun is measured at: the unit's floor, or the ground floor of a house. */
+  private sunFloor(l: Listing): number {
+    return l.type === 'apartment' ? Math.max(1, l.unitFloor ?? 1) : 0;
+  }
+
+  /** "Sol do imóvel": hours of direct sun on each side, computed when opened (the map tiles are loaded by then). */
+  private sunHtml(l: Listing): string {
+    if (!this.sunHours || !l.footprint) return '';
+    const floor = this.sunFloor(l);
+    const where = l.type === 'apartment' ? `no ${floor}º andar${l.unitFloor ? '' : ' (andar não informado)'}` : 'no térreo';
+    return `<details class="sun-box">
+      <summary>Sol do imóvel <small>horas de sol direto em cada fachada, ${where}</small></summary>
+      <div class="sun-body"><p class="muted">Calculando…</p></div>
+    </details>`;
+  }
+
+  private bindSun(l: Listing): void {
+    const box = this.el.querySelector<HTMLDetailsElement>('.sun-box');
+    if (!box || !this.sunHours) return;
+    box.addEventListener('toggle', () => {
+      if (!box.open || box.dataset.done) return;
+      const table = this.sunHours!(l, this.sunFloor(l));
+      const body = box.querySelector('.sun-body')!;
+      if (!table?.length) {
+        body.innerHTML = '<p class="muted">Aproxime o mapa do prédio e abra de novo: os prédios em volta ainda não carregaram.</p>';
+        return;
+      }
+      box.dataset.done = '1';
+      body.innerHTML = `<table class="sun-table">
+        <thead><tr><th scope="col">Fachada</th><th scope="col">Inverno <small>(21/06)</small></th><th scope="col">Verão <small>(21/12)</small></th></tr></thead>
+        <tbody>${table.map((r) => `<tr><th scope="row">${SIDE_LABELS[r.side]}</th><td>${formatHours(r.winter)}</td><td>${formatHours(r.summer)}</td></tr>`).join('')}</tbody>
+      </table>
+      <p class="nearby-note">Desconta a sombra dos prédios em volta (até ${SUN_RADIUS_M} m), com o andar a ${STOREY_M} m por pavimento. Não considera árvores nem relevo; a fachada de cada lado é a parede mais comprida dele no mapa.</p>`;
+    });
+  }
+
   /** "Por perto": the closest school, market… within 2 km, in a straight line. */
   private nearbyHtml(l: Listing): string {
     const near = this.nearby?.(l);

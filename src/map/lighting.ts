@@ -222,3 +222,27 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
     },
   };
 }
+
+/** Days of the hour-and-season ruler (southern hemisphere: December is summer). */
+export const RULER_DAYS = { summer: '2026-12-21', equinox: '2026-03-20', winter: '2026-06-21' } as const;
+export type RulerSeason = keyof typeof RULER_DAYS;
+
+/** Moment of the ruler: `minutes` after midnight, local time of the region, on the season's day. */
+export function rulerDate(season: RulerSeason, minutes: number): Date {
+  const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const mm = String(minutes % 60).padStart(2, '0');
+  return new Date(`${RULER_DAYS[season]}T${hh}:${mm}:00${REGION.utcOffset}`);
+}
+
+/**
+ * Theme for any moment (the ruler): the morning or afternoon colours lit by the sun of that moment, or the night
+ * when the sun is down. Returns the matching button too.
+ */
+export function themeAt(date: Date, minutes: number, lat: number, lon: number): { theme: Theme; tod: TimeOfDay } {
+  const { azimuth, altitude } = getPosition(date, lat, lon);
+  if (altitude <= 0) return { tod: 'night', theme: themeFor('night', lat, lon).theme };
+  const tod: TimeOfDay = minutes < 12 * 60 ? 'morning' : 'afternoon';
+  const sun = { azimuth, altitude };
+  const base = themeFor(tod, lat, lon).theme;
+  return { tod, theme: { ...base, sun, light: { ...base.light, position: sunToLightPosition(sun) } } };
+}

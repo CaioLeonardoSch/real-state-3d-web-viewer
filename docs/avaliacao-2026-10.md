@@ -453,6 +453,12 @@ Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um
        perto (zoom 17,6);
      - sombra de prédio sobre outro prédio (na parede ou no telhado) não aparece nesta etapa, nem a das árvores.
    - **Etapa 2, régua de horário e estação (mais 1 a 2 semanas):**
+     - **Feito em 17/10:** a régua "Hora e época" (verão, outono/primavera, inverno; 5h30 às 19h30, de 15 em 15
+       minutos) move o sol, a luz e a sombra no chão. Na ficha, "Sol do imóvel" calcula, ao abrir, as horas de sol
+       direto de cada fachada no inverno (21/06) e no verão (21/12), no andar da unidade (3 m por andar), com a
+       sombra dos prédios a até 300 m vindos dos blocos do mapa já carregados. No teste, um apartamento no 5º andar
+       em Pirabeiraba: norte 10,5 h no inverno e 3 h no verão; sul sem sol no inverno e 9 h no verão. O cálculo
+       ainda é no navegador; guardar por unidade no banco fica para quando houver o relevo;
      - arrastar a hora e o mês e ver a sombra andar;
      - no anúncio, o sol do apartamento: quantas horas de sol a fachada recebe no inverno e no verão, já descontando
        os prédios em volta. É argumento de venda que hoje se resume a "face norte".

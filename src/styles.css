@@ -608,6 +608,70 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   background: var(--accent-fill);
   color: #fff;
 }
+/* hour-and-season ruler, next to the morning / afternoon / night buttons; its panel opens over the results */
+.lighting {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.lighting .time-of-day {
+  position: static;
+}
+.sun-ruler {
+  position: relative;
+}
+.sun-ruler-toggle {
+  margin-top: 3px;
+}
+.sun-ruler-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+}
+.sun-ruler-toggle {
+  border: 0;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sun-ruler-toggle[aria-expanded='true'] {
+  background: var(--accent-fill);
+  color: #fff;
+}
+.sun-ruler-panel {
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+  width: min(260px, calc(100vw - 32px));
+  font-size: 13px;
+}
+.sun-ruler-panel[hidden] {
+  display: none;
+}
+.sun-ruler-panel label {
+  display: grid;
+  gap: 4px;
+}
+.sun-ruler-panel input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent-fill);
+}
+.sun-ruler-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 .results {
   position: absolute;
@@ -1939,6 +2003,10 @@ button.dev-row-label {
     top: 8px;
     left: 8px;
   }
+  .lighting {
+    top: 8px;
+    left: 8px;
+  }
 }
 
 /* map embedded in a client's site (?embed=1): only the map, its listing card and the lighting control */
@@ -2517,4 +2585,32 @@ body.panel-body {
   font-size: 0.8rem;
   color: var(--muted);
   margin: 6px 0 0;
+}
+
+/* "Sol do imóvel" in the listing panel */
+.sun-box summary small {
+  color: var(--muted);
+  margin-left: 4px;
+}
+.sun-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+.sun-table th,
+.sun-table td {
+  text-align: left;
+  padding: 3px 6px 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sun-table small {
+  color: var(--muted);
+  font-weight: normal;
+}
+.sun-box {
+  margin: 10px 0;
+}
+.sun-box > summary {
+  cursor: pointer;
+  font-weight: 600;
 }

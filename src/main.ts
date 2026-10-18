@@ -8,9 +8,10 @@ import type { StreetEntry, StreetFinder } from './data/streets';
 import type { MultiPolygon, Polygon } from 'geojson';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import type { Listing } from './data/types';
+import { SUN_RADIUS_M, sunTable } from './map/sunHours';
 import { NEARBY_MAX_M, ServiceIndex, listingPoint, nearbyDistances, type ServicesFile } from './data/services';
 import { Scene, type StreetRef } from './map/scene';
-import { themeFor, type TimeOfDay } from './map/lighting';
+import { rulerDate, themeAt, themeFor, type TimeOfDay } from './map/lighting';
 import {
   EMPTY_CRITERIA,
   FilterStore,
@@ -468,6 +469,22 @@ async function main() {
     const p = services && listingPoint(l);
     return p ? services!.nearest(p, NEARBY_MAX_M) : null;
   };
+  // "Sol do imóvel": the buildings around come from the map tiles already loaded
+  drawer.sunHours = (l, floor) => {
+    const fp = l.footprint;
+    const ring = (fp?.type === 'Polygon' ? fp.coordinates[0] : fp?.coordinates[0]?.[0]) as [number, number][] | undefined;
+    if (!ring?.length) return null;
+    const [x, y] = ring[0];
+    const dx = SUN_RADIUS_M / (111_320 * Math.cos((y * Math.PI) / 180));
+    const dy = SUN_RADIUS_M / 110_540;
+    const around = scene.tileFeaturesIn('buildings', [x - dx, y - dy, x + dx, y + dy]).flatMap((f) => {
+      const g = f.geometry;
+      const outer = g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p) => p[0]) : [];
+      const height = Number(f.properties?.height) || 0;
+      return height > 0 ? outer.map((r) => ({ ring: r as [number, number][], height })) : [];
+    });
+    return around.length ? sunTable(ring, floor, around) : null;
+  };
   fetch(new URL(`${import.meta.env.BASE_URL}data/servicos.json`, location.href))
     .then((r) => (r.ok ? (r.json() as Promise<ServicesFile>) : Promise.reject(new Error(`servicos.json: ${r.status}`))))
     .then((file) => {
@@ -794,11 +811,23 @@ async function main() {
   }
   window.addEventListener('popstate', applyUrl);
 
-  mountTimeOfDay($('.time-of-day'), tod, (next) => {
-    tod = next;
-    scene.setTheme(themeFor(tod, lat, lon).theme);
-    document.body.dataset.tod = tod;
-  });
+  mountTimeOfDay(
+    $('.time-of-day'),
+    tod,
+    (next) => {
+      tod = next;
+      scene.setTheme(themeFor(tod, lat, lon).theme);
+      document.body.dataset.tod = tod;
+    },
+    // the hour-and-season ruler: the sun of that moment, with the colours of the matching button
+    (season, minutes) => {
+      const at = themeAt(rulerDate(season, minutes), minutes, lat, lon);
+      tod = at.tod;
+      scene.setTheme(at.theme);
+      document.body.dataset.tod = tod;
+      return tod;
+    },
+  );
   document.body.dataset.tod = tod;
 
   // Mobile: collapsible filters

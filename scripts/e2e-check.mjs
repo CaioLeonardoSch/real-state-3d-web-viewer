@@ -333,6 +333,27 @@ async function main() {
       return out;
     });
     check('camera: left inside a tower, it is lifted above the roof', guard && guard.altitude > guard.height, JSON.stringify(guard));
+    // item 38: the hour-and-season ruler relights the map; Esc closes it
+    const ruler = await page.evaluate(async () => {
+      document.querySelector('.sun-ruler-toggle').click();
+      const h = document.querySelector('[data-hour]');
+      h.focus();
+      const season = document.querySelector('[data-season]');
+      season.value = 'winter';
+      h.value = String(16 * 60);
+      h.dispatchEvent(new Event('input'));
+      await new Promise((r) => setTimeout(r, 200));
+      const afternoon = document.body.dataset.tod;
+      h.value = String(19 * 60 + 30);
+      h.dispatchEvent(new Event('input'));
+      await new Promise((r) => setTimeout(r, 200));
+      return { afternoon, night: document.body.dataset.tod, clock: document.querySelector('[data-clock]').textContent };
+    });
+    await page.keyboard.press('Escape');
+    const rulerClosed = await page.evaluate(() => document.querySelector('.sun-ruler-panel').hidden);
+    check('sun ruler: 16h in winter is afternoon, 19h30 is night, Esc closes it',
+      ruler.afternoon === 'afternoon' && ruler.night === 'night' && rulerClosed, JSON.stringify(ruler));
+    await page.click('.time-of-day button:has-text("Manhã")');
     const pinTarget = await findListingTarget(page, ['listing-pins']);
     if (pinTarget) {
       await page.mouse.move(pinTarget.x, pinTarget.y, { steps: 4 });
@@ -389,6 +410,19 @@ async function main() {
     const drawerOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
     check('click on a listing opens the drawer', !!clicked && drawerOpen, clicked?.id ?? 'no clickable listing found');
     check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Imóvel fictício para demonstração'));
+    // items 36 and 38: services nearby, and the hours of sun on each side (computed when opened)
+    const extras = await page.evaluate(async () => {
+      const box = document.querySelector('#drawer .sun-box');
+      if (box) box.open = true;
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        nearby: document.querySelectorAll('#drawer .nearby li').length,
+        sunRows: document.querySelectorAll('#drawer .sun-table tbody tr').length,
+        sunBox: !!box,
+      };
+    });
+    check('drawer shows "Por perto" (6 kinds) and, for a building, the hours of sun on each side',
+      extras.nearby === 6 && (!extras.sunBox || extras.sunRows > 0), JSON.stringify(extras));
     // sale: the financing simulator (opened before the accessibility check, so its form is checked too)
     const fin = await page.evaluate(() => {
       const d = document.querySelector('#drawer .fin-sim');
