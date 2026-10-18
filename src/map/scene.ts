@@ -13,6 +13,7 @@ import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
 import { OverviewControl } from './overviewControl';
+import { DrawAreaControl } from './drawArea';
 import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
 import { M_PER_DEG, shadowOffset, shadowRing } from './shadows';
@@ -144,6 +145,9 @@ export class Scene {
   private hoveredId: number | null = null;
   private selectedId: number | null = null;
   private onPick: ((p: PickResult) => void) | null = null;
+  private onDraw: ((p: [number, number], screen: { x: number; y: number }) => void) | null = null;
+  /** "Desenhar área" button pressed (main.ts starts the drawing). */
+  onDrawArea: (() => void) | null = null;
   private listings: Listing[];
   readonly ready: Promise<void>;
   /** Pixels per metre at zoom 0 at the region's latitude (512 px tiles). */
@@ -164,7 +168,7 @@ export class Scene {
     private events: SceneEvents,
     listings: Listing[] = data.listings.listings,
     /** Embedded in a page (client site): one finger and the plain wheel scroll the page, not the map. */
-    opts: { cooperative?: boolean } = {},
+    opts: { cooperative?: boolean; drawArea?: boolean } = {},
   ) {
     this.listings = listings;
     this.pxPerM0 = 512 / (40075016.686 * Math.cos(((data.meta.center?.[1] ?? -26.3) * Math.PI) / 180));
@@ -193,6 +197,7 @@ export class Scene {
     this.map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
     // added after the navigation control: bottom corners stack upwards, so it sits above zoom +/−
     this.map.addControl(new OverviewControl(() => this.showOverview(true)), 'bottom-right');
+    if (opts.drawArea) this.map.addControl(new DrawAreaControl(() => this.onDrawArea?.()), 'bottom-right');
 
     this.showOverview(false);
 
@@ -405,6 +410,8 @@ export class Scene {
         // neighbourhood(s) the map is cut to (filter "bairro"), and the ground outside them plus 100 m (masked)
         'clip-area': { type: 'geojson', data: EMPTY_FC },
         'clip-mask': { type: 'geojson', data: EMPTY_FC },
+        // the area being drawn ("Desenhar área"): its sides and corners
+        'draw-area': { type: 'geojson', data: EMPTY_FC },
         // building shadows by day (updateShadows)
         shadows: { type: 'geojson', data: EMPTY_FC, maxzoom: 16 },
       },
@@ -417,6 +424,27 @@ export class Scene {
           type: 'line',
           source: 'clip-area',
           paint: { 'line-color': t.accentStrong, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.5, 17, 3.5], 'line-opacity': 0.85 },
+        },
+        {
+          id: 'draw-fill',
+          type: 'fill',
+          source: 'draw-area',
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: { 'fill-color': t.accentStrong, 'fill-opacity': 0.14 },
+        },
+        {
+          id: 'draw-line',
+          type: 'line',
+          source: 'draw-area',
+          filter: ['==', ['geometry-type'], 'LineString'],
+          paint: { 'line-color': t.accentStrong, 'line-width': 2.5, 'line-dasharray': [2, 1.5] },
+        },
+        {
+          id: 'draw-points',
+          type: 'circle',
+          source: 'draw-area',
+          filter: ['==', ['geometry-type'], 'Point'],
+          paint: { 'circle-radius': ['case', ['get', 'first'], 7, 5], 'circle-color': '#fff', 'circle-stroke-color': t.accentStrong, 'circle-stroke-width': 2.5 },
         },
         {
           id: 'listing-dimmed',
@@ -745,6 +773,57 @@ export class Scene {
     this.map.fitBounds([w, s, e, n], { padding: this.cameraPadding(), maxZoom: 16.5, pitch: 55, duration: 1200 });
   }
 
+  // ---------------------------------------------------------------- drawing the search area
+
+  /** Map clicks go to `onPoint` (a corner of the area) until `stopDrawing()`. */
+  startDrawing(onPoint: (p: [number, number], screen: { x: number; y: number }) => void): void {
+    this.onDraw = onPoint;
+    this.setHover(null);
+    this.events.onListingHover?.(null);
+    this.map.getCanvas().style.cursor = 'crosshair';
+    // quick clicks on corners must not zoom
+    this.map.doubleClickZoom.disable();
+  }
+
+  get isDrawing(): boolean {
+    return this.onDraw !== null;
+  }
+
+  stopDrawing(): void {
+    // after the other click handlers of this click (the developments' too: the click closing the area is not theirs)
+    const ended = this.onDraw;
+    setTimeout(() => {
+      if (this.onDraw === ended) this.onDraw = null;
+    });
+    this.map.getCanvas().style.cursor = '';
+    this.map.doubleClickZoom.enable();
+  }
+
+  /** The corners drawn so far: their points, the open path and, from 3 corners, the area filled. */
+  showDrawing(points: [number, number][]): void {
+    const f = (geometry: Geometry, properties: Record<string, unknown> = {}): Feature => ({ type: 'Feature', properties, geometry });
+    const features: Feature[] = points.map((p, i) => f({ type: 'Point', coordinates: p }, { first: i === 0 }));
+    if (points.length >= 2) features.push(f({ type: 'LineString', coordinates: points.length >= 3 ? [...points, points[0]] : points }));
+    if (points.length >= 3) features.push(f({ type: 'Polygon', coordinates: [[...points, points[0]]] }));
+    (this.map.getSource('draw-area') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
+  }
+
+  project(p: [number, number]): { x: number; y: number } {
+    const { x, y } = this.map.project(p);
+    return { x, y };
+  }
+
+  /** The part of the map on screen, as a rectangle (with the camera tilted, the box around what is seen). */
+  visibleRing(): [number, number][] {
+    const b = this.map.getBounds();
+    return [
+      [b.getWest(), b.getSouth()],
+      [b.getEast(), b.getSouth()],
+      [b.getEast(), b.getNorth()],
+      [b.getWest(), b.getNorth()],
+    ];
+  }
+
   // ---------------------------------------------------------------- choosing a place for a new listing
 
   /** Next map click is reported to `onPick` instead of opening listings, until `stopPicking()`. */
@@ -931,6 +1010,9 @@ export class Scene {
       m.setPaintProperty(id, 'circle-opacity', sc.glowOpacity * share);
     }
     m.setPaintProperty('clip-line', 'line-color', t.accentStrong);
+    m.setPaintProperty('draw-fill', 'fill-color', t.accentStrong);
+    m.setPaintProperty('draw-line', 'line-color', t.accentStrong);
+    m.setPaintProperty('draw-points', 'circle-stroke-color', t.accentStrong);
     for (const id of TEXTURES) {
       const img = base.texture(id);
       if (img && m.hasImage(id)) m.updateImage(id, img);
@@ -1019,7 +1101,7 @@ export class Scene {
       this.events.onListingHover?.(null);
     };
     this.map.on('mousemove', (e) => {
-      if (this.onPick) return;
+      if (this.onPick || this.onDraw) return;
       // no tooltip while the user is dragging/rotating the map
       if (this.map.isMoving()) return hoverOff();
       // a group of pins is drawn over the buildings, and a click on it zooms in (see 'click')
@@ -1032,6 +1114,7 @@ export class Scene {
     this.map.on('mouseout', hoverOff);
     this.map.on('movestart', hoverOff);
     this.map.on('click', (e) => {
+      if (this.onDraw) return this.onDraw([e.lngLat.lng, e.lngLat.lat], { x: e.point.x, y: e.point.y });
       if (this.onPick) {
         const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         if (this.map.getZoom() < Z_3D_START) return this.onPick({ lngLat, tooFar: true });

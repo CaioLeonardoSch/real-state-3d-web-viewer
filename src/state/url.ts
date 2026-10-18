@@ -1,5 +1,5 @@
 import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types.ts';
-import { EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters.ts';
+import { AREA_MAX_POINTS, EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters.ts';
 import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort.ts';
 import { SERVICE_KINDS, type ServiceKind } from '../data/services.ts';
 
@@ -118,6 +118,7 @@ export function stateToSearch(state: UrlState): string {
   if (c.agency !== null) p.set('imob', c.agency);
   if (c.reducedOnly) p.set('reduzido', '1');
   if (c.near.length) p.set('perto', c.near.map((k) => SERVICE_SLUGS[k]).join(','));
+  if (c.area.length >= 3) p.set('area', formatArea(c.area));
   if (state.sort !== DEFAULT_SORT) p.set('ordem', SORT_SLUGS[state.sort]);
   const s = p.toString();
   return s ? `?${s}` : '';
@@ -148,6 +149,7 @@ export function searchToState(search: string, known: KnownIds): UrlState {
     agency: agency && known.agencyIds.has(agency) ? agency : null,
     reducedOnly: p.get('reduzido') === '1' ? true : null,
     near: parseList(p.get('perto'), SLUG_TO_SERVICE),
+    area: parseArea(p.get('area')),
   };
   for (const [field, param] of NUMBER_PARAMS) {
     const n = nonNegative(p.get(param));
@@ -183,6 +185,22 @@ function parseBairros(raw: string[], known?: readonly string[]): string[] {
  */
 function parseStreet(raw: string | null): string | null {
   return raw?.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 120).trim() || null;
+}
+
+/** A drawn area in the URL: "lon,lat;lon,lat;…", 5 decimals (about 1 m). */
+export function formatArea(ring: readonly [number, number][]): string {
+  const r = (v: number) => String(Math.round(v * 1e5) / 1e5);
+  return ring.map(([x, y]) => `${r(x)},${r(y)}`).join(';');
+}
+
+/** A drawn area from the URL: 3 to AREA_MAX_POINTS valid corners, or none at all. */
+export function parseArea(raw: string | null): [number, number][] {
+  const pts = (raw ?? '')
+    .split(';')
+    .filter((s) => s.trim())
+    .map((s) => s.split(',').map((v) => (v.trim() === '' ? NaN : Number(v))));
+  const ok = pts.length >= 3 && pts.length <= AREA_MAX_POINTS && pts.every((p) => p.length === 2 && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90);
+  return ok ? pts.map(([x, y]) => [x, y]) : [];
 }
 
 /** Equal criteria, ignoring the order of list values. */

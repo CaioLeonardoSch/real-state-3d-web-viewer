@@ -1,7 +1,7 @@
 import type { Agency, Amenity, ListingStatus, ListingType } from '../data/types';
 import { AMENITIES, AMENITY_LABELS, LISTING_STATUSES, LISTING_TYPES, MAIN_LISTING_TYPES, STATUS_LABELS, TYPE_LABELS } from '../data/types';
 import { ADVANCED_FIELDS, EMPTY_CRITERIA, countActive, normalizeName, type FilterCriteria, type FilterStore } from '../state/filters';
-import { sameCriteria } from '../state/url';
+import { formatArea, parseArea, sameCriteria } from '../state/url';
 import { StreetFinder, findBairros, type StreetEntry } from '../data/streets';
 import { escapeHtml, parseNumberInput } from '../utils/format';
 import { NEAR_M, SERVICE_LABELS, type ServiceKind } from '../data/services';
@@ -67,7 +67,7 @@ export function mountFilters(
   agencies: Agency[],
   bairros: readonly string[] = [],
   streets: StreetSearch | null = null,
-): { setForm: (c: FilterCriteria) => void; applyStreet: (name: string) => void } {
+): { setForm: (c: FilterCriteria) => void; applyStreet: (name: string) => void; applyArea: (ring: [number, number][]) => void } {
   form.innerHTML = `
     <fieldset class="f-chips f-deal">
       <legend class="sr-only">Negócio</legend>
@@ -82,6 +82,7 @@ export function mountFilters(
       <div class="f-bairro-box">
         <span class="f-bairro-chips"></span>
         <span class="f-street-chips"></span>
+        <span class="f-area-chips"></span>
         <input id="f-bairro-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-place-list"
           placeholder="${bairros.length ? 'Todos' : ''}" autocomplete="off" spellcheck="false">
       </div>
@@ -145,6 +146,7 @@ export function mountFilters(
       reducedOnly: fd.get('reducedOnly') ? true : null,
       near: fd.getAll('near').map(String) as ServiceKind[],
       street: str('street').trim() || null,
+      area: parseArea(str('area')),
     };
   };
   const writeForm = (c: FilterCriteria) => {
@@ -161,6 +163,7 @@ export function mountFilters(
     field<HTMLSelectElement>('agency').value = c.agency ?? '';
     renderBairros(c.bairros);
     renderStreet(c.street);
+    renderArea(c.area);
   };
   // ---------------------------------------------------------------- "Bairro ou rua" (WAI-ARIA 1.2 combobox)
   // Neighbourhoods chosen in it are removable chips (hidden inputs named "bairro"); the searched street, a chip
@@ -172,9 +175,10 @@ export function mountFilters(
   const bairroChips = form.querySelector<HTMLElement>('.f-bairro-chips')!;
   const streetChips = form.querySelector<HTMLElement>('.f-street-chips')!;
   const chosenBairros = () => [...form.querySelectorAll<HTMLInputElement>('input[name="bairro"]')].map((i) => i.value);
+  const areaChips = form.querySelector<HTMLElement>('.f-area-chips')!;
   const chosenStreet = () => form.querySelector<HTMLInputElement>('input[name="street"]')?.value ?? null;
   const setPlaceholder = () =>
-    (placeInput.placeholder = chosenBairros().length || chosenStreet() ? '+ bairro' : bairros.length ? 'Todos' : '');
+    (placeInput.placeholder = chosenBairros().length || chosenStreet() || areaChips.firstChild ? '+ bairro' : bairros.length ? 'Todos' : '');
   const renderBairros = (list: readonly string[]) => {
     bairroChips.innerHTML = list
       .map(
@@ -191,6 +195,14 @@ export function mountFilters(
       : '';
     setPlaceholder();
   };
+  // the area drawn on the map ("Desenhar área"): one chip, removable like the others
+  const renderArea = (ring: readonly [number, number][]) => {
+    areaChips.innerHTML = ring.length
+      ? `<span class="f-street-chip f-area-chip"><span>Área desenhada</span><input type="hidden" name="area" value="${formatArea(ring)}">
+          <button type="button" data-remove-area aria-label="Tirar a área desenhada no mapa">×</button></span>`
+      : '';
+    setPlaceholder();
+  };
   /** Chips changed: pending criteria only, like any other field. */
   const chipsEdited = () => {
     store.setPending(readForm());
@@ -204,17 +216,25 @@ export function mountFilters(
   const removeLastChip = () => {
     const street = chosenStreet();
     const current = chosenBairros();
+    const area = areaChips.firstChild !== null;
     const gone = street ?? current.at(-1);
-    if (!gone) return;
-    if (street) renderStreet(null);
+    if (!area && !gone) return;
+    if (area) renderArea([]);
+    else if (street) renderStreet(null);
     else renderBairros(current.slice(0, -1));
     chipsEdited();
-    say(`${gone} retirado da busca.`, 0);
+    say(area ? 'Área desenhada retirada da busca.' : `${gone} retirado da busca.`, 0);
   };
   bairroChips.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-remove-bairro]');
     if (!btn) return;
     renderBairros(chosenBairros().filter((b) => b !== btn.dataset.removeBairro));
+    chipsEdited();
+    placeInput.focus();
+  });
+  areaChips.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('[data-remove-area]')) return;
+    renderArea([]);
     chipsEdited();
     placeInput.focus();
   });
@@ -459,6 +479,15 @@ export function mountFilters(
     /** Searches the listings on a street ("Imóveis nesta rua"), keeping the form's other edits, like "Buscar". */
     applyStreet: (name: string) => {
       const next = { ...readForm(), street: name };
+      writeForm(next);
+      store.setPending(next);
+      store.apply();
+      setMoreOpen(false);
+      refreshHint();
+    },
+    /** Searches inside an area drawn on the map, keeping the form's other edits, like "Buscar". */
+    applyArea: (ring: [number, number][]) => {
+      const next = { ...readForm(), area: ring };
       writeForm(next);
       store.setPending(next);
       store.apply();

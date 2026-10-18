@@ -1,6 +1,6 @@
 import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types.ts';
 import { publicStreet, sameStreet } from '../data/streets.ts';
-import { NEAR_M, type ServiceKind } from '../data/services.ts';
+import { NEAR_M, listingPoint, type ServiceKind } from '../data/services.ts';
 
 export interface FilterCriteria {
   /** 'rent' = listings for rent, prices are monthly rents; null = for sale (the default). */
@@ -33,7 +33,15 @@ export interface FilterCriteria {
   reducedOnly: true | null;
   /** Services that must be mapped within NEAR_M (straight line) of the listing; empty = no requirement. */
   near: ServiceKind[];
+  /**
+   * Area drawn on the map: the corners [lon, lat] of a polygon, without repeating the first one (empty = anywhere).
+   * Listings whose point (the centre of the circle when the address is hidden) is inside it.
+   */
+  area: [number, number][];
 }
+
+/** The most corners a drawn area keeps. */
+export const AREA_MAX_POINTS = 40;
 
 export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   transaction: null,
@@ -53,6 +61,7 @@ export const EMPTY_CRITERIA: FilterCriteria = Object.freeze({
   agency: null,
   reducedOnly: null,
   near: [],
+  area: [],
 }) as FilterCriteria;
 
 /** Criteria shown under "Mais filtros" (the form counts how many of them are active). */
@@ -107,7 +116,22 @@ export function matchesCriteria(l: Listing, c: FilterCriteria): boolean {
   if (c.reducedOnly && !(l.previousPrice && l.previousPrice > l.price)) return false;
   // distances come with the services file (main.ts); until then nothing matches
   if (c.near.some((k) => !((l.nearby?.[k] ?? Infinity) <= NEAR_M))) return false;
+  if (c.area.length >= 3) {
+    const p = listingPoint(l);
+    if (!p || !inRing(p, c.area)) return false;
+  }
   return true;
+}
+
+/** Point inside a polygon ring (even-odd rule, so a ring that crosses itself still works). */
+export function inRing([x, y]: [number, number], ring: readonly [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 export function filterListings(listings: readonly Listing[], c: FilterCriteria): Listing[] {
@@ -159,12 +183,12 @@ export class FilterStore {
 }
 
 export function cloneCriteria(c: FilterCriteria): FilterCriteria {
-  return { ...c, types: [...c.types], bairros: [...c.bairros], statuses: [...c.statuses], features: [...c.features], near: [...c.near] };
+  return { ...c, types: [...c.types], bairros: [...c.bairros], statuses: [...c.statuses], features: [...c.features], near: [...c.near], area: c.area.map(([x, y]) => [x, y]) };
 }
 
 export type RelaxableField = keyof FilterCriteria;
 export const RELAXABLE_FIELDS: readonly RelaxableField[] = Object.keys(EMPTY_CRITERIA) as RelaxableField[];
-const LIST_FIELDS = new Set<RelaxableField>(['types', 'bairros', 'statuses', 'features', 'near']);
+const LIST_FIELDS = new Set<RelaxableField>(['types', 'bairros', 'statuses', 'features', 'near', 'area']);
 
 export interface RelaxSuggestion {
   field: RelaxableField;

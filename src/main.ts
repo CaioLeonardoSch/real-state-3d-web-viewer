@@ -38,6 +38,8 @@ import { countByStatus, type Development } from './data/developments';
 import { backendConfig } from './backend/config';
 import type { RemoteBackend } from './backend/remote';
 import { mountMapHint } from './ui/mapHint';
+import { AreaDrawer, growRing } from './map/drawArea';
+import { CLIP_BUFFER_M } from './map/baseStyle';
 import type { AccountPanel } from './ui/account';
 import { withPriceChange } from './state/priceChange';
 import { today } from './data/listingText';
@@ -248,7 +250,7 @@ async function main() {
       else tooltip.hide();
       results.highlight(l ? l.id : null);
     },
-  }, listings, { cooperative: !!embed });
+  }, listings, { cooperative: !!embed, drawArea: !embed });
   if (!embed) mountMapHint($('.stage'), scene.map);
 
   function openListing(id: string, fly: boolean) {
@@ -410,6 +412,67 @@ async function main() {
       return false;
     }
   }
+  /**
+   * "Desenhar área": the map is cut to the drawn area plus 100 m around it, like a neighbourhood. Returns whether
+   * the map is cut.
+   */
+  async function applyAreaClip(ring: [number, number][], frame: boolean): Promise<boolean> {
+    const request = ++clipRequest;
+    try {
+      const { default: clipping } = await import('polygon-clipping');
+      if (request !== clipRequest) return false;
+      const area: Polygon = { type: 'Polygon', coordinates: [[...ring, ring[0]]] };
+      const [w, s, e, n] = data.meta.boundaryBbox;
+      const world: [number, number][][] = [[[w - 1, s - 1], [e + 1, s - 1], [e + 1, n + 1], [w - 1, n + 1], [w - 1, s - 1]]];
+      const mask: MultiPolygon = { type: 'MultiPolygon', coordinates: clipping.difference(world, growRing(ring, CLIP_BUFFER_M, clipping.union)) };
+      await scene.ready;
+      if (request !== clipRequest) return false;
+      setClipArea(area, [], mask);
+      if (frame) scene.fitToClip();
+      return true;
+    } catch (err) {
+      console.warn(`Recorte da área indisponível: ${(err as Error).message}`);
+      return false;
+    }
+  }
+  /** The cut of the applied criteria: the drawn area first, else the neighbourhoods. */
+  function applyCut(criteria: { area: [number, number][]; bairros: string[] }, frame: boolean): Promise<boolean> {
+    return criteria.area.length >= 3 ? applyAreaClip(criteria.area, frame) : applyBairroClip(criteria.bairros, frame);
+  }
+
+  const areaDrawer = new AreaDrawer($('.stage'), scene, {
+    onDone: (ring) => {
+      filtersUi.applyArea(ring);
+      if (isMobile()) $('#results').focus();
+      else results.focusFirst();
+    },
+    onCancel: () => {
+      announce('Desenho da área cancelado.');
+      $<HTMLElement>('.draw-area-btn').focus();
+    },
+    announce,
+  });
+  scene.onDrawArea = () => {
+    if (addPanel.opened) return announce('Feche o formulário "Anunciar" para desenhar a área.');
+    // the drawing takes over the map: no listing, development or street card stays over it
+    closingForSearch = true;
+    drawer.close();
+    closingForSearch = false;
+    const devOpen = devPanel.currentId !== null;
+    leavingDevelopment = true;
+    devPanel.close();
+    leavingDevelopment = false;
+    if (devOpen) replaceUrl();
+    streetCard.hide();
+    lightStreet(null);
+    if (isMobile()) {
+      document.body.classList.remove('filters-open');
+      $('.filters-toggle').setAttribute('aria-expanded', 'false');
+      results.setCollapsed(true);
+    }
+    areaDrawer.start();
+  };
+
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
     const rent = store.getApplied().transaction === 'rent';
@@ -446,8 +509,8 @@ async function main() {
       drawer.close();
       closingForSearch = false;
     }
-    // with a neighbourhood filter the camera frames the neighbourhood (even without results); otherwise the results
-    if (criteria.bairros.length) void applyBairroClip(criteria.bairros, true);
+    // with a drawn area or a neighbourhood filter the camera frames it (even without results); otherwise the results
+    if (criteria.area.length || criteria.bairros.length) void applyCut(criteria, true);
     else {
       void applyBairroClip([], false);
       if (matched.length > 0) scene.fitToListings(matched);
@@ -853,7 +916,7 @@ async function main() {
     {
       onOpen: (id) => openDevelopment(id),
       onUnitClick: (devId, unitId) => openDevelopment(devId, devPanel.selectedUnitId === unitId ? null : unitId),
-      isBlocked: () => scene.isPicking || addPanel.opened,
+      isBlocked: () => scene.isPicking || scene.isDrawing || addPanel.opened,
     },
     'listing-pins-dimmed',
   );

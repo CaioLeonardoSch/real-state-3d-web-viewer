@@ -305,6 +305,34 @@ Assim dá para ver o que está à venda nos limites do bairro sem a cidade intei
   - os bairros são os do OSM, e Araquari tem só parte deles mapeados;
   - um imóvel sem bairro no endereço não entra no filtro.
 
+## Desenhar a área da busca
+
+O botão de traço pontilhado (canto inferior direito, acima da "Visão geral") abre a barra **"Desenhe a área da
+busca"**:
+
+- cada clique no mapa marca um canto (até 40), e enquanto se desenha nenhum imóvel ou empreendimento abre;
+- clicar no primeiro ponto ou em "Concluir" fecha a área e busca;
+- "Desfazer ponto" (ou Backspace) tira o último canto; Esc ou × cancela;
+- "Usar a área visível" pega o retângulo que está na tela, o caminho sem mouse.
+
+![Busca numa área desenhada, com o mapa recortado](docs/screenshots/desktop-area.png)
+
+A busca fica como os outros filtros:
+
+- **Na lista:** entram os imóveis cujo ponto está dentro da área. O ponto é o centro do prédio ou do lote, ou o do
+  círculo quando o endereço é oculto. Assim a área não revela nada a mais que o círculo.
+- **No mapa:** ele é recortado como no filtro por bairro, com a área e 100 m em volta, e enquadra a área.
+- **No formulário e no endereço:** um chip "Área desenhada" (o × tira a área) e `?area=lon,lat;lon,lat;…` (5 casas,
+  cerca de 1 m).
+
+A área desenhada combina com os outros filtros, inclusive o de bairro. O recorte do mapa segue a área. Não aparece no
+mapa embutido do site do cliente, que tem a própria busca; um link do mapa com `?area=` aberto no site entra como o
+chip "Área desenhada no mapa".
+
+As isócronas (tempo a pé e de carro) ficaram de fora. Precisam de um grafo de rotas: um serviço (OSRM ou Valhalla) ou
+um grafo das vias do OSM montado na geração do mapa. As vias de hoje são só desenho, sem sentido de tráfego nem
+ligações.
+
 ## Obras em andamento
 
 Num prédio em construção, o mapa mostra **os andares prontos sólidos e o resto translúcido**, com uma grua low poly.
@@ -746,9 +774,12 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 76 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 108 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
+  - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa
+    ficam recortados; o link com `?area=` abre a mesma busca; Esc cancela e devolve o foco ao botão; "Usar a área
+    visível" funciona pelo teclado;
   - de perto: árvores, postes e ruas por pavimento (asfalto e calçamento); de dia sem luzes; ao trocar para a
     noite já perto da rua, os postes acendem;
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);

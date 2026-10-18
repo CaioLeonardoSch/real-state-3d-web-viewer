@@ -87,6 +87,7 @@ Ordenadas por impacto e por quanto se apoiam no que só o mapa 3D faz.
    calculadas nas vias do OSM que já estão no projeto. É o que o QuintoAndar oferece com filtros como "perto do
    metrô", só que visual.
 6. **Desenhar a área de busca no mapa.** Paridade com o VivaReal, com a vantagem de mostrar o resultado em 3D.
+   **Feito em 18/10:** botão "Desenhar área" no mapa, com recorte de 100 m em volta, como no filtro por bairro.
 7. **Busca conversacional.** "Casa com quintal, sol da manhã, até R$ 900 mil, perto de escola." Paridade com o
    QuintoAndar, mas usando critérios que só o 3D sabe responder (sol, vista, altura).
 8. **Versão para imobiliárias locais.** Os sites locais não têm mapa. O mapa 3D pode ser oferecido como

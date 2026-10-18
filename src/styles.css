@@ -1282,7 +1282,8 @@ body[data-tod='night'] .price {
   color: var(--muted);
 }
 
-.overview-btn {
+.overview-btn,
+.draw-area-btn {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -2100,8 +2101,9 @@ body.embed .site-page-link {
   padding: 0 4px;
   cursor: pointer;
 }
-/* the searched street: an outlined chip after the neighbourhoods */
-.f-street-chips {
+/* the searched street and the drawn area: outlined chips after the neighbourhoods */
+.f-street-chips,
+.f-area-chips {
   display: contents;
 }
 .f-street-chip {
@@ -2292,6 +2294,21 @@ body.embed .site-page-link {
   body.street-card-open:not(.drawer-open) .maplibregl-ctrl-bottom-right {
     bottom: calc(var(--street-card-h, 0px) + 8px);
   }
+}
+
+/* "Desenhar área": the bar of the street card, with its buttons; the map button stays lit while drawing */
+.area-card .btn-secondary,
+.area-card .btn-primary {
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.area-card button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+body.drawing-area .draw-area-btn {
+  background: var(--accent-fill);
+  color: #fff;
 }
 
 /* works under way (listing panel) */

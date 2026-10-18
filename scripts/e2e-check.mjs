@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
+import turfCentroid from '@turf/centroid';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
@@ -340,13 +341,17 @@ async function main() {
       h.focus();
       const season = document.querySelector('[data-season]');
       season.value = 'winter';
+      // the relighting can take a moment on a busy machine: wait (up to 3 s) for the time of day to change
+      const until = async (tod) => {
+        for (let t = 0; t < 30 && document.body.dataset.tod !== tod; t++) await new Promise((r) => setTimeout(r, 100));
+      };
       h.value = String(16 * 60);
       h.dispatchEvent(new Event('input'));
-      await new Promise((r) => setTimeout(r, 200));
+      await until('afternoon');
       const afternoon = document.body.dataset.tod;
       h.value = String(19 * 60 + 30);
       h.dispatchEvent(new Event('input'));
-      await new Promise((r) => setTimeout(r, 200));
+      await until('night');
       return { afternoon, night: document.body.dataset.tod, clock: document.querySelector('[data-clock]').textContent };
     });
     await page.keyboard.press('Escape');
@@ -1227,6 +1232,76 @@ async function main() {
         (await cut.page.textContent('#results .results-title')).startsWith(`${TOTAL} `));
     check('no console errors (bairro)', cut.errors.length === 0, cut.errors.join(' | '));
     await cut.ctx.close();
+
+    // ------------------------------------------------ "Desenhar área": the search inside a drawn area
+    {
+      // the point each listing is measured from (src/data/services.ts listingPoint)
+      const pointOf = (l) => (l.approximateLocation ? l.approxCenter : turfCentroid(l.footprint ?? l.lotPolygon).geometry.coordinates);
+      const inSquare = (p, [w, s2, e, n]) => p && p[0] > w && p[0] < e && p[1] > s2 && p[1] < n;
+      const sales = DATA.filter((l) => (l.transaction ?? 'sale') !== 'rent');
+      // a square of about 1.2 km around the listing with the most others near it
+      const near = (l) => sales.filter((o) => inSquare(pointOf(o), [pointOf(l)[0] - 0.006, pointOf(l)[1] - 0.0055, pointOf(l)[0] + 0.006, pointOf(l)[1] + 0.0055])).length;
+      const mid = pointOf(sales.filter((l) => pointOf(l)).sort((a, b) => near(b) - near(a))[0]);
+      const box = [mid[0] - 0.006, mid[1] - 0.0055, mid[0] + 0.006, mid[1] + 0.0055];
+      const inBox = sales.filter((l) => inSquare(pointOf(l), box)).length;
+      const dr = await openPage(browser, { width: 1440, height: 900 }, 'area');
+      await dr.page.evaluate((c) => window.__demo.map.jumpTo({ center: c, zoom: 13.6, pitch: 0, bearing: 0 }), mid);
+      await waitIdle(dr.page);
+      await dr.page.click('.draw-area-btn');
+      const corners = [[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]]];
+      const screen = await dr.page.evaluate((cs) => cs.map((c) => window.__demo.map.project(c)), corners);
+      const mapBox = await dr.page.locator('#map').boundingBox();
+      for (const p of screen) await dr.page.mouse.click(mapBox.x + p.x, mapBox.y + p.y);
+      const sketched = () => window.__demo.map.getSource('draw-area').getData().then((d) => d.features.length);
+      const drawing = await dr.page.evaluate(async (fn) => ({
+        bar: !document.querySelector('.area-card').hidden,
+        hint: document.querySelector('.area-card-hint').textContent,
+        drawn: await eval(fn)(),
+        drawerOpen: document.querySelector('#drawer').classList.contains('open'),
+      }), sketched.toString());
+      // a click on the first corner closes the area
+      await dr.page.mouse.click(mapBox.x + screen[0].x + 3, mapBox.y + screen[0].y - 2);
+      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      await waitIdle(dr.page);
+      const drawn = await dr.page.evaluate(async (fn) => ({
+        header: document.querySelector('#results .results-title')?.textContent ?? '',
+        chip: document.querySelector('.f-area-chip')?.textContent.trim() ?? '',
+        area: new URLSearchParams(location.search).get('area') ?? '',
+        mask: window.__demo.map.querySourceFeatures('clip-mask').length,
+        bar: !document.querySelector('.area-card').hidden,
+        sketch: await eval(fn)(),
+      }), sketched.toString());
+      check('"Desenhar área": four clicks mark the corners (no listing opens), a click on the first closes it, the list and the map are cut to it',
+        inBox > 0 && inBox < sales.length && drawing.bar && /4 pontos/.test(drawing.hint) && drawing.drawn > 0 && !drawing.drawerOpen &&
+          drawn.header.startsWith(`${inBox} `) && drawn.chip.startsWith('Área desenhada') && drawn.area.split(';').length === 4 && drawn.mask > 0 && !drawn.bar && drawn.sketch === 0,
+        JSON.stringify({ inBox, drawing, drawn: { ...drawn, area: drawn.area.slice(0, 40) } }));
+      await dr.page.screenshot({ path: path.join(SHOTS, 'desktop-area.png') });
+      // the link keeps the area
+      const areaLink = await openPage(browser, { width: 1440, height: 900 }, 'area-link', `?area=${encodeURIComponent(drawn.area)}`);
+      await areaLink.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      const sharedHeader = await areaLink.page.textContent('#results .results-title');
+      check('a link with ?area= opens with the same search and the map cut', sharedHeader.startsWith(`${inBox} `), sharedHeader);
+      await areaLink.ctx.close();
+      // Esc leaves the drawing without searching; "Usar a área visível" (no mouse needed) takes the screen
+      await dr.page.click('.f-area-chip button');
+      await dr.page.click('#filters button[type="submit"]');
+      await dr.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 20000 });
+      await dr.page.click('.draw-area-btn');
+      await dr.page.keyboard.press('Escape');
+      const cancelled = await dr.page.evaluate(() => ({ bar: !document.querySelector('.area-card').hidden, clipped: window.__demo.clipped, focus: document.activeElement?.className }));
+      await dr.page.click('.draw-area-btn');
+      // the bar has the focus; "Desfazer ponto" is off with no point yet
+      await dr.page.keyboard.press('Tab');
+      const focused = await dr.page.evaluate(() => document.activeElement?.textContent);
+      await dr.page.keyboard.press('Enter');
+      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      const visible = await dr.page.evaluate(() => new URLSearchParams(location.search).get('area')?.split(';').length);
+      check('Esc cancels the drawing (focus back on the button); "Usar a área visível" works from the keyboard',
+        !cancelled.bar && !cancelled.clipped && cancelled.focus === 'draw-area-btn' && focused === 'Usar a área visível' && visible === 4,
+        JSON.stringify({ cancelled, focused, visible }));
+      check('no console errors (area)', dr.errors.length === 0, dr.errors.join(' | '));
+      await dr.ctx.close();
+    }
 
     // ------------------------------------------------ scenery up close: pavement, trees, lamps, night lights
     const sc = await openPage(browser, { width: 1440, height: 900 }, 'scenery');

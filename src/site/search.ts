@@ -124,6 +124,7 @@ export function chipsOf(s: SiteSearch): Chip[] {
   for (const st of c.statuses) out.push({ label: st === 'under_construction' ? 'Lançamentos' : STATUS_LABELS[st], without: reset(s, {}, { statuses: c.statuses.filter((x) => x !== st) }) });
   for (const f of c.features) out.push({ label: AMENITY_LABELS[f], without: reset(s, {}, { features: c.features.filter((x) => x !== f) }) });
   if (c.reducedOnly) out.push({ label: 'Baixou o preço', without: reset(s, {}, { reducedOnly: null }) });
+  if (c.area.length) out.push({ label: 'Área desenhada no mapa', without: reset(s, {}, { area: [] }) });
   if (s.code) out.push({ label: `Código ${s.code}`, without: reset(s, { code: null }) });
   return out;
 }
