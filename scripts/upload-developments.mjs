@@ -13,7 +13,7 @@
 // Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (service key: support only, never in the site).
 // Sending again updates the drawing and keeps what the developer did: status, price and reservations of the units
 // already there (matched by tower and number) are not touched unless --with-sales.
-import { execFileSync } from 'node:child_process';
+import { supabaseStatus } from './lib/cli.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,7 @@ function fail(msg) {
 let url = process.env.SUPABASE_URL;
 let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (flag('local')) {
-  const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  const status = supabaseStatus();
   [url, key] = [status.API_URL, status.SERVICE_ROLE_KEY];
 }
 if (!url || !key) fail('defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY (ou use --local)');

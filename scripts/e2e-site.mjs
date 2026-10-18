@@ -3,6 +3,7 @@
 // chips, URL, favourites, comparison, listing page, forms, the embedded 3D map, the editor and phone layout.
 // Screenshots go to docs/screenshots/site-*.png. Usage: npm run build && npm run verify:site
 import { spawn } from 'node:child_process';
+import { cli } from './lib/cli.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -33,7 +34,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function startServer() {
   // vite itself, not through npx: killing npx would leave the server running on the port
-  const proc = spawn(path.join(ROOT, 'node_modules', '.bin', 'vite'), ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
+  const proc = spawn(...cli('vite', ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1']), { cwd: ROOT, stdio: 'ignore' });
   for (let i = 0; i < 60; i++) {
     try {
       if ((await fetch(BASE)).ok) return proc;

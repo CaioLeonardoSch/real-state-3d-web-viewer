@@ -7,15 +7,12 @@
 //                                   platform address where site.html is; ALERT_EMAIL_FROM is the sender)
 //   options: --local      the local Supabase (npm run db:start)
 //            --dry-run    only print what would be sent
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { supabaseStatus } from './lib/cli.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { summaryToListing } from '../src/backend/mapping.ts';
 import { normalizeSiteConfig } from '../src/site/config.ts';
 import { confirmMail, newForAlert, newListingsMail } from '../src/site/alerts.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const LOCAL = args.includes('--local');
 const DRY = args.includes('--dry-run');
@@ -24,7 +21,7 @@ const STALE_MS = 30 * 24 * 3600 * 1000;
 let url = process.env.SUPABASE_URL;
 let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (LOCAL) {
-  const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  const status = supabaseStatus();
   [url, key] = [status.API_URL, status.SERVICE_ROLE_KEY];
 }
 const siteUrl = process.env.SITE_URL ?? '';

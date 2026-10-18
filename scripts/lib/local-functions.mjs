@@ -1,7 +1,8 @@
 // Serves the edge functions of the local Supabase with a fake e-mail provider (Resend API) and a fake anti-bot
 // verifier (Cloudflare Turnstile: only the token "token-valido" passes), so the lead notification and the captcha
 // path can be tested end to end without anything leaving the machine. Used by test-backend and e2e-backend.
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { killTree, spawnCli } from './cli.mjs';
 import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -55,12 +56,10 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
       `TURNSTILE_VERIFY_URL=http://${gateway}:${mock.address().port}/siteverify`,
     ].join('\n'),
   );
-  const proc = spawn('npx', ['supabase', 'functions', 'serve', '--env-file', envFile], { stdio: 'ignore', detached: true });
+  const proc = spawnCli('supabase', ['functions', 'serve', '--env-file', envFile], { stdio: 'ignore' });
   const stop = () => {
     stopMock();
-    try {
-      process.kill(-proc.pid);
-    } catch {}
+    killTree(proc);
   };
   for (let i = 0; i < 90; i++) {
     try {

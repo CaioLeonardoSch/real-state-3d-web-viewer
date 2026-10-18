@@ -3,6 +3,7 @@
 // builds dist-backend/ with the local URL and key, then: sign-up → client → announce with photos → the public
 // sees it (without the private fields) → lower the price → delete. Never point this at a production project.
 import { execFile, execFileSync, spawn } from 'node:child_process';
+import { cli, supabaseStatus } from './lib/cli.mjs';
 import { promisify } from 'node:util';
 import http from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,9 +26,9 @@ const detailReady = (p) => p.waitForFunction(() => !!document.querySelector('#dr
 /** Authenticator-app codes already typed: the next one waits for a new code (Supabase may refuse a repeat). */
 const usedCodes = new Set();
 
-const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+const status = supabaseStatus();
 if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(status.API_URL)) throw new Error(`${status.API_URL} não é o Supabase local`);
-execFileSync('npx', ['vite', 'build', '--outDir', OUT, '--emptyOutDir'], {
+execFileSync(...cli('vite', ['build', '--outDir', OUT, '--emptyOutDir']), {
   cwd: ROOT,
   stdio: 'ignore',
   env: { ...process.env, VITE_SUPABASE_URL: status.API_URL, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
@@ -65,7 +66,7 @@ const fns = await startLocalFunctions(status.API_URL, URL_);
 // a server left on the port (e.g. the demo build, or one from an interrupted run) would answer in place of ours
 if (await fetch(URL_).then(() => true, () => false)) throw new Error(`a porta ${PORT} está ocupada por outro servidor`);
 // vite itself rather than through npx, so that kill() stops the server and does not leave it holding the port
-const server = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vite.js'), 'preview', '--outDir', OUT, '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+const server = spawn(...cli('vite', ['preview', '--outDir', OUT, '--port', String(PORT), '--strictPort', '--host', '127.0.0.1']), {
   cwd: ROOT,
   stdio: 'ignore',
   env: { ...process.env, VITE_SUPABASE_URL: status.API_URL, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
@@ -510,7 +511,7 @@ try {
     const alertEmail = `alerta-${tag}@teste.local`;
     // async: the fake e-mail provider answers from this process
     const sendAlerts = () =>
-      promisify(execFile)('node', ['scripts/send-alerts.mjs', '--local'], {
+      promisify(execFile)(process.execPath, ['scripts/send-alerts.mjs', '--local'], {
         cwd: ROOT,
         encoding: 'utf8',
         env: { ...process.env, RESEND_API_KEY: 'teste', RESEND_API_URL: fns.mailUrl, SITE_URL: URL_ },

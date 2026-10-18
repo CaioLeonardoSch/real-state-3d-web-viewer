@@ -3,6 +3,7 @@
 // runs the checks listed in the README and saves screenshots to docs/screenshots/.
 // Usage: npm run build && npm run verify:e2e
 import { spawn } from 'node:child_process';
+import { cli } from './lib/cli.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -92,7 +93,7 @@ async function axe(page, label) {
 
 async function startServer() {
   // the vite binary itself (not npx): kill() reaches the server, and no unread pipes keep this process alive
-  const proc = spawn(path.join(ROOT, 'node_modules', '.bin', 'vite'), ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+  const proc = spawn(...cli('vite', ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1']), {
     cwd: ROOT,
     stdio: 'ignore',
   });

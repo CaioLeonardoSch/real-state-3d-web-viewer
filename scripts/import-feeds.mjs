@@ -6,7 +6,8 @@
 //   npm run import:feeds                 (needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
 //   options: --local      the local Supabase (npm run db:start)
 //            --org <id>   only this client, due or not
-import { execFile, execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { supabaseStatus } from './lib/cli.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -22,7 +23,7 @@ const run = promisify(execFile);
 let url = process.env.SUPABASE_URL;
 let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (LOCAL) {
-  const status = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  const status = supabaseStatus();
   [url, key] = [status.API_URL, status.SERVICE_ROLE_KEY];
 }
 if (!url || !key) {
