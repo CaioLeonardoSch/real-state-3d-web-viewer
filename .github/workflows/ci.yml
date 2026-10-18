@@ -1,4 +1,4 @@
-# Testes a cada push e pull request: tipos, testes unitários, o build e os testes no navegador (mapa e site), e o
+# Testes a cada push e pull request: lint, tipos, testes unitários, o build e os testes no navegador (mapa e site), e o
 # backend com o Supabase local (permissões, volume e o fluxo completo no navegador). A publicação no GitHub Pages
 # (pages.yml) só roda depois que este workflow passa no main.
 name: CI
@@ -29,6 +29,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # oxlint: as regras de correção do ESLint (o typescript-eslint ainda não roda com o TypeScript 7)
+      - run: npm run lint
       - run: npx playwright install --with-deps chromium
       - run: npm test
       # inclui tsc --noEmit (site e scripts) e as páginas estáticas dos anúncios

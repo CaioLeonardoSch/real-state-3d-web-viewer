@@ -141,6 +141,11 @@ fotos diferentes. Num mapa 3D isso é pior do que numa lista: viram vários pino
 - **Provável:** mesmo prédio e unidade não informada, com área, quartos e vagas iguais (dentro de uma tolerância) e
   preço próximo. Fica marcado "possivelmente o mesmo imóvel" e o anunciante confirma ou separa ao cadastrar.
 - Na importação dos XMLs das imobiliárias a mesma regra roda automaticamente.
+- **Feito em 18/10** (`src/data/dedup.ts`, no navegador, sobre os anúncios publicados que o mapa já recebe, inclusive
+  os importados): a regra certa (prédio + unidade, ou a mesma casa) e a provável (área até 5% e preço até 15%), um
+  pino por imóvel, a ficha com "anunciado por N imobiliárias" e a exclusividade escondendo os outros. Ainda falta: a
+  tabela de imóveis no banco, a matrícula e a inscrição imobiliária como chave, o anunciante confirmar ou separar ao
+  cadastrar, e a parceria.
 
 **Como mostrar ao visitante:**
 
@@ -239,7 +244,7 @@ README). O que muda com backend:
 3. **Camadas da Prefeitura como opções ligáveis**: mancha de inundação, zoneamento e lote real, desligadas por padrão
    para não poluir o mapa.
 4. **Anúncios repetidos** só importam num modo portal (vários anunciantes). No produto vendido por imobiliária, cada
-   site mostra só os anúncios dela; a deduplicação da seção 5 fica para um eventual portal agregador.
+   site mostra só os anúncios dela; a deduplicação da seção 5 vale para o mapa geral (**feita em 18/10**, ver §5).
 5. **Marca da imobiliária**: tema dinâmico por cliente (cores, logo, fontes, textos) aplicado ao mapa e ao site
    embutido, como configuração (seção 2).
 

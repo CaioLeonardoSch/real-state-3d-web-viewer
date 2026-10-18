@@ -964,6 +964,31 @@ body[data-tod='night'] .price {
   padding: 8px 10px;
   font-size: 13px;
 }
+.dup-others {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 12px 0;
+}
+.dup-others h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.dup-others ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.dup-others li small {
+  display: block;
+  color: var(--muted);
+}
+.dup-others .hint {
+  font-size: 12px;
+  margin: 6px 0 0;
+}
 .facts {
   display: grid;
   grid-template-columns: 1fr 1fr;

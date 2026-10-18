@@ -12,6 +12,7 @@ import { SUN_RADIUS_M, sunTable } from './map/sunHours';
 import { NEARBY_MAX_M, ServiceIndex, listingPoint, nearbyDistances, type ServicesFile } from './data/services';
 import { Scene, type StreetRef } from './map/scene';
 import { rulerDate, themeAt, themeFor, type TimeOfDay } from './map/lighting';
+import { collapse, findDuplicates } from './data/dedup';
 import {
   EMPTY_CRITERIA,
   FilterStore,
@@ -20,6 +21,7 @@ import {
   normalizeName,
   suggestRelaxations,
   withoutCriterion,
+  type FilterCriteria,
 } from './state/filters';
 import { sameCriteria, searchToState, stateToSearch } from './state/url';
 import { DEFAULT_SORT, sortListings, type SortKey } from './state/sort';
@@ -140,6 +142,11 @@ async function main() {
   }
   let userListings = remote ? [] : loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
   let listings = [...baseListings, ...remoteListings, ...userListings];
+  // the same property advertised by several agencies: one pin and one row, the others listed in its sheet (item 50)
+  let dups = findDuplicates(listings);
+  const primaryOf = (id: string) => dups.groupOf.get(id)?.primary ?? id;
+  const onMap = () => (dups.hidden.size ? listings.filter((l) => !dups.hidden.has(l.id)) : listings);
+  const search = (c: FilterCriteria) => collapse(filterListings(listings, c), listings, dups);
   // the sales charts are a demo of a developer: not inside an agency's site
   // one kept in the back end replaces the demonstration's with the same address
   const developments = embed
@@ -186,7 +193,7 @@ async function main() {
   // Row that opened the drawer, to give focus back to it when the drawer closes.
   let openedFromRow: string | null = null;
   // The list the drawer browses with previous/next: applied search results, in display order.
-  let currentList: Listing[] = sortListings(filterListings(listings, store.getApplied()), sort);
+  let currentList: Listing[] = sortListings(search(store.getApplied()), sort);
   // True while the UI is being updated from the URL (back/forward, initial load): don't write history.
   let syncingFromUrl = false;
   // True while a search closes the drawer because its listing is no longer in the results.
@@ -251,7 +258,7 @@ async function main() {
       else tooltip.hide();
       results.highlight(l ? l.id : null);
     },
-  }, listings, { cooperative: !!embed, drawArea: !embed });
+  }, onMap(), { cooperative: !!embed, drawArea: !embed });
   if (!embed) mountMapHint($('.stage'), scene.map);
 
   function openListing(id: string, fly: boolean) {
@@ -263,9 +270,9 @@ async function main() {
     leavingDevelopment = false;
     const wasOpen = drawer.currentId !== null;
     if (fly) scene.flyToListing(l);
-    scene.select(id);
+    scene.select(primaryOf(id));
     if (remote && l.remote && !l.draft) remote.trackView(id, embed ? 'site' : 'map');
-    const index = currentList.findIndex((x) => x.id === id);
+    const index = currentList.findIndex((x) => x.id === primaryOf(id));
     if (l.partial) loadDetail(l);
     drawer.open(
       l,
@@ -344,7 +351,7 @@ async function main() {
     leavingDevelopment = false;
     if (devOpen) replaceUrl();
     // only listings that show their street in the address are counted (see publicStreet)
-    const count = filterListings(listings, { ...store.getPending(), street: street.name }).length;
+    const count = search({ ...store.getPending(), street: street.name }).length;
     // the card first: on small screens it is a bar at the bottom, and the street is framed above it
     streetCard.show({ street, count, elsewhere: finder.inOtherPlaces(street) });
     const mobile = isMobile();
@@ -477,12 +484,12 @@ async function main() {
   /** Re-sorts the applied results and refreshes the list. */
   function showResults() {
     const rent = store.getApplied().transaction === 'rent';
-    currentList = sortListings(filterListings(listings, store.getApplied()), sort, rent);
+    currentList = sortListings(search(store.getApplied()), sort, rent);
     const filtered = !isEmptyCriteria(store.getApplied());
     results.render({
       rent,
       results: currentList,
-      total: listings.length,
+      total: onMap().length,
       sort,
       filtered,
       suggestions: currentList.length === 0 ? suggestRelaxations(listings, store.getApplied()) : [],
@@ -505,7 +512,7 @@ async function main() {
     announce(resultsHeading(currentList.length, !isEmptyCriteria(criteria), criteria.transaction === 'rent'));
     const matched = currentList;
     scene.setMatched(new Set(matched.map((l) => l.id)));
-    if (drawer.currentId && !matched.some((l) => l.id === drawer.currentId)) {
+    if (drawer.currentId && !matched.some((l) => l.id === primaryOf(drawer.currentId!))) {
       closingForSearch = true;
       drawer.close();
       closingForSearch = false;
@@ -528,6 +535,13 @@ async function main() {
   let services: ServiceIndex | null = null;
   const setNearby = (list: Listing[]) => {
     if (services) for (const l of list) l.nearby = nearbyDistances(services, l);
+  };
+  drawer.others = (l) => {
+    const g = dups.groupOf.get(l.id);
+    if (!g) return null;
+    const byId = (id: string) => listings.find((x) => x.id === id)!;
+    if (g.exclusive) return g.primary === l.id ? null : { listings: [], certain: g.certain, exclusive: byId(g.primary) };
+    return { listings: g.members.filter((id) => id !== l.id).map(byId), certain: g.certain, exclusive: null };
   };
   drawer.nearby = (l) => {
     const p = services && listingPoint(l);
@@ -565,12 +579,13 @@ async function main() {
 
   function listingsChanged() {
     listings = [...baseListings, ...remoteListings, ...userListings];
+    dups = findDuplicates(listings);
     setNearby(listings);
     known.agencyIds = new Set(agencies.map((a) => a.id));
     known.listingIds = new Set(listings.map((l) => l.id));
-    scene.setListings(listings);
+    scene.setListings(onMap());
     showResults();
-    scene.setMatched(new Set(filterListings(listings, store.getApplied()).map((l) => l.id)));
+    scene.setMatched(new Set(currentList.map((l) => l.id)));
   }
 
   /** Reloads the back end's listings (after login, logout or a change) and refreshes the map and list. */

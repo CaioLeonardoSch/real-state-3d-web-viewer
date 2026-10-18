@@ -74,7 +74,7 @@ describe.skipIf(!run)('backend: muitos anúncios', () => {
     for (let start = 0; start < photos.length; start += 2000) {
       expect((await db.from('listing_photos').insert(photos.slice(start, start + 2000))).error).toBeNull();
     }
-    const d = await db.from('listings').insert({ ...{ org_id: org, type: 'house', title: 'Rascunho', price: 1, area_m2: 50, bedrooms: 1, bathrooms: 1, parking_spots: 0 }, location: 'SRID=4326;POINT(-48.86 -26.31)', published: false }).select('id').single();
+    const d = await db.from('listings').insert({ org_id: org, type: 'house', title: 'Rascunho', price: 1, area_m2: 50, bedrooms: 1, bathrooms: 1, parking_spots: 0, location: 'SRID=4326;POINT(-48.86 -26.31)', published: false }).select('id').single();
     expect(d.error).toBeNull();
     draft = d.data!.id;
   }, 120_000);
