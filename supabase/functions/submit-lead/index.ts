@@ -1,4 +1,4 @@
-// Edge Function: records a visitor's message (listing, contact page, "Anunciar imóvel") after checking the anti-bot
+// Edge Function: records a visitor's message (listing, contact page, "Anunciar imóvel") or new-listing alert after checking the anti-bot
 // token (Cloudflare Turnstile) on the server, then with the service key, passing on the visitor's address for the
 // per-origin limits. Used when the site is built with VITE_TURNSTILE_SITE_KEY; with private_settings.lead_captcha =
 // 'on' the database refuses messages that do not come through here. Secrets: TURNSTILE_SECRET_KEY.
@@ -9,6 +9,7 @@ import { clientIp, originHost, verifyTurnstile } from '../_shared/turnstile.ts';
 const ARGS: Record<string, string[]> = {
   submit_lead: ['p_listing', 'p_source', 'p_name', 'p_email', 'p_phone', 'p_message', 'p_consent', 'p_consent_text', 'p_trap', 'p_visit_on', 'p_visit_period'],
   submit_site_lead: ['p_org', 'p_source', 'p_name', 'p_email', 'p_phone', 'p_message', 'p_details', 'p_consent', 'p_consent_text', 'p_trap'],
+  subscribe_search_alert: ['p_org', 'p_email', 'p_query', 'p_label', 'p_consent_text', 'p_trap'],
 };
 
 Deno.serve(async (req) => {

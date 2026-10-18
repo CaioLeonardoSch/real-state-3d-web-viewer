@@ -5,8 +5,8 @@ import { formatPhone, telHref, whatsappHref } from '../config';
 import { cardHtml, photosOf, priceHtml } from '../cards';
 import { leadFormHtml, wireLeadForm } from '../forms';
 import { ICONS } from '../icons';
-import { MAX_COMPARE } from '../saved';
-import { bairroCounts } from '../search';
+import { MAX_COMPARE, unseen } from '../saved';
+import { bairroCounts, queryToSearch, runSearch } from '../search';
 import { REGION } from '../../config/region';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
@@ -122,7 +122,44 @@ export function favorites(app: SiteApp, main: HTMLElement): void {
     list.length
       ? `<p class="muted">Salvos neste navegador. ${plural(list.length, 'imóvel', 'imóveis')}.${toggle}</p><div class="r-list r-grade">${list.map((l) => cardHtml(l, app.cardCtx(rent))).join('')}</div>`
       : `<div class="empty"><p>Você ainda não salvou nenhum imóvel. Toque no ${ICONS.heart} de um imóvel para guardá-lo aqui.</p><a class="btn btn-primary" href="${escapeHtml(app.menuHref('venda'))}" data-nav>Ver imóveis</a></div>`
-  }</div>`;
+  }${savedSearchesHtml(app)}<div class="alert-note" role="status"></div></div>`;
+  main.querySelectorAll<HTMLButtonElement>('[data-unsearch]').forEach((b) =>
+    b.addEventListener('click', () => {
+      app.saved.toggleSearch(b.dataset.unsearch!, '', []);
+      app.render();
+    }),
+  );
+  alertLink(app, $(main, '.alert-note'));
+}
+
+/** The saved searches, each with how many listings it has and how many are new since the visitor last opened it. */
+function savedSearchesHtml(app: SiteApp): string {
+  const list = app.saved.searches;
+  if (!list.length) return '';
+  const bairros = bairroCounts(app.data.listings, false).map((b) => b.name);
+  const rows = list.map((s) => {
+    const ids = runSearch(app.data.listings, queryToSearch(s.query, app.config.search, new Set([app.data.agencyId]), bairros)).map((l) => l.id);
+    const fresh = unseen(s, ids).length;
+    return `<li><a href="${escapeHtml(app.href('imoveis', new URLSearchParams(s.query)))}" data-nav>${escapeHtml(s.label)}</a>
+      <span class="muted">${plural(ids.length, 'imóvel', 'imóveis')}</span>${fresh ? ` <span class="badge-new">${plural(fresh, 'novo', 'novos')}</span>` : ''}
+      <button type="button" class="link-btn" data-unsearch="${escapeHtml(s.query)}">Apagar<span class="sr-only"> a busca ${escapeHtml(s.label)}</span></button></li>`;
+  });
+  return `<section class="saved-searches"><h2>Buscas salvas</h2><p class="muted small">"Novos" são os imóveis que entraram depois da última vez que você abriu a busca.</p><ul>${rows.join('')}</ul></section>`;
+}
+
+/** The links of the alert e-mails (?alerta=confirmar|cancelar&token=…) land on this page. */
+function alertLink(app: SiteApp, box: HTMLElement): void {
+  const action = app.params.get('alerta');
+  const token = app.params.get('token') ?? '';
+  const remote = app.data.demo ? null : app.data.remote;
+  if (!action || !remote) return;
+  if (!/^[0-9a-f-]{36}$/i.test(token)) return void (box.textContent = 'Este link de alerta está incompleto.');
+  box.textContent = 'Um momento…';
+  const show = (text: string) => (box.textContent = text);
+  (action === 'cancelar'
+    ? remote.cancelAlert(token).then((ok) => show(ok ? 'Pronto: você não vai mais receber esse alerta.' : 'Este alerta já tinha sido cancelado.'))
+    : remote.confirmAlert(token).then((a) => show(a ? `Alerta confirmado: "${a.label}". Você recebe um e-mail quando entrar imóvel novo nessa busca.` : 'Não encontramos este alerta; ele pode ter sido cancelado.'))
+  ).catch((e: Error) => show(e.message));
 }
 
 export function compare(app: SiteApp, main: HTMLElement): void {

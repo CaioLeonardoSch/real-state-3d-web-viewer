@@ -853,7 +853,7 @@ export class RemoteBackend {
    * Records a visitor's message: straight through the database function or, with the anti-bot check on, through the
    * submit-lead edge function, which checks the token on the server first (the database then refuses direct calls).
    */
-  private async recordLead(fn: 'submit_lead' | 'submit_site_lead', args: Record<string, unknown>, captchaToken?: string): Promise<string> {
+  private async recordLead(fn: 'submit_lead' | 'submit_site_lead' | 'subscribe_search_alert', args: Record<string, unknown>, captchaToken?: string): Promise<string> {
     if (!captchaToken) {
       const { data, error } = await this.sb.rpc(fn, args);
       fail(error, 'Não foi possível enviar');
@@ -1215,6 +1215,28 @@ export class RemoteBackend {
       l.captchaToken,
     );
     void this.sb.functions.invoke('notify-lead', { body: { lead_id: id } }).catch(() => {});
+  }
+
+  /** New-listing alert for a search of the site (`query` as in the address); a confirmation e-mail goes out first. */
+  async subscribeAlert(orgId: string, a: { email: string; query: string; label: string; consentText: string; trap?: string; captchaToken?: string }): Promise<void> {
+    await this.recordLead(
+      'subscribe_search_alert',
+      { p_org: orgId, p_email: a.email, p_query: a.query, p_label: a.label, p_consent_text: a.consentText, p_trap: a.trap || null },
+      a.captchaToken,
+    );
+  }
+
+  /** The links of the alert e-mails: confirm (null = unknown link) and cancel (false = already gone). */
+  async confirmAlert(token: string): Promise<{ label: string; query: string } | null> {
+    const { data, error } = await this.sb.rpc('confirm_search_alert', { p_token: token });
+    fail(error, 'Não foi possível confirmar o alerta');
+    return (data as { label: string; query: string } | null) ?? null;
+  }
+
+  async cancelAlert(token: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc('cancel_search_alert', { p_token: token });
+    fail(error, 'Não foi possível cancelar o alerta');
+    return data === true;
   }
 
   /** Whether the logged-in user may edit this client's site (owner, admin or platform support). */

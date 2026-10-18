@@ -1,6 +1,6 @@
-import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types';
-import { publicStreet, sameStreet } from '../data/streets';
-import { NEAR_M, type ServiceKind } from '../data/services';
+import { priceIn, type Amenity, type Listing, type ListingStatus, type ListingType } from '../data/types.ts';
+import { publicStreet, sameStreet } from '../data/streets.ts';
+import { NEAR_M, type ServiceKind } from '../data/services.ts';
 
 export interface FilterCriteria {
   /** 'rent' = listings for rent, prices are monthly rents; null = for sale (the default). */

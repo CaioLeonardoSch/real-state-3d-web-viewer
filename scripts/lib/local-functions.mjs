@@ -7,7 +7,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 
-/** Starts both; resolves to { mailLog, mails(), stop() }, or null when the functions cannot run here. */
+/** Starts both; resolves to { mailLog, mails(), stop(), mailUrl (for the Node scripts) }, or null when the functions cannot run here. */
 export async function startLocalFunctions(apiUrl, siteUrl) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'functions-'));
   const mailLog = path.join(dir, 'mails.jsonl');
@@ -75,7 +75,7 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
             .split('\n')
             .filter(Boolean)
             .map((l) => JSON.parse(l));
-        return { mailLog, mails, stop };
+        return { mailLog, mails, stop, mailUrl: `http://127.0.0.1:${mock.address().port}/emails` };
       }
     } catch {}
     await new Promise((r) => setTimeout(r, 1000));

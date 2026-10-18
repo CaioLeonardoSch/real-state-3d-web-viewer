@@ -2,7 +2,8 @@
 // Browser check of the site connected to the LOCAL Supabase (`npm run db:start` first):
 // builds dist-backend/ with the local URL and key, then: sign-up → client → announce with photos → the public
 // sees it (without the private fields) → lower the price → delete. Never point this at a production project.
-import { execFileSync, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import http from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -480,6 +481,45 @@ try {
     !!href && opened.canonical === origin + href && reloaded.canonical === origin + href && !!reloaded.h1 && reloaded.h1 === opened.h1 && domErrors.length === 0,
     JSON.stringify({ href, opened, reloaded, domErrors }),
   );
+
+  // ---- new-listing alert (item 40): asked on the search page, confirmed by the e-mail link, then the new listings
+  if (fns) {
+    const alertEmail = `alerta-${tag}@teste.local`;
+    // async: the fake e-mail provider answers from this process
+    const sendAlerts = () =>
+      promisify(execFile)('node', ['scripts/send-alerts.mjs', '--local'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: { ...process.env, RESEND_API_KEY: 'teste', RESEND_API_URL: fns.mailUrl, SITE_URL: URL_ },
+      });
+    await dp.goto(`${origin}/imoveis`);
+    await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+    await dp.click('.alert-box summary');
+    await dp.fill('.alert-box [name=email]', alertEmail);
+    await dp.check('.alert-box [name=consent]');
+    await dp.click('.alert-box button[type=submit]');
+    await dp.waitForSelector('.alert-box .form-msg.ok, .alert-box .form-msg.err', { timeout: 15000 });
+    const asked = await dp.textContent('.alert-box .form-msg');
+    await sendAlerts();
+    const confirm = fns.mails().find((m) => m.to?.[0] === alertEmail && /Confirme/.test(m.subject));
+    const token = /token=([0-9a-f-]{36})/.exec(confirm?.text ?? '')?.[1];
+    await dp.goto(`${origin}/favoritos?alerta=confirmar&token=${token}`);
+    await dp.waitForFunction(() => /confirmado/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 15000 });
+    // as if the listing came in after the confirmation
+    await svc.from('search_alerts').update({ last_sent_at: '2000-01-01T00:00:00Z' }).eq('token', token);
+    await sendAlerts();
+    const news = fns.mails().find((m) => m.to?.[0] === alertEmail && /novo/.test(m.subject));
+    await sendAlerts();
+    const again = fns.mails().filter((m) => m.to?.[0] === alertEmail).length;
+    await dp.goto(`${origin}/favoritos?alerta=cancelar&token=${token}`);
+    await dp.waitForFunction(() => /não vai mais receber/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 15000 });
+    const left = (await svc.from('search_alerts').select('id').eq('token', token)).data?.length;
+    check(
+      'alerta de imóvel novo: pedido na busca, confirmação pelo link do e-mail, e-mail com o imóvel e o link de saída, sem repetir; cancelado pelo link',
+      /confirmação/.test(asked ?? '') && !!token && !!news && news.text.includes(`https://${domain}/imovel?id=`) && news.text.includes('alerta=cancelar') && again === 2 && left === 0,
+      JSON.stringify({ asked, token: !!token, news: news?.subject, again, left }),
+    );
+  }
   await dom.close();
 
   // ---- session survives a reload; trash → restore → trash → delete for good

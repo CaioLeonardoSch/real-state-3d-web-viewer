@@ -127,6 +127,12 @@ feed em Minha conta), crie no GitHub o segredo **`SUPABASE_SERVICE_ROLE_KEY`** (
 Actions → Secrets) com a chave `service_role` do projeto. O workflow "Importar XML" roda de hora em hora quando a
 variável `VITE_SUPABASE_URL` está definida; sem o segredo, ele falha e nenhum feed é lido.
 
+**Feito em 17/10:** alertas de imóveis novos (item 40). O workflow "Alertas de imóveis" (`.github/workflows/alertas.yml`)
+roda todo dia às 8h07 quando as variáveis `VITE_SUPABASE_URL` e `SITE_URL` (o endereço da plataforma, onde fica o
+`site.html`) estão definidas. Precisa dos segredos `SUPABASE_SERVICE_ROLE_KEY` e `RESEND_API_KEY`; a variável
+`ALERT_EMAIL_FROM` é o remetente (um domínio verificado no Resend). Para rodar à mão: `npm run alerts:send`
+(`--dry-run` só mostra o que mandaria). Pedidos sem confirmação somem depois de 30 dias.
+
 ### Espelho de vendas das incorporadoras
 
 O suporte envia o desenho das torres com `npm run developments:upload` (chave de serviço); a incorporadora cuida de

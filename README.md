@@ -107,6 +107,9 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   convites vão por e-mail, e os anúncios do CRM do cliente entram pelo XML (VRSync): o administrador informa o
   endereço do feed em Minha conta e ele é lido a cada 6 horas (workflow "Importar XML"), ou o suporte importa pela
   linha de comando, ver [`docs/importacao-xml.md`](docs/importacao-xml.md).
+- **Buscas salvas e alertas** (feito em 17/10): "Salvar busca" guarda a busca no navegador, e Favoritos mostra
+  quantos imóveis novos entraram; no site com backend, o visitante deixa o e-mail, confirma pelo link e recebe uma
+  vez por dia os imóveis novos da busca (workflow "Alertas de imóveis", `scripts/send-alerts.mjs`).
 - **Páginas para o Google:** `npm run build` gera uma página estática por anúncio (`dist/imovel/…/`), o
   `sitemap.xml` e a prévia com foto para links compartilhados (`scripts/prerender.mjs`).
 
@@ -674,7 +677,7 @@ A lista completa do que falta, em ordem de prioridade (com impacto, esforço, ri
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Backend (contas, anúncios, fotos, leads, espelho de vendas) e hospedagem multi-cliente: ver
   [`docs/backend.md`](docs/backend.md).
-- Favoritos, alertas e as demais melhorias priorizadas em
+- Alertas por push e as demais melhorias priorizadas em
   [`docs/analise-concorrencia.md`](docs/analise-concorrencia.md).
 - Espelho de vendas com dados reais da incorporadora (planta do pavimento-tipo, tabela de unidades e de preços),
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.

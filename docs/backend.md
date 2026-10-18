@@ -38,7 +38,11 @@ imobiliária (white label, item 12): 13/10/2026.
 8. **Importação dos anúncios** do sistema que a imobiliária já usa (**feito em 13/10/2026**, formato VRSync, ver
    [`importacao-xml.md`](importacao-xml.md)). Elas mandam o mesmo cadastro para ZAP e VivaReal
    em XML; ler esse arquivo evita cadastro duplicado e é o que faz uma imobiliária adotar o produto.
-9. **Favoritos, buscas salvas e alertas** de novos imóveis (e-mail ou push).
+9. **Favoritos, buscas salvas e alertas** de novos imóveis (e-mail ou push). **Feito em 17/10:** "Salvar busca"
+   guarda a busca no navegador e Favoritos mostra quantos imóveis entraram desde a última visita; no site com backend,
+   "Receber por e-mail" grava um alerta (`search_alerts`, confirmação por e-mail antes do primeiro aviso, link de saída
+   em todo e-mail) e o workflow "Alertas de imóveis" (`scripts/send-alerts.mjs`) manda uma vez por dia os imóveis
+   novos de cada busca (item 40). Push fica para depois.
 10. **Moderação:** fila de aprovação, denúncias, histórico de alterações. **Feito em 17/10:** aprovação prévia por
     cliente (`organizations.listing_review`, só a equipe muda), `listings.moderation` (em análise, aprovado,
     recusado, com o motivo) aplicada por gatilho e no filtro de `public_listings`; `report_listing` para o
@@ -493,7 +497,7 @@ monta é `src/seo/siteServer.ts`, com uma consulta ao banco (`site_bootstrap`) p
 4. Se o tráfego crescer, guardar as páginas na borda por alguns minutos (`s-maxage`) ou mandar os dados junto com o
    HTML, para o site não repetir a consulta.
 5. Ideias para depois: blog, páginas extras livres, banner com várias fotos na capa, "Seja corretor" (vagas),
-   alerta de imóvel novo por e-mail para a busca salva.
+   ~~alerta de imóvel novo por e-mail para a busca salva~~ (**feito em 17/10**, item 40).
 
 *Anotado por Claude (assistente de IA), 13/10/2026 (atualizado em 15/10/2026), para consulta na manutenção.*
 

@@ -1,11 +1,11 @@
 // Search of a client's site: the map's criteria (src/state/filters.ts, neighbourhoods included) plus reference code
 // and suites, with page and view. Kept in the address bar so any search can be shared or bookmarked.
-import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, TYPE_PLURALS, type Listing } from '../data/types';
-import { hasStreetType } from '../data/streets';
-import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName, type FilterCriteria } from '../state/filters';
-import { DEFAULT_SORT, sortListings, type SortKey } from '../state/sort';
-import { searchToState, stateToSearch } from '../state/url';
-import { formatArea, formatBRLCompact } from '../utils/format';
+import { AMENITY_LABELS, STATUS_LABELS, TYPE_LABELS, TYPE_PLURALS, type Listing } from '../data/types.ts';
+import { hasStreetType } from '../data/streets.ts';
+import { EMPTY_CRITERIA, cloneCriteria, filterListings, normalizeName, type FilterCriteria } from '../state/filters.ts';
+import { DEFAULT_SORT, sortListings, type SortKey } from '../state/sort.ts';
+import { searchToState, stateToSearch } from '../state/url.ts';
+import { formatArea, formatBRLCompact } from '../utils/format.ts';
 import type { SearchView } from './config';
 
 export interface SiteSearch {
@@ -62,6 +62,11 @@ export function searchToQuery(s: SiteSearch, defaults: { sort: SortKey; view: Se
   if (s.page > 1) p.set('pagina', String(s.page));
   if (s.view !== defaults.view) p.set('vista', s.view);
   return p;
+}
+
+/** The key of a search for saving it and for e-mail alerts: only the criteria (no page, view or order). */
+export function alertQuery(s: SiteSearch, defaults: { sort: SortKey; view: SearchView }): string {
+  return searchToQuery({ ...s, page: 1, view: defaults.view, sort: defaults.sort }, defaults).toString();
 }
 
 /** The search in an address. Neighbourhoods not in `knownBairros` (when given) are dropped. */
@@ -131,6 +136,11 @@ export function bairroCounts(listings: readonly Listing[], rent: boolean): { nam
     if (b) counts.set(b, (counts.get(b) ?? 0) + 1);
   }
   return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+/** Name of a saved search or alert: "Aluguel · Apartamento · Glória · Até R$ 3.000". */
+export function searchLabel(s: SiteSearch): string {
+  return [s.criteria.transaction === 'rent' ? 'Aluguel' : 'Venda', ...chipsOf(s).map((c) => c.label)].join(' · ').slice(0, 160);
 }
 
 /** Title of a results page: "34 apartamentos à venda em Glória". */

@@ -231,6 +231,14 @@ async function main() {
     await page.waitForSelector('main.page-favoritos .card');
     const favRent = { href: await page.locator('.card .card-title a').getAttribute('href'), price: await page.locator('.card .price').first().textContent() };
     check('favoritos no modo aluguel: aluguel no card e ficha aberta no aluguel', favRent.price.includes('/mês') === favRent.href.includes('negocio=alugar'), JSON.stringify(favRent));
+    await page.goto(`${BASE}?p=imoveis&tipo=apartamento`);
+    await page.waitForSelector('main.page-imoveis .card');
+    await page.click('.save-search');
+    const pressed = await page.getAttribute('.save-search', 'aria-pressed');
+    await page.goto(`${BASE}?p=favoritos`);
+    await page.waitForSelector('main.page-favoritos');
+    const savedSearch = { pressed, rows: await page.locator('.saved-searches li').count(), label: await page.locator('.saved-searches li a').first().textContent(), href: await page.locator('.saved-searches li a').first().getAttribute('href') };
+    check('busca salva no navegador aparece em Favoritos, com o link da busca', pressed === 'true' && savedSearch.rows === 1 && /Apartamento/.test(savedSearch.label) && /tipo=apartamento/.test(savedSearch.href), JSON.stringify(savedSearch));
 
     // ------------------------------------------------ listing page
     const red = reduced[0];

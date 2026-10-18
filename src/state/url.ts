@@ -1,7 +1,7 @@
-import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types';
-import { EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters';
-import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort';
-import { SERVICE_KINDS, type ServiceKind } from '../data/services';
+import { AMENITIES, LISTING_STATUSES, LISTING_TYPES, type Amenity, type ListingStatus, type ListingType } from '../data/types.ts';
+import { EMPTY_CRITERIA, RELAXABLE_FIELDS, normalizeName, type FilterCriteria } from './filters.ts';
+import { DEFAULT_SORT, SORT_KEYS, type SortKey } from './sort.ts';
+import { SERVICE_KINDS, type ServiceKind } from '../data/services.ts';
 
 /** What the address bar stores: applied filters and the open listing. */
 export interface UrlState {

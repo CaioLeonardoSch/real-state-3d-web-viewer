@@ -1,0 +1,42 @@
+# Alertas de imóveis novos (scripts/send-alerts.mjs): uma vez por dia, de manhã, manda a confirmação de quem pediu
+# um alerta no site e, depois de confirmado, os imóveis novos de cada busca.
+#
+# Precisa das variáveis VITE_SUPABASE_URL (a mesma do site) e SITE_URL (o endereço da plataforma, onde fica o
+# site.html), e dos segredos SUPABASE_SERVICE_ROLE_KEY e RESEND_API_KEY (Settings → Secrets and variables →
+# Actions). ALERT_EMAIL_FROM (variável) é o remetente, de um domínio verificado no Resend. Sem o backend e o
+# SITE_URL configurados, o job não roda.
+name: Alertas de imóveis
+
+on:
+  schedule:
+    - cron: '7 11 * * *' # 8h07 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alertas
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    if: vars.VITE_SUPABASE_URL != '' && vars.SITE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run alerts:send
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          ALERT_EMAIL_FROM: ${{ vars.ALERT_EMAIL_FROM }}

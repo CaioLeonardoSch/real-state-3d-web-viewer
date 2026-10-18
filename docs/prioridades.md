@@ -83,7 +83,7 @@ Dependem de validação comercial. Não começar antes de P0 e P1.
 
 | # | Item | Impacto | Esforço | Risco | Dependências | Origem |
 |---|---|---|---|---|---|---|
-| 40 | Buscas salvas e alertas de novos imóveis | Médio | Médio | Baixo | 5, 6 | Backend §1, concorrência |
+| 40 | ~~Buscas salvas e alertas de novos imóveis~~ **Feito em 17/10:** "Salvar busca" guarda até 10 buscas no navegador e Favoritos mostra cada uma com o total e os novos desde a última visita; no site com backend, "Receber por e-mail" grava o alerta (tabela `search_alerts`, só pelas funções do banco, com limites e o anti-robô), o visitante confirma pelo link do e-mail e o workflow "Alertas de imóveis" manda uma vez por dia os imóveis publicados depois do último aviso, com link de saída; pedido sem confirmação some em 30 dias | Médio | Médio | Baixo | 5, 6 | Backend §1, concorrência |
 | 41 | Busca conversacional com IA | Incerto | Médio | Médio | 5 | Auditoria §10 |
 | 42 | Análise de investimento e preço justo por m² | Incerto | Grande | Alto: não há dados de mercado reais | Fonte de dados | Concorrência |
 | 43 | Isócronas e desenho de área no mapa | Médio | Médio | Baixo | 5 | Concorrência |

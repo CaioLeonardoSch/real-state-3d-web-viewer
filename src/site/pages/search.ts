@@ -6,7 +6,9 @@ import { escapeHtml, parseNumberInput } from '../../utils/format';
 import { cardHtml } from '../cards';
 import { ICONS } from '../icons';
 import { codeOf } from '../routes';
-import { bairroCounts, chipsOf, emptySearch, pageOf, queryToSearch, resultsTitle, runSearch, type SiteSearch } from '../search';
+import { alertQuery, bairroCounts, chipsOf, emptySearch, pageOf, queryToSearch, resultsTitle, runSearch, searchLabel, type SiteSearch } from '../search';
+import { MAX_SEARCHES } from '../saved';
+import { captchaBox, formCaptcha } from '../../backend/captcha';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
 import { countGroup, wireCountGroups } from './home';
@@ -44,12 +46,14 @@ export function searchPage(app: SiteApp, main: HTMLElement): void {
           <div><h1 id="r-title"></h1><p class="r-sub"></p></div>
           <div class="r-tools">
             <label class="fld sort"><span class="sr-only">Ordenar</span><select name="ordem">${SORT_KEYS.map((k) => `<option value="${k}"${k === s.sort ? ' selected' : ''}>${SORT_LABELS[k]}</option>`).join('')}</select></label>
+            <button type="button" class="btn btn-ghost save-search" aria-pressed="false">${ICONS.bell}<span>Salvar busca</span></button>
             <div class="tabs views" role="group" aria-label="Exibir em">
               <button type="button" data-view="grade" aria-label="Grade">${ICONS.grid}</button><button type="button" data-view="lista" aria-label="Lista">${ICONS.list}</button><button type="button" data-view="mapa" aria-label="Mapa 3D">${ICONS.map}<span>Mapa 3D</span></button>
             </div>
           </div>
         </div>
         <div class="chips" role="group" aria-label="Filtros aplicados"></div>
+        <div class="alert-slot"></div>
         <div class="r-list"></div>
         <nav class="pager" aria-label="Páginas"></nav>
       </section>
@@ -57,6 +61,16 @@ export function searchPage(app: SiteApp, main: HTMLElement): void {
   renderFilterPanel(app);
   renderBairroChips(app);
   renderResults(app);
+  $(main, '.save-search').addEventListener('click', () => {
+    const s = app.search;
+    const ids = runSearch(app.data.listings, s).map((l) => l.id);
+    if (!app.saved.toggleSearch(alertQuery(s, c.search), searchLabel(s), ids)) {
+      app.toast(`Salve até ${MAX_SEARCHES} buscas; apague alguma em Favoritos.`);
+      return;
+    }
+    app.toast(app.saved.savedSearch(alertQuery(s, c.search)) ? 'Busca salva neste navegador: veja em Favoritos quando entrar imóvel novo.' : 'Busca removida.');
+    renderSaveState(app, main);
+  });
   const top = $(main, '.search-top');
   top.querySelectorAll<HTMLButtonElement>('[data-deal]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -259,6 +273,7 @@ function renderResults(app: SiteApp): void {
         app.render();
       }),
     );
+  renderSaveState(app, main, found.map((l) => l.id));
   const list = $(main, '.r-list');
   const pager = $(main, '.pager');
   if (s.view === 'mapa') {
@@ -318,6 +333,64 @@ function renderResults(app: SiteApp): void {
       $(main, '#r-title').focus({ preventScroll: true });
     }),
   );
+}
+
+// ---------------------------------------------------------------- saved search and e-mail alert
+
+/** "Salvar busca" pressed or not, and (on a client's site with backend) the form of the e-mail alert. */
+function renderSaveState(app: SiteApp, main: HTMLElement, matchIds?: string[]): void {
+  const query = alertQuery(app.search, app.config.search);
+  const saved = !!app.saved.savedSearch(query);
+  // opening a saved search: what it shows now is no longer new
+  if (saved && matchIds) app.saved.markSeen(query, matchIds);
+  const btn = $(main, '.save-search');
+  btn.setAttribute('aria-pressed', String(saved));
+  btn.querySelector('span')!.textContent = saved ? 'Busca salva' : 'Salvar busca';
+  const slot = $(main, '.alert-slot');
+  const remote = app.data.demo ? null : app.data.remote;
+  if (!remote || slot.dataset.query === query) return;
+  slot.dataset.query = query;
+  slot.innerHTML = `<details class="alert-box"><summary>${ICONS.mail} Receber por e-mail os imóveis novos desta busca</summary>
+    <form novalidate>
+      <label class="fld"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="120" required></label>
+      <label class="hp" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
+      <label class="consent"><input type="checkbox" name="consent"> <span>Quero receber de ${escapeHtml(app.config.name)} um e-mail quando entrar imóvel novo nesta busca. Posso cancelar pelo link de cada e-mail.</span></label>
+      ${captchaBox()}
+      <p class="form-msg" role="status" aria-live="polite"></p>
+      <button type="submit" class="btn btn-primary">Avisar por e-mail</button>
+    </form></details>`;
+  const form = slot.querySelector('form')!;
+  const msg = $(form, '.form-msg');
+  const captcha = formCaptcha(form, 'lead');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = String(new FormData(form).get('email') ?? '').trim();
+    const consent = form.querySelector<HTMLInputElement>('[name=consent]')!;
+    msg.className = 'form-msg err';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return void (msg.textContent = 'Informe um e-mail válido.');
+    if (!consent.checked) return void (msg.textContent = 'Marque a concordância para receber os avisos.');
+    const submit = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+    submit.disabled = true;
+    msg.className = 'form-msg';
+    msg.textContent = 'Enviando…';
+    const error = await (captcha ? captcha.getToken() : Promise.resolve(undefined))
+      .then((captchaToken) =>
+        remote.subscribeAlert(app.data.agencyId, {
+          email,
+          query,
+          label: searchLabel(app.search),
+          consentText: consent.nextElementSibling!.textContent!.trim(),
+          trap: String(new FormData(form).get('website') ?? ''),
+          captchaToken,
+        }),
+      )
+      .then(() => null, (err: Error) => err.message);
+    captcha?.reset();
+    submit.disabled = false;
+    msg.className = `form-msg ${error ? 'err' : 'ok'}`;
+    msg.textContent = error ?? `Quase lá: até amanhã chega em ${email} um link para confirmar. Os avisos começam depois da confirmação.`;
+    if (!error) form.reset();
+  });
 }
 
 // ---------------------------------------------------------------- 3D map (the map app in a frame)
