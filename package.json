@@ -20,6 +20,7 @@
     "data:developments": "node scripts/generate-developments.mjs",
     "validate:data": "node scripts/validate-listings.mjs",
     "listings:add": "node scripts/add-listings.mjs",
+    "developments:upload": "node scripts/upload-developments.mjs",
     "verify:e2e": "node scripts/e2e-check.mjs",
     "test:backend": "node scripts/test-backend.mjs",
     "db:start": "supabase start -x realtime,studio,imgproxy,logflare,vector,supavisor,postgres-meta,mailpit",

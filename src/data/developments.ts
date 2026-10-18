@@ -21,10 +21,14 @@ export interface Unit {
   shape: number;
   /** Grid positions the unit takes on its floor (2 for a penthouse spanning two). */
   cells: number;
-  /** Illustrative only. */
-  price: number;
-  /** Fictional. */
+  /** Demo: illustrative. From the back end: null when the developer does not show prices. */
+  price: number | null;
+  /** Demo: fictional. From the back end: as the developer keeps it (an expired reservation is already available). */
   status: UnitStatus;
+  /** Tower of the development ("" when there is only one). */
+  tower?: string;
+  /** Row id in the back end (development_units). */
+  dbId?: string;
 }
 
 export interface Level {
@@ -61,6 +65,8 @@ export interface Development {
   levels: Level[];
   /** Works under way: levels already built, counted from the ground (the rest of the tower is drawn translucent). */
   progress?: ConstructionProgress;
+  /** Kept by the developer in the back end (absent: the public demonstration, with fictional sales). */
+  backend?: { id: string; orgId: string; showPrices: boolean };
 }
 
 export interface DevelopmentsFile {

@@ -11,6 +11,7 @@ import {
 } from '../data/developments';
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, progressLabel } from '../data/construction';
+import type { TeamUnitRow } from '../backend/remote';
 
 export interface DevelopmentPanelHandlers {
   onClose: () => void;
@@ -21,6 +22,19 @@ export interface DevelopmentPanelHandlers {
   onHoverUnit: (unitId: string | null) => void;
   onView: (unitId: string) => void;
   onExitView: () => void;
+  /** Status or price of units changed (a reservation, a sale): the map redraws. */
+  onUnitsChanged?: () => void;
+}
+
+/** What the developer's team can do from the mirror (only for developments kept in the back end). */
+export interface DevelopmentTeam {
+  /** Role of the logged-in user in the developer's team (null: the public view). */
+  roleFor(d: Development): 'admin' | 'member' | null;
+  /** Units with prices and reservations (who, until when), as the team sees them. */
+  units(d: Development): Promise<TeamUnitRow[]>;
+  reserve(u: Unit, note: string): Promise<void>;
+  release(u: Unit): Promise<void>;
+  setStatus(u: Unit, status: 'available' | 'sold'): Promise<void>;
 }
 
 interface UnitFilter {
@@ -30,6 +44,10 @@ interface UnitFilter {
 
 const floorLabel = (level: number) => (level === 0 ? 'Térreo' : `${level}º`);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const unitName = (u: Unit) => `${u.tower ? `Torre ${u.tower}, apto` : 'Apto'} ${u.number}`;
+/** "18/10 14:30" in the region's time. */
+const shortWhen = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
 /**
  * "Espelho de vendas": every floor of a development as a row of units coloured by status, a unit
@@ -41,6 +59,13 @@ export class DevelopmentPanel {
   private floor: number | null = null;
   private filter: UnitFilter = { onlyAvailable: false, suitesMin: null };
   private viewing = false;
+  /** Set by the app when there is a back end. */
+  team: DevelopmentTeam | null = null;
+  private teamRole: 'admin' | 'member' | null = null;
+  /** The team's view of the units (by database id), once loaded. */
+  private teamUnits = new Map<string, TeamUnitRow>();
+  private busy = false;
+  private actionError = '';
 
   constructor(
     private el: HTMLElement,
@@ -67,7 +92,11 @@ export class DevelopmentPanel {
     this.floor = null;
     this.filter = { onlyAvailable: false, suitesMin: null };
     this.viewing = false;
+    this.teamRole = dev.backend && this.team ? this.team.roleFor(dev) : null;
+    this.teamUnits = new Map();
+    this.actionError = '';
     this.render();
+    if (this.teamRole) void this.loadTeam();
     this.el.classList.add('open');
     this.el.setAttribute('aria-hidden', 'false');
     this.el.inert = false;
@@ -93,6 +122,7 @@ export class DevelopmentPanel {
   select(unitId: string | null): void {
     if (!this.dev) return;
     this.setViewing(false, false);
+    this.actionError = '';
     this.unitId = unitId;
     const level = unitId ? levelOf(this.dev, unitId) : undefined;
     this.floor = level ? level.level : null;
@@ -115,7 +145,7 @@ export class DevelopmentPanel {
         <button type="button" class="link-btn dev-back" data-action="close">‹ Voltar ao bairro</button>
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar empreendimento">×</button>
       </div>
-      <span class="badge-fictional badge-dev">Espelho de vendas 3D · demonstração</span>
+      ${d.backend ? '<span class="badge-dev badge-live">Espelho de vendas 3D</span>' : '<span class="badge-fictional badge-dev">Espelho de vendas 3D · demonstração</span>'}
       <h2 id="dev-title">${escapeHtml(d.name)}</h2>
       <p class="dev-sub">${escapeHtml(d.developer)} · ${STAGE_LABELS[d.stage]} · entrega ${escapeHtml(d.delivery)}<br>
         <span class="muted">${escapeHtml(d.address)}</span></p>
@@ -133,14 +163,20 @@ export class DevelopmentPanel {
         <span class="st st-reserved">${plural(c.reserved, 'reservado', 'reservados')}</span>
         <span class="st st-sold">${plural(c.sold, 'vendido', 'vendidos')}</span>
       </p>
-      <p class="notice-approx small">Preços e disponibilidade são <b>fictícios</b>. A distribuição por andar e a posição da
-        torre são estimadas a partir da divulgação pública. Sem vínculo com a ${escapeHtml(d.developer)}.</p>
+      ${
+        d.backend
+          ? `<p class="small muted">Situação das unidades informada pela ${escapeHtml(d.developer)}.${d.backend.showPrices ? '' : ' Preços sob consulta.'}${
+              this.teamRole ? ' <b>Você está na equipe:</b> escolha uma unidade para reservar ou mudar a situação.' : ''
+            }</p>`
+          : `<p class="notice-approx small">Preços e disponibilidade são <b>fictícios</b>. A distribuição por andar e a posição da
+        torre são estimadas a partir da divulgação pública. Sem vínculo com a ${escapeHtml(d.developer)}.</p>`
+      }
       <div class="dev-detail" aria-live="polite"></div>
       <div class="dev-tools">
-        <label class="a-check"><input type="checkbox" name="onlyAvailable"> Só disponíveis</label>
+        <label class="a-check"><input type="checkbox" name="onlyAvailable"${this.filter.onlyAvailable ? ' checked' : ''}> Só disponíveis</label>
         <label class="results-sort">Suítes
           <select name="suitesMin"><option value="">Qualquer</option>${[2, 3, 4]
-            .map((n) => `<option value="${n}">${n}+</option>`)
+            .map((n) => `<option value="${n}"${this.filter.suitesMin === n ? ' selected' : ''}>${n}+</option>`)
             .join('')}</select>
         </label>
         <button type="button" class="link-btn" data-action="whole-tower" hidden>Ver torre inteira</button>
@@ -150,16 +186,27 @@ export class DevelopmentPanel {
         <span class="st st-sold">vendido</span> <span class="st st-selected">selecionado</span></p>
       <details class="dev-about">
         <summary>De onde vêm esses dados</summary>
-        <h3>Público</h3>
-        <ul>${d.facts.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
-        <h3>Estimado nesta demonstração</h3>
+        ${d.backend ? '<p class="small">Unidades, situação e preços: cadastro da incorporadora, atualizado por ela.</p>' : ''}
+        ${d.facts.length ? `<h3>Público</h3><ul>${d.facts.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
+        ${
+          d.backend
+            ? d.estimates.length || d.locationNote
+              ? `<h3>Estimado</h3><ul>${d.estimates.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}${
+                  d.locationNote ? `<li>localização: ${escapeHtml(d.locationNote)}</li>` : ''
+                }</ul>`
+              : ''
+            : `<h3>Estimado nesta demonstração</h3>
         <ul>${d.estimates.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}
           <li>preços (ilustrativos) e disponibilidade (fictícia) de cada unidade</li>
-          <li>localização: ${escapeHtml(d.locationNote)}</li></ul>
-        <h3>Fontes</h3>
-        <ul>${d.sources
-          .map((s) => `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.label)}</a></li>`)
-          .join('')}</ul>
+          <li>localização: ${escapeHtml(d.locationNote)}</li></ul>`
+        }
+        ${
+          d.sources.length
+            ? `<h3>Fontes</h3><ul>${d.sources
+                .map((s) => `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.label)}</a></li>`)
+                .join('')}</ul>`
+            : ''
+        }
       </details>`;
     this.el.querySelectorAll('[data-action="close"]').forEach((b) => b.addEventListener('click', () => this.close()));
     this.el.querySelector('[data-action="whole-tower"]')!.addEventListener('click', () => this.select(null));
@@ -200,7 +247,7 @@ export class DevelopmentPanel {
       <button type="button" class="dev-row-label" data-floor="${l.level}" aria-label="Ver o ${floorLabel(l.level)} andar">${floorLabel(l.level)}</button>
       <div class="dev-row-units">${l.units
         .map((u) => {
-          const label = `Apartamento ${u.number}, ${u.plan}, ${formatArea(u.areaM2)}, ${UNIT_STATUS_LABELS[u.status].toLowerCase()}`;
+          const label = `${u.tower ? `Torre ${u.tower}, apartamento` : 'Apartamento'} ${u.number}, ${u.plan}, ${formatArea(u.areaM2)}, ${UNIT_STATUS_LABELS[u.status].toLowerCase()}`;
           return `<button type="button" class="unit st-${u.status}" style="flex-grow:${u.cells}" data-unit="${escapeHtml(u.id)}"
             aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${escapeHtml(u.number)}</button>`;
         })
@@ -277,13 +324,14 @@ export class DevelopmentPanel {
       ['Vagas', String(u.parkingSpots)],
       ['Andar', floorLabel(level.level)],
       ['Face', `${face.direction} · ${face.sun}`],
-      ['Preço (ilustrativo)', formatBRL(u.price)],
-      ['Preço por m²', `${formatBRL(Math.round(u.price / u.areaM2))}/m²`],
+      [d.backend ? 'Preço' : 'Preço (ilustrativo)', u.price === null ? 'Sob consulta' : formatBRL(u.price)],
+      ...(u.price === null ? [] : ([['Preço por m²', `${formatBRL(Math.round(u.price / u.areaM2))}/m²`]] as [string, string][])),
     ];
     box.innerHTML = `<div class="dev-card">
-      <div class="dev-card-head"><h3>Apto ${escapeHtml(u.number)}</h3>
+      <div class="dev-card-head"><h3>${escapeHtml(unitName(u))}</h3>
         <span class="st st-${u.status}">${UNIT_STATUS_LABELS[u.status]}</span></div>
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+      ${this.teamHtml(u)}
       <div class="dev-card-actions">
         <button type="button" class="btn-primary" data-action="view">${this.viewing ? 'Sair da vista' : 'Ver a vista da janela'}</button>
         <button type="button" class="btn-secondary" data-action="deselect">Fechar unidade</button>
@@ -293,6 +341,112 @@ export class DevelopmentPanel {
     </div>`;
     box.querySelector('[data-action="view"]')!.addEventListener('click', () => this.setViewing(!this.viewing, true));
     box.querySelector('[data-action="deselect"]')!.addEventListener('click', () => this.select(null));
+    this.bindTeam(box, u);
+  }
+
+  // ------------------------------------------------------------------ the developer's team
+
+  private async loadTeam(): Promise<void> {
+    const d = this.dev;
+    if (!d || !this.team) return;
+    try {
+      const rows = await this.team.units(d);
+      if (this.dev !== d) return;
+      this.teamUnits = new Map(rows.map((r) => [r.id, r]));
+      // the team's view is the current one (a reservation made meanwhile by someone else, a price changed)
+      let changed = false;
+      for (const u of d.levels.flatMap((l) => l.units)) {
+        const t = u.dbId ? this.teamUnits.get(u.dbId) : undefined;
+        if (t && (t.status !== u.status || t.price !== u.price)) {
+          u.status = t.status;
+          u.price = t.price;
+          changed = true;
+        }
+      }
+      if (changed) this.rerender();
+      else this.renderDetail();
+    } catch (err) {
+      this.actionError = (err as Error).message;
+      this.renderDetail();
+    }
+  }
+
+  /** Reservation details and the team's buttons for a unit. */
+  private teamHtml(u: Unit): string {
+    if (!this.teamRole || !u.dbId) return '';
+    const t = this.teamUnits.get(u.dbId);
+    if (!t) return `<p class="small muted dev-team">${this.actionError ? `<span role="alert">${escapeHtml(this.actionError)}</span>` : 'Carregando as reservas…'}</p>`;
+    const admin = this.teamRole === 'admin';
+    const buttons: string[] = [];
+    if (t.status === 'available') {
+      buttons.push('<button type="button" class="btn-primary" data-team="reserve">Reservar</button>');
+      if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="sold">Marcar como vendida</button>');
+    } else if (t.status === 'reserved') {
+      if (admin || t.reservedBy === this.myId()) buttons.push('<button type="button" class="btn-secondary" data-team="release">Desfazer reserva</button>');
+      if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="sold">Marcar como vendida</button>');
+    } else if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="available">Voltar para disponível</button>');
+    return `<div class="dev-team">
+      ${
+        t.status === 'reserved' && t.reservedUntil
+          ? `<p class="small">Reservada${t.reservedByName ? ` por <b>${escapeHtml(t.reservedByName)}</b>` : ''} até <b>${escapeHtml(shortWhen(t.reservedUntil))}</b>${
+              t.reservedNote ? ` · ${escapeHtml(t.reservedNote)}` : ''
+            }. Depois do prazo, volta a ficar disponível sozinha.</p>`
+          : ''
+      }
+      ${
+        t.status === 'available'
+          ? '<label class="dev-team-note">Para quem (opcional) <input type="text" name="note" maxlength="120" autocomplete="off" placeholder="Cliente, corretor"></label>'
+          : ''
+      }
+      ${buttons.length ? `<div class="dev-card-actions">${buttons.join('')}</div>` : ''}
+      ${this.actionError ? `<p class="a-error" role="alert">${escapeHtml(this.actionError)}</p>` : ''}
+    </div>`;
+  }
+
+  /** Id of the logged-in user, as seen in the reservations (set by the app). */
+  myId: () => string | null = () => null;
+
+  private bindTeam(box: HTMLElement, u: Unit): void {
+    box.querySelectorAll<HTMLButtonElement>('button[data-team]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const action = b.dataset.team!;
+        const note = box.querySelector<HTMLInputElement>('input[name="note"]')?.value.trim() ?? '';
+        void this.act(u, () =>
+          action === 'reserve'
+            ? this.team!.reserve(u, note)
+            : action === 'release'
+              ? this.team!.release(u)
+              : this.team!.setStatus(u, action as 'available' | 'sold'),
+        );
+      }),
+    );
+  }
+
+  private async act(u: Unit, run: () => Promise<void>): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    this.actionError = '';
+    this.el.querySelectorAll<HTMLButtonElement>('button[data-team]').forEach((b) => (b.disabled = true));
+    try {
+      await run();
+    } catch (err) {
+      this.actionError = (err as Error).message;
+    } finally {
+      this.busy = false;
+    }
+    // what the database has now (also when the action failed: someone may have reserved it first)
+    await this.loadTeam();
+    if (this.unitId === u.id) this.el.querySelector<HTMLElement>('.dev-team button, .dev-team [role="alert"]')?.focus();
+  }
+
+  /** Whole panel again (counts, grid colours), keeping the unit, floor and filters chosen. */
+  private rerender(): void {
+    const top = this.el.scrollTop;
+    this.render();
+    this.markGrid();
+    this.applyFilter();
+    this.el.scrollTop = top;
+    this.handlers.onUnitsChanged?.();
   }
 
   private setViewing(on: boolean, notify: boolean): void {

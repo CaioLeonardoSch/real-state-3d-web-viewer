@@ -943,4 +943,107 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect(site.data.photos).toHaveLength(photos.length);
     expect(site.data.photos).toEqual(expect.arrayContaining(photos));
   });
+
+  it('espelho de vendas: público vê só o publicado e o preço quando mostrado; a equipe reserva, o admin vende e importa', async () => {
+    const svc = service();
+    const polygon = { type: 'Polygon', coordinates: [[[-48.9, -26.4], [-48.9, -26.39], [-48.89, -26.39], [-48.9, -26.4]]] };
+    const layout = {
+      location: [-48.9, -26.4], center: [-48.9, -26.4], footprint: polygon, grid: { cols: 1, rows: 1 }, hiddenBuildingIds: [], floorHeightM: 3,
+      levels: [{ level: 1, use: 'residential', base: 0, top: 3 }], shapes: [{ polygon, facing: 0 }],
+    };
+    // sem a posição no mapa, o banco recusa (o mapa não tem onde pôr a torre)
+    expect((await svc.from('developments').insert({ org_id: orgA, slug: `sem-local-${tag}`, name: 'Sem local', developer: 'A', layout: { levels: [], shapes: [] } })).error).not.toBeNull();
+    const dev = await svc
+      .from('developments')
+      .insert({ org_id: orgA, slug: `espelho-${tag}`, name: 'Residencial Teste', developer: 'Incorporadora A', layout })
+      .select('id')
+      .single();
+    expect(dev.error).toBeNull();
+    const devId = dev.data!.id as string;
+    const units = await svc
+      .from('development_units')
+      .insert(['101', '102', '103', '104'].map((number) => ({ development_id: devId, floor: 1, number, area_m2: 70, price: 500_000 })))
+      .select('id, number, org_id');
+    expect(units.error).toBeNull();
+    expect(units.data!.every((u) => u.org_id === orgA)).toBe(true); // copiado do empreendimento
+    const id = Object.fromEntries(units.data!.map((u) => [u.number, u.id as string]));
+    const pub = anon();
+    const bA = backendOf(ana);
+    const bBruno = backendOf(bruno);
+
+    // rascunho: o público não vê; a equipe vê; outra incorporadora não vê nada
+    expect((await pub.from('public_developments').select('id').eq('id', devId)).data).toEqual([]);
+    expect((await pub.from('developments').select('id')).error).not.toBeNull();
+    expect((await bruno.client.from('developments').select('id').eq('id', devId)).data).toHaveLength(1);
+    expect((await carla.client.from('development_units').select('id').eq('development_id', devId)).data).toEqual([]);
+    expect((await carla.client.rpc('team_development_units', { p_development: devId })).data).toEqual([]);
+    expect((await carla.client.rpc('reserve_unit', { p_unit: id['101'] })).error?.code).toBe('42501');
+    expect((await pub.rpc('reserve_unit', { p_unit: id['101'] })).error).not.toBeNull();
+
+    // publicar e esconder o preço: só administradores
+    await expect(bBruno.updateDevelopment(devId, { published: true })).rejects.toThrow();
+    await bA.updateDevelopment(devId, { published: true, showPrices: false, reservationHours: 48 });
+    const seen = (await pub.from('public_development_units').select('number, price, status').eq('development_id', devId).order('number')).data!;
+    expect(seen).toHaveLength(4);
+    expect(seen.every((u) => u.price === null)).toBe(true);
+    expect((await bA.loadDevelopments(orgA)).find((d) => d.backend?.id === devId)?.levels[0].units[0].price).toBe(500_000);
+
+    // corretor reserva (prazo do empreendimento, sem escolher horas); não reserva de novo, não muda preço
+    const until = await bBruno.reserveUnit(id['101'], { hours: 2, note: '  Cliente Maria  ' });
+    expect(Date.parse(until) - Date.now()).toBeGreaterThan(47 * 3600_000);
+    await expect(bA.reserveUnit(id['101'])).rejects.toThrow(/já está reservada/);
+    await expect(bBruno.updateUnit(id['102'], { price: 1 })).rejects.toThrow(/administradores/);
+    expect((await bruno.client.from('development_units').update({ reserved_until: null }).eq('id', id['101'])).error).not.toBeNull();
+    const team = await bA.teamUnits(devId);
+    expect(team.find((u) => u.id === id['101'])).toMatchObject({ status: 'reserved', reservedBy: bruno.id, reservedNote: 'Cliente Maria' });
+    expect((await pub.from('public_development_units').select('status').eq('id', id['101']).single()).data!.status).toBe('reserved');
+
+    // reservar pela tabela não vale (sem prazo); vender e voltar, sim (admin)
+    expect((await ana.client.from('development_units').update({ status: 'reserved' }).eq('id', id['102'])).error?.message).toMatch(/Reservar/);
+    await bA.updateUnit(id['102'], { status: 'sold' });
+    await expect(bBruno.reserveUnit(id['102'])).rejects.toThrow(/vendida/);
+
+    // admin escolhe o prazo (limitado a 7 dias); desfazer: só quem reservou ou o admin
+    const long = await bA.reserveUnit(id['103'], { hours: 1000 });
+    expect(Date.parse(long) - Date.now()).toBeLessThanOrEqual(168 * 3600_000 + 60_000);
+    await expect(bBruno.releaseUnit(id['103'])).rejects.toThrow(/Só quem reservou/);
+    await bBruno.releaseUnit(id['101']);
+    await bA.releaseUnit(id['103']);
+    const cleared = (await svc.from('development_units').select('status, reserved_until, reserved_by, reserved_note').eq('id', id['101']).single()).data!;
+    expect(cleared).toEqual({ status: 'available', reserved_until: null, reserved_by: null, reserved_note: null });
+
+    // reserva vencida: o público e a equipe já veem disponível; a limpeza grava; pode reservar de novo
+    expect((await svc.from('development_units').update({ status: 'reserved', reserved_until: new Date(Date.now() - 60_000).toISOString() }).eq('id', id['104'])).error).toBeNull();
+    expect((await pub.from('public_development_units').select('status').eq('id', id['104']).single()).data!.status).toBe('available');
+    expect((await bA.teamUnits(devId)).find((u) => u.id === id['104'])).toMatchObject({ status: 'available', reservedUntil: null });
+    expect((await ana.client.rpc('release_expired_reservations')).error).not.toBeNull();
+    expect((await svc.rpc('release_expired_reservations')).data).toBeGreaterThanOrEqual(1);
+    expect((await svc.from('development_units').select('status').eq('id', id['104']).single()).data!.status).toBe('available');
+
+    // planilha: só administradores; acha pela torre e número; avisa as que não existem; preço vazio limpa
+    await expect(bBruno.importUnits(devId, [{ tower: '', number: '101', status: 'sold' }])).rejects.toThrow();
+    const r = await bA.importUnits(devId, [
+      { tower: '', number: '101', status: 'sold', price: 610_000 },
+      { tower: '', number: '102', status: 'available', price: null },
+      { tower: '', number: '104', status: 'reserved' },
+      { tower: 'B', number: '101', status: 'sold' },
+      { tower: '', number: '999' },
+    ]);
+    expect(r).toEqual({ updated: 3, unknown: ['B 101', '999'] });
+    const after = Object.fromEntries((await bA.teamUnits(devId)).map((u) => [u.number, u]));
+    expect(after['101']).toMatchObject({ status: 'sold', price: 610_000 });
+    expect(after['102']).toMatchObject({ status: 'available', price: null });
+    expect(after['104']).toMatchObject({ status: 'reserved', reservedBy: ana.id });
+    expect(Date.parse(after['104'].reservedUntil!) - Date.now()).toBeGreaterThan(47 * 3600_000);
+    expect(after['103']).toMatchObject({ status: 'available', price: 500_000 });
+
+    // outra incorporadora não importa nem altera
+    expect((await carla.client.rpc('import_development_units', { p_development: devId, p_rows: [] })).error?.code).toBe('42501');
+    expect((await carla.client.from('developments').update({ published: false }).eq('id', devId).select('id')).data).toEqual([]);
+    expect((await carla.client.from('developments').delete().eq('id', devId).select('id')).data).toEqual([]);
+    // remover: só administradores; as unidades vão junto
+    expect((await bruno.client.from('developments').delete().eq('id', devId).select('id')).data).toEqual([]);
+    expect((await ana.client.from('developments').delete().eq('id', devId).select('id')).data).toHaveLength(1);
+    expect((await svc.from('development_units').select('id').eq('development_id', devId)).data).toEqual([]);
+  });
 });

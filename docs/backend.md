@@ -26,7 +26,9 @@ imobiliária (white label, item 12): 13/10/2026.
    e/ou WhatsApp). Exige consentimento conforme a LGPD. **Feito em 13/10/2026** (aviso por e-mail via Resend; aviso
    por WhatsApp fica para depois, exige a API paga do WhatsApp Business).
 5. **Espelho de vendas.** Unidades por empreendimento com situação (disponível, reservado, vendido) e preço, editados
-   pela incorporadora. O ideal é integrar com o sistema de vendas dela.
+   pela incorporadora. O ideal é integrar com o sistema de vendas dela. **Feito em 17/10/2026:** no banco, com
+   reserva com prazo e planilha de ida e volta ([`espelho-de-vendas.md`](espelho-de-vendas.md)); a integração direta
+   fica para depois.
 6. **Página própria de cada imóvel,** que o Google consiga indexar. **Feito em 13/10/2026**: páginas estáticas geradas
    a cada publicação (de hora em hora com o backend), com dados estruturados e sitemap.
 7. **Termos de uso, política de privacidade e CRECI** nos anúncios de corretores e imobiliárias.
@@ -173,6 +175,11 @@ diferente do das imobiliárias:
 - **Permissões:** construtora (edita tudo do empreendimento), imobiliária parceira (vê tudo, reserva, vende),
   corretor (vê e reserva dentro da cota da imobiliária), público (vê só o que a construtora liberar; muitas preferem
   não mostrar preço ou disponibilidade abertamente).
+
+**Feito em 17/10/2026** ([`espelho-de-vendas.md`](espelho-de-vendas.md)): a incorporadora é dona dos dados no
+banco; administradores dela publicam, escondem o preço do público, vendem e importam a planilha; corretores dela
+reservam por um prazo que vence sozinho e aparece para todos. Imobiliárias parceiras, cota por imobiliária, link do
+corretor e painel por canal ainda não existem.
 
 ## 7. Cadastro do anúncio no backend
 

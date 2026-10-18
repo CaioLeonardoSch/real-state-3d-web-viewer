@@ -154,6 +154,8 @@ Arquitetura e negócio · alta para incorporadoras · alta · grande.
 - Nenhuma migration tem empreendimentos ou unidades; `src/data/load.ts` lê `developments.json` só com `DEMO`. Em
   produção o recurso desaparece.
 - A demonstração pública mostra empreendimentos reais (Halsten, Plaenge) com preços inventados (já em B4).
+- **Feito em 17/10:** empreendimentos e unidades no banco, com reserva com prazo, preço opcional para o público e
+  planilha (`docs/espelho-de-vendas.md`). Os da demonstração continuam só com `DEMO`.
 
 ### A8. Gestão do dia a dia insuficiente [prioridade 13]
 
@@ -288,7 +290,7 @@ Interface · média · média (hipótese) · pequeno.
 | Importação XML | Parcial: comando manual com a chave de serviço; os dez tipos do enum são lidos, os outros descartados (A6). **Feito em 17/10:** importação agendada pelo endereço do feed, cadastrado pelo administrador em Minha conta |
 | Site white label, editor, histórico de versões | Implementado |
 | SEO no domínio do cliente | Código pronto, não publicado (A5) |
-| Espelho de vendas | Só demonstração (A7) |
+| Espelho de vendas | Só demonstração (A7). **Feito em 17/10:** no banco, com reservas e planilha |
 | Documento de exclusividade | Só interface |
 | Rascunho de anúncio | Só no banco, sem interface |
 | Busca por área (`listings_in_bbox`) | Só no banco, sem uso |

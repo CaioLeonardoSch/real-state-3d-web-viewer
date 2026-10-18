@@ -21,6 +21,7 @@ import { whatsappLink } from '../data/listingText';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
 import { leadsCsv, statsCsv } from '../backend/leadsCsv';
+import { parseUnitsCsv, unitsCsv } from '../backend/unitsCsv';
 import { AVAILABILITIES, AVAILABILITY_LABELS, HIGHLIGHTS, HIGHLIGHT_LABELS, TYPE_LABELS, type Availability, type Highlight } from '../data/types';
 import { escapeHtml, formatBRL } from '../utils/format';
 
@@ -84,6 +85,8 @@ export class AccountPanel {
   private mode: 'signin' | 'signup' = 'signin';
   /** Form leads waiting for the user (shown on the account button). */
   private newLeads = 0;
+  /** The client keeps sales mirrors (developments) in the back end. */
+  private hasDevelopments = false;
   private leadTimer: number | null = null;
   /** Opens a listing on the map (from a lead). */
   openListing: (id: string) => void = () => {};
@@ -124,6 +127,10 @@ export class AccountPanel {
   get currentOrg(): Org | null {
     return this.org;
   }
+  /** The user's role in a client (null: not in its team). */
+  roleIn(orgId: string): Org['role'] | null {
+    return this.orgs.find((o) => o.id === orgId)?.role ?? null;
+  }
   get loggedIn(): boolean {
     return this.email !== null;
   }
@@ -150,6 +157,7 @@ export class AccountPanel {
     }
     this.org = this.orgs.find((o) => o.id === saved) ?? this.orgs[0] ?? null;
     this.newLeads = this.org ? await this.backend.newLeadsCount(this.org.id) : 0;
+    this.hasDevelopments = this.org ? (await this.backend.teamDevelopments(this.org.id).catch(() => [])).length > 0 : false;
     if (!this.org && this.leadTimer !== null) {
       clearInterval(this.leadTimer);
       this.leadTimer = null;
@@ -253,6 +261,7 @@ export class AccountPanel {
       ${this.org ? this.sectionHtml('listings', 'Meus anúncios') : ''}
       ${this.org ? this.sectionHtml('stats', 'Desempenho dos anúncios') : ''}
       ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
+      ${this.org && this.hasDevelopments ? this.sectionHtml('mirror', 'Espelho de vendas') : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
       ${this.org && canManage ? this.sectionHtml('feed', 'Importação automática (XML)') : ''}
@@ -387,6 +396,7 @@ export class AccountPanel {
       else if (key === 'listings') await this.loadListings(body, more);
       else if (key === 'stats') await this.loadStats(body, more);
       else if (key === 'feed') this.renderFeed(body, await this.backend.listingFeed(this.org.id));
+      else if (key === 'mirror') await this.loadMirror(body);
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -820,6 +830,139 @@ export class AccountPanel {
       void this.act(remove, async () => {
         await this.backend.removeListingFeed(org.id);
         await this.loadSection('feed');
+      });
+    });
+  }
+
+  /**
+   * "Espelho de vendas": each development with its counts and active reservations; administrators publish, choose
+   * whether the public sees prices and the reservation deadline, and send the spreadsheet of units.
+   */
+  private async loadMirror(body: HTMLElement): Promise<void> {
+    const org = this.org!;
+    const admin = org.role === 'owner' || org.role === 'admin';
+    const devs = await this.backend.teamDevelopments(org.id);
+    const units = await Promise.all(devs.map((d) => this.backend.teamUnits(d.id)));
+    const when = (iso: string) =>
+      new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+    const mapUrl = (slug: string) => `${new URL(`${import.meta.env.BASE_URL}`, location.href).href}?empreendimento=${encodeURIComponent(slug)}`;
+    body.innerHTML = `<p class="a-hint">A situação de cada unidade aparece no mapa na hora, para todos. Qualquer pessoa da equipe
+        reserva uma unidade pelo espelho (no mapa, clique no prédio); a reserva vence sozinha no prazo. O desenho da torre
+        (andares e posição das unidades) é feito pelo suporte.</p>
+      ${devs
+        .map((d, i) => {
+          const list = units[i];
+          const n = (st: string, one: string, many: string) => {
+            const c = list.filter((u) => u.status === st).length;
+            return `${c} ${c === 1 ? one : many}`;
+          };
+          const reserved = list.filter((u) => u.status === 'reserved').sort((a, b) => (a.reservedUntil ?? '').localeCompare(b.reservedUntil ?? ''));
+          return `<div class="mirror-dev" data-dev="${escapeHtml(d.id)}">
+            <h4>${escapeHtml(d.name)} <span class="muted small">${d.published ? 'publicado' : 'só a equipe vê'}</span></h4>
+            <p class="small">${list.length} unidades: <span class="st st-available">${n('available', 'disponível', 'disponíveis')}</span>
+              <span class="st st-reserved">${n('reserved', 'reservada', 'reservadas')}</span> <span class="st st-sold">${n('sold', 'vendida', 'vendidas')}</span>
+              · <a href="${escapeHtml(mapUrl(d.slug))}">abrir no mapa</a></p>
+            ${
+              reserved.length
+                ? `<details class="mirror-res"><summary>Reservas ativas (${reserved.length})</summary><ul>${reserved
+                    .map(
+                      (u) => `<li><span><strong>${escapeHtml(`${u.tower ? `${u.tower} ` : ''}${u.number}`)}</strong> até ${escapeHtml(when(u.reservedUntil!))}${
+                        u.reservedByName ? ` · ${escapeHtml(u.reservedByName)}` : ''
+                      }${u.reservedNote ? ` · ${escapeHtml(u.reservedNote)}` : ''}</span>${
+                        admin || u.reservedBy === this.userId
+                          ? ` <button type="button" class="link-btn" data-release="${escapeHtml(u.id)}">Desfazer</button>`
+                          : ''
+                      }</li>`,
+                    )
+                    .join('')}</ul></details>`
+                : ''
+            }
+            ${
+              admin
+                ? `<form class="add-form account-form mirror-form" novalidate>
+                    <label class="a-check a-wide"><input type="checkbox" name="published" ${d.published ? 'checked' : ''}> <span>Publicado no mapa</span></label>
+                    <label class="a-check a-wide"><input type="checkbox" name="showPrices" ${d.showPrices ? 'checked' : ''}> <span>Mostrar os preços ao público (a equipe sempre vê)</span></label>
+                    <label class="a-field">Prazo da reserva (horas)<input name="hours" type="number" min="1" max="168" step="1" value="${d.reservationHours}" required></label>
+                    <div class="a-actions a-wide"><button type="submit" class="btn-primary">Salvar</button></div>
+                  </form>
+                  <div class="mirror-sheet">
+                    <p class="small"><b>Planilha:</b> baixe, mude situação e preços no Excel ou no Google Planilhas e envie de volta.
+                      As unidades são achadas pela torre e pelo número; preço em branco fica "sob consulta".</p>
+                    <div class="a-actions">
+                      <button type="button" class="btn-secondary" data-action="csv-out">Baixar planilha</button>
+                      <label class="btn-secondary file-btn">Enviar planilha<input type="file" accept=".csv,text/csv" data-action="csv-in" hidden></label>
+                    </div>
+                  </div>`
+                : `<div class="a-actions"><button type="button" class="btn-secondary" data-action="csv-out">Baixar planilha</button></div>`
+            }
+            <p class="a-error a-wide" role="alert" hidden></p>
+            <p class="account-note mirror-done" role="status" hidden></p>
+          </div>`;
+        })
+        .join('')}`;
+    body.querySelectorAll<HTMLElement>('.mirror-dev').forEach((box, i) => {
+      const d = devs[i];
+      const errorEl = box.querySelector<HTMLElement>('.a-error')!;
+      const done = box.querySelector<HTMLElement>('.mirror-done')!;
+      const show = (el: HTMLElement, text: string) => {
+        el.textContent = text;
+        el.hidden = !text;
+      };
+      box.querySelector('[data-action="csv-out"]')!.addEventListener('click', () =>
+        download(unitsCsv(units[i]), `espelho-${d.slug}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8'),
+      );
+      box.querySelectorAll<HTMLButtonElement>('button[data-release]').forEach((b) =>
+        b.addEventListener('click', () =>
+          void this.act(b, async () => {
+            await this.backend.releaseUnit(b.dataset.release!);
+            await this.loadSection('mirror');
+            this.onChange();
+          }),
+        ),
+      );
+      const form = box.querySelector<HTMLFormElement>('form.mirror-form');
+      form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const hours = Number(fd.get('hours'));
+        show(errorEl, '');
+        if (!Number.isInteger(hours) || hours < 1 || hours > 168) return show(errorEl, 'O prazo da reserva vai de 1 a 168 horas (7 dias).');
+        const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        btn.disabled = true;
+        this.backend
+          .updateDevelopment(d.id, { published: !!fd.get('published'), showPrices: !!fd.get('showPrices'), reservationHours: hours })
+          .then(async () => {
+            await this.loadSection('mirror');
+            this.onChange();
+          })
+          .catch((ex: Error) => {
+            show(errorEl, ex.message);
+            btn.disabled = false;
+          });
+      });
+      const input = box.querySelector<HTMLInputElement>('input[data-action="csv-in"]');
+      input?.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file) return;
+        show(errorEl, '');
+        show(done, '');
+        if (file.size > 2_000_000) return show(errorEl, 'Planilha grande demais (até 2 MB).');
+        const parsed = parseUnitsCsv(await file.text());
+        if (parsed.errors.length)
+          return show(errorEl, `Nada foi alterado. ${parsed.errors.slice(0, 5).join(' · ')}${parsed.errors.length > 5 ? ` (e mais ${parsed.errors.length - 5})` : ''}`);
+        try {
+          const r = await this.backend.importUnits(d.id, parsed.rows);
+          await this.loadSection('mirror');
+          const again = this.el.querySelector<HTMLElement>(`.mirror-dev[data-dev="${CSS.escape(d.id)}"] .mirror-done`);
+          if (again)
+            show(again, `${r.updated} ${r.updated === 1 ? 'unidade atualizada' : 'unidades atualizadas'}.${
+              r.unknown.length ? ` Não existem no desenho (ficaram de fora): ${r.unknown.slice(0, 10).join(', ')}${r.unknown.length > 10 ? '…' : ''}.` : ''
+            }`);
+          this.onChange();
+        } catch (ex) {
+          show(errorEl, (ex as Error).message);
+        }
       });
     });
   }

@@ -178,6 +178,10 @@ células que cada unidade ocupa na grade do andar, `expectedUnits` para conferir
 `npm run data:developments`. O script falha se o total de unidades não bater ou se a torre não couber sem encostar
 em ruas e outras torres.
 
+**No backend** (incorporadora cliente): o suporte envia a torre desenhada com `npm run developments:upload`, e a
+incorporadora atualiza situação, preços e reservas no mapa e em Minha conta, também por planilha. A reserva tem prazo
+e vence sozinha; o preço pode ficar escondido do público. Ver [`docs/espelho-de-vendas.md`](docs/espelho-de-vendas.md).
+
 Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Opera (Halsten, Atiradores), ONE e Vitra
 (Plaenge, Atiradores) e Nola (Halsten, Cidade das Águas).
 

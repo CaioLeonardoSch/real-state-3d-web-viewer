@@ -255,6 +255,7 @@ export class DevelopmentLayer {
       const name = document.createElement('strong');
       name.textContent = d.name;
       const sub = document.createElement('span');
+      sub.className = 'dev-marker-sub';
       sub.textContent = `${d.developer} · ${n === 1 ? '1 disponível' : `${n} disponíveis`}`;
       const action = document.createElement('span');
       action.className = 'sr-only';
@@ -271,6 +272,18 @@ export class DevelopmentLayer {
       this.markers.forEach((m) => m.getElement().classList.toggle('is-far', this.map.getZoom() < MARKER_MIN_ZOOM));
     this.map.on('zoomend', update);
     update();
+  }
+
+  /** Units changed (a reservation, a sale): redraws the open tower and the counts on the labels. */
+  unitsChanged(): void {
+    if (!this.developments.length) return;
+    this.markers.forEach((m, i) => {
+      const d = this.developments[i];
+      const n = countByStatus(d).available;
+      const sub = m.getElement().querySelector('.dev-marker-sub');
+      if (sub) sub.textContent = `${d.developer} · ${n === 1 ? '1 disponível' : `${n} disponíveis`}`;
+    });
+    if (this.openId) this.refresh();
   }
 
   /** Hides the labels of these developments (outside the neighbourhood the map is cut to). */

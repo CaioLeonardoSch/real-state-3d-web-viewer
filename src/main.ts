@@ -32,7 +32,7 @@ import { exportUserListings, loadUserListings, newListingId, saveUserListings } 
 import { PlacementChecker } from './utils/placement';
 import { DevelopmentLayer } from './map/developmentLayer';
 import { DevelopmentPanel } from './ui/developmentPanel';
-import { countByStatus } from './data/developments';
+import { countByStatus, type Development } from './data/developments';
 import { RemoteBackend, backendConfig } from './backend/remote';
 import { mountMapHint } from './ui/mapHint';
 import { AccountPanel } from './ui/account';
@@ -111,6 +111,7 @@ async function main() {
   // With a back end (Supabase), listings come from it; without one, "Anunciar" keeps them in this browser.
   let remote: RemoteBackend | null = null;
   let remoteListings: Listing[] = [];
+  let remoteDevelopments: Development[] = [];
   if (backendConfig) {
     try {
       remote = await RemoteBackend.connect(backendConfig.url, backendConfig.key);
@@ -121,6 +122,8 @@ async function main() {
       console.error(err);
       status.textContent = 'Não foi possível carregar os anúncios do servidor; mostrando só a demonstração.';
     }
+    // sales mirrors kept by developers (an error leaves only the demonstration)
+    if (remote && !embed) remoteDevelopments = await remote.loadDevelopments().catch((err: Error) => (console.error(err), []));
   }
   function mergeAgencies(more: typeof agencies) {
     for (const a of more) if (!agencies.some((x) => x.id === a.id)) agencies.push(a);
@@ -128,7 +131,10 @@ async function main() {
   let userListings = remote ? [] : loadUserListings(agencies, new Set(baseListings.map((l) => l.id)));
   let listings = [...baseListings, ...remoteListings, ...userListings];
   // the sales charts are a demo of a developer: not inside an agency's site
-  const developments = embed ? [] : data.developments;
+  // one kept in the back end replaces the demonstration's with the same address
+  const developments = embed
+    ? []
+    : [...data.developments.filter((d) => !remoteDevelopments.some((r) => r.id === d.id)), ...remoteDevelopments];
   const known = {
     bairros: data.meta.bairros,
     agencyIds: new Set(agencies.map((a) => a.id)),
@@ -462,6 +468,28 @@ async function main() {
     mergeAgencies(r.agencies);
     remoteListings = ofSite(r.listings);
     listingsChanged();
+    // logged in or out: the team sees its prices; the units of the towers already drawn take the new view
+    if (embed || !developments.some((d) => d.backend)) return;
+    const fresh = new Map((await remote.loadDevelopments()).map((d) => [d.id, d]));
+    for (const d of developments) {
+      const f = fresh.get(d.id);
+      if (!d.backend || !f?.backend) continue;
+      d.backend = f.backend;
+      const units = new Map(f.levels.flatMap((l) => l.units).map((u) => [u.id, u]));
+      for (const u of d.levels.flatMap((l) => l.units)) {
+        const nu = units.get(u.id);
+        if (nu) Object.assign(u, { status: nu.status, price: nu.price });
+      }
+    }
+    devLayer?.unitsChanged();
+    showResults();
+    const open = devPanel.currentId ? developments.find((d) => d.id === devPanel.currentId) : undefined;
+    if (open) {
+      // after logging in, the open unit shows the team's actions right away
+      const unit = devPanel.selectedUnitId;
+      devPanel.open(open);
+      if (unit) devPanel.select(unit);
+    }
   }
 
   async function deleteUserListing(id: string): Promise<string | null> {
@@ -639,7 +667,30 @@ async function main() {
     onHoverUnit: (unitId) => devLayer?.hoverUnit(unitId),
     onView: (unitId) => devLayer?.viewFrom(unitId),
     onExitView: () => devLayer?.exitView(true),
+    onUnitsChanged: () => {
+      devLayer?.unitsChanged();
+      devLayer?.selectUnit(devPanel.selectedUnitId);
+      showResults();
+    },
   });
+  if (remote && account) {
+    const backend = remote;
+    let myId: string | null = null;
+    const setMe = (s: { user: { id: string } } | null) => (myId = s?.user.id ?? null);
+    void backend.session().then(setMe);
+    backend.onAuthChange(setMe);
+    devPanel.myId = () => myId;
+    devPanel.team = {
+      roleFor: (d) => {
+        const role = d.backend ? account.roleIn(d.backend.orgId) : null;
+        return role === 'owner' || role === 'admin' ? 'admin' : role ? 'member' : null;
+      },
+      units: (d) => backend.teamUnits(d.backend!.id),
+      reserve: async (u, note) => void (await backend.reserveUnit(u.dbId!, { note })),
+      release: (u) => backend.releaseUnit(u.dbId!),
+      setStatus: (u, st) => backend.updateUnit(u.dbId!, { status: st }),
+    };
+  }
   await account?.refresh();
   // opened from an invitation link (?convite=…): show it right away
   await account?.openFromLink();

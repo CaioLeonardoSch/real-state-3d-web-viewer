@@ -2407,3 +2407,59 @@ body.panel-body {
 .stats-table tr.is-draft th .link-btn {
   color: var(--muted);
 }
+
+/* Sales mirror (docs/espelho-de-vendas.md): live developments, the team's actions in the panel and "Minha conta" */
+.badge-live {
+  background: #1e7a46;
+}
+.dev-team {
+  margin: 10px 0 4px;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--line);
+}
+.dev-team p {
+  margin: 0 0 8px;
+}
+.dev-team-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.dev-team-note input {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-solid);
+  color: inherit;
+}
+.mirror-dev {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mirror-dev h4 {
+  margin: 0 0 4px;
+}
+.mirror-dev .st {
+  margin-right: 6px;
+}
+.mirror-res ul {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.mirror-res li {
+  margin: 3px 0;
+  font-size: 13px;
+}
+.mirror-sheet {
+  margin-top: 8px;
+}
+.file-btn {
+  cursor: pointer;
+}
+.file-btn:focus-within {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}

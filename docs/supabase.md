@@ -127,6 +127,12 @@ feed em Minha conta), crie no GitHub o segredo **`SUPABASE_SERVICE_ROLE_KEY`** (
 Actions → Secrets) com a chave `service_role` do projeto. O workflow "Importar XML" roda de hora em hora quando a
 variável `VITE_SUPABASE_URL` está definida; sem o segredo, ele falha e nenhum feed é lido.
 
+### Espelho de vendas das incorporadoras
+
+O suporte envia o desenho das torres com `npm run developments:upload` (chave de serviço); a incorporadora cuida de
+situação, preços, reservas e planilha em Minha conta. Passo a passo em [`espelho-de-vendas.md`](espelho-de-vendas.md).
+As reservas vencidas são liberadas pelo `pg_cron` a cada 10 minutos (o mesmo agendador da limpeza da lixeira).
+
 ## 7. Páginas para o Google
 
 A cada publicação, o site gera uma página para cada anúncio real (`/imovel/<titulo>-<codigo>/`), com título, preço,

@@ -3,6 +3,9 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Agency, Listing, Photo } from '../data/types';
 import type { AuditEntry } from './audit';
+import type { Development, UnitStatus } from '../data/developments';
+import { hasDrawing, rowsToDevelopment, type DevelopmentRow, type UnitRow } from './developments';
+import type { TeamUnit, UnitImportRow } from './unitsCsv';
 import { dataUrlToBlob, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
@@ -202,6 +205,28 @@ export interface ListingStats {
 }
 
 /** Scheduled XML import of a client (administrators): the feed address and the outcome of its last reading. */
+/** A development as the developer's team manages it (Minha conta → Espelho de vendas). */
+export interface TeamDevelopment {
+  id: string;
+  slug: string;
+  name: string;
+  published: boolean;
+  showPrices: boolean;
+  reservationHours: number;
+}
+
+export interface TeamUnitRow extends TeamUnit {
+  id: string;
+  reservedBy: string | null;
+}
+
+const UNIT_COLUMNS = 'id, development_id, tower, floor, number, plan, area_m2, bedrooms, suites, parking_spots, shape, cells, price, status, reserved_until';
+const DEV_COLUMNS = 'id, org_id, slug, name, developer, address, stage, delivery, show_prices, layout, info, progress';
+
+/** A reservation past its deadline is already available (the database releases it every 10 minutes). */
+const liveStatus = (r: { status: UnitStatus; reserved_until?: string | null }, now = Date.now()): UnitStatus =>
+  r.status === 'reserved' && r.reserved_until && Date.parse(r.reserved_until) <= now ? 'available' : r.status;
+
 export interface ListingFeed {
   url: string;
   enabled: boolean;
@@ -730,6 +755,131 @@ export class RemoteBackend {
       whatsapp: Number(r.whatsapp),
       messages: Number(r.messages),
     }));
+  }
+
+  // ---------------------------------------------------------------- sales mirror (developments)
+
+  /**
+   * Developments of the map: the published ones and, for a logged-in team, its own (also unpublished, with the
+   * prices the public may not see). `orgId`: only that client's (client sites).
+   */
+  async loadDevelopments(orgId: string | null = null): Promise<Development[]> {
+    const pubQ = this.sb.from('public_developments').select(DEV_COLUMNS);
+    const [pub, mine] = await Promise.all([
+      orgId ? pubQ.eq('org_id', orgId) : pubQ,
+      (async () => ((await this.session()) ? this.sb.from('developments').select(DEV_COLUMNS) : { data: [], error: null }))(),
+    ]);
+    fail(pub.error, 'Não foi possível carregar os empreendimentos');
+    fail(mine.error, 'Não foi possível carregar seus empreendimentos');
+    const mineRows = ((mine.data ?? []) as DevelopmentRow[]).filter((r) => (!orgId || r.org_id === orgId) && hasDrawing(r.layout));
+    const mineIds = new Set(mineRows.map((r) => r.id));
+    const pubRows = ((pub.data ?? []) as DevelopmentRow[]).filter((r) => !mineIds.has(r.id) && hasDrawing(r.layout));
+    const unitsOf = async (table: string, ids: string[]) => {
+      if (!ids.length) return [] as (UnitRow & { reserved_until?: string | null })[];
+      const cols = table === 'development_units' ? UNIT_COLUMNS : UNIT_COLUMNS.replace(', reserved_until', '');
+      const { data, error } = await this.sb.from(table).select(cols).in('development_id', ids).limit(20000);
+      fail(error, 'Não foi possível carregar as unidades');
+      return (data ?? []) as unknown as (UnitRow & { reserved_until?: string | null })[];
+    };
+    const [pubUnits, mineUnits] = await Promise.all([
+      unitsOf('public_development_units', pubRows.map((r) => r.id)),
+      unitsOf('development_units', [...mineIds]),
+    ]);
+    const group = (units: (UnitRow & { reserved_until?: string | null })[]) => {
+      const m = new Map<string, UnitRow[]>();
+      for (const u of units) {
+        const list = m.get(u.development_id) ?? [];
+        list.push({ ...u, status: liveStatus(u) });
+        m.set(u.development_id, list);
+      }
+      return m;
+    };
+    const byPub = group(pubUnits);
+    const byMine = group(mineUnits);
+    return [
+      ...pubRows.map((r) => rowsToDevelopment(r, byPub.get(r.id) ?? [])),
+      // the team sees its prices even when the public does not
+      ...mineRows.map((r) => rowsToDevelopment({ ...r, show_prices: true }, byMine.get(r.id) ?? [])),
+    ];
+  }
+
+  /** Developments of a client, for its team. */
+  async teamDevelopments(orgId: string): Promise<TeamDevelopment[]> {
+    const { data, error } = await this.sb
+      .from('developments')
+      .select('id, slug, name, published, show_prices, reservation_hours')
+      .eq('org_id', orgId)
+      .order('name');
+    fail(error, 'Não foi possível ler os empreendimentos');
+    return (data ?? []).map((d) => ({
+      id: d.id,
+      slug: d.slug,
+      name: d.name,
+      published: d.published,
+      showPrices: d.show_prices,
+      reservationHours: d.reservation_hours,
+    }));
+  }
+
+  /** Publication, prices to the public and the default reservation deadline (administrators). */
+  async updateDevelopment(id: string, patch: { published?: boolean; showPrices?: boolean; reservationHours?: number }): Promise<void> {
+    const row = {
+      ...(patch.published !== undefined ? { published: patch.published } : {}),
+      ...(patch.showPrices !== undefined ? { show_prices: patch.showPrices } : {}),
+      ...(patch.reservationHours !== undefined ? { reservation_hours: patch.reservationHours } : {}),
+    };
+    const { data, error } = await this.sb.from('developments').update(row).eq('id', id).select('id');
+    fail(error, 'Não foi possível salvar o empreendimento');
+    if (!data?.length) throw new Error('Só administradores alteram o empreendimento.');
+  }
+
+  /** Every unit with its reservation (who, until when), for the team. */
+  async teamUnits(developmentId: string): Promise<TeamUnitRow[]> {
+    const { data, error } = await this.sb.rpc('team_development_units', { p_development: developmentId });
+    fail(error, 'Não foi possível ler as unidades');
+    return ((data ?? []) as Record<string, never>[]).map((r) => ({
+      id: r.id,
+      tower: r.tower,
+      floor: r.floor,
+      number: r.number,
+      plan: r.plan,
+      areaM2: Number(r.area_m2),
+      bedrooms: r.bedrooms,
+      suites: r.suites,
+      parkingSpots: r.parking_spots,
+      price: r.price === null ? null : Number(r.price),
+      status: r.status,
+      reservedUntil: r.reserved_until,
+      reservedBy: r.reserved_by,
+      reservedByName: r.reserved_by_name,
+      reservedNote: r.reserved_note,
+    }));
+  }
+
+  /** Reserves a unit (default deadline of the development; administrators may choose up to 168 h). Returns the end. */
+  async reserveUnit(unitId: string, opts: { hours?: number; note?: string } = {}): Promise<string> {
+    const { data, error } = await this.sb.rpc('reserve_unit', { p_unit: unitId, p_hours: opts.hours ?? null, p_note: opts.note ?? null });
+    if (error) throw new Error(error.code === 'P0001' || error.code === '42501' ? error.message : `Não foi possível reservar: ${error.message}`);
+    return data as string;
+  }
+
+  async releaseUnit(unitId: string): Promise<void> {
+    const { error } = await this.sb.rpc('release_unit', { p_unit: unitId });
+    if (error) throw new Error(error.code === '42501' ? error.message : `Não foi possível desfazer a reserva: ${error.message}`);
+  }
+
+  /** Marks a unit sold or available again, or changes its price (administrators). */
+  async updateUnit(unitId: string, patch: { status?: 'available' | 'sold'; price?: number | null }): Promise<void> {
+    const { data, error } = await this.sb.from('development_units').update(patch).eq('id', unitId).select('id');
+    fail(error, 'Não foi possível salvar a unidade');
+    if (!data?.length) throw new Error('Só administradores alteram a situação e o preço.');
+  }
+
+  /** Sends the spreadsheet (already read, src/backend/unitsCsv.ts); unknown units come back and change nothing. */
+  async importUnits(developmentId: string, rows: UnitImportRow[]): Promise<{ updated: number; unknown: string[] }> {
+    const { data, error } = await this.sb.rpc('import_development_units', { p_development: developmentId, p_rows: rows });
+    fail(error, 'Não foi possível importar a planilha');
+    return data as { updated: number; unknown: string[] };
   }
 
   async listingFeed(orgId: string): Promise<ListingFeed | null> {
