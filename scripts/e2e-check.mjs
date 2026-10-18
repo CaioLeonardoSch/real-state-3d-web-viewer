@@ -139,17 +139,27 @@ const renderedCount = (page, layer) =>
 
 /** Finds a matched listing on the given layers that is visible on screen (page coordinates). */
 async function findListingTarget(page, kindFilter = ['listing-buildings']) {
-  return page.evaluate((layers) => {
+  return page.evaluate(async (layers) => {
     const map = window.__demo.map;
+    // the camera may still be easing (a click flies to the listing): pick once it is still
+    if (map.isMoving() || !map.loaded()) await new Promise((r) => map.once('idle', r));
     const fs = map.queryRenderedFeatures({ layers });
     const canvas = map.getCanvas().getBoundingClientRect();
     for (const f of fs) {
-      const p = window.__demo.project(f.properties.listingId);
+      const c = window.__demo.project(f.properties.listingId);
+      // the mouse moves in whole pixels: test the pixel it will land on (the center may sit on an edge)
+      const p = c && { x: Math.round(c.x + canvas.left) - canvas.left, y: Math.round(c.y + canvas.top) - canvas.top };
       if (!p || p.x < 20 || p.y < 20 || p.x > canvas.width - 20 || p.y > canvas.height - 20) continue;
       // skip points covered by UI (results list, drawer, controls)
       if (document.elementFromPoint(p.x + canvas.left, p.y + canvas.top) !== map.getCanvas()) continue;
+      // the listing must be the one the app picks there (the first matched one on top: another listing's pin may cover it)
+      // a group of pins there takes the click
+      if (map.getLayer('listing-clusters') && map.queryRenderedFeatures([p.x, p.y], { layers: ['listing-clusters'] }).length) continue;
+      const top = map
+        .queryRenderedFeatures([p.x, p.y], { layers: ['listing-pins', 'listing-buildings', 'listing-unbuilt', 'listing-land', 'listing-approx-fill'].filter((l) => map.getLayer(l)) })
+        .find((h) => h.properties.matched === true);
       const hit = map.queryRenderedFeatures([p.x, p.y], { layers }).find((h) => h.properties.listingId === f.properties.listingId);
-      if (hit) return { id: f.properties.listingId, x: p.x + canvas.left, y: p.y + canvas.top };
+      if (hit && top?.properties.listingId === f.properties.listingId) return { id: f.properties.listingId, x: p.x + canvas.left, y: p.y + canvas.top };
     }
     return null;
   }, kindFilter);
@@ -275,11 +285,31 @@ async function main() {
     await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
 
     // pins in the overview
-    const pinIds = await page.evaluate(() =>
-      [...new Set(window.__demo.map.queryRenderedFeatures({ layers: ['listing-pins'] }).map((f) => f.properties.listingId))],
-    );
+    // pins that would overlap are grouped, with the count: every listing is in a pin or in a group
+    const overview = await page.evaluate(() => {
+      const m = window.__demo.map;
+      const pins = new Set(m.queryRenderedFeatures({ layers: ['listing-pins'] }).map((f) => f.properties.listingId)).size;
+      const groups = new Map(m.queryRenderedFeatures({ layers: ['listing-clusters'] }).map((f) => [f.properties.cluster_id, f]));
+      const grouped = [...groups.values()].reduce((n, f) => n + f.properties.point_count, 0);
+      // a group not covered by the results list or the controls
+      const box = m.getCanvas().getBoundingClientRect();
+      const at = [...groups.values()]
+        .map((f) => m.project(f.geometry.coordinates))
+        .map((p) => ({ x: p.x + box.left, y: p.y + box.top }))
+        .find((p) => document.elementFromPoint(p.x, p.y) === m.getCanvas());
+      return { pins, groups: groups.size, grouped, at: at ?? null, zoom: m.getZoom() };
+    });
     const totalListings = await page.evaluate(() => window.__demo.listingIds.length);
-    check('overview: a pin is rendered for every listing', pinIds.length === totalListings, `${pinIds.length}/${totalListings}`);
+    check('overview: every listing has a pin or is counted in a group of pins',
+      overview.pins + overview.grouped === totalListings, `${overview.pins} pins + ${overview.grouped} in ${overview.groups} groups / ${totalListings}`);
+    if (overview.at) {
+      const cam = await page.evaluate(() => { const m = window.__demo.map; return { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() }; });
+      await page.mouse.click(overview.at.x, overview.at.y);
+      await sleep(1200);
+      const zoomed = await page.evaluate(() => window.__demo.map.getZoom());
+      check('clicking a group of pins zooms in', zoomed > overview.zoom + 0.5, `${overview.zoom.toFixed(1)} → ${zoomed.toFixed(1)}`);
+      await page.evaluate(async (c) => { const m = window.__demo.map; m.jumpTo(c); await new Promise((r) => m.once('idle', r)); }, cam);
+    }
     const pinTarget = await findListingTarget(page, ['listing-pins']);
     if (pinTarget) {
       await page.mouse.move(pinTarget.x, pinTarget.y, { steps: 4 });
@@ -304,7 +334,8 @@ async function main() {
     });
     check('pins are hidden when zoomed in (zoom 17.5)', pinsZoomedIn === 0, `${pinsZoomedIn} pins`);
 
-    // hover tooltip
+    // hover tooltip: closer in, where each listing has its own pin (in the overview a group may cover the building)
+    await page.evaluate(async () => { const m = window.__demo.map; m.jumpTo({ zoom: 14 }); await new Promise((r) => m.once('idle', r)); });
     const hoverTarget = await findListingTarget(page);
     if (hoverTarget) {
       await page.mouse.move(hoverTarget.x, hoverTarget.y, { steps: 4 });

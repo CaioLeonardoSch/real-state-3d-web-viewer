@@ -266,8 +266,10 @@ Interface · média · média (hipótese) · pequeno.
   é projeto de dados, não configuração [prioridade 29]. **Feito em 17/10:** a região sai de
   `scripts/data/region.json` (app e pipeline); ver `docs/nova-regiao.md`.
 - **Filtro do mapa base:** `contextFilter` (`scene.ts:449`) usa `in` com a lista literal de todos os prédios
-  anunciados e é reaplicado a cada mudança de anúncios. A medir com milhares [prioridade 31].
-- **Pinos sem agrupamento:** com muitos anúncios próximos, eles se sobrepõem [prioridade 31].
+  anunciados e é reaplicado a cada mudança de anúncios. A medir com milhares [prioridade 31]. **Feito em 17/10:**
+  medido (`scripts/bench-context-filter.mjs`) e trocado por `match`, ~100 vezes mais rápido com 5.000 anúncios.
+- **Pinos sem agrupamento:** com muitos anúncios próximos, eles se sobrepõem [prioridade 31]. **Feito em 17/10:**
+  agrupados com a contagem até o zoom 13.
 - **Painel da conta no pacote do mapa:** `AccountPanel` é importado direto em `src/main.ts:37` e vai para todo
   visitante (M5) [prioridade 30].
 - **Documento de exclusividade:** o formulário guarda só o nome do arquivo; o bucket `exclusivity-docs` não recebe

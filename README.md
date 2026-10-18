@@ -544,7 +544,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Pinos**: um círculo laranja com borda (camada `circle` do MapLibre, sem ícones nem fontes externas) no centro de
   cada imóvel. Ficam visíveis na visão geral e somem gradualmente entre os zooms 15,5 e 16,5, quando o prédio ou
   terreno destacado já é legível. Clicar ou passar o mouse no pino equivale a fazê-lo no imóvel. Imóveis fora da
-  busca têm pino cinza menor e não clicável.
+  busca têm pino cinza menor e não clicável. Pinos da busca que se sobreporiam (só na visão 2D, até o zoom 13) viram um grupo com a
+  contagem; clicar no grupo aproxima o mapa até ele se abrir. Os pinos cinza não são agrupados.
 - **Câmera inicial**: enquadra todos os imóveis (com a inclinação de 58°), para nenhum começar fora da tela. O limite
   de navegação continua sendo o do bairro.
 - **Etiqueta ao passar o mouse**: elemento HTML próprio (não o `Popup` do MapLibre) que segue o cursor e mostra
@@ -733,7 +734,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
     noite já perto da rua, os postes acendem;
   - visão geral da região com os prédios planos e sem 3D (o 3D só aparece de perto);
   - atribuição e banner visíveis;
-  - na visão geral há um pino por imóvel, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
+  - na visão geral cada imóvel tem pino ou entra na contagem de um grupo, o clique no grupo aproxima, o pino abre a etiqueta e o painel, e os pinos somem no zoom 17,5;
   - passar o mouse mostra a etiqueta com o preço certo e cursor de mão, e sair a esconde;
   - clique abre o drawer, e Esc, o botão × e o clique no mapa vazio fecham;
   - localização aproximada;

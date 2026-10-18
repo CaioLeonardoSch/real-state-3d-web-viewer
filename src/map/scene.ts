@@ -75,6 +75,15 @@ const LISTING_SOURCES = ['listings', 'listing-pins'] as const;
 /** Pins help find listings in the overview and fade out once the 3D highlight is readable. */
 const PIN_FADE_START_ZOOM = 15.5;
 const PIN_MAX_ZOOM = 16.5;
+/**
+ * Pins of the search that would overlap are grouped into one with the count (about twice a pin's width apart),
+ * in the 2D overview only: once the 3D buildings show (Z_3D_START) each listing has its own pin, then its building, so a
+ * group never covers the building it would open. Dimmed pins are not grouped.
+ */
+const CLUSTER_RADIUS_PX = 24;
+const CLUSTER_MAX_ZOOM = Z_3D_START - 1;
+/** Count on the group: dark on the accent, readable by day and by night. */
+const CLUSTER_TEXT = '#141b2d';
 
 /** What the user clicked while choosing the place of a new listing ("Anunciar imóvel"). */
 export interface PickResult {
@@ -83,6 +92,16 @@ export interface PickResult {
   building?: { osmId: string; residential: boolean; height: number; geometry: Polygon | MultiPolygon };
   /** Buildings are only pickable up close (3D, zoom ≥ Z_3D_START). */
   tooFar?: boolean;
+}
+
+/**
+ * Keeps the features whose `key` is not in `ids`. A `match` looks the key up in a table built once, where `in` over a
+ * literal list compares it with every id: with 5,000 listed buildings, 20,000 buildings are filtered in about 2 ms
+ * instead of 170 ms (scripts/bench-context-filter.mjs), and the filter runs on every tile the map loads.
+ */
+export function hideFilter(key: ExpressionSpecification, ids: string[] | number[]): ExpressionSpecification {
+  const unique = [...new Set<string | number>(ids)] as string[] | number[];
+  return unique.length ? ['match', key, unique, false, true] : ['literal', true];
 }
 
 /** Colour of the place being chosen for a new listing (distinct from the listing accent). */
@@ -309,12 +328,12 @@ export class Scene {
    * development are hidden (replaced by its tower).
    */
   private contextFilter(): ExpressionSpecification {
-    return ['!', ['in', ['get', 'osmId'], ['literal', this.contextHiddenIds()]]];
+    return hideFilter(['get', 'osmId'], this.contextHiddenIds());
   }
 
   /** The same for the roofs, which carry the building as a numeric feature id (src/data/osmId.ts). */
   private roofFilter(): ExpressionSpecification {
-    return ['!', ['in', ['id'], ['literal', this.contextHiddenIds().map(osmNumericId)]]];
+    return hideFilter(['id'], this.contextHiddenIds().map(osmNumericId));
   }
 
   private contextHiddenIds(): string[] {
@@ -368,7 +387,14 @@ export class Scene {
           : {}),
         boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },
-        'listing-pins': { type: 'geojson', data: this.pinCollection() },
+        'listing-pins': {
+          type: 'geojson',
+          data: this.pinCollection(true),
+          cluster: true,
+          clusterRadius: CLUSTER_RADIUS_PX,
+          clusterMaxZoom: CLUSTER_MAX_ZOOM,
+        },
+        'listing-pins-dimmed': { type: 'geojson', data: this.pinCollection(false) },
         // buildings under construction: the part still to build (translucent) and a tower crane
         construction: { type: 'geojson', data: this.constructionCollection() },
         'pick-preview': { type: 'geojson', data: EMPTY_FC },
@@ -502,7 +528,7 @@ export class Scene {
         {
           id: 'listing-pins-dimmed',
           type: 'circle',
-          source: 'listing-pins',
+          source: 'listing-pins-dimmed',
           maxzoom: PIN_MAX_ZOOM,
           filter: dimFilter,
           paint: {
@@ -530,6 +556,32 @@ export class Scene {
             'circle-opacity': this.pinFade(1),
             'circle-stroke-opacity': this.pinFade(1),
           },
+        },
+        {
+          id: 'listing-clusters',
+          type: 'circle',
+          source: 'listing-pins',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': t.accent,
+            'circle-radius': ['step', ['get', 'point_count'], 11, 10, 14, 50, 18],
+            'circle-stroke-color': t.pinStroke,
+            'circle-stroke-width': 2,
+          },
+        },
+        {
+          id: 'listing-cluster-count',
+          type: 'symbol',
+          source: 'listing-pins',
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': ['get', 'point_count_abbreviated'],
+            'text-font': [STREET_FONT],
+            'text-size': 12,
+            'text-allow-overlap': true,
+            'text-ignore-placement': true,
+          },
+          paint: { 'text-color': CLUSTER_TEXT },
         },
       ],
     };
@@ -571,11 +623,14 @@ export class Scene {
     return ['interpolate', ['linear'], ['zoom'], PIN_FADE_START_ZOOM, max, PIN_MAX_ZOOM, 0];
   }
 
-  /** One point per listing at the centre of its highlighted shape (same feature ids as `listings`). */
-  private pinCollection(): FeatureCollection<Point, ListingFeatureProps> {
+  /**
+   * One point per listing at the centre of its highlighted shape (same feature ids as `listings`): those of the search
+   * (grouped when close) or the dimmed ones.
+   */
+  private pinCollection(matched: boolean): FeatureCollection<Point, ListingFeatureProps> {
     return {
       type: 'FeatureCollection',
-      features: this.listingFeatures.map((f) => {
+      features: this.listingFeatures.filter((f) => f.properties.matched === matched).map((f) => {
         const [w, s, e, n] = turfBbox(f);
         return {
           type: 'Feature',
@@ -585,6 +640,11 @@ export class Scene {
         };
       }),
     };
+  }
+
+  private updatePins(): void {
+    (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection(true));
+    (this.map.getSource('listing-pins-dimmed') as GeoJSONSource | undefined)?.setData(this.pinCollection(false));
   }
 
   private listingCollection(): FeatureCollection<Polygon | MultiPolygon, ListingFeatureProps> {
@@ -614,7 +674,7 @@ export class Scene {
   setMatched(matchedIds: Set<string>): void {
     for (const f of this.listingFeatures) f.properties.matched = matchedIds.has(f.properties.listingId);
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
-    (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
+    this.updatePins();
     (this.map.getSource('construction') as GeoJSONSource | undefined)?.setData(this.constructionCollection());
     this.setHover(null);
     this.invalidateShadows();
@@ -628,7 +688,7 @@ export class Scene {
     this.buildListingFeatures();
     for (const source of LISTING_SOURCES) this.map.removeFeatureState({ source });
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
-    (this.map.getSource('listing-pins') as GeoJSONSource | undefined)?.setData(this.pinCollection());
+    this.updatePins();
     (this.map.getSource('construction') as GeoJSONSource | undefined)?.setData(this.constructionCollection());
     for (const id of ['context-buildings', 'buildings-flat', 'roofs']) {
       this.baseFilters.set(id, id === 'roofs' ? this.roofFilter() : this.contextFilter());
@@ -871,6 +931,8 @@ export class Scene {
     m.setPaintProperty('listing-pins', 'circle-stroke-color', t.pinStroke);
     m.setPaintProperty('listing-pins-dimmed', 'circle-color', t.dimmed);
     m.setPaintProperty('listing-pins-dimmed', 'circle-stroke-color', t.pinStroke);
+    m.setPaintProperty('listing-clusters', 'circle-color', t.accent);
+    m.setPaintProperty('listing-clusters', 'circle-stroke-color', t.pinStroke);
     m.setLight({ anchor: 'map', ...t.light });
     m.setSky({ 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon });
     this.invalidateShadows();
@@ -883,6 +945,17 @@ export class Scene {
     return this.map
       .queryRenderedFeatures([point.x, point.y], { layers })
       .find((f) => f.properties?.matched === true);
+  }
+
+  private queryCluster(point: { x: number; y: number }): MapGeoJSONFeature | undefined {
+    return this.map.getLayer('listing-clusters') ? this.map.queryRenderedFeatures([point.x, point.y], { layers: ['listing-clusters'] })[0] : undefined;
+  }
+
+  /** A click on a group of pins zooms in until it splits. */
+  private async openCluster(f: MapGeoJSONFeature): Promise<void> {
+    const source = this.map.getSource('listing-pins') as GeoJSONSource;
+    const zoom = await source.getClusterExpansionZoom(f.properties.cluster_id as number);
+    this.map.easeTo({ center: (f.geometry as Point).coordinates as [number, number], zoom: Math.max(zoom, this.map.getZoom() + 1) });
   }
 
   private setListingState(id: number, state: Record<string, boolean>): void {
@@ -922,8 +995,11 @@ export class Scene {
       if (this.onPick) return;
       // no tooltip while the user is dragging/rotating the map
       if (this.map.isMoving()) return hoverOff();
-      const f = this.queryListing(e.point);
+      // a group of pins is drawn over the buildings, and a click on it zooms in (see 'click')
+      const cluster = this.queryCluster(e.point);
+      const f = cluster ? undefined : this.queryListing(e.point);
       this.setHover(f ? (f.id as number) : null);
+      if (cluster) this.map.getCanvas().style.cursor = 'pointer';
       this.events.onListingHover?.(f ? String(f.properties.listingId) : null, { x: e.point.x, y: e.point.y });
     });
     this.map.on('mouseout', hoverOff);
@@ -950,6 +1026,8 @@ export class Scene {
       }
       this.events.onListingHover?.(null);
       if (this.events.ignoreClickAt?.(e.point)) return;
+      const cluster = this.queryCluster(e.point);
+      if (cluster) return void this.openCluster(cluster);
       const f = this.queryListing(e.point);
       if (f) this.events.onListingClick(String(f.properties.listingId));
       else this.events.onEmptyClick();
