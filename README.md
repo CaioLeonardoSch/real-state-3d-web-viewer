@@ -380,6 +380,8 @@ NODE_USE_ENV_PROXY=1 npm run data
    diretório raiz, diretórios-folha quando necessário, blocos repetidos guardados uma vez), com a paisagem
    (`scripts/lib/scenery.mjs`). Também grava `boundary.geojson`, `bairros.geojson` (pontos dos rótulos),
    `bairros-areas.geojson` (filtro por bairro) e `meta.json`. Leva menos de 1 minuto e usa até ~4,3 GB de memória.
+   Em produção, `npm run tiles:upload` envia os `.pmtiles` ao bucket `map-tiles` com nome por versão e põe as URLs
+   no `meta.json` ([docs/mapa-no-armazenamento.md](docs/mapa-no-armazenamento.md)).
 4. `npm run data:listings` (`scripts/generate-listings.mjs`): imóveis fictícios de forma determinística
    (seed `20261007`), espalhados pela região. Aceita `--count N` (padrão 60). Cada imóvel em prédio leva o contorno
    (`footprint`) e a altura do prédio do OSM, porque o app não tem mais o arquivo de prédios inteiro. As comodidades

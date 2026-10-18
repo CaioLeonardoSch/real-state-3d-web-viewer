@@ -11,7 +11,7 @@ export interface DataMeta {
   bairros: string[];
   center: [number, number];
   boundaryBbox: [number, number, number, number];
-  /** Vector tiles file (PMTiles) next to meta.json (or an absolute https URL). */
+  /** Vector tiles file (PMTiles) next to meta.json (or an absolute URL: the object storage, see docs/mapa-no-armazenamento.md). */
   tiles: string;
   /** Close-up detail (roofs, trees, street lamps), same rules. */
   detailTiles?: string;
@@ -87,6 +87,6 @@ export async function loadData(): Promise<AppData> {
         })
     : [];
   // the tiles can live elsewhere (object storage, one file per monthly version): an absolute URL in meta.json
-  const url = (name: string) => (/^https:\/\//.test(name) ? name : dataUrl(name));
+  const url = (name: string) => (/^https?:\/\//.test(name) ? name : dataUrl(name));
   return { meta, boundary, bairros, tilesUrl: url(meta.tiles), detailUrl: meta.detailTiles ? url(meta.detailTiles) : null, listings, developments };
 }

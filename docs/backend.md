@@ -538,6 +538,9 @@ mostrar o estado atual de forma translúcida.
 
 **Quando o histórico do git pesar** (cerca de 20 MB por mês):
 
+**Feito em 17/10:** pronto no código (bucket `map-tiles`, `npm run tiles:upload`, passo de envio no mapa mensal);
+para ligar, ver [mapa-no-armazenamento.md](mapa-no-armazenamento.md). O plano original:
+
 - publicar o `.pmtiles` num armazenamento de objetos, com nome por versão (`joinville-2026-11.pmtiles`), e pôr a
   URL completa em `tiles` no `meta.json` (o app aceita endereço `https://`);
 - Cloudflare R2 ou Supabase Storage servem, desde que aceitem `Range` e liberem CORS para o domínio do site;

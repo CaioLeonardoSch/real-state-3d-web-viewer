@@ -24,6 +24,7 @@ import { parseVrsync } from '../src/import/vrsync.ts';
 import { PHOTO_SIZES } from '../src/utils/images.ts';
 import { toEwkt } from '../src/backend/mapping.ts';
 import { openBuildings } from './lib/building-at.mjs';
+import { localTiles } from './lib/local-tiles.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -94,7 +95,7 @@ const existing = new Map(existingRows.map((r) => [r.reference_code, r]));
 
 // ---------------------------------------------------------------- placement on the map
 const meta = JSON.parse(await readFile(path.join(ROOT, 'public', 'data', 'meta.json'), 'utf8'));
-const buildings = await openBuildings(path.join(ROOT, 'public', 'data', meta.tiles));
+const buildings = await openBuildings(await localTiles(path.join(ROOT, 'public', 'data'), meta));
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const bairros = new Map(
   JSON.parse(await readFile(path.join(ROOT, 'public', 'data', 'bairros.geojson'), 'utf8')).features.map((f) => [norm(f.properties.name), f.geometry.coordinates]),

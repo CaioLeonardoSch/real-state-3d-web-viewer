@@ -4,8 +4,9 @@
 # o relatório e aprovar o PR; o merge publica o mapa novo (workflow "Publicar no GitHub Pages").
 #
 # Na primeira vez: Settings → Actions → General → Workflow permissions → marque "Allow GitHub Actions to create and
-# approve pull requests". Cada mês acrescenta ~25 MB (os dois .pmtiles) ao histórico do git: quando pesar, mova o
-# arquivo para um armazenamento de objetos com nome por versão (docs/backend.md, "Serviço mensal do mapa").
+# approve pull requests". Com os segredos SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY, os dois .pmtiles vão para o
+# bucket "map-tiles" do Supabase com nome por versão (scripts/upload-tiles.mjs) e o PR leva só o meta.json com os
+# endereços; sem eles, os .pmtiles entram no PR (~25 MB por mês no histórico do git). Ver docs/mapa-no-armazenamento.md.
 name: Mapa mensal
 
 on:
@@ -43,7 +44,9 @@ jobs:
       - name: Guarda o mapa publicado, para comparar
         run: |
           mkdir -p "$RUNNER_TEMP/anterior"
-          cp "public/data/$(node -p "require('./public/data/meta.json').tiles")" public/data/meta.json "$RUNNER_TEMP/anterior/"
+          # do git ou do bucket, conforme o meta.json publicado
+          cp "$(node scripts/lib/local-tiles.mjs)" "$RUNNER_TEMP/anterior/anterior.pmtiles"
+          cp public/data/meta.json "$RUNNER_TEMP/anterior/"
 
       - name: Baixa o OpenStreetMap (o extrato do estado, em scripts/data/region.json)
         run: npm run data:download
@@ -67,10 +70,23 @@ jobs:
       - name: Relatório de mudanças
         id: relatorio
         run: |
-          npm run map:changes -- --old "$RUNNER_TEMP/anterior/$(node -p "require('./public/data/meta.json').tiles")" --old-meta "$RUNNER_TEMP/anterior/meta.json" \
+          npm run map:changes -- --old "$RUNNER_TEMP/anterior/anterior.pmtiles" --old-meta "$RUNNER_TEMP/anterior/meta.json" \
             --out "$RUNNER_TEMP/relatorio.md" --json "$RUNNER_TEMP/resumo.json"
           echo "mes=$(node -p "new Date(require('./public/data/meta.json').osmTimestamp).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric', timeZone: 'UTC' })")" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/relatorio.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Envia os tiles ao armazenamento (com os segredos do Supabase)
+        id: envio
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            npm run tiles:upload
+            echo "enviado=sim" >> "$GITHUB_OUTPUT"
+          else
+            echo "Sem SUPABASE_SERVICE_ROLE_KEY: os .pmtiles vão no pull request."
+          fi
 
       - name: Abre o pull request
         uses: peter-evans/create-pull-request@v7
@@ -80,8 +96,9 @@ jobs:
           title: 'Mapa de ${{ steps.relatorio.outputs.mes }}: OpenStreetMap e cadastro atualizados'
           commit-message: 'Mapa de ${{ steps.relatorio.outputs.mes }}: OpenStreetMap e cadastro atualizados'
           body-path: ${{ runner.temp }}/relatorio.md
+          # com os tiles no bucket, o meta.json com os endereços basta
           add-paths: |
-            public/data/*.pmtiles
+            ${{ steps.envio.outputs.enviado == 'sim' && 'public/data/meta.json' || 'public/data/*.pmtiles' }}
             public/data/meta.json
             public/data/bairros.geojson
             public/data/bairros-areas.geojson
