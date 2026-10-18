@@ -114,9 +114,13 @@ export function missingPage(app: SiteApp, main: HTMLElement): void {
 export function favorites(app: SiteApp, main: HTMLElement): void {
   app.setPage('favoritos');
   const list = app.saved.favorites.map((id) => app.data.listings.find((l) => l.id === id)).filter((l): l is Listing => !!l);
+  // in the mode of the search (?negocio=alugar): rents on the cards and the listing pages open in rent mode
+  const rent = app.params.get('negocio') === 'alugar';
+  const both = list.some((l) => priceIn(l, false) !== null && priceIn(l, true) !== null);
+  const toggle = both ? ` <a href="${escapeHtml(app.href('favoritos', rent ? {} : { negocio: 'alugar' }))}" data-nav>${rent ? 'Ver os preços de venda' : 'Ver os aluguéis'}</a>` : '';
   main.innerHTML = `<div class="wrap"><h1>Favoritos</h1>${
     list.length
-      ? `<p class="muted">Salvos neste navegador. ${plural(list.length, 'imóvel', 'imóveis')}.</p><div class="r-list r-grade">${list.map((l) => cardHtml(l, app.cardCtx())).join('')}</div>`
+      ? `<p class="muted">Salvos neste navegador. ${plural(list.length, 'imóvel', 'imóveis')}.${toggle}</p><div class="r-list r-grade">${list.map((l) => cardHtml(l, app.cardCtx(rent))).join('')}</div>`
       : `<div class="empty"><p>Você ainda não salvou nenhum imóvel. Toque no ${ICONS.heart} de um imóvel para guardá-lo aqui.</p><a class="btn btn-primary" href="${escapeHtml(app.menuHref('venda'))}" data-nav>Ver imóveis</a></div>`
   }</div>`;
 }

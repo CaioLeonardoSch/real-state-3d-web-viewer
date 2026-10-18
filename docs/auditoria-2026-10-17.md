@@ -276,11 +276,12 @@ Interface · média · média (hipótese) · pequeno.
   nada e a conferência depende de intervenção manual [prioridade 34]. **Feito em 17/10:** o arquivo vai para o
   bucket privado e o suporte confere na tela, com fila, link temporário e recusa com motivo.
 - **`robots.txt` da demonstração** fica em `/real-state-3d-web-viewer/robots.txt`, onde os robôs não leem. Só afeta
-  a demonstração.
+  a demonstração. **Feito em 17/10:** fica como limitação conhecida do GitHub Pages de projeto (não há como
+  publicar na raiz do domínio); no domínio do cliente o arquivo sai na raiz e funciona (item 39).
 - **`.pmtiles` no git:** ~25 MB por mês no histórico [prioridade 32].
 - **Turnstile** não confere o `hostname` da resposta (baixa) [prioridade 14].
 - **Documentação desatualizada:** `docs/backend.md` §10, item 6, diz que a importação XML precisa remover o EXIF das
-  fotos; `scripts/import-xml.mjs:129-131` já remove.
+  fotos; `scripts/import-xml.mjs:129-131` já remove. **Feito em 17/10:** texto corrigido (item 39).
 
 ## Inventário: o que é demonstração e o que é produto
 

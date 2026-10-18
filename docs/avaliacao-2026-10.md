@@ -171,7 +171,7 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 
 | Item | Situação |
 |---|---|
-| I1. A busca de aluguel virava venda ao abrir a ficha | **Corrigido** nos links dos cards e, depois, na comparação (5a2d8b2). Os favoritos não foram conferidos de novo |
+| I1. A busca de aluguel virava venda ao abrir a ficha | **Corrigido** nos links dos cards e, depois, na comparação (5a2d8b2). **Feito em 17/10:** os favoritos também seguem o modo da busca (`negocio=alugar` mostra os aluguéis e abre a ficha no aluguel), com link para trocar quando há imóveis nos dois (item 39) |
 | I2. Reservado e vendido sumiam da ficha | **Corrigido:** selo, aviso, chamada de contato ajustada e `LimitedAvailability` no schema |
 | I3. Filtros que mostravam uma coisa e aplicavam outra (preço mínimo perdido, bairro com acento) | **Corrigido:** um temporizador por campo; bairro sem acento e sem diferença de maiúsculas |
 | I4. Painel de filtros esticado e cabeçalho que rolava para o lado | **Corrigido:** as caixas do painel ficam alinhadas ao topo; o menu recolhe quando não cabe, medido na tela, sem depender de largura fixa |
@@ -192,12 +192,12 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 |---|---|
 | M1. Escape na ordem errada na imagem de capa | **Corrigido** |
 | M2. DDI repetido no `tel:` | **Corrigido** |
-| M3. Paginação com `replaceState` (Voltar pula as páginas), clique do meio bloqueado, `pagina=99` | **Parte corrigida:** a paginação entra no histórico, e `pagina=99` mostra a última página, com o endereço corrigido (5a2d8b2). O clique do meio não foi conferido de novo |
+| M3. Paginação com `replaceState` (Voltar pula as páginas), clique do meio bloqueado, `pagina=99` | **Parte corrigida:** a paginação entra no histórico, e `pagina=99` mostra a última página, com o endereço corrigido (5a2d8b2). **Feito em 17/10:** o clique do meio (e Ctrl/Cmd/Shift) na paginação abre a página em outra aba, porque os links têm endereço real e o site só intercepta o clique simples (conferido no item 39) |
 | M4. `?p=qualquer` mostra a inicial; "Imóvel não encontrado" sem `noindex` | **Corrigido:** página desconhecida mostra "Página não encontrada", e as duas páginas têm noindex; no domínio do cliente, respondem 404 |
 | M5. O acesso ao backend (11 KB) é carregado mesmo sem backend | **Feito em 17/10:** o cliente do backend e o painel da conta são importados sob demanda, só quando há backend configurado (item 30) |
 | M6. Banco e e-mail | **Corrigido:** imagens em `data:image/svg+xml` recusadas, e o aviso de contato por e-mail não sai mais duplicado (49d9120). **Conferido:** o limite de 64 KB da configuração funciona, porque a checagem vê o valor ainda sem compressão (o teste de backend com 70 mil caracteres repetidos é recusado). |
 | M7. `app.ts` com 1.200 linhas montando HTML em texto; "Joinville" fixo no código | **Feito em 17/10:** região configurável (item 29); as páginas saíram do `app.ts` para `src/site/pages/` (item 30). O HTML continua montado em texto, com `escapeHtml` |
-| M8. Detalhes de interface (rótulo do favorito, caixa "Comparar", filtros do celular sem "Ver N resultados") | **Parte:** os filtros do celular ganharam "Ver N imóveis" (5a2d8b2); os outros dois não foram conferidos de novo |
+| M8. Detalhes de interface (rótulo do favorito, caixa "Comparar", filtros do celular sem "Ver N resultados") | **Parte:** os filtros do celular ganharam "Ver N imóveis" (5a2d8b2). **Feito em 17/10:** o coração dos cards diz "Salvar nos favoritos: <imóvel>", com dica ao passar o mouse e estado ligado/desligado (`aria-pressed`); "Comparar" já tinha rótulo com o nome do imóvel e avisa quando passa do limite (item 39) |
 
 ## Números
 

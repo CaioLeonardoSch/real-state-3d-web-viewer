@@ -227,6 +227,10 @@ async function main() {
     await page.goto(`${BASE}?p=favoritos`);
     await page.waitForSelector('main.page-favoritos');
     check('favoritos ficam salvos no navegador', (await page.locator('.card').count()) === 1 && (await page.locator('.card').getAttribute('data-id')) === ids[0]);
+    await page.goto(`${BASE}?p=favoritos&negocio=alugar`);
+    await page.waitForSelector('main.page-favoritos .card');
+    const favRent = { href: await page.locator('.card .card-title a').getAttribute('href'), price: await page.locator('.card .price').first().textContent() };
+    check('favoritos no modo aluguel: aluguel no card e ficha aberta no aluguel', favRent.price.includes('/mês') === favRent.href.includes('negocio=alugar'), JSON.stringify(favRent));
 
     // ------------------------------------------------ listing page
     const red = reduced[0];

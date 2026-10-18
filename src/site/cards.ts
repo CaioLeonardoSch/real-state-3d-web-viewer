@@ -85,7 +85,7 @@ export function cardHtml(l: Listing, ctx: CardContext, layout: 'grade' | 'lista'
         cardPhoto(photos[0])[1] ? ` srcset="${escapeHtml(cardPhoto(photos[0])[1]!)}" sizes="${CARD_SIZES}"` : ''
       } alt="" loading="lazy" decoding="async"></a>
       ${badges(l)}
-      <button type="button" class="icon-btn fav${fav ? ' on' : ''}" data-fav="${escapeHtml(l.id)}" aria-pressed="${fav}" aria-label="Favorito: ${title}">${ICONS.heart}</button>
+      <button type="button" class="icon-btn fav${fav ? ' on' : ''}" data-fav="${escapeHtml(l.id)}" aria-pressed="${fav}" aria-label="Salvar nos favoritos: ${title}" title="Salvar nos favoritos">${ICONS.heart}</button>
       ${
         photos.length > 1
           ? `<button type="button" class="icon-btn car-btn car-prev" aria-label="Foto anterior">${ICONS.left}</button><button type="button" class="icon-btn car-btn car-next" aria-label="Próxima foto">${ICONS.right}</button><span class="car-dots" aria-hidden="true">${photos

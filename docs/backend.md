@@ -282,8 +282,8 @@ preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
 5. **Limites contra abuso** no formulário de contato: ~~limite de envios por origem e campo-armadilha~~ feitos em
    13/10/2026; ~~CAPTCHA (Turnstile)~~ pronto para ligar desde 14/10/2026.
 6. **Fotos sem localização:** fotos de celular carregam as coordenadas GPS de onde foram tiradas, o que revelaria o
-   endereço de quem escolheu escondê-lo. O site já remove esses dados ao redimensionar a foto; a importação por XML
-   precisa fazer o mesmo no servidor.
+   endereço de quem escolheu escondê-lo. O site já remove esses dados ao redimensionar a foto, e a importação por XML
+   também: `scripts/import-xml.mjs` regrava cada foto sem metadados (EXIF/GPS). **Feito em 17/10:** conferido (item 39).
 7. **LGPD:** termos de uso, política de privacidade, contrato de tratamento de dados com cada imobiliária (ela é a
    controladora dos dados dos clientes dela; nós somos operadores) e exclusão de dados a pedido.
 8. **Antes de lançar:** revisão de segurança por alguém de fora (teste de invasão), o "Security Advisor" do painel do
