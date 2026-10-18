@@ -115,9 +115,10 @@ async function waitIdle(page) {
   await sleep(400);
 }
 
-async function openPage(browser, viewport, label, query = '') {
+async function openPage(browser, viewport, label, query = '', setup) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
+  if (setup) await setup(page);
   const errors = [];
   // every URL asked for (the street names' font must come from this site)
   const requests = [];
@@ -1184,7 +1185,15 @@ async function main() {
       JSON.stringify(badState) + bad.errors.join(' | '));
     await bad.ctx.close();
     const amanTop = devUnits('aman').at(-3);
-    const devLink = await openPage(browser, { width: 1440, height: 900 }, 'dev-link', `?empreendimento=aman&unidade=${amanTop.number}`);
+    // the developer's identity (item 46): the demo data has none, so this page gets a fictional one
+    const BRAND = { color: '#0b2545', accent: '#e0a100', font: 'classica', materials: [{ label: 'Book do lançamento', url: 'https://example.com/book.pdf' }] };
+    const devLink = await openPage(browser, { width: 1440, height: 900 }, 'dev-link', `?empreendimento=aman&unidade=${amanTop.number}`, (p) =>
+      p.route('**/data/developments.json', async (route) => {
+        const file = await (await route.fetch()).json();
+        for (const d of file.developments) if (d.id === 'aman') Object.assign(d, { developer: 'Incorporadora Exemplo', brand: BRAND });
+        await route.fulfill({ json: file });
+      }),
+    );
     const devLinkState = await devLink.page.evaluate(() => ({
       title: document.querySelector('#dev-panel.open h2')?.textContent ?? null,
       card: document.querySelector('#dev-panel .dev-card h3')?.textContent ?? null,
@@ -1193,6 +1202,24 @@ async function main() {
     check('shared link opens the development with the unit selected',
       devLinkState.title === 'Aman' && devLinkState.card === `Apto ${amanTop.number}` && devLinkState.overflow <= 0 && devLink.errors.length === 0,
       JSON.stringify(devLinkState) + devLink.errors.join(' | '));
+    const branded = await devLink.page.evaluate(() => {
+      const panel = document.querySelector('#dev-panel');
+      const btn = panel.querySelector('.btn-primary');
+      return {
+        branded: panel.classList.contains('dev-branded') && panel.classList.contains('dev-font'),
+        band: panel.querySelector('.dev-brand-band')?.textContent.trim() ?? null,
+        bandBg: getComputedStyle(panel.querySelector('.dev-brand-band') ?? panel).backgroundColor,
+        button: btn ? getComputedStyle(btn).backgroundColor : null,
+        font: getComputedStyle(panel.querySelector('h2')).fontFamily,
+        materials: [...panel.querySelectorAll('.dev-materials a')].map((a) => [a.textContent, a.getAttribute('href'), a.rel]),
+      };
+    });
+    check("the developer's identity colours the panel and lists the launch's materials",
+      branded.branded && branded.band === 'Incorporadora Exemplo' && branded.bandBg === 'rgb(11, 37, 69)' &&
+        (branded.button === null || branded.button === 'rgb(11, 37, 69)') && /Georgia/.test(branded.font) &&
+        branded.materials.length === 1 && branded.materials[0][1] === 'https://example.com/book.pdf' && /noopener/.test(branded.materials[0][2]),
+      JSON.stringify(branded));
+    await devLink.page.screenshot({ path: path.join(SHOTS, 'desktop-development-brand.png') });
     await devLink.ctx.close();
 
     // ------------------------------------------------ neighbourhood cut ("bairro" filter)
@@ -1475,6 +1502,10 @@ async function main() {
     await sp.keyboard.press('Enter');
     await sleep(300);
     await waitIdle(sp);
+    // the names are placed a frame or two after the flight goes idle (symbol placement); give them a moment
+    await sp
+      .waitForFunction(() => window.__demo.map.queryRenderedFeatures({ layers: ['road-names'] }).length > 0, null, { timeout: 5000 })
+      .catch(() => {});
     const xvState = await streetState(sp);
     const inBox = ([x, y], [w, s, e, n], pad = 1e-4) => w - pad <= x && x <= e + pad && s - pad <= y && y <= n + pad;
     check('search box: a street chosen with ↓ + Enter takes the map to it (zoom ≥ 16, names showing, inside its Centro stretch), lit, with its card; no search is made',

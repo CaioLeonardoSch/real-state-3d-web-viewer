@@ -803,15 +803,11 @@ async function main() {
   });
   if (remote && account) {
     const backend = remote;
-    let myId: string | null = null;
-    const setMe = (s: { user: { id: string } } | null) => (myId = s?.user.id ?? null);
-    void backend.session().then(setMe);
-    backend.onAuthChange(setMe);
-    devPanel.myId = () => myId;
     devPanel.team = {
       roleFor: (d) => {
         const role = d.backend ? account.roleIn(d.backend.orgId) : null;
-        return role === 'owner' || role === 'admin' ? 'admin' : role ? 'member' : null;
+        if (!role) return d.backend && account.sellsAsPartner(d.backend.id) ? 'partner' : null;
+        return role === 'owner' || role === 'admin' ? 'admin' : 'member';
       },
       units: (d) => backend.teamUnits(d.backend!.id),
       reserve: async (u, note) => void (await backend.reserveUnit(u.dbId!, { note })),

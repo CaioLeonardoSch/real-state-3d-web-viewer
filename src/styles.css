@@ -1912,6 +1912,70 @@ button.dev-row-label {
   color: inherit;
 }
 
+/* the developer's identity (item 46): colours and font from the panel's custom properties (devBrand.ts) */
+.dev-brand-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--dev-brand, transparent);
+  color: var(--dev-brand-text, inherit);
+  border-bottom: 3px solid var(--dev-accent, transparent);
+}
+.dev-panel:not(.dev-branded) .dev-brand-band {
+  padding: 0;
+}
+.dev-logo {
+  max-height: 40px;
+  max-width: 160px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.dev-brand-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.dev-panel.dev-font h2,
+.dev-panel.dev-font h3,
+.dev-panel.dev-font .dev-brand-name {
+  font-family: var(--dev-font);
+}
+.dev-panel.dev-branded .btn-primary {
+  background: var(--dev-brand);
+  border-color: var(--dev-brand);
+  color: var(--dev-brand-text);
+}
+.dev-materials {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.dev-materials h3 {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+.dev-materials ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.mirror-partners,
+.mirror-brand {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.mirror-partners summary,
+.mirror-brand summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.a-field input[type='color'] {
+  height: 34px;
+  padding: 2px;
+}
+
 /* ---------------- attribution ---------------- */
 .maplibregl-ctrl-attrib {
   font-size: 11px;

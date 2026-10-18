@@ -2,6 +2,7 @@
 // and the app's Development. Pure functions, unit-tested; scripts/upload-developments.mjs uses the other direction.
 import type { Polygon } from 'geojson';
 import { parseProgress } from '../data/construction.ts';
+import { parseBrand } from '../data/devBrand.ts';
 import type { DevStage, Development, Level, LevelUse, Unit, UnitStatus } from '../data/developments';
 
 /** Row of public.public_developments (or public.developments for the team). */
@@ -18,6 +19,7 @@ export interface DevelopmentRow {
   layout: DevelopmentLayout;
   info: DevelopmentInfo;
   progress: unknown;
+  brand?: unknown;
   published?: boolean;
   reservation_hours?: number;
 }
@@ -118,6 +120,7 @@ export function rowsToDevelopment(d: DevelopmentRow, units: UnitRow[]): Developm
     level.units.push(u);
   }
   const progress = parseProgress(d.progress);
+  const brand = parseBrand(d.brand);
   return {
     id: d.slug,
     name: d.name,
@@ -138,6 +141,7 @@ export function rowsToDevelopment(d: DevelopmentRow, units: UnitRow[]): Developm
     hiddenBuildingIds: L.hiddenBuildingIds,
     levels,
     ...(progress ? { progress } : {}),
+    ...(brand ? { brand } : {}),
     backend: { id: d.id, orgId: d.org_id, showPrices: d.show_prices },
   };
 }

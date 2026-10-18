@@ -187,6 +187,13 @@ em ruas e outras torres.
 incorporadora atualiza situação, preços e reservas no mapa e em Minha conta, também por planilha. A reserva tem prazo
 e vence sozinha; o preço pode ficar escondido do público. Ver [`docs/espelho-de-vendas.md`](docs/espelho-de-vendas.md).
 
+**Identidade e parceiras:** a incorporadora escolhe as cores, o logotipo, o estilo de letra e os materiais do
+lançamento (book, tabela, vídeo), que o painel do empreendimento mostra, e credencia imobiliárias parceiras com uma
+cota de reservas: a equipe da parceira vê preço e situação ao vivo e reserva, e a incorporadora vê por qual
+imobiliária veio cada reserva.
+
+![Painel do empreendimento com a identidade da incorporadora (fictícia)](docs/screenshots/desktop-development-brand.png)
+
 Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Opera (Halsten, Atiradores), ONE e Vitra
 (Plaenge, Atiradores) e Nola (Halsten, Cidade das Águas).
 
@@ -786,7 +793,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 109 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 110 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
   - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa
@@ -814,6 +821,8 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - "Mais filtros": abre, conta os critérios ativos ("Mais filtros (2)"), filtra por comodidade + banheiros e grava
     `?banheiros=2&comodidades=piscina`;
   - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
+  - espelho com a identidade da incorporadora (dados fictícios): faixa com o nome nas cores dela, botões na cor
+    principal, a letra escolhida e o link dos materiais;
   - "Anunciar pela unidade": num apartamento com 6 pavimentos e 3 unidades por andar a grade mostra 18 unidades;
     o clique na 402 a marca, preenche o andar e destaca a faixa da unidade no prédio;
   - "Anunciar": cadastro incompleto (sem CRECI) é recusado; casa num prédio cinza e terreno num espaço

@@ -19,7 +19,9 @@ import {
   type Role,
   type TotpSetup,
   type TrashItem,
+  type PartnerDevelopment,
 } from '../backend/remote';
+import { BRAND_FONTS, brandErrors, type DevelopmentBrand } from '../data/devBrand';
 import { REPORT_REASONS } from '../backend/mapping';
 import { whatsappLink } from '../data/listingText';
 import { captchaBox, formCaptcha } from '../backend/captcha';
@@ -91,6 +93,8 @@ export class AccountPanel {
   private newLeads = 0;
   /** The client keeps sales mirrors (developments) in the back end. */
   private hasDevelopments = false;
+  /** Developments the user's clients sell as accredited partners (item 46). */
+  private partnerDevs: (PartnerDevelopment & { orgId: string })[] = [];
   private leadTimer: number | null = null;
   /** Opens a listing on the map (from a lead). */
   openListing: (id: string) => void = () => {};
@@ -135,6 +139,10 @@ export class AccountPanel {
   roleIn(orgId: string): Org['role'] | null {
     return this.orgs.find((o) => o.id === orgId)?.role ?? null;
   }
+  /** One of the user's clients is accredited to sell this development (database id). */
+  sellsAsPartner(developmentId: string): boolean {
+    return this.partnerDevs.some((d) => d.id === developmentId);
+  }
   get loggedIn(): boolean {
     return this.email !== null;
   }
@@ -162,6 +170,9 @@ export class AccountPanel {
     this.org = this.orgs.find((o) => o.id === saved) ?? this.orgs[0] ?? null;
     this.newLeads = this.org ? await this.backend.newLeadsCount(this.org.id) : 0;
     this.hasDevelopments = this.org ? (await this.backend.teamDevelopments(this.org.id).catch(() => [])).length > 0 : false;
+    this.partnerDevs = (
+      await Promise.all(this.orgs.map(async (o) => (await this.backend.partnerDevelopments(o.id).catch(() => [])).map((d) => ({ ...d, orgId: o.id }))))
+    ).flat();
     if (!this.org && this.leadTimer !== null) {
       clearInterval(this.leadTimer);
       this.leadTimer = null;
@@ -273,7 +284,7 @@ export class AccountPanel {
       ${this.org ? this.sectionHtml('listings', 'Meus anúncios') : ''}
       ${this.org ? this.sectionHtml('stats', 'Desempenho dos anúncios') : ''}
       ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
-      ${this.org && this.hasDevelopments ? this.sectionHtml('mirror', 'Espelho de vendas') : ''}
+      ${this.org && (this.hasDevelopments || this.partnerDevs.some((d) => d.orgId === this.org!.id)) ? this.sectionHtml('mirror', 'Espelho de vendas') : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
       ${this.org && canManage ? this.sectionHtml('reports', 'Denúncias dos visitantes') : ''}
@@ -862,13 +873,36 @@ export class AccountPanel {
     const org = this.org!;
     const admin = org.role === 'owner' || org.role === 'admin';
     const devs = await this.backend.teamDevelopments(org.id);
-    const units = await Promise.all(devs.map((d) => this.backend.teamUnits(d.id)));
+    const [units, partners] = await Promise.all([
+      Promise.all(devs.map((d) => this.backend.teamUnits(d.id))),
+      Promise.all(devs.map((d) => this.backend.developmentPartners(d.id).catch(() => []))),
+    ]);
+    const asPartner = this.partnerDevs.filter((d) => d.orgId === org.id);
     const when = (iso: string) =>
       new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
     const mapUrl = (slug: string) => `${new URL(`${import.meta.env.BASE_URL}`, location.href).href}?empreendimento=${encodeURIComponent(slug)}`;
-    body.innerHTML = `<p class="a-hint">A situação de cada unidade aparece no mapa na hora, para todos. Qualquer pessoa da equipe
+    const quota = (p: { maxReservations: number | null; activeReservations: number }) =>
+      `${p.activeReservations} ${p.activeReservations === 1 ? 'reserva ativa' : 'reservas ativas'}${p.maxReservations ? ` de ${p.maxReservations}` : ' (sem limite)'}`;
+    body.innerHTML = `${
+      devs.length
+        ? `<p class="a-hint">A situação de cada unidade aparece no mapa na hora, para todos. Qualquer pessoa da equipe
         reserva uma unidade pelo espelho (no mapa, clique no prédio); a reserva vence sozinha no prazo. O desenho da torre
-        (andares e posição das unidades) é feito pelo suporte.</p>
+        (andares e posição das unidades) é feito pelo suporte.</p>`
+        : ''
+    }
+      ${
+        asPartner.length
+          ? `<div class="mirror-partner-of"><h4>Como imobiliária parceira</h4>
+              <p class="a-hint">A incorporadora credenciou ${escapeHtml(org.name)} para vender: no mapa, você vê preços e reservas
+                ao vivo e reserva unidades dentro da cota; a venda é registrada pela incorporadora.</p>
+              <ul class="account-list">${asPartner
+                .map(
+                  (d) => `<li><span><strong>${escapeHtml(d.name)}</strong><small>${escapeHtml(d.ownerName)} · ${escapeHtml(quota(d))}</small></span>
+                    <a href="${escapeHtml(mapUrl(d.slug))}">abrir no mapa</a></li>`,
+                )
+                .join('')}</ul></div>`
+          : ''
+      }
       ${devs
         .map((d, i) => {
           const list = units[i];
@@ -888,8 +922,8 @@ export class AccountPanel {
                     .map(
                       (u) => `<li><span><strong>${escapeHtml(`${u.tower ? `${u.tower} ` : ''}${u.number}`)}</strong> até ${escapeHtml(when(u.reservedUntil!))}${
                         u.reservedByName ? ` · ${escapeHtml(u.reservedByName)}` : ''
-                      }${u.reservedNote ? ` · ${escapeHtml(u.reservedNote)}` : ''}</span>${
-                        admin || u.reservedBy === this.userId
+                      }${u.reservedOrgName && u.reservedOrgName !== org.name ? ` (${escapeHtml(u.reservedOrgName)})` : ''}${u.reservedNote ? ` · ${escapeHtml(u.reservedNote)}` : ''}</span>${
+                        u.canRelease
                           ? ` <button type="button" class="link-btn" data-release="${escapeHtml(u.id)}">Desfazer</button>`
                           : ''
                       }</li>`,
@@ -915,6 +949,32 @@ export class AccountPanel {
                   </div>`
                 : `<div class="a-actions"><button type="button" class="btn-secondary" data-action="csv-out">Baixar planilha</button></div>`
             }
+            <details class="mirror-partners"${partners[i].length ? ' open' : ''}>
+              <summary>Imobiliárias parceiras (${partners[i].length})</summary>
+              <p class="a-hint">Corretores das imobiliárias credenciadas veem o espelho ao vivo (preço e reservas) e reservam dentro
+                da cota; não veem quem reservou pelas outras imobiliárias.</p>
+              ${
+                partners[i].length
+                  ? `<ul class="account-list">${partners[i]
+                      .map(
+                        (p) => `<li><span><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(quota(p))}</small></span>${
+                          admin ? ` <button type="button" class="link-btn btn-danger-text" data-unpartner="${escapeHtml(p.orgId)}" aria-label="Descredenciar ${escapeHtml(p.name)}">Descredenciar</button>` : ''
+                        }</li>`,
+                      )
+                      .join('')}</ul>`
+                  : '<p class="muted small">Nenhuma imobiliária credenciada.</p>'
+              }
+              ${
+                admin
+                  ? `<form class="add-form account-form partner-form" novalidate>
+                      <label class="a-field">Endereço da imobiliária no mapa<input name="slug" required maxlength="60" autocomplete="off" placeholder="imobiliaria-exemplo"></label>
+                      <label class="a-field">Reservas ao mesmo tempo<input name="max" type="number" min="1" max="500" step="1" placeholder="sem limite"></label>
+                      <div class="a-actions a-wide"><button type="submit" class="btn-secondary">Credenciar</button></div>
+                    </form>`
+                  : ''
+              }
+            </details>
+            ${admin ? this.brandFormHtml(d.brand) : ''}
             <p class="a-error a-wide" role="alert" hidden></p>
             <p class="account-note mirror-done" role="status" hidden></p>
           </div>`;
@@ -931,6 +991,39 @@ export class AccountPanel {
       box.querySelector('[data-action="csv-out"]')!.addEventListener('click', () =>
         download(unitsCsv(units[i]), `espelho-${d.slug}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8'),
       );
+      const reload = async () => {
+        await this.loadSection('mirror');
+        this.onChange();
+      };
+      const partnerForm = box.querySelector<HTMLFormElement>('form.partner-form');
+      partnerForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(partnerForm);
+        const slug = String(fd.get('slug') ?? '').trim();
+        const max = String(fd.get('max') ?? '').trim();
+        show(errorEl, '');
+        if (!slug) return show(errorEl, 'Informe o endereço da imobiliária (o "?imobiliaria=" do site dela).');
+        if (max && !(Number.isInteger(Number(max)) && Number(max) >= 1 && Number(max) <= 500)) return show(errorEl, 'A cota vai de 1 a 500 reservas (ou em branco, sem limite).');
+        const btn = partnerForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        btn.disabled = true;
+        this.backend
+          .addDevelopmentPartner(d.id, slug, max ? Number(max) : null)
+          .then(reload)
+          .catch((ex: Error) => {
+            show(errorEl, ex.message);
+            btn.disabled = false;
+          });
+      });
+      box.querySelectorAll<HTMLButtonElement>('button[data-unpartner]').forEach((b) =>
+        b.addEventListener('click', () => {
+          if (!confirm('Descredenciar esta imobiliária? As reservas ativas dela neste empreendimento voltam a ficar disponíveis.')) return;
+          void this.act(b, async () => {
+            await this.backend.removeDevelopmentPartner(d.id, b.dataset.unpartner!);
+            await reload();
+          });
+        }),
+      );
+      this.bindBrandForm(box, d.id, d.brand, errorEl, reload);
       box.querySelectorAll<HTMLButtonElement>('button[data-release]').forEach((b) =>
         b.addEventListener('click', () =>
           void this.act(b, async () => {
@@ -984,6 +1077,79 @@ export class AccountPanel {
           show(errorEl, (ex as Error).message);
         }
       });
+    });
+  }
+
+  /** "Identidade no espelho": the developer's colours, logo, font and materials (administrators). */
+  private brandFormHtml(b: DevelopmentBrand | null): string {
+    return `<details class="mirror-brand">
+      <summary>Identidade no espelho</summary>
+      <form class="add-form account-form brand-form" novalidate>
+        <label class="a-check a-wide"><input type="checkbox" name="useColors" ${b?.color ? 'checked' : ''}> <span>Usar as cores da incorporadora</span></label>
+        <label class="a-field">Cor principal<input type="color" name="color" value="${escapeHtml(b?.color ?? '#1f4e79')}"></label>
+        <label class="a-field">Segunda cor<input type="color" name="accent" value="${escapeHtml(b?.accent ?? '#c8a24a')}"></label>
+        <label class="a-field">Fonte dos títulos<select name="font"><option value="">A do mapa</option>${Object.entries(BRAND_FONTS)
+          .map(([k, f]) => `<option value="${k}"${b?.font === k ? ' selected' : ''}>${escapeHtml(f.label)}</option>`)
+          .join('')}</select></label>
+        <label class="a-field">Logotipo (PNG, JPG ou WebP, até 1 MB)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
+        ${b?.logo ? `<label class="a-check a-wide"><input type="checkbox" name="noLogo"> <span>Tirar o logotipo atual</span></label>` : ''}
+        <label class="a-field a-wide">Materiais do lançamento (um por linha: nome | https://…)<textarea name="materials" rows="3" maxlength="4000" placeholder="Book do lançamento | https://…">${escapeHtml(
+          (b?.materials ?? []).map((m) => `${m.label} | ${m.url}`).join('\n'),
+        )}</textarea></label>
+        <div class="a-actions a-wide"><button type="submit" class="btn-secondary">Salvar identidade</button></div>
+      </form>
+    </details>`;
+  }
+
+  private bindBrandForm(box: HTMLElement, devId: string, current: DevelopmentBrand | null, errorEl: HTMLElement, reload: () => Promise<void>): void {
+    const form = box.querySelector<HTMLFormElement>('form.brand-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const fail = (msg: string) => {
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+      };
+      errorEl.hidden = true;
+      const brand: DevelopmentBrand = {};
+      if (fd.get('useColors')) {
+        brand.color = String(fd.get('color'));
+        brand.accent = String(fd.get('accent'));
+      }
+      const font = String(fd.get('font') ?? '');
+      if (font in BRAND_FONTS) brand.font = font as keyof typeof BRAND_FONTS;
+      const lines = String(fd.get('materials') ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+      const materials = lines.map((l) => {
+        const at = l.lastIndexOf('|');
+        return at < 0 ? { label: '', url: l } : { label: l.slice(0, at).trim(), url: l.slice(at + 1).trim() };
+      });
+      if (materials.length) brand.materials = materials;
+      const file = (fd.get('logo') as File | null) ?? null;
+      if (current?.logo && !fd.get('noLogo') && !file?.size) brand.logo = current.logo;
+      const errors = brandErrors(brand);
+      if (errors.length) return fail(`Confira ${errors.join(', ')}.`);
+      if (file?.size) {
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return fail('O logotipo precisa ser PNG, JPG ou WebP.');
+        if (file.size > 1_000_000) return fail('Logotipo grande demais (até 1 MB).');
+      }
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      btn.disabled = true;
+      try {
+        if (file?.size) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result));
+            r.onerror = () => reject(new Error('Não foi possível ler o logotipo.'));
+            r.readAsDataURL(file);
+          });
+          brand.logo = await this.backend.uploadSiteImage(this.org!.id, dataUrl, 'empreendimento');
+        }
+        await this.backend.updateDevelopment(devId, { brand });
+        await reload();
+      } catch (ex) {
+        fail((ex as Error).message);
+        btn.disabled = false;
+      }
     });
   }
 

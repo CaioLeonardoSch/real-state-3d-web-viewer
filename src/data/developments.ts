@@ -1,3 +1,4 @@
+import { parseBrand, type DevelopmentBrand } from './devBrand';
 import type { Polygon } from 'geojson';
 import { parseProgress, type ConstructionProgress } from './construction';
 
@@ -65,6 +66,8 @@ export interface Development {
   levels: Level[];
   /** Works under way: levels already built, counted from the ground (the rest of the tower is drawn translucent). */
   progress?: ConstructionProgress;
+  /** The developer's identity in the mirror (colours, logo, font, materials). */
+  brand?: DevelopmentBrand;
   /** Kept by the developer in the back end (absent: the public demonstration, with fictional sales). */
   backend?: { id: string; orgId: string; showPrices: boolean };
 }
@@ -132,6 +135,11 @@ export function validateDevelopmentsFile(raw: unknown): DevelopmentsFile {
       throw new Error(`developments.json: invalid development ${d.id ?? '?'}`);
     for (const u of allUnits(d)) if (!d.shapes[u.shape]) throw new Error(`developments.json: ${u.id} has no shape`);
     if (d.progress !== undefined && !parseProgress(d.progress)) throw new Error(`developments.json: ${d.id} has an invalid progress`);
+    if (d.brand !== undefined) {
+      const brand = parseBrand(d.brand);
+      if (brand) d.brand = brand;
+      else delete d.brand;
+    }
   }
   return f;
 }

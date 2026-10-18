@@ -1148,4 +1148,93 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await ana.client.from('developments').delete().eq('id', devId).select('id')).data).toHaveLength(1);
     expect((await svc.from('development_units').select('id').eq('development_id', devId)).data).toEqual([]);
   });
+
+  it('espelho de vendas: imobiliária parceira reserva dentro da cota e vê só as reservas dela; identidade do lançamento', async () => {
+    const svc = service();
+    const polygon = { type: 'Polygon', coordinates: [[[-48.9, -26.4], [-48.9, -26.39], [-48.89, -26.39], [-48.9, -26.4]]] };
+    const layout = {
+      location: [-48.9, -26.4], center: [-48.9, -26.4], footprint: polygon, grid: { cols: 1, rows: 1 }, hiddenBuildingIds: [], floorHeightM: 3,
+      levels: [{ level: 1, use: 'residential', base: 0, top: 3 }], shapes: [{ polygon, facing: 0 }],
+    };
+    const dev = await svc
+      .from('developments')
+      .insert({ org_id: orgA, slug: `parceria-${tag}`, name: 'Residencial Parceria', developer: 'Incorporadora A', layout })
+      .select('id')
+      .single();
+    expect(dev.error).toBeNull();
+    const devId = dev.data!.id as string;
+    const units = await svc
+      .from('development_units')
+      .insert(['201', '202', '203'].map((number) => ({ development_id: devId, floor: 2, number, area_m2: 60, price: 400_000 })))
+      .select('id, number');
+    const id = Object.fromEntries(units.data!.map((u) => [u.number, u.id as string]));
+    const bA = backendOf(ana);
+    const bBruno = backendOf(bruno);
+    const bCarla = backendOf(carla);
+
+    // credenciar: só o admin da incorporadora, pelo endereço da imobiliária; a própria não; cota de 1 a 500
+    await expect(bBruno.addDevelopmentPartner(devId, `imob-b-${tag}`, 1)).rejects.toThrow(/não encontrado/);
+    await expect(bA.addDevelopmentPartner(devId, 'nao-existe-xyz', 1)).rejects.toThrow(/Não achamos/);
+    await expect(bA.addDevelopmentPartner(devId, `imob-a-${tag}`, 1)).rejects.toThrow(/própria incorporadora/);
+    await expect(bA.addDevelopmentPartner(devId, `imob-b-${tag}`, 0)).rejects.toThrow(/cota/);
+    expect((await carla.client.rpc('add_development_partner', { p_development: devId, p_slug: `imob-b-${tag}`, p_max: 5 })).error?.code).toBe('42501');
+    await bA.addDevelopmentPartner(devId, `  IMOB-B-${tag} `, 1);
+    expect(await bA.developmentPartners(devId)).toEqual([
+      { orgId: orgB, name: 'Imobiliária B', slug: `imob-b-${tag}`, maxReservations: 1, activeReservations: 0 },
+    ]);
+    expect(await bBruno.developmentPartners(devId)).toHaveLength(1); // a equipe da incorporadora vê
+    expect((await anon().from('development_partners').select('org_id')).data ?? []).toEqual([]);
+
+    // rascunho: a parceira ainda não vende nem vê
+    expect(await bCarla.partnerDevelopments(orgB)).toEqual([]);
+    expect((await carla.client.rpc('team_development_units', { p_development: devId })).data).toEqual([]);
+    await expect(bCarla.reserveUnit(id['201'])).rejects.toThrow(/não encontrada/);
+    await bA.updateDevelopment(devId, { published: true });
+    expect(await bCarla.partnerDevelopments(orgB)).toEqual([
+      expect.objectContaining({ id: devId, name: 'Residencial Parceria', ownerName: 'Imobiliária A', maxReservations: 1, activeReservations: 0 }),
+    ]);
+    expect(await bBruno.partnerDevelopments(orgB)).toEqual([]); // de outra imobiliária, nada
+
+    // a parceira reserva (prazo do empreendimento, não escolhe horas); a cota de 1 trava a segunda
+    const until = await bCarla.reserveUnit(id['201'], { hours: 150, note: 'Cliente da B' });
+    expect(Date.parse(until) - Date.now()).toBeLessThan(49 * 3600_000);
+    await expect(bCarla.reserveUnit(id['202'])).rejects.toThrow(/já tem 1 reservas ativas/);
+    await bBruno.reserveUnit(id['202'], { note: 'Cliente do Bruno' }); // a equipe da incorporadora não tem cota
+    expect((await svc.from('development_units').select('reserved_org').eq('id', id['201']).single()).data!.reserved_org).toBe(orgB);
+
+    // a parceira vê situação e preço de tudo, mas quem reservou só das dela; a incorporadora vê o canal
+    const seenB = Object.fromEntries((await bCarla.teamUnits(devId)).map((u) => [u.number, u]));
+    expect(seenB['201']).toMatchObject({ status: 'reserved', reservedBy: carla.id, reservedNote: 'Cliente da B', reservedOrgName: 'Imobiliária B', canRelease: true });
+    expect(seenB['202']).toMatchObject({ status: 'reserved', reservedBy: null, reservedByName: null, reservedNote: null, reservedOrgName: null, canRelease: false });
+    expect(seenB['203']).toMatchObject({ status: 'available', price: 400_000 });
+    const seenA = Object.fromEntries((await bA.teamUnits(devId)).map((u) => [u.number, u]));
+    expect(seenA['201']).toMatchObject({ reservedBy: carla.id, reservedOrgName: 'Imobiliária B', canRelease: true });
+    expect(seenA['202']).toMatchObject({ reservedBy: bruno.id, reservedOrgName: 'Imobiliária A' });
+    expect((await bBruno.teamUnits(devId)).find((u) => u.number === '201')?.canRelease).toBe(false);
+    await expect(bCarla.releaseUnit(id['202'])).rejects.toThrow(/Só quem reservou/);
+    expect((await bA.developmentPartners(devId))[0].activeReservations).toBe(1);
+
+    // a parceira não muda unidade nem empreendimento
+    await expect(bCarla.updateUnit(id['203'], { price: 1 })).rejects.toThrow();
+    expect((await carla.client.from('developments').update({ brand: {} }).eq('id', devId).select('id')).data ?? []).toEqual([]);
+
+    // descredenciar: as reservas dela voltam a ficar disponíveis; as da incorporadora ficam
+    await bA.removeDevelopmentPartner(devId, orgB);
+    const back = Object.fromEntries((await svc.from('development_units').select('number, status, reserved_org').eq('development_id', devId)).data!.map((u) => [u.number, u]));
+    expect(back['201']).toMatchObject({ status: 'available', reserved_org: null });
+    expect(back['202'].status).toBe('reserved');
+    expect(await bCarla.partnerDevelopments(orgB)).toEqual([]);
+    await expect(bCarla.reserveUnit(id['203'])).rejects.toThrow(/não encontrada/);
+
+    // identidade do lançamento: o banco recusa cor, logo, letra e material fora do padrão; o público vê a válida
+    const brand = { color: '#123abc', accent: '#ff8800', logo: 'https://exemplo.supabase.co/storage/v1/object/public/site-assets/a/logo.png', font: 'classica', materials: [{ label: 'Book', url: 'https://exemplo.com/book.pdf' }] };
+    for (const bad of [{ color: 'red' }, { logo: 'javascript:alert(1)' }, { font: 'comic' }, { materials: [{ label: 'X', url: 'http://inseguro.com' }] }, { materials: [{ url: 'https://sem-nome.com' }] }, { extra: 1 }]) {
+      expect((await ana.client.from('developments').update({ brand: bad }).eq('id', devId)).error, JSON.stringify(bad)).not.toBeNull();
+    }
+    await expect(bBruno.updateDevelopment(devId, { brand: {} })).rejects.toThrow();
+    await bA.updateDevelopment(devId, { brand: brand as never });
+    expect((await anon().from('public_developments').select('brand').eq('id', devId).single()).data!.brand).toEqual(brand);
+    expect((await bA.teamDevelopments(orgA)).find((d) => d.id === devId)?.brand).toEqual(brand);
+    expect((await ana.client.from('developments').delete().eq('id', devId).select('id')).data).toHaveLength(1);
+  });
 });

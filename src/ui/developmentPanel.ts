@@ -12,6 +12,7 @@ import {
 import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, progressLabel } from '../data/construction';
 import type { TeamUnitRow } from '../backend/remote';
+import { brandVars } from '../data/devBrand';
 
 export interface DevelopmentPanelHandlers {
   onClose: () => void;
@@ -28,14 +29,19 @@ export interface DevelopmentPanelHandlers {
 
 /** What the developer's team can do from the mirror (only for developments kept in the back end). */
 export interface DevelopmentTeam {
-  /** Role of the logged-in user in the developer's team (null: the public view). */
-  roleFor(d: Development): 'admin' | 'member' | null;
+  /**
+   * Role of the logged-in user: in the developer's team, or in an agency accredited to sell it ('partner': sees
+   * prices and reservations live and reserves within its quota; null: the public view).
+   */
+  roleFor(d: Development): TeamRole;
   /** Units with prices and reservations (who, until when), as the team sees them. */
   units(d: Development): Promise<TeamUnitRow[]>;
   reserve(u: Unit, note: string): Promise<void>;
   release(u: Unit): Promise<void>;
   setStatus(u: Unit, status: 'available' | 'sold'): Promise<void>;
 }
+
+type TeamRole = 'admin' | 'member' | 'partner' | null;
 
 interface UnitFilter {
   onlyAvailable: boolean;
@@ -61,7 +67,7 @@ export class DevelopmentPanel {
   private viewing = false;
   /** Set by the app when there is a back end. */
   team: DevelopmentTeam | null = null;
-  private teamRole: 'admin' | 'member' | null = null;
+  private teamRole: TeamRole = null;
   /** The team's view of the units (by database id), once loaded. */
   private teamUnits = new Map<string, TeamUnitRow>();
   private busy = false;
@@ -137,15 +143,32 @@ export class DevelopmentPanel {
 
   // ------------------------------------------------------------------ rendering
 
+  /** The developer's colours and font on the panel (custom properties read by styles.css). */
+  private applyBrand(d: Development): void {
+    for (const k of ['--dev-brand', '--dev-brand-text', '--dev-accent', '--dev-font']) this.el.style.removeProperty(k);
+    const vars = d.brand ? brandVars(d.brand) : {};
+    for (const [k, v] of Object.entries(vars)) this.el.style.setProperty(k, v);
+    this.el.classList.toggle('dev-branded', !!d.brand?.color);
+    this.el.classList.toggle('dev-font', !!d.brand?.font);
+  }
+
   private render(): void {
     const d = this.dev!;
     const c = countByStatus(d);
+    const b = d.brand;
+    this.applyBrand(d);
     this.el.innerHTML = `
       <div class="drawer-head">
         <button type="button" class="link-btn dev-back" data-action="close">‹ Voltar ao bairro</button>
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar empreendimento">×</button>
       </div>
       ${d.backend ? '<span class="badge-dev badge-live">Espelho de vendas 3D</span>' : '<span class="badge-fictional badge-dev">Espelho de vendas 3D · demonstração</span>'}
+      ${
+        b?.logo || b?.color
+          ? `<div class="dev-brand-band">${b.logo ? `<img class="dev-logo" src="${escapeHtml(b.logo)}" alt="${escapeHtml(d.developer)}" loading="lazy">` : ''}
+              <span class="dev-brand-name">${escapeHtml(d.developer)}</span></div>`
+          : ''
+      }
       <h2 id="dev-title">${escapeHtml(d.name)}</h2>
       <p class="dev-sub">${escapeHtml(d.developer)} · ${STAGE_LABELS[d.stage]} · entrega ${escapeHtml(d.delivery)}<br>
         <span class="muted">${escapeHtml(d.address)}</span></p>
@@ -166,7 +189,11 @@ export class DevelopmentPanel {
       ${
         d.backend
           ? `<p class="small muted">Situação das unidades informada pela ${escapeHtml(d.developer)}.${d.backend.showPrices ? '' : ' Preços sob consulta.'}${
-              this.teamRole ? ' <b>Você está na equipe:</b> escolha uma unidade para reservar ou mudar a situação.' : ''
+              this.teamRole === 'partner'
+                ? ` <b>Sua imobiliária é parceira credenciada:</b> você vê preços e reservas ao vivo e reserva uma unidade; a venda é registrada pela ${escapeHtml(d.developer)}.`
+                : this.teamRole
+                  ? ' <b>Você está na equipe:</b> escolha uma unidade para reservar ou mudar a situação.'
+                  : ''
             }</p>`
           : `<p class="notice-approx small">Preços e disponibilidade são <b>fictícios</b>. A distribuição por andar e a posição da
         torre são estimadas a partir da divulgação pública. Sem vínculo com a ${escapeHtml(d.developer)}.</p>`
@@ -184,6 +211,13 @@ export class DevelopmentPanel {
       <div class="dev-grid" role="group" aria-label="Unidades por andar, do último ao primeiro">${this.gridHtml(d)}</div>
       <p class="dev-legend small"><span class="st st-available">disponível</span> <span class="st st-reserved">reservado</span>
         <span class="st st-sold">vendido</span> <span class="st st-selected">selecionado</span></p>
+      ${
+        b?.materials?.length
+          ? `<div class="dev-materials"><h3>Materiais do lançamento</h3><ul>${b.materials
+              .map((m) => `<li><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener">${escapeHtml(m.label)}</a></li>`)
+              .join('')}</ul></div>`
+          : ''
+      }
       <details class="dev-about">
         <summary>De onde vêm esses dados</summary>
         ${d.backend ? '<p class="small">Unidades, situação e preços: cadastro da incorporadora, atualizado por ela.</p>' : ''}
@@ -382,13 +416,15 @@ export class DevelopmentPanel {
       buttons.push('<button type="button" class="btn-primary" data-team="reserve">Reservar</button>');
       if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="sold">Marcar como vendida</button>');
     } else if (t.status === 'reserved') {
-      if (admin || t.reservedBy === this.myId()) buttons.push('<button type="button" class="btn-secondary" data-team="release">Desfazer reserva</button>');
+      if (t.canRelease) buttons.push('<button type="button" class="btn-secondary" data-team="release">Desfazer reserva</button>');
       if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="sold">Marcar como vendida</button>');
     } else if (admin) buttons.push('<button type="button" class="btn-secondary" data-team="available">Voltar para disponível</button>');
     return `<div class="dev-team">
       ${
         t.status === 'reserved' && t.reservedUntil
-          ? `<p class="small">Reservada${t.reservedByName ? ` por <b>${escapeHtml(t.reservedByName)}</b>` : ''} até <b>${escapeHtml(shortWhen(t.reservedUntil))}</b>${
+          ? `<p class="small">Reservada${t.reservedByName ? ` por <b>${escapeHtml(t.reservedByName)}</b>` : ''}${
+              t.reservedOrgName ? ` (${escapeHtml(t.reservedOrgName)})` : ''
+            } até <b>${escapeHtml(shortWhen(t.reservedUntil))}</b>${
               t.reservedNote ? ` · ${escapeHtml(t.reservedNote)}` : ''
             }. Depois do prazo, volta a ficar disponível sozinha.</p>`
           : ''
@@ -402,9 +438,6 @@ export class DevelopmentPanel {
       ${this.actionError ? `<p class="a-error" role="alert">${escapeHtml(this.actionError)}</p>` : ''}
     </div>`;
   }
-
-  /** Id of the logged-in user, as seen in the reservations (set by the app). */
-  myId: () => string | null = () => null;
 
   private bindTeam(box: HTMLElement, u: Unit): void {
     box.querySelectorAll<HTMLButtonElement>('button[data-team]').forEach((b) =>

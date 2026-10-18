@@ -6,6 +6,7 @@ import type { AuditEntry } from './audit';
 import { validLayout, type BuildingLayout } from '../map/unitLayout';
 import type { Development, UnitStatus } from '../data/developments';
 import { hasDrawing, rowsToDevelopment, type DevelopmentRow, type UnitRow } from './developments';
+import { parseBrand, type DevelopmentBrand } from '../data/devBrand';
 import type { TeamUnit, UnitImportRow } from './unitsCsv';
 import { DOC_TYPES, type ReportReason, dataUrlToBlob, exclusivityDocProblem, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
 
@@ -249,15 +250,40 @@ export interface TeamDevelopment {
   published: boolean;
   showPrices: boolean;
   reservationHours: number;
+  brand: DevelopmentBrand | null;
 }
 
 export interface TeamUnitRow extends TeamUnit {
   id: string;
   reservedBy: string | null;
+  /** Agency that reserved it (the developer sees every channel; a partner, only its own). */
+  reservedOrgName: string | null;
+  /** The user may undo this reservation (who made it, or an administrator of the developer or of that agency). */
+  canRelease: boolean;
+}
+
+/** An agency accredited to sell a development (Minha conta → Espelho de vendas → Imobiliárias parceiras). */
+export interface DevelopmentPartner {
+  orgId: string;
+  name: string;
+  slug: string;
+  maxReservations: number | null;
+  activeReservations: number;
+}
+
+/** A development an agency sells as an accredited partner. */
+export interface PartnerDevelopment {
+  id: string;
+  slug: string;
+  name: string;
+  developer: string;
+  ownerName: string;
+  maxReservations: number | null;
+  activeReservations: number;
 }
 
 const UNIT_COLUMNS = 'id, development_id, tower, floor, number, plan, area_m2, bedrooms, suites, parking_spots, shape, cells, price, status, reserved_until';
-const DEV_COLUMNS = 'id, org_id, slug, name, developer, address, stage, delivery, show_prices, layout, info, progress';
+const DEV_COLUMNS = 'id, org_id, slug, name, developer, address, stage, delivery, show_prices, layout, info, progress, brand';
 
 /** A reservation past its deadline is already available (the database releases it every 10 minutes). */
 const liveStatus = (r: { status: UnitStatus; reserved_until?: string | null }, now = Date.now()): UnitStatus =>
@@ -954,7 +980,7 @@ export class RemoteBackend {
   async teamDevelopments(orgId: string): Promise<TeamDevelopment[]> {
     const { data, error } = await this.sb
       .from('developments')
-      .select('id, slug, name, published, show_prices, reservation_hours')
+      .select('id, slug, name, published, show_prices, reservation_hours, brand')
       .eq('org_id', orgId)
       .order('name');
     fail(error, 'Não foi possível ler os empreendimentos');
@@ -965,12 +991,17 @@ export class RemoteBackend {
       published: d.published,
       showPrices: d.show_prices,
       reservationHours: d.reservation_hours,
+      brand: parseBrand(d.brand),
     }));
   }
 
   /** Publication, prices to the public and the default reservation deadline (administrators). */
-  async updateDevelopment(id: string, patch: { published?: boolean; showPrices?: boolean; reservationHours?: number }): Promise<void> {
+  async updateDevelopment(
+    id: string,
+    patch: { published?: boolean; showPrices?: boolean; reservationHours?: number; brand?: DevelopmentBrand },
+  ): Promise<void> {
     const row = {
+      ...(patch.brand !== undefined ? { brand: patch.brand } : {}),
       ...(patch.published !== undefined ? { published: patch.published } : {}),
       ...(patch.showPrices !== undefined ? { show_prices: patch.showPrices } : {}),
       ...(patch.reservationHours !== undefined ? { reservation_hours: patch.reservationHours } : {}),
@@ -1000,6 +1031,48 @@ export class RemoteBackend {
       reservedBy: r.reserved_by,
       reservedByName: r.reserved_by_name,
       reservedNote: r.reserved_note,
+      reservedOrgName: r.reserved_org_name ?? null,
+      canRelease: !!r.can_release,
+    }));
+  }
+
+  /** Agencies accredited to sell a development, with their active reservations (the developer's team). */
+  async developmentPartners(developmentId: string): Promise<DevelopmentPartner[]> {
+    const { data, error } = await this.sb.rpc('development_partner_list', { p_development: developmentId });
+    fail(error, 'Não foi possível ler as imobiliárias parceiras');
+    return ((data ?? []) as Record<string, never>[]).map((r) => ({
+      orgId: r.org_id,
+      name: r.name,
+      slug: r.slug,
+      maxReservations: r.max_reservations,
+      activeReservations: r.active_reservations,
+    }));
+  }
+
+  /** Accredits an agency by its address (slug), or changes its quota (administrators of the developer). */
+  async addDevelopmentPartner(developmentId: string, slug: string, maxReservations: number | null): Promise<void> {
+    const { error } = await this.sb.rpc('add_development_partner', { p_development: developmentId, p_slug: slug, p_max: maxReservations });
+    if (error) throw new Error(['P0001', '22023', '42501'].includes(error.code) ? error.message : `Não foi possível credenciar: ${error.message}`);
+  }
+
+  /** Withdraws the accreditation; that agency's active reservations become available. */
+  async removeDevelopmentPartner(developmentId: string, orgId: string): Promise<void> {
+    const { error } = await this.sb.rpc('remove_development_partner', { p_development: developmentId, p_org: orgId });
+    fail(error, 'Não foi possível descredenciar');
+  }
+
+  /** Developments the client sells as an accredited partner (published ones). */
+  async partnerDevelopments(orgId: string): Promise<PartnerDevelopment[]> {
+    const { data, error } = await this.sb.rpc('partner_developments', { p_org: orgId });
+    fail(error, 'Não foi possível ler os empreendimentos parceiros');
+    return ((data ?? []) as Record<string, never>[]).map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      developer: r.developer,
+      ownerName: r.owner_name,
+      maxReservations: r.max_reservations,
+      activeReservations: r.active_reservations,
     }));
   }
 
@@ -1196,7 +1269,7 @@ export class RemoteBackend {
   }
 
   /** Uploads a logo or banner (data URL prepared by the editor); returns its public URL. */
-  async uploadSiteImage(orgId: string, dataUrl: string, kind: 'logo' | 'capa' | 'sobre'): Promise<string> {
+  async uploadSiteImage(orgId: string, dataUrl: string, kind: 'logo' | 'capa' | 'sobre' | 'empreendimento'): Promise<string> {
     const blob = dataUrlToBlob(dataUrl);
     const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
     const path = `${orgId}/${kind}-${Date.now().toString(36)}.${ext}`;

@@ -186,8 +186,12 @@ diferente do das imobiliárias:
 
 **Feito em 17/10/2026** ([`espelho-de-vendas.md`](espelho-de-vendas.md)): a incorporadora é dona dos dados no
 banco; administradores dela publicam, escondem o preço do público, vendem e importam a planilha; corretores dela
-reservam por um prazo que vence sozinho e aparece para todos. Imobiliárias parceiras, cota por imobiliária, link do
-corretor e painel por canal ainda não existem.
+reservam por um prazo que vence sozinho e aparece para todos. **Feito em 18/10 (item 46):** a incorporadora credencia
+imobiliárias parceiras pelo endereço delas, com uma cota de reservas ativas por imobiliária; a equipe da parceira vê
+o espelho com preços e reservas ao vivo e reserva dentro da cota, mas só vê quem reservou nas reservas dela; a
+incorporadora vê por qual imobiliária cada unidade foi reservada e as reservas ativas de cada parceira (o começo do
+painel por canal). Vender continua com a incorporadora. O link do corretor e a simulação de pagamento ainda não
+existem.
 
 ## 7. Cadastro do anúncio no backend
 
@@ -223,6 +227,11 @@ README). O que muda com backend:
    ainda faltam.
 2. **Espelho de vendas com a identidade de cada construtora e empreendimento** (cores, logotipo, fontes, materiais do
    lançamento), além da disponibilidade ao vivo para corretores credenciados.
+   **Feito em 18/10:** coluna `brand` em `developments` (cor principal e segunda cor, logotipo enviado ao bucket
+   `site-assets`, um de quatro estilos de letra do sistema, até 8 links de materiais em https), conferida pelo banco
+   (`valid_development_brand`) e editada em Minha conta → Espelho de vendas; o painel do empreendimento ganha a faixa
+   com o logotipo e as cores da incorporadora, a letra escolhida e "Materiais do lançamento". As parceiras e as
+   cotas estão na seção 6 e em [`espelho-de-vendas.md`](espelho-de-vendas.md).
 3. **Camadas da Prefeitura como opções ligáveis**: mancha de inundação, zoneamento e lote real, desligadas por padrão
    para não poluir o mapa.
 4. **Anúncios repetidos** só importam num modo portal (vários anunciantes). No produto vendido por imobiliária, cada
