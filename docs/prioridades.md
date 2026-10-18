@@ -94,6 +94,7 @@ Dependem de validação comercial. Não começar antes de P0 e P1.
 | 48 | Prédio "hero" com janelas por unidade (Three.js) **Feito em 18/10:** o prédio aberto ganha janelas nas paredes de fachada de cada unidade, e à noite acendem as das unidades vendidas e reservadas e a da unidade escolhida; camada customizada em WebGL puro (`src/map/heroWindows.ts`), sem o Three.js. Falta o modelo detalhado da construtora (sacadas, caixilhos) | Médio | Grande | Médio | 28 | README |
 | 49 | Dados do mapa: pavimento da Secretaria de Infraestrutura, iluminação pública, LiDAR, estéreo e classificador de telhados | Baixo a médio | Grande | Médio | 7, dados externos | README, avaliação |
 | 50 | Deduplicação de anúncios repetidos (só num portal com vários anunciantes) | Baixo hoje | Médio | Médio | Decisão sobre o portal | Backend §5 e §8 |
+| 51 | Anunciar sem clicar no mapa **Feito em 18/10:** "Localizar pelo endereço" acha rua e número no cadastro da Prefeitura (116 mil lotes com número) e pega o prédio do mapa no lote; se não acha, pergunta entre localização aproximada e um ponto escolhido no Google Maps (aberto em outra aba, coordenadas coladas no formulário, sem API nem chave); onde o OpenStreetMap não tem prédio, o mapa desenha um prédio padrão ilustrativo. Falta confirmar a licença do cadastro com a Prefeitura | Alto | Médio | Baixo | 44 | README |
 
 ## Decisões que travam a ordem
 

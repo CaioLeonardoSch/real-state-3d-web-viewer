@@ -919,6 +919,78 @@ async function main() {
     await page.click('#add-panel [data-action="close"]');
     await sleep(200);
 
+    // item 51: located by the typed address (city cadastre), without clicking the map
+    {
+      const ADDR = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'enderecos.json'), 'utf8'));
+      const [cx, cy] = META.center;
+      let near = null;
+      for (const [name, rows] of ADDR.streets)
+        for (const r of rows) {
+          if (!r[4]) continue;
+          const d = Math.hypot(ADDR.origin[0] + r[1] / 1e5 - cx, ADDR.origin[1] + r[2] / 1e5 - cy);
+          if (!near || d < near.d) near = { d, name, number: r[0] };
+        }
+      const locateStatus = () => page.textContent('#add-panel .a-locate-status');
+      const waitLocated = () => page.waitForFunction(() => {
+        const t = document.querySelector('#add-panel .a-locate-status')?.textContent ?? '';
+        return t && !t.endsWith('…');
+      }, null, { timeout: 15000 }).catch(() => null);
+      await page.click('.add-toggle');
+      await page.selectOption('#add-panel select[name="type"]', 'house');
+      await page.fill('#add-panel input[name="areaM2"]', '120');
+      await page.fill('#add-panel input[name="street"]', `Rua ${near.name.toLowerCase()}`);
+      await page.fill('#add-panel input[name="number"]', String(near.number));
+      await page.click('#add-panel [data-action="locate"]');
+      await waitLocated();
+      const byAddress = { locate: await locateStatus(), place: await placeStatus(), bairro: await page.inputValue('#add-panel input[name="bairro"]') };
+      check('a typed street and number find the lot in the city cadastre and place the listing (map building or a standard one)',
+        byAddress.locate.startsWith('✓') && byAddress.place.startsWith('✓') && !!byAddress.bairro, JSON.stringify({ ...byAddress, near }));
+
+      // not in the cadastre: asks between an approximate place and a point chosen in Google Maps
+      await page.fill('#add-panel input[name="street"]', 'Rua Que Não Existe Nesta Cidade');
+      await page.fill('#add-panel input[name="number"]', '10');
+      await page.fill('#add-panel input[name="bairro"]', 'Centro');
+      await page.click('#add-panel [data-action="locate"]');
+      await waitLocated();
+      const missing = await page.evaluate(() => ({
+        status: document.querySelector('#add-panel .a-locate-status').textContent,
+        choices: !document.querySelector('#add-panel .a-locate-more').hidden,
+        approx: !document.querySelector('#add-panel [data-action="approx"]').hidden,
+        gmaps: document.querySelector('#add-panel [data-gmaps]').href,
+      }));
+      await page.click('#add-panel [data-action="approx"]');
+      await sleep(300);
+      const approxPlace = { place: await placeStatus(), display: await page.inputValue('#add-panel select[name="addressDisplay"]') };
+      check('an address missing from the cadastre offers an approximate place or Google Maps, and the approximate one hides the building',
+        /Não achamos/.test(missing.status) && missing.choices && missing.approx && missing.gmaps.startsWith('https://www.google.com/maps/search/?api=1&query=') &&
+          /aproximada/.test(approxPlace.place) && approxPlace.display !== 'full',
+        JSON.stringify({ missing, approxPlace }));
+
+      // a point pasted from Google Maps on free ground: no building in OpenStreetMap, so a standard one is drawn
+      await closeUp();
+      await waitIdle(page);
+      const free = await page.evaluate(() => {
+        const map = window.__demo.map;
+        const r = map.getCanvas().getBoundingClientRect();
+        for (let y = r.height * 0.3; y < r.height * 0.8; y += 20)
+          for (let x = r.width * 0.3; x < r.width * 0.7; x += 20) {
+            if (document.elementFromPoint(x + r.left, y + r.top) !== map.getCanvas()) continue;
+            const around = map.queryRenderedFeatures([[x - 30, y - 30], [x + 30, y + 30]]);
+            if (around.every((h) => h.layer.id === 'boundary-line')) return map.unproject([x, y]).toArray();
+          }
+        return null;
+      });
+      await page.fill('#add-panel input[name="gmapsPoint"]', free ? `https://www.google.com/maps/@${free[1].toFixed(6)},${free[0].toFixed(6)},19z` : '');
+      await page.click('#add-panel [data-action="use-point"]');
+      await waitLocated();
+      const pasted = { locate: await locateStatus(), place: await placeStatus(), preview: await page.evaluate(() => window.__demo.map.getSource('pick-preview').serialize().data?.features?.length ?? 0) };
+      check('a point pasted from Google Maps with no building there gets a standard building drawn on our map',
+        !!free && pasted.locate.startsWith('✓') && /prédio padrão/.test(pasted.place) && pasted.preview === 1, JSON.stringify({ free, ...pasted }));
+      await page.screenshot({ path: path.join(SHOTS, 'desktop-locate-address.png') });
+      await page.click('#add-panel [data-action="close"]');
+      await sleep(200);
+    }
+
     await closeUp();
     await waitIdle(page);
     await page.click('.add-toggle');

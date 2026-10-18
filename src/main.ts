@@ -701,6 +701,12 @@ async function main() {
     otherLots: (exceptId) => listings.flatMap((l) => (l.lotPolygon && l.id !== exceptId ? [l.lotPolygon] : [])),
     newId: (slug) => newListingId(slug, known.listingIds),
     bairroAt: (p) => scene.bairroAt(p),
+    bairroPoint: (name) => {
+      const key = name.trim().toLocaleLowerCase('pt-BR');
+      const f = data.bairros.features.find((b) => String(b.properties?.name ?? '').toLocaleLowerCase('pt-BR') === key);
+      return f?.geometry.type === 'Point' ? (f.geometry.coordinates.slice(0, 2) as [number, number]) : null;
+    },
+    listingById: (id) => listings.find((l) => l.id === id),
     remoteOrgName: () => (remote ? (account?.currentOrg?.name ?? null) : null),
     onSave: async (l, center, doc) => {
       if (remote) {

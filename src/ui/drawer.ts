@@ -27,6 +27,7 @@ import { SIDE_LABELS, STOREY_M, SUN_RADIUS_M, formatHours, type SunTable } from 
 import { NEARBY_MAX_M, SERVICE_COLORS, SERVICE_KINDS, SERVICE_LABELS, formatDistance, type NearbyService, type ServiceKind } from '../data/services';
 import { financingHtml, wireFinancing } from './financingSim';
 import { readVisit, visitFieldsHtml, wireVisitFields } from './visitRequest';
+import { isSynthetic } from '../map/syntheticBuilding';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
 
 /** Position of the open listing inside the current list, for previous/next navigation. */
@@ -316,7 +317,9 @@ export class Drawer {
       ${
         l.approximateLocation
           ? `<p class="notice-approx">📍 Localização aproximada: a posição exata não é exibida; o círculo indica um raio de ~${l.approxRadiusM ?? 150} m.</p>`
-          : ''
+          : isSynthetic(l.buildingOsmId)
+            ? '<p class="notice-approx">Prédio ilustrativo: o OpenStreetMap ainda não tem esse prédio, então o mapa mostra um volume padrão no endereço.</p>'
+            : ''
       }
       ${this.progressHtml(l)}
       ${this.nearbyHtml(l)}

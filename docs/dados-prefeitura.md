@@ -33,6 +33,10 @@ Exemplo real, Rua Frei Caneca, 139, América: terreno de 365 m² e 217,85 m² co
 - **Terrenos de verdade.** `baldio = Sim` marca os lotes vagos. Os terrenos à venda poderiam ser desenhados no lote
   real, em vez dos retângulos gerados hoje.
 - **Endereço.** Rua e número por lote resolvem a geocodificação, que hoje usa o Nominatim e falhou no caso do Aman.
+  **Feito em 18/10:** o formulário "Anunciar imóvel" localiza o anúncio por rua e número com esse cadastro
+  (`scripts/build-addresses.mjs` → `public/data/enderecos.json`; 81% dos 143 mil lotes têm número). O índice guarda
+  só rua, número, bairro, um ponto do lote e a área construída, sem dono nem matrícula. A licença de uso dos dados
+  ainda precisa ser confirmada com a Prefeitura (SEPUR.UGP).
 
 ### 2. Levantamento a laser (LiDAR) da Prefeitura
 

@@ -1512,6 +1512,50 @@ body[data-tod='night'] .btn-danger {
 .a-error {
   color: #b42318;
 }
+.a-locate {
+  border: 1px dashed #2f7de1;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.a-locate-status {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+.a-locate-status:empty {
+  display: none;
+}
+.a-locate-more {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+.a-locate-ask {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.a-locate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.a-locate-actions a {
+  text-decoration: none;
+}
+.a-coords {
+  display: flex;
+  gap: 6px;
+}
+.a-coords input {
+  flex: 1;
+  min-width: 0;
+}
+.a-locate-status.is-error,
+.a-place-status.is-error,
+.a-error {
+  color: #b42318;
+}
+body[data-tod='night'] .a-locate-status.is-error,
 body[data-tod='night'] .a-place-status.is-error,
 body[data-tod='night'] .a-error {
   color: #ff9b8f;

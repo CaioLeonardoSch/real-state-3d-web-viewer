@@ -33,7 +33,8 @@ Os dados já estão versionados em `public/data/`, então o app funciona sem red
 São três caminhos:
 
 1. **Pelo app ("+ Anunciar")**: preencha o formulário (cadastro completo, ver abaixo), clique em **Escolher no mapa** e clique num prédio cinza
-   (residencial e sem outro anúncio) ou, para terreno, num espaço livre. O lote é desenhado no ponto clicado com a
+   (residencial e sem outro anúncio) ou, para terreno, num espaço livre. Ou, sem clicar no mapa, preencha rua e
+   número e use **Localizar pelo endereço** (ver "Localizar pelo endereço" abaixo). O lote é desenhado no ponto clicado com a
    área informada, na proporção 2,5:1. O anúncio aparece na hora no mapa e na lista com a marca "Seu anúncio" e
    fica salvo **só neste navegador** (`localStorage`). Para excluir, abra o anúncio e use **Excluir este anúncio**.
 2. **Publicar para todos**: no formulário, use **Exportar meus anúncios (JSON)** e depois rode
@@ -440,7 +441,8 @@ NODE_USE_ENV_PROXY=1 npm run data
 6. `npm run validate:data`: verificações de consistência (ver abaixo), contra os dados de `.cache/region/`.
 
 Entre os passos 2 e 3 rodam `npm run data:cadastre` (cadastro da Prefeitura, em `.cache/cadastre/`) e
-`npm run data:heights` (pavimentos por prédio, em `.cache/region/heights.json`). Sem eles, os blocos e os imóveis
+`npm run data:heights` (pavimentos por prédio, em `.cache/region/heights.json`); `npm run data:addresses` gera o
+índice de endereços do formulário (`public/data/enderecos.json`). Sem eles, os blocos e os imóveis
 usam só as alturas do OSM e o padrão de 6 m, e os apartamentos voltam a ter pavimentos fictícios.
 
 **Relatório de mudanças:** `npm run map:changes -- --old <mapa-anterior.pmtiles> --old-meta <meta-anterior.json>`
@@ -584,6 +586,24 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   Prédios com nome, não residenciais ou já anunciados sem a unidade são recusados com o motivo. Sem título, o anúncio recebe um
   título automático ("Casa 3 quartos", "Terreno de 300 m²"). Um anúncio recém-salvo é aberto mesmo que os filtros
   aplicados o escondam.
+- **Localizar pelo endereço** (item 51): rua e número vão ao cadastro da Prefeitura (`public/data/enderecos.json`,
+  gerado por `npm run data:addresses` a partir de `.cache/cadastre/`: 115.941 lotes com número em 4.298 ruas, 2,8 MB,
+  1,1 MB comprimido, baixado só ao usar o botão). O nome é comparado sem "Rua"/"Av.", sem acento, com as abreviações
+  por extenso e os números em palavras ("Av. Dr. João Colin", "R. XV de Novembro" e "29 de Novembro" acham o
+  cadastro). Número ausente do cadastro usa o vizinho do mesmo lado da rua (até 40 números). Achado o lote, o mapa
+  vai até lá e pega o prédio do OSM sob o ponto (ou o mais próximo a até 12 m), com as mesmas regras do clique.
+  - **Não achou**: o formulário pergunta se a pessoa quer **deixar uma localização aproximada** (no lote de número
+    mais próximo da rua, ou no bairro; o público vê o raio e o endereço sem número) ou **selecionar pelo Google Maps**:
+    o botão abre o Google Maps já buscando o endereço, em outra aba; lá (ou no Street View) a pessoa clica com o botão
+    direito no imóvel, copia as coordenadas e cola no campo, que também aceita o link da barra de endereço (`@lat,lng`,
+    `!3d…!4d…`, `?q=`). O link curto `maps.app.goo.gl` não traz coordenadas, e o formulário avisa. Não usamos a API
+    do Google: ela exige chave e conta de cobrança, e os termos dela proíbem mostrar o resultado num mapa que não
+    seja o do Google; abrir o site e copiar o ponto é grátis e não depende disso.
+  - **Prédio padrão**: se no ponto não há prédio no OpenStreetMap, o mapa desenha um volume padrão
+    (`src/map/syntheticBuilding.ts`): casa com a área do anúncio (ou a construída do cadastro), em 1 ou 2 pavimentos;
+    apartamento, sala ou loja com os andares do formulário (4 se não informados); galpão de 8 m. O id é
+    `sintetico/<lng>,<lat>`, então outro anúncio no mesmo endereço (outra unidade) cai no mesmo prédio. A ficha avisa
+    "Prédio ilustrativo".
 - **Anunciar pela unidade**: num apartamento, informados os pavimentos e as **unidades por andar** (até 12), o
   formulário mostra a grade do prédio, do último andar ao primeiro, com o número de cada unidade ("402" = 4º andar,
   2º final). Clicar numa unidade preenche o andar, e o mapa destaca só ela, no andar dela, com o resto do prédio
@@ -800,7 +820,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 111 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 114 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
   - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa

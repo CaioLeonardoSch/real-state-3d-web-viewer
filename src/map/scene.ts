@@ -92,6 +92,20 @@ const CLUSTER_MAX_ZOOM = Z_3D_START - 1;
 /** Count on the group: dark on the accent, readable by day and by night. */
 const CLUSTER_TEXT = '#141b2d';
 
+/** How far from an address point (a point inside its lot) the building of that lot may be. */
+const NEAR_BUILDING_M = 12;
+
+/** A context building as the form takes it (osmId, residential flag, height, outline). */
+function pickedBuilding(b: MapGeoJSONFeature): PickResult['building'] | undefined {
+  if (b.geometry.type !== 'Polygon' && b.geometry.type !== 'MultiPolygon') return undefined;
+  return {
+    osmId: String(b.properties.osmId),
+    residential: b.properties.residential === true,
+    height: Number(b.properties.height) || DEFAULT_BUILDING_HEIGHT_M,
+    geometry: b.geometry,
+  };
+}
+
 /** What the user clicked while choosing the place of a new listing ("Anunciar imóvel"). */
 export interface PickResult {
   lngLat: [number, number];
@@ -890,6 +904,50 @@ export class Scene {
     this.map.getCanvas().style.cursor = 'crosshair';
   }
 
+  /**
+   * The map building at a point found without a click (address typed, coordinates pasted): flies there in 3D, waits
+   * for the tiles and takes the building under the point, else the nearest one within NEAR_BUILDING_M. `listingId`:
+   * the point falls on a building that already has a listing (those are not context buildings).
+   */
+  async buildingAt(lngLat: [number, number]): Promise<{ building?: PickResult['building']; listingId?: string }> {
+    this.flyToPoint(lngLat);
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, 8000);
+      this.map.once('idle', () => {
+        clearTimeout(t);
+        resolve();
+      });
+    });
+    const p = this.map.project(lngLat);
+    const pt: Feature<Point> = { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: lngLat } };
+    const listed = this.queryListing(p);
+    if (listed && listed.properties.kind !== 'approx') return { listingId: String(listed.properties.listingId) };
+    const r = NEAR_BUILDING_M / this.metersPerPixel();
+    const around = this.map
+      .queryRenderedFeatures([[p.x - r, p.y - r], [p.x + r, p.y + r]], { layers: ['context-buildings'] })
+      .filter((f) => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon');
+    const inside = around.find((f) => turfBooleanPointInPolygon(pt, f as Feature<Polygon | MultiPolygon>));
+    const dist = (f: MapGeoJSONFeature) => {
+      const [w, s, e, n] = turfBbox(f);
+      const c = this.map.project([(w + e) / 2, (s + n) / 2]);
+      return Math.hypot(c.x - p.x, c.y - p.y);
+    };
+    const nearest = inside ?? around.sort((a, b) => dist(a) - dist(b))[0];
+    const building = nearest && pickedBuilding(nearest);
+    return building ? { building } : {};
+  }
+
+  /** Close-up of a point in 3D (a place found by the address). */
+  flyToPoint(lngLat: [number, number]): void {
+    this.map.flyTo({ center: lngLat, zoom: 17.6, pitch: 55, duration: 900, padding: this.cameraPadding() });
+  }
+
+  /** Metres per screen pixel at the centre of the map (Web Mercator). */
+  private metersPerPixel(): number {
+    const lat = this.map.getCenter().lat;
+    return (40_075_016.686 * Math.cos((lat * Math.PI) / 180)) / (512 * 2 ** this.map.getZoom());
+  }
+
   stopPicking(): void {
     this.onPick = null;
     this.map.getCanvas().style.cursor = '';
@@ -1185,19 +1243,8 @@ export class Scene {
         const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         if (this.map.getZoom() < Z_3D_START) return this.onPick({ lngLat, tooFar: true });
         const b = this.map.queryRenderedFeatures(e.point, { layers: ['context-buildings'] })[0];
-        this.onPick({
-          lngLat,
-          ...(b && (b.geometry.type === 'Polygon' || b.geometry.type === 'MultiPolygon')
-            ? {
-                building: {
-                  osmId: String(b.properties.osmId),
-                  residential: b.properties.residential === true,
-                  height: Number(b.properties.height) || DEFAULT_BUILDING_HEIGHT_M,
-                  geometry: b.geometry,
-                },
-              }
-            : {}),
-        });
+        const building = b && pickedBuilding(b);
+        this.onPick({ lngLat, ...(building ? { building } : {}) });
         return;
       }
       this.events.onListingHover?.(null);

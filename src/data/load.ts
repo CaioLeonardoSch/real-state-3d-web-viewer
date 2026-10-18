@@ -1,3 +1,4 @@
+import { buildAddressIndex, type AddressFile, type AddressIndex } from './addresses';
 import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson';
 import { validateListingsFile, type ListingsFile } from './types';
 import { DEMO } from './demo';
@@ -67,6 +68,18 @@ export function loadStreets(): Promise<StreetEntry[]> {
       throw err;
     });
   return streets;
+}
+
+/** Address index of the "Anunciar imóvel" form (enderecos.json, scripts/build-addresses.mjs), loaded when first used. */
+let addresses: Promise<AddressIndex> | null = null;
+export function loadAddresses(): Promise<AddressIndex> {
+  addresses ??= getJson<AddressFile>('enderecos.json')
+    .then(buildAddressIndex)
+    .catch((err: Error) => {
+      addresses = null;
+      throw err;
+    });
+  return addresses;
 }
 
 export async function loadData(): Promise<AppData> {
