@@ -59,6 +59,8 @@ export interface ListingRow {
   // my_listings
   published?: boolean;
   exclusive_verified?: boolean;
+  moderation?: 'pending' | 'approved' | 'rejected';
+  moderation_note?: string | null;
   exclusivity_doc?: string | null;
   exclusivity_reviewed_at?: string | null;
   exclusivity_note?: string | null;
@@ -179,6 +181,7 @@ export function rowToListing(r: ListingRow, photos: PhotoRow[], photoUrl: (path:
     ...(r.advertiser && Object.keys(r.advertiser).length ? { advertiser: r.advertiser } : {}),
     ...opt('referenceCode', r.reference_code),
     ...(r.exclusive ? { exclusive: true } : {}),
+    ...(mine && r.moderation && r.moderation !== 'approved' ? { moderation: { status: r.moderation, ...opt('note', r.moderation_note) } } : {}),
     ...(mine && r.exclusive && r.exclusivity_doc ? { exclusivityDoc: r.exclusivity_doc, exclusivityReview: exclusivityReview(r) } : {}),
     availability: r.availability,
     highlight: r.highlight,
@@ -273,3 +276,13 @@ export function exclusivityDocProblem(f: { type: string; size: number }): string
   if (f.size > DOC_MAX_BYTES) return 'O documento de exclusividade passa de 10 MB.';
   return null;
 }
+
+/** Why a visitor reports a listing (listing_reports.reason). */
+export type ReportReason = 'sold' | 'outdated' | 'wrong_info' | 'fraud' | 'other';
+export const REPORT_REASONS: Record<ReportReason, string> = {
+  sold: 'Já foi vendido ou alugado',
+  outdated: 'Informações desatualizadas',
+  wrong_info: 'Preço, endereço ou fotos errados',
+  fraud: 'Parece golpe ou anúncio falso',
+  other: 'Outro motivo',
+};

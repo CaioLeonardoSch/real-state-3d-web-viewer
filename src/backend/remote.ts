@@ -6,7 +6,7 @@ import type { AuditEntry } from './audit';
 import type { Development, UnitStatus } from '../data/developments';
 import { hasDrawing, rowsToDevelopment, type DevelopmentRow, type UnitRow } from './developments';
 import type { TeamUnit, UnitImportRow } from './unitsCsv';
-import { DOC_TYPES, dataUrlToBlob, exclusivityDocProblem, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
+import { DOC_TYPES, type ReportReason, dataUrlToBlob, exclusivityDocProblem, listingToRow, rowToListing, summaryToListing, type ListingRow, type PhotoRow, type SummaryRow } from './mapping';
 
 export type Role = 'owner' | 'admin' | 'agent';
 
@@ -26,6 +26,28 @@ export interface ExclusivityItem {
   /** Path in the private bucket. */
   doc: string;
   sentAt: string;
+}
+
+export type { ReportReason };
+
+export interface ListingReport {
+  id: string;
+  listingId: string;
+  reason: ReportReason;
+  details: string | null;
+  createdAt: string;
+}
+
+export interface ModerationItem {
+  id: string;
+  orgName: string;
+  title: string;
+  referenceCode: string | null;
+  moderation: 'pending' | 'approved' | 'rejected';
+  published: boolean;
+  openReports: number;
+  reasons: ReportReason[];
+  since: string;
 }
 
 export interface Member {
@@ -201,6 +223,8 @@ export interface ListingTableRow {
   createdBy: string | null;
   updatedAt: string;
   bairro: string | null;
+  moderation: 'pending' | 'approved' | 'rejected';
+  moderationNote: string | null;
 }
 
 export interface ListingStats {
@@ -601,6 +625,69 @@ export class RemoteBackend {
       doc: r.doc,
       sentAt: r.updated_at,
     }));
+  }
+
+  /** A visitor's report about a published listing (no account needed; the server limits how many). */
+  async reportListing(id: string, reason: ReportReason, details: string): Promise<void> {
+    fail((await this.sb.rpc('report_listing', { p_listing: id, p_reason: reason, p_details: details })).error, 'Não foi possível enviar a denúncia');
+  }
+
+  /** Open reports about the client's listings (administrators and support staff). */
+  async listingReports(orgId: string): Promise<(ListingReport & { title: string })[]> {
+    const { data, error } = await this.sb
+      .from('listing_reports')
+      .select('id, listing_id, reason, details, created_at, listings(title)')
+      .eq('org_id', orgId)
+      .is('resolved_at', null)
+      .order('created_at');
+    fail(error, 'Não foi possível ler as denúncias');
+    return ((data ?? []) as unknown as { id: string; listing_id: string; reason: ReportReason; details: string | null; created_at: string; listings: { title: string } | null }[]).map((r) => ({
+      id: r.id,
+      listingId: r.listing_id,
+      reason: r.reason,
+      details: r.details,
+      createdAt: r.created_at,
+      title: r.listings?.title ?? 'Anúncio',
+    }));
+  }
+
+  async resolveReport(id: string, resolution: string): Promise<void> {
+    fail((await this.sb.rpc('resolve_report', { p_report: id, p_resolution: resolution })).error, 'Não foi possível encerrar a denúncia');
+  }
+
+  /** Support staff only: listings waiting for approval and listings with open reports. */
+  async moderationQueue(): Promise<ModerationItem[]> {
+    const { data, error } = await this.sb.rpc('moderation_queue');
+    fail(error, 'Não foi possível ler a fila de moderação');
+    return ((data ?? []) as { id: string; org_name: string; title: string; reference_code: string | null; moderation: ModerationItem['moderation']; published: boolean; open_reports: number; reasons: ReportReason[]; since: string }[]).map((r) => ({
+      id: r.id,
+      orgName: r.org_name,
+      title: r.title,
+      referenceCode: r.reference_code,
+      moderation: r.moderation,
+      published: r.published,
+      openReports: Number(r.open_reports),
+      reasons: r.reasons ?? [],
+      since: r.since,
+    }));
+  }
+
+  /** Support staff only: approves, or refuses (also takes an approved listing off the air) with the reason. */
+  async moderateListing(id: string, ok: boolean, note = ''): Promise<void> {
+    fail((await this.sb.rpc('moderate_listing', { p_listing: id, p_ok: ok, p_note: note })).error, 'Não foi possível registrar a moderação');
+  }
+
+  /** Support staff only: whether the client's new listings wait for approval. */
+  async listingReview(orgId: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc('listing_review_of', { p_org: orgId });
+    fail(error, 'Não foi possível ler a aprovação prévia');
+    return !!data;
+  }
+
+  async setListingReview(orgId: string, on: boolean): Promise<void> {
+    const { data, error } = await this.sb.from('organizations').update({ listing_review: on }).eq('id', orgId).select('id');
+    fail(error, 'Não foi possível mudar a aprovação prévia');
+    if (!data?.length) throw new Error('Não foi possível mudar a aprovação prévia.');
   }
 
   /** Short-lived link to read a document of the private bucket (support staff and the agency's admins). */
@@ -1006,7 +1093,7 @@ export class RemoteBackend {
   async listingsTable(orgId: string, filter: ListingFilter = {}, offset = 0, limit = LISTINGS_PAGE): Promise<{ rows: ListingTableRow[]; total: number }> {
     let q = this.sb
       .from('my_listings')
-      .select('id, title, type, transaction, price, rent_price, availability, highlight, published, reference_code, created_by, updated_at, address', { count: 'exact' })
+      .select('id, title, type, transaction, price, rent_price, availability, highlight, published, reference_code, created_by, updated_at, address, moderation, moderation_note', { count: 'exact' })
       .eq('org_id', orgId);
     if (filter.state === 'published') q = q.eq('published', true);
     else if (filter.state === 'draft') q = q.eq('published', false);
@@ -1030,6 +1117,8 @@ export class RemoteBackend {
         createdBy: r.created_by,
         updatedAt: r.updated_at,
         bairro: r.address?.bairro ?? null,
+        moderation: r.moderation,
+        moderationNote: r.moderation_note,
       })),
       total: count ?? 0,
     };

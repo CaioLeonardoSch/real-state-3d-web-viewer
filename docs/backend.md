@@ -39,7 +39,11 @@ imobiliária (white label, item 12): 13/10/2026.
    [`importacao-xml.md`](importacao-xml.md)). Elas mandam o mesmo cadastro para ZAP e VivaReal
    em XML; ler esse arquivo evita cadastro duplicado e é o que faz uma imobiliária adotar o produto.
 9. **Favoritos, buscas salvas e alertas** de novos imóveis (e-mail ou push).
-10. **Moderação:** fila de aprovação, denúncias, histórico de alterações.
+10. **Moderação:** fila de aprovação, denúncias, histórico de alterações. **Feito em 17/10:** aprovação prévia por
+    cliente (`organizations.listing_review`, só a equipe muda), `listings.moderation` (em análise, aprovado,
+    recusado, com o motivo) aplicada por gatilho e no filtro de `public_listings`; `report_listing` para o
+    visitante, `listing_reports` lida pelos administradores do cliente, `moderation_queue` e `moderate_listing`
+    para a equipe. O histórico de alterações já existia (`audit_log`).
 11. **Métricas por cliente:** visualizações, cliques e contatos por anúncio (o relatório que justifica a assinatura).
     **Feito em 17/10:** `track_listing_view` conta a abertura do anúncio publicado (mapa ou site), uma vez por
     navegador por dia (hash do IP com sal + id aleatório do navegador, no máximo 20 por IP por anúncio por dia),
@@ -150,7 +154,7 @@ fotos diferentes. Num mapa 3D isso é pior do que numa lista: viram vários pino
 - Também dá para registrar **parceria** entre imobiliárias (venda compartilhada, comum no mercado): o anúncio mostra
   as duas e o lead chega às duas.
 
-**Regras de convivência:** denúncia de anúncio desatualizado ou já vendido, expiração automática sem atualização (por
+**Regras de convivência:** denúncia de anúncio desatualizado ou já vendido (**feita em 17/10**, ver §1 item 10), expiração automática sem atualização (por
 exemplo, 60 dias) e histórico de preço por imóvel. O histórico vira, com o tempo, um dado valioso.
 
 ## 6. Construtoras e incorporadoras

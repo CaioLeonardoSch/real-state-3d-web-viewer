@@ -192,6 +192,16 @@ export class AddListingPanel {
     set('referenceCode', l.referenceCode);
     (f.elements.namedItem('exclusive') as HTMLInputElement).checked = !!l.exclusive;
     this.el.querySelector<HTMLElement>('[data-exclusive]')!.hidden = !l.exclusive;
+    if (l.moderation) {
+      const notice = document.createElement('p');
+      notice.className = l.moderation.status === 'rejected' ? 'a-error' : 'a-hint';
+      notice.setAttribute('role', 'status');
+      notice.textContent =
+        l.moderation.status === 'rejected'
+          ? `O suporte recusou este anúncio${l.moderation.note ? `: ${l.moderation.note}` : ''}. Corrija e salve: ele volta para a análise.`
+          : 'Este anúncio aguarda a aprovação do suporte; só aparece no público depois.';
+      f.prepend(notice);
+    }
     const review = l.exclusivityReview;
     if (review) {
       const box = this.el.querySelector<HTMLElement>('[data-exclusive-status]')!;

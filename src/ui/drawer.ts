@@ -19,6 +19,7 @@ import { withPriceChange } from '../state/priceChange';
 import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
 import { escapeHtml, formatArea, formatBRL, parseNumberInput } from '../utils/format';
 import { captchaBox, formCaptcha } from '../backend/captcha';
+import { REPORT_REASONS, type ReportReason } from '../backend/mapping';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
 import { DEMO } from '../data/demo';
@@ -56,6 +57,8 @@ export interface ContactHandlers {
 export class Drawer {
   /** Set when a back end is configured. */
   contact: ContactHandlers | null = null;
+  /** Report about the listing (back end only); resolves to an error message or null. */
+  report: ((l: Listing, reason: ReportReason, details: string) => Promise<string | null>) | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
 
@@ -303,6 +306,7 @@ export class Drawer {
           : ''
       }
       ${this.leadFormHtml(l, agency)}
+      ${this.reportHtml(l)}
       ${
         l.approximateLocation
           ? `<p class="notice-approx">📍 Localização aproximada: a posição exata não é exibida; o círculo indica um raio de ~${l.approxRadiusM ?? 150} m.</p>`
@@ -378,6 +382,7 @@ export class Drawer {
     });
     this.bindGallery(l);
     this.bindLeadForm(l);
+    this.bindReport(l);
     wireFinancing(this.el);
     this.el.querySelector('.btn-whatsapp')?.addEventListener('click', () => {
       if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
@@ -471,6 +476,51 @@ export class Drawer {
       done.textContent = visit.visitOn
         ? `Pedido de visita enviado, ${v('name').split(' ')[0]}! A imobiliária vai confirmar o horário pelo contato que você deixou.`
         : `Mensagem enviada, ${v('name').split(' ')[0]}! A imobiliária vai responder pelo contato que você deixou.`;
+    });
+  }
+
+  /** "Denunciar": sold, outdated, wrong or fake listings of other advertisers (the support team reads them). */
+  private reportHtml(l: Listing): string {
+    if (!this.report || !l.remote || l.userAdded) return '';
+    return `<details class="report-box">
+      <summary>Denunciar este anúncio</summary>
+      <form class="report-form" novalidate>
+        <label class="a-field">Motivo<select name="reason">${(Object.keys(REPORT_REASONS) as ReportReason[])
+          .map((k) => `<option value="${k}">${REPORT_REASONS[k]}</option>`)
+          .join('')}</select></label>
+        <label class="a-field">Detalhes (opcional)<textarea name="details" rows="2" maxlength="1000"></textarea></label>
+        <p class="a-error" role="alert" hidden></p>
+        <button type="submit" class="btn-secondary">Enviar denúncia</button>
+      </form>
+      <p class="report-done" role="status" hidden>Obrigado! A denúncia vai para a imobiliária e para o suporte da plataforma.</p>
+    </details>`;
+  }
+
+  private bindReport(l: Listing): void {
+    const form = this.el.querySelector<HTMLFormElement>('.report-form');
+    if (!form || !this.report) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reason = (form.elements.namedItem('reason') as HTMLSelectElement).value as ReportReason;
+      const details = (form.elements.namedItem('details') as HTMLTextAreaElement).value.trim();
+      const err = form.querySelector<HTMLElement>('.a-error')!;
+      err.hidden = true;
+      if (reason === 'other' && !details) {
+        err.hidden = false;
+        err.textContent = 'Conte o que há de errado com o anúncio.';
+        return;
+      }
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      btn.disabled = true;
+      const error = await this.report!(l, reason, details).catch((ex: Error) => ex.message);
+      btn.disabled = false;
+      if (error) {
+        err.hidden = false;
+        err.textContent = error;
+        return;
+      }
+      form.hidden = true;
+      this.el.querySelector<HTMLElement>('.report-done')!.hidden = false;
     });
   }
 

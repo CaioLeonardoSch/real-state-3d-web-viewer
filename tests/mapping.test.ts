@@ -116,6 +116,12 @@ describe('exclusividade', () => {
     expect(rowToListing(row(ex), [], url, false).exclusivityReview).toBeUndefined();
     expect(rowToListing(row({ exclusive: true }), [], url, true).exclusivityReview).toBeUndefined();
   });
+  it('mostra a moderação pendente ou a recusa só nos anúncios da própria imobiliária', () => {
+    expect(rowToListing(row({ moderation: 'approved' }), [], url, true).moderation).toBeUndefined();
+    expect(rowToListing(row({ moderation: 'pending' }), [], url, true).moderation).toEqual({ status: 'pending' });
+    expect(rowToListing(row({ moderation: 'rejected', moderation_note: 'Fotos' }), [], url, true).moderation).toEqual({ status: 'rejected', note: 'Fotos' });
+    expect(rowToListing(row({ moderation: 'rejected' }), [], url, false).moderation).toBeUndefined();
+  });
   it('aceita PDF, JPG e PNG de até 10 MB', () => {
     expect(exclusivityDocProblem({ type: 'application/pdf', size: 1000 })).toBeNull();
     expect(exclusivityDocProblem({ type: 'image/webp', size: 1000 })).toMatch(/PDF, JPG ou PNG/);

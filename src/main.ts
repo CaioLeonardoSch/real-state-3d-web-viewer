@@ -638,6 +638,14 @@ async function main() {
       },
       whatsapp: (l) => backend.whatsappClick(l.id),
     };
+    drawer.report = async (l, reason, details) => {
+      try {
+        await backend.reportListing(l.id, reason, details);
+        return null;
+      } catch (err) {
+        return (err as Error).message.replace(/^Não foi possível enviar a denúncia: /, '');
+      }
+    };
     account.openListing = (id) => openListing(id, true);
   }
   if (embed?.page) {

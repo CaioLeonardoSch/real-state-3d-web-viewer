@@ -263,6 +263,69 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await staff.client.rpc('exclusivity_queue')).data.map((q: { id: string }) => q.id)).toContain(id);
   });
 
+  it('moderação: aprovação prévia ligada pelo suporte, recusa com motivo, nova análise ao corrigir', async () => {
+    // só a equipe liga a aprovação prévia (a dona edita a linha do cliente, mas não esta coluna)
+    expect((await carla.client.from('organizations').update({ listing_review: true }).eq('id', orgB)).error?.message).toMatch(/suporte/);
+    expect((await carla.client.rpc('listing_review_of', { p_org: orgB })).error).not.toBeNull();
+    expect((await staff.client.from('organizations').update({ listing_review: true }).eq('id', orgB)).error).toBeNull();
+    expect((await staff.client.rpc('listing_review_of', { p_org: orgB })).data).toBe(true);
+    try {
+      const l = await carla.client.from('listings').insert(listingRow(orgB, { moderation: 'approved' })).select('id, moderation').single();
+      const id = l.data!.id as string;
+      expect(l.data!.moderation).toBe('pending'); // o anunciante não se aprova
+      expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(0);
+      await carla.client.from('listings').update({ moderation: 'approved' }).eq('id', id);
+      expect((await carla.client.from('my_listings').select('moderation').eq('id', id).single()).data!.moderation).toBe('pending');
+      expect((await carla.client.rpc('moderate_listing', { p_listing: id, p_ok: true })).error?.message).toMatch(/suporte/);
+      expect((await carla.client.rpc('moderation_queue')).error).not.toBeNull();
+      expect((await staff.client.rpc('moderation_queue')).data.find((q: { id: string }) => q.id === id)).toMatchObject({ moderation: 'pending', open_reports: 0 });
+      expect((await staff.client.rpc('moderate_listing', { p_listing: id, p_ok: false })).error?.message).toMatch(/motivo/);
+      expect((await staff.client.rpc('moderate_listing', { p_listing: id, p_ok: false, p_note: 'Fotos de outro imóvel' })).error).toBeNull();
+      expect((await carla.client.from('my_listings').select('moderation, moderation_note').eq('id', id).single()).data).toEqual({ moderation: 'rejected', moderation_note: 'Fotos de outro imóvel' });
+      // corrigir volta para a análise; aprovar publica
+      await carla.client.from('listings').update({ title: 'Fotos corrigidas' }).eq('id', id);
+      expect((await carla.client.from('my_listings').select('moderation').eq('id', id).single()).data!.moderation).toBe('pending');
+      expect((await staff.client.rpc('moderate_listing', { p_listing: id, p_ok: true })).error).toBeNull();
+      expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(1);
+      // editar um aprovado não volta para a análise
+      await carla.client.from('listings').update({ title: 'Editado depois' }).eq('id', id);
+      expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(1);
+    } finally {
+      await staff.client.from('organizations').update({ listing_review: false }).eq('id', orgB);
+    }
+  });
+
+  it('denúncias: o visitante denuncia, a imobiliária e o suporte veem, e quem cuida encerra', async () => {
+    const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
+    const id = l.data!.id as string;
+    const visitor = anon();
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'other' })).error?.message).toMatch(/Conte/);
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'spam' })).error?.message).toMatch(/motivo/);
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'sold', p_details: 'Vendido mês passado' })).error).toBeNull();
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'outdated' })).error).toBeNull();
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'fraud' })).error).toBeNull();
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'sold' })).error?.message).toMatch(/várias denúncias/);
+    // o público não lê denúncias; o corretor e outra imobiliária também não; a dona lê sem a origem
+    expect((await anon().from('listing_reports').select('id')).data ?? []).toHaveLength(0);
+    expect((await bruno.client.from('listing_reports').select('id').eq('listing_id', id)).data).toHaveLength(0);
+    expect((await carla.client.from('listing_reports').select('id').eq('listing_id', id)).data).toHaveLength(0);
+    expect((await ana.client.from('listing_reports').select('origin_hash').eq('listing_id', id)).error).not.toBeNull();
+    const reports = await backendOf(ana).listingReports(orgA);
+    const mine = reports.filter((r) => r.listingId === id);
+    expect(mine.map((r) => r.reason)).toEqual(['sold', 'outdated', 'fraud']);
+    expect(mine[0]).toMatchObject({ details: 'Vendido mês passado', title: 'Apartamento de teste' });
+    const q = (await staff.client.rpc('moderation_queue')).data.find((x: { id: string }) => x.id === id);
+    expect(q).toMatchObject({ moderation: 'approved', open_reports: 3 });
+    expect(q.reasons.sort()).toEqual(['fraud', 'outdated', 'sold']);
+    expect((await bruno.client.rpc('resolve_report', { p_report: mine[0].id })).error).not.toBeNull();
+    await backendOf(ana).resolveReport(mine[0].id, 'Marcado como vendido');
+    expect((await backendOf(ana).listingReports(orgA)).map((r) => r.id)).not.toContain(mine[0].id);
+    // tirar do ar pelo suporte
+    expect((await staff.client.rpc('moderate_listing', { p_listing: id, p_ok: false, p_note: 'Anúncio falso' })).error).toBeNull();
+    expect((await anon().from('public_listings').select('id').eq('id', id)).data).toHaveLength(0);
+    expect((await visitor.rpc('report_listing', { p_listing: id, p_reason: 'fraud' })).error?.message).toMatch(/não encontrado/);
+  });
+
   it('lixeira: some do público, aparece na lixeira com quem excluiu, e pode ser restaurado', async () => {
     const l = await bruno.client.from('listings').insert(listingRow(orgA)).select('id').single();
     const id = l.data!.id;

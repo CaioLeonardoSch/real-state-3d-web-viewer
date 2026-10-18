@@ -225,6 +225,8 @@ export interface Listing {
   exclusivityDoc?: string;
   /** Result of the support team's check of that document (own listings). */
   exclusivityReview?: { status: 'pending' | 'verified' | 'refused'; note?: string };
+  /** Own listing waiting for the support team's approval, or refused by it (hidden from the public). */
+  moderation?: { status: 'pending' | 'rejected'; note?: string };
   // ---- control
   availability?: Availability;
   /** YYYY-MM-DD */

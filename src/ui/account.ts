@@ -7,6 +7,8 @@ import {
   type ListingFeed,
   type ListingStats,
   type ExclusivityItem,
+  type ListingReport,
+  type ModerationItem,
   type Lead,
   type LeadStatus,
   type Member,
@@ -18,6 +20,7 @@ import {
   type TotpSetup,
   type TrashItem,
 } from '../backend/remote';
+import { REPORT_REASONS } from '../backend/mapping';
 import { whatsappLink } from '../data/listingText';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
@@ -241,7 +244,13 @@ export class AccountPanel {
       ? await Promise.all([this.backend.members(this.org.id), this.backend.invitations(this.org.id)])
       : [[], []];
     // the support team's queue; a failure here must not hide the rest of the panel
-    const queue = this.staff ? await this.backend.exclusivityQueue().catch(() => null) : [];
+    const [queue, moderation, review] = this.staff
+      ? await Promise.all([
+          this.backend.exclusivityQueue().catch(() => null),
+          this.backend.moderationQueue().catch(() => null),
+          this.org ? this.backend.listingReview(this.org.id).catch(() => null) : Promise.resolve(null),
+        ])
+      : [[], [], null];
     // the invitation from the link, when it is for this account and not in the list yet
     let offers = [...this.pending];
     const link = this.linkInfo;
@@ -267,15 +276,17 @@ export class AccountPanel {
       ${this.org && this.hasDevelopments ? this.sectionHtml('mirror', 'Espelho de vendas') : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
+      ${this.org && canManage ? this.sectionHtml('reports', 'Denúncias dos visitantes') : ''}
       ${this.org && canManage ? this.sectionHtml('feed', 'Importação automática (XML)') : ''}
       ${this.org && canManage ? this.sectionHtml('audit', 'Histórico de alterações') : ''}
-      ${this.staff ? this.staffHtml() + this.exclusivityHtml(queue) : ''}
+      ${this.staff ? this.staffHtml() + this.moderationHtml(moderation, review) + this.exclusivityHtml(queue) : ''}
       ${canManage || this.staffMember || this.mfa.enabled ? this.mfaHtml() : ''}
       <div class="a-actions account-signout"><button type="button" class="btn-secondary" data-action="signout">Sair</button></div>`;
     this.teamMembers = members;
     this.bindClose();
     this.bindLoggedIn(members);
     this.bindExclusivity(queue ?? []);
+    this.bindModeration(moderation ?? []);
     this.bindMfa();
     this.bindSections();
   }
@@ -401,6 +412,7 @@ export class AccountPanel {
       else if (key === 'stats') await this.loadStats(body, more);
       else if (key === 'feed') this.renderFeed(body, await this.backend.listingFeed(this.org.id));
       else if (key === 'mirror') await this.loadMirror(body);
+      else if (key === 'reports') this.renderReports(body, await this.backend.listingReports(this.org.id));
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -687,7 +699,11 @@ export class AccountPanel {
         .map((v) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${labels[v]}</option>`)
         .join('')}</select></label>`;
     return `<li class="listing-row${r.published ? '' : ' is-draft'}" data-listing="${escapeHtml(r.id)}">
-      <div class="lead-head"><strong>${escapeHtml(r.title)}</strong>${r.published ? '' : '<span class="draft-badge">Rascunho</span>'}</div>
+      <div class="lead-head"><strong>${escapeHtml(r.title)}</strong>${r.published ? '' : '<span class="draft-badge">Rascunho</span>'}${
+        r.moderation === 'pending' ? '<span class="draft-badge">Em análise</span>' : r.moderation === 'rejected' ? '<span class="draft-badge">Recusado</span>' : ''
+      }</div>
+      ${r.moderation === 'rejected' && r.moderationNote ? `<p class="a-error small">Recusado pelo suporte: ${escapeHtml(r.moderationNote)}. Corrija e salve para nova análise.</p>` : ''}
+      ${r.moderation === 'pending' ? '<p class="muted small">Aguardando a aprovação do suporte; só aparece no público depois.</p>' : ''}
       <small class="muted">${facts.join(' · ')}</small>
       <div class="lead-controls">
         ${select('availability', 'Situação', AVAILABILITIES, AVAILABILITY_LABELS, r.availability)}
@@ -1177,6 +1193,98 @@ export class AccountPanel {
       <div class="org-result" hidden></div></section>`;
   }
 
+  /** Open reports from visitors about the client's listings, closed with what was done. */
+  private renderReports(body: HTMLElement, reports: (ListingReport & { title: string })[]): void {
+    if (!reports.length) {
+      body.innerHTML = '<p class="muted small">Nenhuma denúncia aberta.</p>';
+      return;
+    }
+    body.innerHTML = `<ul class="exclusivity-queue">${reports
+      .map(
+        (r) => `<li data-report="${escapeHtml(r.id)}">
+        <p><button type="button" class="link-btn" data-open="${escapeHtml(r.listingId)}">${escapeHtml(r.title)}</button><br>
+          <strong>${escapeHtml(REPORT_REASONS[r.reason])}</strong>${r.details ? `: ${escapeHtml(r.details)}` : ''}<br>
+          <span class="muted small">${new Date(r.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span></p>
+        <div class="a-actions"><button type="button" class="btn-secondary" data-resolve>Encerrar</button></div></li>`,
+      )
+      .join('')}</ul>`;
+    body.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) => b.addEventListener('click', () => this.openListing(b.dataset.open!)));
+    body.querySelectorAll<HTMLButtonElement>('[data-resolve]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const id = b.closest<HTMLElement>('li')!.dataset.report!;
+        const what = window.prompt('O que foi feito? (por exemplo: marcado como vendido, preço corrigido)');
+        if (what === null) return;
+        void this.act(b, async () => {
+          await this.backend.resolveReport(id, what);
+          await this.loadSection('reports');
+        });
+      }),
+    );
+  }
+
+  /** Support: listings waiting for approval or with open reports, and the client's prior approval switch. */
+  private moderationHtml(queue: ModerationItem[] | null, review: boolean | null): string {
+    const when = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
+    const body = !queue
+      ? '<p class="a-error">Não foi possível ler a fila agora.</p>'
+      : !queue.length
+        ? '<p class="muted small">Nenhum anúncio em análise ou com denúncia.</p>'
+        : `<ul class="exclusivity-queue moderation-queue">${queue
+            .map(
+              (q) => `<li data-listing="${escapeHtml(q.id)}">
+          <p><button type="button" class="link-btn" data-open="${escapeHtml(q.id)}">${escapeHtml(q.title)}</button>${
+            q.referenceCode ? ` · cód. ${escapeHtml(q.referenceCode)}` : ''
+          }<br><span class="muted small">${escapeHtml(q.orgName)} · desde ${when(q.since)}${
+            q.moderation === 'pending' ? ' · <strong>em análise</strong>' : q.moderation === 'rejected' ? ' · fora do ar' : ''
+          }${q.openReports ? ` · ${q.openReports} ${q.openReports === 1 ? 'denúncia' : 'denúncias'}: ${q.reasons.map((r) => escapeHtml(REPORT_REASONS[r])).join(', ')}` : ''}</span></p>
+          <div class="a-actions">
+            ${q.moderation !== 'approved' ? '<button type="button" class="btn-primary" data-moderate="ok">Aprovar</button>' : ''}
+            ${q.moderation !== 'rejected' ? `<button type="button" class="btn-secondary" data-moderate="no">${q.moderation === 'pending' ? 'Recusar com motivo' : 'Tirar do ar'}</button>` : ''}
+          </div></li>`,
+            )
+            .join('')}</ul>`;
+    const toggle =
+      this.org && review !== null
+        ? `<label class="a-check"><input type="checkbox" data-review-toggle ${review ? 'checked' : ''}> Anúncios novos de ${escapeHtml(this.org.name)} passam pela aprovação do suporte</label>`
+        : '';
+    return `<section class="account-section"><h3>Suporte: moderação${queue?.length ? ` (${queue.length})` : ''}</h3>
+      <p class="a-hint">Anúncios em análise ou recusados não aparecem no público. As denúncias abertas aparecem também para a imobiliária, que as encerra.</p>
+      ${toggle}${body}</section>`;
+  }
+
+  private bindModeration(queue: ModerationItem[]): void {
+    const toggle = this.el.querySelector<HTMLInputElement>('[data-review-toggle]');
+    toggle?.addEventListener('change', () => {
+      const on = toggle.checked;
+      void this.act(toggle, async () => {
+        await this.backend.setListingReview(this.org!.id, on);
+        this.note = on ? 'Os anúncios novos deste cliente passam pela aprovação.' : 'Aprovação prévia desligada para este cliente.';
+        await this.render();
+      });
+    });
+    this.el.querySelectorAll<HTMLLIElement>('.moderation-queue li').forEach((li) => {
+      const item = queue.find((q) => q.id === li.dataset.listing);
+      if (!item) return;
+      li.querySelector<HTMLButtonElement>('[data-open]')!.addEventListener('click', () => {
+        this.close();
+        this.openListing(item.id);
+      });
+      li.querySelectorAll<HTMLButtonElement>('[data-moderate]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const ok = b.dataset.moderate === 'ok';
+          const note = ok ? '' : (window.prompt(`Motivo para "${item.title}" (a imobiliária vai ler):`)?.trim() ?? '');
+          if (!ok && !note) return;
+          void this.act(b, async () => {
+            await this.backend.moderateListing(item.id, ok, note);
+            this.note = ok ? 'Anúncio aprovado.' : 'Anúncio fora do público; a imobiliária vê o motivo.';
+            this.onChange();
+            await this.render();
+          });
+        }),
+      );
+    });
+  }
+
   /** Support: exclusive listings whose authorisation document waits to be checked. */
   private exclusivityHtml(queue: ExclusivityItem[] | null): string {
     const when = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
@@ -1383,7 +1491,7 @@ export class AccountPanel {
   }
 
   /** A button/select action with a busy state; errors go to the panel's note. */
-  private async act(control: HTMLButtonElement | HTMLSelectElement, action: () => Promise<void>): Promise<void> {
+  private async act(control: HTMLButtonElement | HTMLSelectElement | HTMLInputElement, action: () => Promise<void>): Promise<void> {
     control.disabled = true;
     try {
       await action();

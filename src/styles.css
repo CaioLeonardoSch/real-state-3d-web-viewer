@@ -1043,6 +1043,23 @@ body[data-tod='night'] .price {
   font-weight: 600;
   font-size: 14px;
 }
+.report-box {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.report-box > summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.report-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.report-form[hidden],
+.report-form .a-error[hidden] {
+  display: none;
+}
 .lead-form {
   display: grid;
   gap: 8px;
