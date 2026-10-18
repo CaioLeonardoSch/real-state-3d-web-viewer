@@ -6,7 +6,7 @@
 // that publishes the new map, so a person looks at the changes before they go live.
 //
 //   node scripts/map-changes.mjs --old <previous.pmtiles> [--old-meta <previous meta.json>]
-//        [--new public/data/joinville.pmtiles] [--new-meta public/data/meta.json]
+//        [--new public/data/<região>.pmtiles] [--new-meta public/data/meta.json]
 //        [--listings public/data/listings.json] [--out report.md] [--json summary.json]
 import { existsSync } from 'node:fs';
 import { open, readFile, writeFile } from 'node:fs/promises';
@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
 import { PbfReader as Pbf } from 'pbf';
+import { REGION } from './lib/region.mjs';
 import { frame, polygonTester } from './lib/scenery.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -347,7 +348,7 @@ async function main() {
     console.error('Uso: node scripts/map-changes.mjs --old <mapa-anterior.pmtiles> [--old-meta meta-anterior.json] [--out relatorio.md] [--json resumo.json]');
     process.exit(2);
   }
-  const newFile = arg('new', path.join(ROOT, 'public', 'data', 'joinville.pmtiles'));
+  const newFile = arg('new', path.join(ROOT, 'public', 'data', `${REGION.id}.pmtiles`));
   const readJson = async (f) => (f && existsSync(f) ? JSON.parse(await readFile(f, 'utf8')) : null);
   const beforeMeta = await readJson(arg('old-meta', path.join(path.dirname(oldFile), 'meta.json')));
   const afterMeta = await readJson(arg('new-meta', path.join(path.dirname(newFile), 'meta.json')));

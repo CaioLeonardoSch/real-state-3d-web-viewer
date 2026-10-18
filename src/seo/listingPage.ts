@@ -4,6 +4,7 @@
 import type { Listing } from '../data/types.ts';
 import { photoSrcset } from '../utils/images.ts';
 import { AMENITY_LABELS, HIGHLIGHT_LABELS, STATUS_LABELS, TRANSACTION_LABELS, TYPE_LABELS, hasBedrooms, inBuilding, isCommercialType } from '../data/types.ts';
+import { REGION } from '../config/region.ts';
 
 export interface PageContext {
   /** Absolute URL of the site root, ending with "/". */
@@ -66,7 +67,7 @@ function shownAddress(l: Listing): { line: string | null; street?: string; local
   const street = display === 'neighborhood' ? undefined : display === 'full' ? [a.street, a.number].filter(Boolean).join(', ') || undefined : a.street;
   const locality = a.city ?? undefined;
   const line = [street, a.bairro, locality].filter(Boolean).join(' · ') || null;
-  return { line, street, locality, region: 'SC', ...(display === 'full' && a.cep ? { postal: a.cep } : {}) };
+  return { line, street, locality, region: REGION.uf, ...(display === 'full' && a.cep ? { postal: a.cep } : {}) };
 }
 
 export function description(l: Listing, agency: string): string {

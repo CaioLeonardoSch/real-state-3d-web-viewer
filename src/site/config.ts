@@ -2,6 +2,7 @@
 // (organizations.branding in the back end, public/data/sites.json in the demo), never as code: every value is
 // checked here before use, because any admin of a client can write it.
 import { SORT_KEYS, type SortKey } from '../state/sort.ts';
+import { REGION } from '../config/region.ts';
 
 export const TEMPLATES = ['leve', 'classico', 'lateral', 'escuro', 'moderno'] as const;
 export type Template = (typeof TEMPLATES)[number];
@@ -162,7 +163,7 @@ export function defaultSiteConfig(name = 'Sua imobiliária', template: Template 
     social: { instagram: '', facebook: '', youtube: '', linkedin: '', tiktok: '' },
     menu: ['venda', 'locacao', 'lancamentos', 'mapa', 'sobre', 'anunciar', 'contato'],
     home: {
-      title: 'Encontre o imóvel certo em Joinville',
+      title: `Encontre o imóvel certo em ${REGION.city}`,
       subtitle: 'Veja cada imóvel no mapa 3D da cidade: o prédio, a rua e o que tem por perto.',
       heroImage: '',
       sections: ['destaques', 'descontos', 'mapa', 'lancamentos', 'bairros', 'sobre', 'anunciar'],

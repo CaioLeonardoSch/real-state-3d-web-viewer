@@ -10,11 +10,12 @@ import { fileURLToPath } from 'node:url';
 import { LISTING_PAGE_CSS, pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
 import { rowToListing } from '../src/backend/mapping.ts';
 import { listingCsp, styleHash } from './lib/csp.mjs';
+import { REGION } from './lib/region.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, process.env.OUT_DIR || "dist");
 const SITE_URL = (process.env.SITE_URL || 'https://caioleonardosch.github.io/real-state-3d-web-viewer/').replace(/\/?$/, '/');
-const SITE_NAME = process.env.SITE_NAME || 'Joinville e região';
+const SITE_NAME = process.env.SITE_NAME || `${REGION.city} e região`;
 
 const listingsFile = JSON.parse(await readFile(path.join(DIST, 'data', 'listings.json'), 'utf8'));
 const agencyName = new Map(listingsFile.agencies.map((a) => [a.id, a.name]));

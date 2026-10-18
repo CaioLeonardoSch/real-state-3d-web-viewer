@@ -20,12 +20,14 @@ import { dirtRoad, pavingStones, waterFacets, type TextureImage } from './textur
 import { craneParts } from './crane';
 import { osmNumericId } from '../data/osmId';
 import interMedium from '@fontsource/inter/files/inter-latin-500-normal.woff2?url';
+import { REGION } from '../config/region';
 
 const OSM_ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL)';
 const MAPLIBRE_ATTRIBUTION = '<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a>';
-const CADASTRE_ATTRIBUTION =
-  'Alturas: <a href="https://www.joinville.sc.gov.br/servicos/acessar-sistema-de-informacoes-municipais-georreferenciadas-simgeo/" target="_blank" rel="noopener">cadastro da Prefeitura de Joinville (SIMGeo)</a>';
+const CADASTRE_ATTRIBUTION = REGION.cadastre
+  ? `Alturas: <a href="${REGION.cadastre.url}" target="_blank" rel="noopener">${REGION.cadastre.label.replace(/^Cadastro/, 'cadastro')}</a>`
+  : '';
 
 const LAND_HEIGHT_M = 0.5;
 const METERS_PER_FLOOR = 3;

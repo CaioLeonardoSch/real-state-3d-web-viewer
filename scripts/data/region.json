@@ -1,5 +1,15 @@
 {
   "id": "joinville",
   "name": "Joinville e Araquari",
-  "municipios": ["Joinville", "Araquari"]
+  "city": "Joinville",
+  "uf": "SC",
+  "utcOffset": "-03:00",
+  "municipios": ["Joinville", "Araquari"],
+  "osmExtract": "https://download.openstreetmap.fr/extracts/south-america/brazil/south/santa-catarina-latest.osm.pbf",
+  "cadastre": {
+    "source": "joinville-simgeo",
+    "label": "Cadastro imobiliário da Prefeitura de Joinville (SIMGeo)",
+    "url": "https://www.joinville.sc.gov.br/servicos/acessar-sistema-de-informacoes-municipais-georreferenciadas-simgeo/"
+  },
+  "maxFloors": 32
 }

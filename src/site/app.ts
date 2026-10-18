@@ -44,6 +44,7 @@ import { ICONS } from './icons';
 import { ROUTES, codeOf, listingPath, pageMeta, parsePath, routePath, type Route } from './routes';
 import { MAX_COMPARE, SavedLists } from './saved';
 import { bairroCounts, chipsOf, emptySearch, pageOf, queryToSearch, resultsTitle, runSearch, searchToQuery, type SiteSearch } from './search';
+import { REGION } from '../config/region';
 
 
 const $ = <T extends HTMLElement>(root: ParentNode, sel: string) => root.querySelector<T>(sel)!;
@@ -567,7 +568,7 @@ export class SiteApp {
       } else if (sec === 'mapa') {
         parts.push(`<section class="wrap home-sec"><a class="map-cta" href="${escapeHtml(this.searchHref({ ...base, view: 'mapa' }))}" data-nav>
           <span class="map-cta-icon">${ICONS.cube}</span>
-          <span><strong>Veja os imóveis no mapa 3D de Joinville</strong><span>Os prédios de verdade, a rua, o sol da manhã e da tarde, o que tem por perto. Coisa que fotos não mostram.</span></span>
+          <span><strong>Veja os imóveis no mapa 3D de ${escapeHtml(REGION.city)}</strong><span>Os prédios de verdade, a rua, o sol da manhã e da tarde, o que tem por perto. Coisa que fotos não mostram.</span></span>
           <span class="btn btn-primary">Abrir o mapa</span></a></section>`);
       } else if (sec === 'bairros') {
         const top = bairroCounts(all, false).slice(0, 8);
@@ -1273,7 +1274,7 @@ export class SiteApp {
   private about(main: HTMLElement): void {
     const c = this.config;
     this.setPage('sobre');
-    const paragraphs = (c.about.text || `A ${c.name} ajuda você a comprar, vender e alugar imóveis em Joinville.`).split(/\n+/).filter(Boolean);
+    const paragraphs = (c.about.text || `A ${c.name} ajuda você a comprar, vender e alugar imóveis em ${REGION.city}.`).split(/\n+/).filter(Boolean);
     main.innerHTML = `<div class="wrap narrow about">
       <h1>${escapeHtml(c.about.title)}</h1>
       ${c.about.image ? `<img class="about-img" src="${escapeHtml(c.about.image)}" alt="">` : ''}

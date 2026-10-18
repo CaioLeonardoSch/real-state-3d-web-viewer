@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Downloads the Santa Catarina OpenStreetMap extract (≈140 MB) to .cache/osm-pbf/ and checks its MD5.
+// Downloads the region's OpenStreetMap extract (region.json → osmExtract; Santa Catarina ≈140 MB) to .cache/osm-pbf/
+// and checks its MD5.
 // Source: OpenStreetMap France extracts (updated daily). Skips the download when the file is current.
 // Behind a proxy, Node's fetch needs NODE_USE_ENV_PROXY=1.
 import { createHash } from 'node:crypto';
@@ -9,11 +10,12 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
+import { REGION, osmFile } from './lib/region.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, '.cache', 'osm-pbf');
-const URL_ = 'https://download.openstreetmap.fr/extracts/south-america/brazil/south/santa-catarina-latest.osm.pbf';
-const FILE = path.join(DIR, 'santa-catarina-latest.osm.pbf');
+const URL_ = REGION.osmExtract;
+const FILE = osmFile();
 const UA = { 'User-Agent': 'real-state-3d-web-viewer-prototype/0.1 (+https://github.com/caioleonardosch/real-state-3d-web-viewer)' };
 
 const md5 = async (f) => createHash('md5').update(await readFile(f)).digest('hex');

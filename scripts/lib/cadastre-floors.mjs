@@ -1,8 +1,10 @@
 // Floors of the buildings of one lot from the city cadastre's built area. See scripts/estimate-heights.mjs.
 import turfArea from '@turf/area';
 import polygonClipping from 'polygon-clipping';
+import { REGION } from './region.mjs';
 
-export const MAX_FLOORS = 32; // Joinville's tallest buildings have ~30 floors
+/** Tallest building of the region, in floors (region.json; Joinville's tallest have ~30). */
+export const MAX_FLOORS = REGION.maxFloors ?? 32;
 export const MAIN_SHARE = 0.7;
 export const MIN_RATIO = 0.2;
 /** A tower (more than TOWER_FLOORS floors) needs a footprint of at least TOWER_MIN_AREA_M2. */

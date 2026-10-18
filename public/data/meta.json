@@ -1,6 +1,7 @@
 {
   "region": "joinville",
   "regionName": "Joinville e Araquari",
+  "city": "Joinville",
   "municipios": [
     "Joinville",
     "Araquari"

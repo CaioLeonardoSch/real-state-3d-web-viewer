@@ -42,6 +42,7 @@ import { makeThumb, photoVersions, resizeImage } from '../utils/images';
 import type { PickResult, Scene } from '../map/scene';
 import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type PlacementChecker } from '../utils/placement';
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
+import { REGION } from '../config/region';
 
 const METERS_PER_FLOOR = 3;
 const TYPE_SLUG: Record<ListingType, string> = {
@@ -312,7 +313,7 @@ export class AddListingPanel {
           ${field('Número', `<input name="number" maxlength="12">`)}
           ${field('Complemento', `<input name="complement" maxlength="40" placeholder="apto, bloco…">`)}
           ${field('Bairro *', `<input name="bairro" maxlength="60" placeholder="preenchido pelo mapa">`)}
-          ${field('Cidade', `<input name="city" maxlength="60" value="Joinville">`)}
+          ${field('Cidade', `<input name="city" maxlength="60" value="${escapeHtml(REGION.city)}">`)}
           <label class="a-field a-wide">Mostrar ao público<select name="addressDisplay">${options(ADDRESS_DISPLAYS, ADDRESS_DISPLAY_LABELS, 'street')}</select>
             <span class="a-hint">Sem o endereço completo, o mapa mostra um raio de ${APPROX_RADIUS_M} m em vez do prédio.</span></label>
         </fieldset>
@@ -429,7 +430,7 @@ export class AddListingPanel {
         if (d.erro) return void (status.textContent = 'CEP não encontrado. Preencha o endereço à mão.');
         const fill = (name: string, v?: string) => {
           const f = this.form.elements.namedItem(name) as HTMLInputElement;
-          if (v && (!f.value.trim() || (name === 'city' && f.value === 'Joinville'))) f.value = v;
+          if (v && (!f.value.trim() || (name === 'city' && f.value === REGION.city))) f.value = v;
         };
         fill('street', d.logradouro);
         fill('bairro', d.bairro);

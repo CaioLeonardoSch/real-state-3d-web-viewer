@@ -43,14 +43,14 @@ jobs:
       - name: Guarda o mapa publicado, para comparar
         run: |
           mkdir -p "$RUNNER_TEMP/anterior"
-          cp public/data/joinville.pmtiles public/data/meta.json "$RUNNER_TEMP/anterior/"
+          cp "public/data/$(node -p "require('./public/data/meta.json').tiles")" public/data/meta.json "$RUNNER_TEMP/anterior/"
 
-      - name: Baixa o OpenStreetMap (Santa Catarina)
+      - name: Baixa o OpenStreetMap (o extrato do estado, em scripts/data/region.json)
         run: npm run data:download
       - name: Recorta a região (prédios, ruas, água, verde, árvores, postes, bairros)
         run: npm run data:region
 
-      - name: Baixa o cadastro da Prefeitura (SIMGeo)
+      - name: Baixa o cadastro da Prefeitura (SIMGeo; região sem cadastro pula)
         # sem o cadastro as alturas cairiam para 6 m: se o servidor da Prefeitura estiver fora do ar, o job falha
         # aqui e nada muda; rode de novo mais tarde (Actions → Mapa mensal → Run workflow)
         run: npm run data:cadastre
@@ -67,7 +67,7 @@ jobs:
       - name: Relatório de mudanças
         id: relatorio
         run: |
-          npm run map:changes -- --old "$RUNNER_TEMP/anterior/joinville.pmtiles" --old-meta "$RUNNER_TEMP/anterior/meta.json" \
+          npm run map:changes -- --old "$RUNNER_TEMP/anterior/$(node -p "require('./public/data/meta.json').tiles")" --old-meta "$RUNNER_TEMP/anterior/meta.json" \
             --out "$RUNNER_TEMP/relatorio.md" --json "$RUNNER_TEMP/resumo.json"
           echo "mes=$(node -p "new Date(require('./public/data/meta.json').osmTimestamp).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric', timeZone: 'UTC' })")" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/relatorio.md" >> "$GITHUB_STEP_SUMMARY"
@@ -81,8 +81,7 @@ jobs:
           commit-message: 'Mapa de ${{ steps.relatorio.outputs.mes }}: OpenStreetMap e cadastro atualizados'
           body-path: ${{ runner.temp }}/relatorio.md
           add-paths: |
-            public/data/joinville.pmtiles
-            public/data/joinville-detalhe.pmtiles
+            public/data/*.pmtiles
             public/data/meta.json
             public/data/bairros.geojson
             public/data/bairros-areas.geojson

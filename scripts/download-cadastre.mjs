@@ -10,12 +10,20 @@
 //
 // The data is public, but no licence is stated: confirm the terms with SEPUR.UGP (simgeo@joinville.sc.gov.br)
 // before using it in a product.
+//
+// Only for a region whose region.json says "cadastre": { "source": "joinville-simgeo" }. Without a cadastre (another
+// city), it does nothing: the heights come from OSM alone (docs/nova-regiao.md).
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REGION } from './lib/region.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (REGION.cadastre?.source !== 'joinville-simgeo') {
+  console.log(`Região "${REGION.name}" sem cadastro da Prefeitura de Joinville: nada a baixar (alturas pelo OpenStreetMap).`);
+  process.exit(0);
+}
 const OUT = path.join(ROOT, '.cache', 'cadastre');
 const SERVER = 'https://geo.joinville.sc.gov.br/server/rest/services';
 const PAGE = 2000;

@@ -22,6 +22,7 @@ import turfCentroid from '@turf/centroid';
 import turfPointOnFeature from '@turf/point-on-feature';
 import turfArea from '@turf/area';
 import { computeRenderHeight, loadCadastreFloors } from './lib/height.mjs';
+import { REGION } from './lib/region.mjs';
 import { isResidentialBuilding } from './lib/residential.mjs';
 import { writePmtiles } from './lib/pmtiles-writer.mjs';
 import { clearings, cutCanopy, frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeShapes, urbanMask } from './lib/scenery.mjs';
@@ -286,7 +287,7 @@ const outMeta = {
     roadKmBySurface: Object.fromEntries(Object.entries(surfaceKm).map(([k, v]) => [k, Math.round(v * 10) / 10])),
   },
   heightSources: heightCounts.cadastre
-    ? ['OpenStreetMap', 'Cadastro imobiliário da Prefeitura de Joinville (SIMGeo): área construída por lote']
+    ? ['OpenStreetMap', `${REGION.cadastre.label}: área construída por lote`]
     : ['OpenStreetMap'],
 };
 await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + '\n');

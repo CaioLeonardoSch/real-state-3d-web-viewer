@@ -1,12 +1,13 @@
 import { getPosition } from 'suncalc';
+import { REGION } from '../config/region';
 
 export type TimeOfDay = 'morning' | 'afternoon' | 'night';
 
-/** Fixed reference date (March equinox 2026). Joinville uses UTC−03:00 (no DST since 2019). */
+/** Fixed reference date (March equinox 2026), in the region's local time (Joinville: UTC−03:00, no DST since 2019). */
 export const REFERENCE_TIMES: Record<TimeOfDay, string> = {
-  morning: '2026-03-20T09:00:00-03:00',
-  afternoon: '2026-03-20T15:00:00-03:00',
-  night: '2026-03-20T21:00:00-03:00',
+  morning: `2026-03-20T09:00:00${REGION.utcOffset}`,
+  afternoon: `2026-03-20T15:00:00${REGION.utcOffset}`,
+  night: `2026-03-20T21:00:00${REGION.utcOffset}`,
 };
 
 export interface SunInfo {

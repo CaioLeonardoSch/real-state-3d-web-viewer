@@ -420,9 +420,12 @@ Na primeira vez, marque em Settings → Actions → General → Workflow permiss
 create and approve pull requests". Cada mês acrescenta ~20 MB ao histórico do git. Quando pesar, publique o
 `.pmtiles` num armazenamento de objetos com nome por versão (veja `docs/backend.md`, item 13).
 
-**Para mudar a região**, edite a lista de bairros em `scripts/data/region.json` e rode `npm run data:region`,
-`data:tiles` e, se quiser imóveis nos novos bairros, `data:listings`. A cidade inteira funciona do mesmo jeito: o
-tamanho do `.pmtiles` cresce, mas o que cada visitante baixa continua sendo só o que está na tela.
+**Para mudar a região**, edite `scripts/data/region.json` (municípios, extrato do OSM, cidade, fuso, cadastro) e
+rode `npm run data:download`, `data:region`, `data:tiles` e, se quiser imóveis nos novos bairros, `data:listings`.
+O nome da cidade nos títulos, formulários e páginas sai desse arquivo. Outra cidade sem cadastro de alturas usa só
+o OSM; o passo a passo e o que ainda é de Joinville estão em [`docs/nova-regiao.md`](docs/nova-regiao.md). A cidade
+inteira funciona do mesmo jeito: o tamanho do `.pmtiles` cresce, mas o que cada visitante baixa continua sendo só o
+que está na tela.
 
 ## Estrutura
 

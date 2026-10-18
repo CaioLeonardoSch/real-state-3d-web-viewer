@@ -2,11 +2,9 @@
 """Cuts the map region (scripts/data/region.json) out of an OpenStreetMap extract (.osm.pbf).
 
 Usage:
-    python3 scripts/extract-region.py [path/to/santa-catarina-latest.osm.pbf]
+    python3 scripts/extract-region.py [path/to/extract.osm.pbf]
 
-Default input: .cache/osm-pbf/santa-catarina-latest.osm.pbf, from
-https://download.openstreetmap.fr/extracts/south-america/brazil/south/santa-catarina-latest.osm.pbf
-(see `npm run data:download`).
+Default input: the extract named in region.json (osmExtract), in .cache/osm-pbf/ (see `npm run data:download`).
 
 Writes GeoJSON to .cache/region/ (not versioned: tens of MB): bairros, boundary (union of the chosen
 neighbourhoods), buildings, roads (with surface and lighting tags), water, green (with its kind), trees and street
@@ -27,7 +25,8 @@ from shapely.prepared import prep
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 REGION = json.load(open(os.path.join(ROOT, 'scripts', 'data', 'region.json'), encoding='utf-8'))
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, '.cache', 'osm-pbf', 'santa-catarina-latest.osm.pbf')
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+    ROOT, '.cache', 'osm-pbf', os.path.basename(REGION['osmExtract'].split('?')[0]))
 OUT = os.path.join(ROOT, '.cache', 'region')
 
 # Tags kept on buildings: height rule (scripts/lib/height.mjs), residential rule (scripts/lib/residential.mjs) and
@@ -242,6 +241,7 @@ c = region.centroid
 meta = {
     'region': REGION['id'],
     'regionName': REGION['name'],
+    'city': REGION.get('city') or MUNIS[0],
     'municipios': MUNIS,
     'bairros': sorted({n for n, kind, _, _ in labels if kind == 'bairro'}),
     'source': os.path.basename(SRC),

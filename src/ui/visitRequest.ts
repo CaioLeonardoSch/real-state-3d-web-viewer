@@ -12,7 +12,7 @@ const PERIODS: [VisitPeriod | '', string][] = [
   ['noite', 'Noite'],
 ];
 
-/** Today in Joinville (America/Sao_Paulo) as YYYY-MM-DD, whatever the visitor's clock zone. */
+/** Today in Brasília time (America/Sao_Paulo, as the server checks it) as YYYY-MM-DD, whatever the visitor's clock zone. */
 export function todayInBrazil(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now);
 }

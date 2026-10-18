@@ -5,6 +5,7 @@
 import type { Listing } from '../data/types.ts';
 import { slugify } from '../seo/listingPage.ts';
 import { formatPhone, type SiteConfig } from './config.ts';
+import { REGION } from '../config/region.ts';
 
 export const ROUTES = ['inicio', 'imoveis', 'imovel', 'sobre', 'contato', 'anunciar', 'favoritos', 'comparar'] as const;
 export type Route = (typeof ROUTES)[number];
@@ -62,7 +63,7 @@ export function pageMeta(page: Exclude<Route, 'imovel'> | 'nao-encontrada' | 'im
   const intro = c.seo.description || c.home.subtitle || `Imóveis de ${c.name}.`;
   switch (page) {
     case 'inicio':
-      return { title: `${c.name} · Imóveis em Joinville`, description: intro };
+      return { title: `${c.name} · Imóveis em ${REGION.city}`, description: intro };
     case 'imoveis':
       return { title: `Imóveis à venda e para alugar · ${c.name}`, description: intro };
     case 'sobre':

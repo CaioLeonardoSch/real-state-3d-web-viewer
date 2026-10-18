@@ -11,8 +11,9 @@
 //     more than 4 floors on a footprint under 150 m² means the tower itself is not mapped in OSM: skip;
 //     more than 4 floors with under 70% of the outline inside the lot: matched to the wrong lot, skip;
 //   - several similar buildings (e.g. a condominium of houses): all get round(ratio) floors, at most 4;
-//   - at most 32 floors (Joinville's tallest have ~30); where the lot has a granted height (OODC), height ≤ it.
-// Skipped buildings keep the default height of the map (6 m).
+//   - at most region.json maxFloors (Joinville: 32, its tallest have ~30); where the lot has a granted height (OODC),
+//     height ≤ it.
+// Skipped buildings keep the default height of the map (6 m). A region without a cadastre gets an empty heights.json.
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,9 +23,16 @@ import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import turfPointOnFeature from '@turf/point-on-feature';
 import { METERS_PER_LEVEL, parseOsmNumber } from './lib/height.mjs';
 import { TOWER_FLOORS, TOWER_MIN_INSIDE, floorsForLot, shareInside } from './lib/cadastre-floors.mjs';
+import { CADASTRE_SOURCES, REGION } from './lib/region.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = async (...p) => JSON.parse(await readFile(path.join(ROOT, '.cache', ...p), 'utf8'));
+if (!CADASTRE_SOURCES.includes(REGION.cadastre?.source)) {
+  // no stale heights from another region
+  await writeFile(path.join(ROOT, '.cache', 'region', 'heights.json'), '{}');
+  console.log(`Região "${REGION.name}" sem cadastro: alturas só pelo OpenStreetMap (tags) ou 6 m.`);
+  process.exit(0);
+}
 const [buildings, lots, attrs, oodc] = await Promise.all([
   read('region', 'buildings.geojson'),
   read('cadastre', 'lotes.geojson'),

@@ -260,7 +260,8 @@ Interface · média · média (hipótese) · pequeno.
 ### Menores
 
 - **"Joinville" fixo** (`src/site/routes.ts:65`); o pipeline e o cadastro são específicos de Joinville. Outra cidade
-  é projeto de dados, não configuração [prioridade 29].
+  é projeto de dados, não configuração [prioridade 29]. **Feito em 17/10:** a região sai de
+  `scripts/data/region.json` (app e pipeline); ver `docs/nova-regiao.md`.
 - **Filtro do mapa base:** `contextFilter` (`scene.ts:449`) usa `in` com a lista literal de todos os prédios
   anunciados e é reaplicado a cada mudança de anúncios. A medir com milhares [prioridade 31].
 - **Pinos sem agrupamento:** com muitos anúncios próximos, eles se sobrepõem [prioridade 31].
