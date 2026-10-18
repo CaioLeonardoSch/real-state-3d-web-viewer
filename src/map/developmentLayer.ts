@@ -6,6 +6,7 @@ import turfDestination from '@turf/destination';
 import { point } from '@turf/helpers';
 import { countByStatus, type Development, type Level, type Unit } from '../data/developments';
 import { craneParts } from './crane';
+import { HeroWindowsLayer } from './heroWindows';
 
 /**
  * Developments on the map. Closed: one violet tower per development, with a label.
@@ -65,6 +66,8 @@ export class DevelopmentLayer {
   private markers: Marker[] = [];
   private viewing = false;
   private savedLimits: { maxZoom: number; maxPitch: number } | null = null;
+  /** Windows of the open tower, lit at night (item 48). */
+  readonly windows = new HeroWindowsLayer();
 
   constructor(
     private map: MlMap,
@@ -158,6 +161,7 @@ export class DevelopmentLayer {
         beforeLayer,
       );
     }
+    map.addLayer(this.windows, beforeLayer);
     this.addMarkers();
     this.bindInteractions();
   }
@@ -241,6 +245,19 @@ export class DevelopmentLayer {
     this.map.removeFeatureState({ source: 'dev-blocks' });
     (this.map.getSource('dev-blocks') as GeoJSONSource).setData(this.blockCollection());
     (this.map.getSource('dev-towers') as GeoJSONSource).setData(this.towerCollection());
+    const d = this.current;
+    const chosen = d && this.floor !== null ? d.levels.find((l) => l.level === this.floor) : undefined;
+    const above = new Set(chosen ? d!.levels.filter((l) => l.level > chosen.level).flatMap((l) => l.units.map((u) => u.id)) : []);
+    this.windows.setDevelopment(d ?? null, {
+      builtTop: d ? this.builtTop(d) : null,
+      skip: (u) => above.has(u.id) || (this.visibleUnits !== null && !this.visibleUnits(u)),
+    });
+    this.windows.setSelected(null);
+  }
+
+  /** Night: the windows of occupied units light up. */
+  setNight(night: boolean): void {
+    if (this.developments.length) this.windows.setNight(night);
   }
 
   // ---------------------------------------------------------------- markers
@@ -336,6 +353,7 @@ export class DevelopmentLayer {
     if (this.selectedBlock !== null) this.map.setFeatureState({ source: 'dev-blocks', id: this.selectedBlock }, { selected: false });
     this.selectedBlock = unitId ? (this.blockIdByUnit.get(unitId) ?? null) : null;
     if (this.selectedBlock !== null) this.map.setFeatureState({ source: 'dev-blocks', id: this.selectedBlock }, { selected: true });
+    this.windows.setSelected(unitId);
   }
 
   /** Highlights a unit hovered in the panel. */

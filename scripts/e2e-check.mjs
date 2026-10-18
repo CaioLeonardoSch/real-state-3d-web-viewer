@@ -1051,6 +1051,22 @@ async function main() {
       JSON.stringify(unitState));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-development-unit.png') });
 
+    // the open tower's windows (item 48): glass by day; at night the occupied units and the chosen one light up
+    const winDay = await page.evaluate(() => window.__demo.heroWindows());
+    await page.click('.time-of-day button:has-text("Noite")');
+    await sleep(600);
+    await waitIdle(page);
+    const winNight = await page.evaluate(() => window.__demo.heroWindows());
+    await page.screenshot({ path: path.join(SHOTS, 'desktop-development-night.png') });
+    await page.click('.time-of-day button:has-text("Manhã")');
+    await sleep(400);
+    await waitIdle(page);
+    const winBack = await page.evaluate(() => window.__demo.heroWindows());
+    check('the open tower has windows on its facades, lit at night for occupied units and dark again by day',
+      winDay.windows > 0 && winDay.lit === 0 && winDay.frames > 0 && winNight.windows === winDay.windows &&
+        winNight.lit > 0 && winNight.lit < winNight.windows && winNight.frames > winDay.frames && winBack.lit === 0,
+      `${JSON.stringify(winDay)} → ${JSON.stringify(winNight)} → ${JSON.stringify(winBack)}`);
+
     await page.check('#dev-panel input[name="onlyAvailable"]');
     await sleep(300);
     const outCount = await page.locator('#dev-panel button[data-unit].is-out').count();

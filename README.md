@@ -160,6 +160,13 @@ Cinco empreendimentos reais do bairro aparecem como torres violeta com um rótul
 - **Unidade** (clique na grade ou no prédio): fica azul, os andares de cima ficam translúcidos para o andar aparecer,
   e a ficha mostra planta, área, suítes, vagas, andar, **face e sol** (hemisfério sul: norte = sol a maior parte do
   dia, leste = manhã, oeste = tarde, sul = pouco sol direto), preço ilustrativo e R$/m².
+- **Janelas** (prédio aberto): cada unidade ganha janelas nas paredes de fachada (as que não divide com a vizinha),
+  uma a cada 3 m, do peitoril (0,9 m) à verga; **à noite acendem** as janelas das unidades vendidas e reservadas
+  (ocupadas) e da unidade escolhida. É uma camada customizada do MapLibre em WebGL puro (`src/map/heroWindows.ts`):
+  o `fill-extrusion` não tem textura por face, e o Three.js custaria uns 150 KB a mais para um shader e um buffer.
+  Andares translúcidos e os ainda não construídos ficam sem janelas.
+
+  ![Torre aberta à noite, com as janelas das unidades ocupadas acesas](docs/screenshots/desktop-development-night.png)
 - **"Ver a vista da janela"**: a câmera vai para fora da fachada da unidade, na altura do andar + 1,6 m, olhando na
   direção da face (`calculateCameraOptionsFromCameraLngLatAltRotation`, com zoom e inclinação máximos liberados só
   nessa vista). Esc volta.
@@ -719,8 +726,8 @@ A lista completa do que falta, em ordem de prioridade (com impacto, esforço, ri
 [`docs/prioridades.md`](docs/prioridades.md). A auditoria que a originou está em
 [`docs/auditoria-2026-10-17.md`](docs/auditoria-2026-10-17.md).
 
-- Modelo 3D detalhado de um prédio "hero" com janelas por unidade e janelas acesas à noite, com Three.js como camada
-  customizada do MapLibre (o `fill-extrusion` não suporta isso).
+- Prédio "hero" com o modelo da construtora (sacadas, caixilhos, materiais): hoje as janelas do prédio aberto são
+  retângulos nas fachadas, a partir das formas das unidades.
 - Dados de imóveis vindos de uma API, com paginação e URL compartilhável da busca.
 - Backend (contas, anúncios, fotos, leads, espelho de vendas) e hospedagem multi-cliente: ver
   [`docs/backend.md`](docs/backend.md).
@@ -793,7 +800,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - todo `buildingOsmId` existe e é residencial, sem as tags excluídas;
   - terrenos dentro do limite e sem interseção com prédios, vias, água ou verde;
   - círculos aproximados contêm o local real.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 110 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 111 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
   - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa
@@ -823,6 +830,8 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - "Alugar" lista os imóveis para aluguel com preço mensal e grava `?negocio=alugar`;
   - espelho com a identidade da incorporadora (dados fictícios): faixa com o nome nas cores dela, botões na cor
     principal, a letra escolhida e o link dos materiais;
+  - janelas da torre aberta: desenhadas nas fachadas de dia, sem nenhuma acesa; à noite acendem as das unidades
+    ocupadas (nem todas), e de dia apagam de novo;
   - "Anunciar pela unidade": num apartamento com 6 pavimentos e 3 unidades por andar a grade mostra 18 unidades;
     o clique na 402 a marca, preenche o andar e destaca a faixa da unidade no prédio;
   - "Anunciar": cadastro incompleto (sem CRECI) é recusado; casa num prédio cinza e terreno num espaço

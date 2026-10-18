@@ -886,6 +886,7 @@ async function main() {
       tod = next;
       scene.setTheme(themeFor(tod, lat, lon).theme);
       document.body.dataset.tod = tod;
+      devLayer?.setNight(tod === 'night');
     },
     // the hour-and-season ruler: the sun of that moment, with the colours of the matching button
     (season, minutes) => {
@@ -893,6 +894,7 @@ async function main() {
       tod = at.tod;
       scene.setTheme(at.theme);
       document.body.dataset.tod = tod;
+      devLayer?.setNight(tod === 'night');
       return tod;
     },
   );
@@ -925,6 +927,8 @@ async function main() {
     },
     'listing-pins-dimmed',
   );
+  // (the time of day may have changed while the map loaded)
+  devLayer.setNight((tod as TimeOfDay) === 'night');
   if (clipArea) devLayer.setHidden(new Set(developments.filter((d) => !inClip(d)).map((d) => d.id)));
   // Shared link: restore filters and the open listing, then normalise the URL (drops invalid params).
   applyUrl();
@@ -975,6 +979,8 @@ async function main() {
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     shadows: () => scene.shadowInfo,
     developmentIds: developments.map((d) => d.id),
+    /** Windows of the open tower drawn in the last frame (item 48). */
+    heroWindows: () => ({ ...devLayer?.windows.stats }),
     /** Name of the street lit by the search box, or null. */
     get highlightedStreet() {
       return litStreet?.name ?? null;
