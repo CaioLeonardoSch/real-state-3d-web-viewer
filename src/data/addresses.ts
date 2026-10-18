@@ -1,6 +1,5 @@
 // Address lookup of the "Anunciar imóvel" form: street + number → a point inside the lot, from the city cadastre
-// (public/data/enderecos.json, scripts/build-addresses.mjs). Also reads the coordinates of a Google Maps link or of a
-// typed "lat, lng", for an address the cadastre does not have.
+// (public/data/enderecos.json, scripts/build-addresses.mjs).
 
 /** enderecos.json as served. */
 export interface AddressFile {
@@ -133,38 +132,3 @@ const LOWER = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
 const titleCase = (s: string) =>
   s.toLowerCase().replace(/\S+/g, (w, i) => (i > 0 && LOWER.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
 const displayStreet = (cadastreName: string) => titleCase(cadastreName);
-
-/**
- * Coordinates in what the user pasted from Google Maps (or typed): "-26.30, -48.84", a link with "@lat,lng",
- * "q=lat,lng", "ll=", "query=", or the "!3d…!4d…" of a place link. Null when there are none (a short
- * maps.app.goo.gl link has none: it must be opened first).
- */
-export function parseCoordinates(text: string): [number, number] | null {
-  const t = decodeURIComponentSafe(text.trim());
-  const num = String.raw`(-?\d{1,3}(?:\.\d+)?)`;
-  const pats = [
-    new RegExp(String.raw`!3d${num}!4d${num}`),
-    new RegExp(String.raw`@${num},\s*${num}`),
-    new RegExp(String.raw`[?&](?:q|ll|query|destination|center|viewpoint|cbll)=${num},\s*${num}`),
-    new RegExp(String.raw`^${num}\s*[,;\s]\s*${num}$`),
-  ];
-  for (const p of pats) {
-    const m = p.exec(t);
-    if (!m) continue;
-    const lat = Number(m[1]);
-    const lng = Number(m[2]);
-    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat !== 0 || lng !== 0)) return [lng, lat];
-  }
-  return null;
-}
-
-function decodeURIComponentSafe(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
-
-/** Google Maps searching the address (opens in a new tab; no key needed, nothing of Google's is shown on our map). */
-export const googleMapsUrl = (query: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;

@@ -592,18 +592,17 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   por extenso e os números em palavras ("Av. Dr. João Colin", "R. XV de Novembro" e "29 de Novembro" acham o
   cadastro). Número ausente do cadastro usa o vizinho do mesmo lado da rua (até 40 números). Achado o lote, o mapa
   vai até lá e pega o prédio do OSM sob o ponto (ou o mais próximo a até 12 m), com as mesmas regras do clique.
-  - **Não achou**: o formulário pergunta se a pessoa quer **deixar uma localização aproximada** (no lote de número
-    mais próximo da rua, ou no bairro; o público vê o raio e o endereço sem número) ou **selecionar pelo Google Maps**:
-    o botão abre o Google Maps já buscando o endereço, em outra aba; lá (ou no Street View) a pessoa clica com o botão
-    direito no imóvel, copia as coordenadas e cola no campo, que também aceita o link da barra de endereço (`@lat,lng`,
-    `!3d…!4d…`, `?q=`). O link curto `maps.app.goo.gl` não traz coordenadas, e o formulário avisa. Não usamos a API
-    do Google: ela exige chave e conta de cobrança, e os termos dela proíbem mostrar o resultado num mapa que não
-    seja o do Google; abrir o site e copiar o ponto é grátis e não depende disso.
-  - **Prédio padrão**: se no ponto não há prédio no OpenStreetMap, o mapa desenha um volume padrão
+  - **Não achou**: o formulário pergunta se a pessoa quer **marcar o local no mapa** ou **deixar uma localização
+    aproximada**. "Marcar no mapa" leva o mapa até a rua digitada (o lote de número mais próximo no cadastro, ou a rua
+    na lista de ruas do mapa) e espera um clique: no prédio, ou no terreno se o prédio não aparece. A aproximada fica
+    nesse mesmo ponto (ou no bairro); o público vê o raio e o endereço sem número. Achado o endereço, "Marcar no
+    mapa" continua ali para corrigir o ponto. Seleção pelo Google Maps dentro do site fica para depois: precisa da
+    API do Google (chave e conta de cobrança, e os termos limitam o uso com outro mapa).
+  - **Prédio padrão**: se no ponto (achado ou clicado) não há prédio no OpenStreetMap, o mapa desenha um volume padrão
     (`src/map/syntheticBuilding.ts`): casa com a área do anúncio (ou a construída do cadastro), em 1 ou 2 pavimentos;
     apartamento, sala ou loja com os andares do formulário (4 se não informados); galpão de 8 m. O id é
     `sintetico/<lng>,<lat>`, então outro anúncio no mesmo endereço (outra unidade) cai no mesmo prédio. A ficha avisa
-    "Prédio ilustrativo".
+    "Prédio ilustrativo". Como um lote, ele não pode encostar em prédio, via, água ou área verde do mapa.
 - **Anunciar pela unidade**: num apartamento, informados os pavimentos e as **unidades por andar** (até 12), o
   formulário mostra a grade do prédio, do último andar ao primeiro, com o número de cada unidade ("402" = 4º andar,
   2º final). Clicar numa unidade preenche o andar, e o mapa destaca só ela, no andar dela, com o resto do prédio

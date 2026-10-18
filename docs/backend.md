@@ -199,7 +199,7 @@ O formulário do protótipo já tem o cadastro completo (negócio, imóvel, ende
 README). O que muda com backend:
 
 - **Local sem clique no mapa (item 51, feito em 18/10):** rua e número são achados no cadastro da Prefeitura, no
-  navegador (`public/data/enderecos.json`), ou num ponto colado do Google Maps. Sem prédio no OpenStreetMap, o
+  navegador (`public/data/enderecos.json`), ou o local é marcado no mapa, que vai até a rua digitada. Sem prédio no OpenStreetMap, o
   anúncio guarda um prédio padrão: `building_osm_id` = `sintetico/<lng>,<lat>` e o contorno gerado em `footprint`.
   O banco não muda: as regras de prédio por anúncio e de unidade valem igual para esse id.
 - **Fotos e planta** vão para o storage (R2/Supabase) com miniaturas; no protótipo ficam reduzidas no `localStorage`.

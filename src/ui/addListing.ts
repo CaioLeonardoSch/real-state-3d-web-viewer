@@ -45,8 +45,8 @@ import { APPROX_RADIUS_M, approxCenterFor, lotRectangle, lotSize, type Placement
 import { escapeHtml, formatArea, parseNumberInput } from '../utils/format';
 import { REGION } from '../config/region';
 import { exclusivityDocProblem } from '../backend/mapping';
-import { googleMapsUrl, locateAddress, parseCoordinates, type Located } from '../data/addresses';
-import { loadAddresses } from '../data/load';
+import { locateAddress, streetKey, type Located } from '../data/addresses';
+import { loadAddresses, loadStreets } from '../data/load';
 import { isSynthetic, syntheticBuilding } from '../map/syntheticBuilding';
 
 const METERS_PER_FLOOR = 3;
@@ -364,14 +364,9 @@ export class AddListingPanel {
             <div class="a-locate-more" hidden>
               <p class="a-locate-ask"></p>
               <div class="a-locate-actions">
+                <button type="button" class="btn-primary" data-action="mark">Marcar no mapa</button>
                 <button type="button" class="btn-secondary" data-action="approx">Deixar localização aproximada</button>
-                <a class="btn-secondary" data-gmaps target="_blank" rel="noopener noreferrer">Selecionar pelo Google Maps ↗</a>
               </div>
-              <label class="a-field a-wide">Ponto escolhido no Google Maps
-                <span class="a-coords"><input name="gmapsPoint" placeholder="cole o link ou as coordenadas, ex.: -26.30442, -48.84612" autocomplete="off">
-                <button type="button" class="btn-secondary" data-action="use-point">Usar este ponto</button></span></label>
-              <p class="a-hint">No Google Maps (ou no Street View), clique com o botão direito no imóvel (no celular, toque e segure):
-                as coordenadas aparecem no alto; clique nelas para copiar e cole aqui. Também vale o link da barra de endereço.</p>
             </div>
           </div>
         </fieldset>
@@ -434,12 +429,7 @@ export class AddListingPanel {
     this.el.querySelector('[data-action="pick"]')!.addEventListener('click', () => this.startPick());
     this.el.querySelector('[data-action="locate"]')!.addEventListener('click', () => void this.locate());
     this.el.querySelector('[data-action="approx"]')!.addEventListener('click', () => void this.useApprox());
-    this.el.querySelector('[data-action="use-point"]')!.addEventListener('click', () => void this.usePastedPoint());
-    input('gmapsPoint').addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-      void this.usePastedPoint();
-    });
+    this.el.querySelector('[data-action="mark"]')!.addEventListener('click', () => this.startPick(this.markPoint));
     this.el.querySelector('[data-action="cancel-pick"]')!.addEventListener('click', () => this.cancelPick());
     input('type').addEventListener('change', () => {
       // offices, stores and warehouses are commercial; a change back to a home goes back to residential
@@ -630,15 +620,17 @@ export class AddListingPanel {
 
   // ------------------------------------------------------------------ choosing the place
 
-  private startPick(): void {
+  /** `near`: a point to fly to first (the street of an address the cadastre does not have). */
+  private startPick(near: [number, number] | null = null): void {
     this.showError(null);
     const land = this.type === 'land';
     if (land && !this.lotArea()) return this.showError('Informe a área do lote antes de escolher o local.');
+    if (near) this.deps.scene.flyToPoint(near);
     this.el.classList.add('picking');
     this.el.querySelector<HTMLElement>('.a-picking')!.hidden = false;
     this.el.querySelector('.a-picking-hint')!.textContent = land
       ? 'Clique num espaço livre do mapa, sem prédios, ruas ou áreas verdes. O lote será desenhado no ponto clicado.'
-      : 'Clique num prédio cinza do mapa (residencial e sem outro anúncio).';
+      : 'Clique no prédio do imóvel. Se ele não aparece no mapa, clique no terreno dele: desenhamos um prédio padrão.';
     this.deps.scene.startPicking((p) => this.onPick(p));
   }
 
@@ -664,8 +656,7 @@ export class AddListingPanel {
       const problem = this.tryLot(p.lngLat);
       if (problem) return this.pickHint(problem);
     } else {
-      if (!p.building) return this.pickHint('Aí não há prédio disponível. Clique num prédio cinza (os laranja já estão à venda).');
-      const problem = this.useBuilding(p.building);
+      const problem = this.placeFromHit(p.lngLat, p, 0);
       if (problem) return this.pickHint(problem);
     }
     this.deps.scene.stopPicking();
@@ -695,20 +686,30 @@ export class AddListingPanel {
     el.classList.toggle('is-error', error);
   }
 
-  /** The choices when the address is not found (or the user wants another point): approximate, or Google Maps. */
-  private showLocateChoices(ask: string | null, approx: [number, number] | null): void {
+  /**
+   * The choices after a lookup: mark the place on our map (flying first to `mark`, the street when known) or, when
+   * `approx` is given, leave an approximate place.
+   */
+  private showLocateChoices(ask: string | null, mark: [number, number] | null, approx: [number, number] | null = null): void {
     const box = this.el.querySelector<HTMLElement>('.a-locate-more')!;
     box.hidden = ask === null;
     if (ask === null) return;
     this.el.querySelector('.a-locate-ask')!.textContent = ask;
+    this.markPoint = mark;
     this.approxPoint = approx;
     this.el.querySelector<HTMLButtonElement>('[data-action="approx"]')!.hidden = !approx;
-    const a = this.address();
-    const query = [[a.street, a.number].filter(Boolean).join(', '), a.bairro, a.city || REGION.city].filter(Boolean).join(' - ');
-    this.el.querySelector<HTMLAnchorElement>('[data-gmaps]')!.href = googleMapsUrl(query);
   }
 
+  private markPoint: [number, number] | null = null;
   private approxPoint: [number, number] | null = null;
+
+  /** A point on the typed street from the map's street list (OpenStreetMap), for a street the cadastre lacks. */
+  private async streetPoint(street: string, bairro: string): Promise<[number, number] | null> {
+    const key = streetKey(street);
+    const rows = (await loadStreets().catch(() => [])).filter((s) => streetKey(s.name) === key);
+    const fold = (b: string) => streetKey(b);
+    return (rows.find((s) => bairro && fold(s.bairro) === fold(bairro)) ?? rows[0])?.point ?? null;
+  }
 
   private address() {
     return { street: this.value('street'), number: this.value('number'), bairro: this.value('bairro'), city: this.value('city') };
@@ -730,17 +731,20 @@ export class AddListingPanel {
     }
     if (req !== this.locateRequest) return;
     if (found.kind !== 'found') {
-      const approx = found.kind === 'no-number' ? found.near : a.bairro ? this.deps.bairroPoint(a.bairro) : null;
+      const onStreet = found.kind === 'no-number' ? found.near : await this.streetPoint(a.street, a.bairro);
+      if (req !== this.locateRequest) return;
+      const approx = onStreet ?? (a.bairro ? this.deps.bairroPoint(a.bairro) : null);
       this.locateStatus(
         found.kind === 'no-number'
           ? `O cadastro da Prefeitura tem a ${found.street}, mas não o número ${number}.`
-          : 'Não achamos essa rua no cadastro da Prefeitura.',
+          : 'Não achamos esse endereço no cadastro da Prefeitura.',
         true,
       );
       return this.showLocateChoices(
         approx
-          ? 'Quer deixar uma localização aproximada (o mapa mostra um raio, não o prédio) ou selecionar o ponto pelo Google Maps?'
-          : 'Selecione o ponto pelo Google Maps, ou informe o bairro para deixar uma localização aproximada.',
+          ? `Quer marcar o local no mapa${onStreet ? ' (ele vai até a rua)' : ''} ou deixar uma localização aproximada (o público vê um raio, sem o prédio)?`
+          : 'Marque o local no mapa, ou informe o bairro para deixar uma localização aproximada.',
+        approx,
         approx,
       );
     }
@@ -751,33 +755,14 @@ export class AddListingPanel {
     if (req !== this.locateRequest) return;
     if (problem) {
       this.locateStatus(`Achamos ${where} no cadastro, mas: ${problem}`, true);
-      return this.showLocateChoices('Selecione outro ponto pelo Google Maps, ou escolha no mapa.', null);
+      return this.showLocateChoices('Marque o local no mapa: ele já está na rua.', found.point);
     }
     this.locateStatus(
       found.exact
         ? `✓ ${where}, pelo cadastro da Prefeitura. Confira no mapa.`
         : `✓ O número ${number} não está no cadastro; usamos o vizinho, ${where}. Confira no mapa.`,
     );
-    this.showLocateChoices('Não é esse o lugar? Selecione o ponto certo pelo Google Maps.', null);
-  }
-
-  /** Coordinates pasted from Google Maps (link or "lat, lng"). */
-  private async usePastedPoint(): Promise<void> {
-    const text = this.value('gmapsPoint');
-    const point = parseCoordinates(text);
-    if (!point)
-      return this.locateStatus(
-        /goo\.gl|maps\.app/.test(text)
-          ? 'Esse link curto não traz as coordenadas: abra-o, e copie as coordenadas ou o link da barra de endereço.'
-          : 'Não achamos coordenadas aí. Cole algo como -26.30442, -48.84612 ou o link do Google Maps.',
-        true,
-      );
-    const req = ++this.locateRequest;
-    this.locateStatus('Levando o anúncio ao ponto escolhido…');
-    const problem = await this.placeAt(point, 0);
-    if (req !== this.locateRequest) return;
-    if (problem) return this.locateStatus(problem, true);
-    this.locateStatus('✓ Ponto do Google Maps marcado no mapa. Confira.');
+    this.showLocateChoices('Não é esse o lugar? Marque o certo no mapa.', found.point);
   }
 
   /** Approximate place: the street or the bairro; the map shows a circle, never a building. */
@@ -806,18 +791,30 @@ export class AddListingPanel {
       this.deps.scene.flyToPoint(point);
       return this.tryLot(point) ? 'o lote não cabe nesse ponto (há prédio, rua ou área verde). Escolha no mapa.' : null;
     }
-    const num = (name: string) => parseNumberInput(this.value(name));
-    const standard = () => {
-      const s = syntheticBuilding(point, this.type, num('areaM2'), num('floors'), builtM2);
-      const center = turfCentroid({ type: 'Feature', properties: {}, geometry: s.geometry }).geometry.coordinates as [number, number];
-      this.setPlace({ kind: 'building', osmId: s.osmId, center, geometry: s.geometry, height: s.height, ...(approx ? { approx: true as const } : {}) });
-    };
     if (approx) {
       this.deps.scene.flyToPoint(point);
-      standard();
+      this.standardBuilding(point, 0, true);
       return null;
     }
-    const at = await this.deps.scene.buildingAt(point);
+    return this.placeFromHit(point, await this.deps.scene.buildingAt(point), builtM2);
+  }
+
+  /**
+   * A standard building drawn at the point (OpenStreetMap does not have the building). Like a lot, it must not touch
+   * a mapped building, road, water or green area (an approximate one is never drawn, so it is not checked).
+   */
+  private standardBuilding(point: [number, number], builtM2: number, approx = false): string | null {
+    const num = (name: string) => parseNumberInput(this.value(name));
+    const s = syntheticBuilding(point, this.type, num('areaM2'), num('floors'), builtM2);
+    const problem = approx ? null : this.deps.checker.lotProblem(s.geometry, this.deps.otherLots(this.editing?.id));
+    if (problem) return problem.replace('O terreno encostaria', 'O prédio padrão encostaria').replace('O terreno precisa', 'O prédio precisa');
+    const center = turfCentroid({ type: 'Feature', properties: {}, geometry: s.geometry }).geometry.coordinates as [number, number];
+    this.setPlace({ kind: 'building', osmId: s.osmId, center, geometry: s.geometry, height: s.height, ...(approx ? { approx: true as const } : {}) });
+    return null;
+  }
+
+  /** The place for what is at a point: another listing's building, a map building, or a standard one. */
+  private placeFromHit(point: [number, number], at: { building?: PickResult['building']; listingId?: string }, builtM2: number): string | null {
     if (at.listingId) {
       // the building of another listing (a unit of it, or a standard building drawn earlier)
       const other = at.listingId === this.editing?.id ? this.editing : this.deps.listingById(at.listingId);
@@ -829,8 +826,7 @@ export class AddListingPanel {
       }
     }
     if (at.building) return this.useBuilding(at.building);
-    standard();
-    return null;
+    return this.standardBuilding(point, builtM2);
   }
 
   private lotArea(): number | null {

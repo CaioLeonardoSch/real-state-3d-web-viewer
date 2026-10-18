@@ -111,6 +111,8 @@ export interface PickResult {
   lngLat: [number, number];
   /** Context building under the click, if any (buildings of existing listings are not pickable). */
   building?: { osmId: string; residential: boolean; height: number; geometry: Polygon | MultiPolygon };
+  /** The click fell on a listing's building (a unit of it may still be listed, or a standard building drawn earlier). */
+  listingId?: string;
   /** Buildings are only pickable up close (3D, zoom ≥ Z_3D_START). */
   tooFar?: boolean;
 }
@@ -1244,7 +1246,9 @@ export class Scene {
         if (this.map.getZoom() < Z_3D_START) return this.onPick({ lngLat, tooFar: true });
         const b = this.map.queryRenderedFeatures(e.point, { layers: ['context-buildings'] })[0];
         const building = b && pickedBuilding(b);
-        this.onPick({ lngLat, ...(building ? { building } : {}) });
+        const listed = this.queryListing(e.point);
+        const listingId = listed && listed.properties.kind !== 'approx' ? String(listed.properties.listingId) : undefined;
+        this.onPick({ lngLat, ...(building ? { building } : {}), ...(listingId ? { listingId } : {}) });
         return;
       }
       this.events.onListingHover?.(null);
