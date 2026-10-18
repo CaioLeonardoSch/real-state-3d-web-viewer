@@ -729,6 +729,34 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     }, 30_000);
   });
 
+  it('um banco para todos os clientes, sem cruzar: o layout do prédio fica com quem o informou e o mapa da plataforma não lista ninguém', async () => {
+    const osm = `way/8${Date.now() % 1e9}`;
+    const ins = await bruno.client
+      .from('listings')
+      .insert(listingRow(orgA, { building_osm_id: osm, floors: 9, units_per_floor: 4, unit_floor: 2, unit_position: 1, address_display: 'full', published: true }))
+      .select('id')
+      .single();
+    expect(ins.error).toBeNull();
+    const read = (u: User) => u.client.from('building_layouts').select('floors, units_per_floor').eq('osm_id', osm);
+    expect((await read(ana)).data).toEqual([{ floors: 9, units_per_floor: 4 }]);
+    expect((await read(carla)).data).toEqual([]);
+    expect((await anon().from('building_layouts').select('floors').eq('osm_id', osm)).error).not.toBeNull();
+    // a B informa o mesmo prédio de outro jeito: cada uma guarda o seu
+    const insB = await carla.client
+      .from('listings')
+      .insert(listingRow(orgB, { building_osm_id: osm, floors: 12, units_per_floor: 2, unit_floor: 5, unit_position: 2, address_display: 'full', published: true }))
+      .select('id')
+      .single();
+    expect(insB.error).toBeNull();
+    expect((await read(ana)).data).toEqual([{ floors: 9, units_per_floor: 4 }]);
+    expect((await read(carla)).data).toEqual([{ floors: 12, units_per_floor: 2 }]);
+    // map_listings só responde por um cliente
+    expect((await anon().rpc('map_listings')).data).toEqual([]);
+    const ofA = ((await anon().rpc('map_listings', { p_org: orgA })).data ?? []) as { org_id: string }[];
+    expect(ofA.every((r) => r.org_id === orgA)).toBe(true);
+    await service().from('listings').delete().in('id', [ins.data!.id, insB.data!.id]);
+  });
+
   describe('obra em andamento', () => {
     it('o anunciante informa os andares construídos; o público vê; a origem não pode ser forjada; o histórico guarda o mês', async () => {
       const ins = await bruno.client

@@ -268,22 +268,28 @@ try {
     saved.photo.startsWith('http://127.0.0.1:54321/storage/v1/object/public/listing-photos/') && saved.pos === '1/2', JSON.stringify(saved));
   const id = new URLSearchParams(saved.url).get('imovel');
 
-  // ---- the public (another browser, not logged in)
-  const visitor = await open(browser);
+  // ---- the public (another browser, not logged in). One database for every client, each one isolated: the platform's
+  // map lists no client's listings (another client would see them); the visitor finds it on the client's own site.
+  const orgId = (await svc.from('listings').select('org_id').eq('id', id).single()).data.org_id;
+  const platform = await open(browser);
+  const onPlatform = await platform.page.evaluate((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id);
+  const viaRpc = (await createClient(status.API_URL, status.ANON_KEY, { auth: { persistSession: false } }).rpc('map_listings')).data;
+  await platform.ctx.close();
+  check('o mapa da plataforma não mostra os anúncios dos clientes ao público (nem map_listings sem o cliente)',
+    !onPlatform && Array.isArray(viaRpc) && viaRpc.length === 0, JSON.stringify({ onPlatform, viaRpc: viaRpc?.length }));
+  const visitor = await open(browser, `${URL_}?embed=1&site=${orgId}&imovel=${id}`);
+  await detailReady(visitor.page);
   const pub = await visitor.page.evaluate((id) => ({
     rows: document.querySelectorAll('#results button[data-id]').length,
     has: !!document.querySelector(`#results button[data-id="${id}"]`),
   }), id);
-  await visitor.page.click(`#results button[data-id="${id}"]`);
-  await sleep(600);
-  await detailReady(visitor.page);
   const pubDrawer = await visitor.page.evaluate(() => ({
     address: document.querySelector('#drawer .drawer-address')?.textContent,
     mine: !!document.querySelector('#drawer .badge-user'),
     manage: !!document.querySelector('#drawer .manage'),
     whatsapp: !!document.querySelector('#drawer .btn-whatsapp'),
   }));
-  check('o visitante vê o anúncio publicado, sem ferramentas de gestão', pub.has && pub.rows === before + 1 && /Rua do Teste, 123/.test(pubDrawer.address ?? '') &&
+  check('no mapa do site da imobiliária, o visitante vê o anúncio publicado, sem ferramentas de gestão', pub.has && pub.rows === 1 && /Rua do Teste, 123/.test(pubDrawer.address ?? '') &&
     !pubDrawer.mine && !pubDrawer.manage && pubDrawer.whatsapp, JSON.stringify({ ...pub, ...pubDrawer }));
 
   // ---- the visitor sends a message and clicks WhatsApp; the broker gets it
@@ -390,8 +396,6 @@ try {
   check('baixar o preço gera o preço riscado e o histórico (pelo servidor)', /880\.000/.test(managed.was ?? '') && managed.cut === '−9%' && managed.history === 2, JSON.stringify(managed));
   await visitor.page.reload();
   await visitor.page.waitForSelector('body[data-ready="true"]');
-  await visitor.page.click(`#results button[data-id="${id}"]`);
-  await sleep(600);
   await detailReady(visitor.page);
   const pubCut = await visitor.page.evaluate(() => ({
     was: document.querySelector('#drawer .price-was s')?.textContent,
@@ -424,8 +428,6 @@ try {
     JSON.stringify({ editPhotos, ...editedMine, files: files.data?.map((f) => f.name) }));
   await visitor.page.reload();
   await visitor.page.waitForSelector('body[data-ready="true"]');
-  await visitor.page.click(`#results button[data-id="${id}"]`);
-  await sleep(600);
   await detailReady(visitor.page);
   const pubEdited = await visitor.page.evaluate(() => ({
     title: document.querySelector('#drawer h2')?.textContent,
@@ -436,23 +438,25 @@ try {
     pubEdited.title === 'Casa editada no backend' && /Rua do Teste/.test(pubEdited.address ?? '') && !/123/.test(pubEdited.address ?? '') && pubEdited.approx,
     JSON.stringify(pubEdited));
 
-  // ---- building layout (item 45): only a published listing with the full address records it, readable by anyone
+  // ---- building layout (item 45): only a published listing with the full address records it, kept per client and read
+  // only by its members (another client, and the public, never see it)
   {
     const anon = createClient(status.API_URL, status.ANON_KEY, { auth: { persistSession: false } });
     const osm = `way/9${Date.now() % 1e9}`;
     const before = (await svc.from('listings').select('address_display, building_osm_id, floors').eq('id', id).single()).data;
     const unit = { building_osm_id: osm, floors: 8, units_per_floor: 4, unit_floor: 3, unit_position: 2 };
     await svc.from('listings').update({ ...unit, address_display: 'street' }).eq('id', id);
-    const hidden = (await anon.from('building_layouts').select('osm_id').eq('osm_id', osm)).data;
+    const hidden = (await svc.from('building_layouts').select('osm_id').eq('osm_id', osm)).data;
     const upd = await svc.from('listings').update({ address_display: 'full' }).eq('id', id);
-    const shown = (await anon.from('building_layouts').select('floors, units_per_floor').eq('osm_id', osm)).data;
+    const shown = (await svc.from('building_layouts').select('org_id, floors, units_per_floor').eq('osm_id', osm)).data;
+    const toPublic = await anon.from('building_layouts').select('floors').eq('osm_id', osm);
     const pub = (await anon.from('public_listings').select('unit_position, units_per_floor').eq('id', id)).data;
     const bad = await svc.from('listings').update({ unit_position: 5 }).eq('id', id);
     await svc.from('listings').update({ ...before, units_per_floor: null, unit_floor: null, unit_position: null }).eq('id', id);
-    check('o layout do prédio (andares × unidades) só fica público com o endereço completo; a unidade cabe no andar',
-      hidden?.length === 0 && !upd.error && shown?.[0]?.floors === 8 && shown[0].units_per_floor === 4 &&
-        pub?.[0]?.unit_position === 2 && !!bad.error,
-      JSON.stringify({ hidden, shown, pub, bad: bad.error?.code, upd: upd.error?.message }));
+    check('o layout do prédio (andares × unidades) nasce só com o endereço completo, fica com a imobiliária e não é público; a unidade cabe no andar',
+      hidden?.length === 0 && !upd.error && shown?.length === 1 && shown[0].org_id === orgId && shown[0].floors === 8 &&
+        shown[0].units_per_floor === 4 && !!toPublic.error && pub?.[0]?.unit_position === 2 && !!bad.error,
+      JSON.stringify({ hidden, shown, toPublic: toPublic.error?.code ?? toPublic.data, pub, bad: bad.error?.code, upd: upd.error?.message }));
   }
 
   // ---- the client's own domain, while the listing is published: pages ready for search engines and link previews

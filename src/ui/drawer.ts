@@ -66,8 +66,6 @@ export class Drawer {
   nearby: ((l: Listing) => Partial<Record<ServiceKind, NearbyService>> | null) | null = null;
   /** Hours of sun on each side of the listing's building at its floor (null without a footprint or map tiles). */
   sunHours: ((l: Listing, floor: number) => SunTable | null) | null = null;
-  /** The same property advertised by other agencies (portal only, src/data/dedup.ts). */
-  others: ((l: Listing) => { listings: Listing[]; certain: boolean; exclusive: Listing | null } | null) | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
 
@@ -314,7 +312,6 @@ export class Drawer {
           ? `<a class="btn-primary btn-whatsapp" href="${escapeHtml(contact)}" target="_blank" rel="noopener">Conversar no WhatsApp${l.advertiser?.contactName ? ` com ${escapeHtml(l.advertiser.contactName)}` : ''}</a>`
           : ''
       }
-      ${this.othersHtml(l)}
       ${this.leadFormHtml(l, agency)}
       ${this.reportHtml(l)}
       ${
@@ -403,7 +400,6 @@ export class Drawer {
       if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
     });
     this.el.querySelector('[data-action="edit"]')?.addEventListener('click', () => this.onEdit(l));
-    this.el.querySelectorAll<HTMLButtonElement>('[data-dup]').forEach((b) => b.addEventListener('click', () => this.onNavigate(b.dataset.dup!)));
     this.el.querySelector<HTMLFormElement>('.manage-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
       void this.saveManage(l, e.currentTarget as HTMLFormElement);
@@ -549,34 +545,6 @@ export class Drawer {
       <ul>${rows}</ul>
       <p class="nearby-note">Distâncias em linha reta${l.approximateLocation ? ', medidas do centro do círculo' : ''}. Fonte: OpenStreetMap (pode faltar algum comércio).</p>
     </section>`;
-  }
-
-  /** "Anunciado por 3 imobiliárias": each one's price and date; the contact goes to the one the visitor opens. */
-  private othersHtml(l: Listing): string {
-    const o = this.others?.(l);
-    if (!o || (!o.listings.length && !o.exclusive)) return '';
-    const name = (x: Listing) => this.agencies.find((a) => a.id === x.agency)?.name ?? x.agency;
-    if (o.exclusive)
-      return `<p class="notice-approx dup-exclusive">Este imóvel tem venda com exclusividade de ${escapeHtml(name(o.exclusive))}.
-        <button type="button" class="link-btn" data-dup="${escapeHtml(o.exclusive.id)}">Ver o anúncio de quem tem a exclusividade</button></p>`;
-    const rent = !isForSale(l);
-    const price = (x: Listing) => formatBRL(rent ? (x.rentPrice ?? x.price) : x.price) + (rent ? '/mês' : '');
-    const all = [l, ...o.listings];
-    const head = o.certain ? `Anunciado por ${all.length} imobiliárias` : `Possivelmente o mesmo imóvel em ${all.length} imobiliárias`;
-    const rows = all
-      .map((x) => {
-        const date = x.updatedAt ?? x.publishedAt;
-        const meta = `${escapeHtml(price(x))}${date ? ` · atualizado em ${formatDate(date)}` : ''}${x.exclusive ? ' · exclusividade' : ''}`;
-        return x.id === l.id
-          ? `<li aria-current="true"><strong>${escapeHtml(name(x))}</strong> <small>${meta} · este anúncio</small></li>`
-          : `<li><strong>${escapeHtml(name(x))}</strong> <small>${meta}</small>
-              <button type="button" class="link-btn" data-dup="${escapeHtml(x.id)}">Ver anúncio e contato</button></li>`;
-      })
-      .join('');
-    const note = o.certain
-      ? 'O contato vai só para a imobiliária do anúncio aberto.'
-      : 'Mesmo prédio, área, quartos e vagas parecidos e unidade não informada. O contato vai só para a imobiliária do anúncio aberto.';
-    return `<section class="dup-others" aria-label="${escapeHtml(head)}"><h3>${escapeHtml(head)}</h3><ul>${rows}</ul><p class="hint">${note}</p></section>`;
   }
 
   private reportHtml(l: Listing): string {

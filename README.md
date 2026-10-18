@@ -604,14 +604,11 @@ docs/screenshots/  capturas geradas pelo verify:e2e
     apartamento, sala ou loja com os andares do formulário (4 se não informados); galpão de 8 m. O id é
     `sintetico/<lng>,<lat>`, então outro anúncio no mesmo endereço (outra unidade) cai no mesmo prédio. A ficha avisa
     "Prédio ilustrativo". Como um lote, ele não pode encostar em prédio, via, água ou área verde do mapa.
-- **Mesmo imóvel em várias imobiliárias** (item 50, `src/data/dedup.ts`): no mapa geral, que junta os anúncios de
-  todas, o mesmo imóvel vira um pino e uma linha só. É certo quando o prédio e a unidade (andar e final) coincidem, ou
-  quando é a mesma casa; é provável quando falta a unidade, mas quartos, vagas, área (até 5%) e preço (até 15%)
-  batem. Aparece o anúncio mais completo (fotos, planta, vídeo) e, empatando, o mais recente; quem tem exclusividade
-  conferida fica sozinho e os outros somem. A ficha mostra "Anunciado por 2 imobiliárias" (ou "Possivelmente o mesmo
-  imóvel…") com o preço e a data de cada uma e o botão para abrir o anúncio dela; o contato vai só para a imobiliária
-  do anúncio aberto. Uma busca que acha só o anúncio escondido mostra o imóvel do mesmo jeito. O site de cada
-  imobiliária não muda (só tem os anúncios dela).
+- **Cada cliente só vê o que é dele**: um banco para todos, separado por imobiliária (RLS). O mapa da plataforma
+  mostra ao público só a demonstração fictícia; quem entra vê só os anúncios da própria imobiliária; os anúncios
+  publicados de um cliente aparecem só no site dele (`map_listings` exige o cliente). O prédio desenhado pelo endereço
+  (andares e unidades por andar) também é de cada imobiliária. Não há cruzamento entre clientes: a deduplicação entre
+  imobiliárias (item 50) foi descartada.
 - **Anunciar pela unidade**: num apartamento, informados os pavimentos e as **unidades por andar** (até 12), o
   formulário mostra a grade do prédio, do último andar ao primeiro, com o número de cada unidade ("402" = 4º andar,
   2º final). Clicar numa unidade preenche o andar, e o mapa destaca só ela, no andar dela, com o resto do prédio
@@ -830,7 +827,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
   - círculos aproximados contêm o local real.
 - `npm run lint` (oxlint, `.oxlintrc.json`): as regras de correção do ESLint, sem avisos. O typescript-eslint ainda não
   roda com o TypeScript 7 do projeto, por isso o oxlint.
-- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 115 checagens:
+- `npm run verify:e2e` (Playwright + Chromium headless com SwiftShader), 114 checagens:
   - filtro por bairro: link sem acento acha o bairro, lista só os imóveis dele e recorta o mapa (100 m em volta,
     resto coberto, sem os outros contornos nem empreendimentos de fora); tirar o bairro mostra a cidade de novo;
   - "Desenhar área": quatro cliques marcam os cantos sem abrir imóvel, o clique no primeiro fecha, a lista e o mapa

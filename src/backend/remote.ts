@@ -554,14 +554,15 @@ export class RemoteBackend {
   private photoUrl = (path: string) => this.sb.storage.from(PHOTOS).getPublicUrl(path).data.publicUrl;
 
   /**
-   * Summaries of the published listings for everyone (of one client only, when given), plus the current user's
-   * clients' listings (drafts included, exact location, editable). Each comes in a single response, so the
+   * Summaries of one client's published listings (its own site; the platform's map shows no client's listings to
+   * the public, so clients never see each other's), plus the current user's clients' listings (drafts included,
+   * exact location, editable). Each comes in a single response, so the
    * server's row limit does not cut them; the description, photos and the rest come with listingDetail.
    * Also returns the clients as agencies, for names in the UI.
    */
   async loadListings(orgId: string | null = null): Promise<{ listings: Listing[]; agencies: Agency[] }> {
     const [pub, mine] = await Promise.all([
-      this.sb.rpc('map_listings', orgId ? { p_org: orgId } : {}),
+      orgId ? this.sb.rpc('map_listings', { p_org: orgId }) : Promise.resolve({ data: [], error: null }),
       (async () => ((await this.session()) ? this.sb.rpc('my_map_listings') : { data: [], error: null }))(),
     ]);
     fail(pub.error, 'Não foi possível carregar os anúncios');
@@ -597,9 +598,18 @@ export class RemoteBackend {
     return mine ? { ...l, priceHistory: history.get(id) ?? [] } : l;
   }
 
-  /** Floors × units per floor given by an earlier listing of the building (20261104000001_unit_layouts.sql). */
+  /**
+   * Floors × units per floor given by an earlier listing of the building by one of the user's own clients (each
+   * client keeps its own: 20261106000001_tenant_isolation.sql).
+   */
   async buildingLayout(osmId: string): Promise<BuildingLayout | null> {
-    const { data, error } = await this.sb.from('building_layouts').select('floors, units_per_floor').eq('osm_id', osmId).maybeSingle();
+    const { data, error } = await this.sb
+      .from('building_layouts')
+      .select('floors, units_per_floor')
+      .eq('osm_id', osmId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (error || !data) return null;
     const layout = { floors: data.floors as number, unitsPerFloor: data.units_per_floor as number };
     return validLayout(layout) ? layout : null;

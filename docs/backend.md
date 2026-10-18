@@ -84,6 +84,13 @@ correção precisa ser aplicada N vezes e cada servidor precisa ser monitorado. 
 Uma correção ou melhoria chega a todos os clientes de uma vez, e acrescentar um cliente é cadastrar uma linha, não
 subir um servidor.
 
+**Feito em 18/10: nada se cruza entre clientes** (`20261106000001_tenant_isolation.sql`). O mapa da plataforma mostra
+ao público só a demonstração fictícia; logado, cada um vê só os anúncios da própria imobiliária (`my_map_listings`); os
+anúncios publicados de um cliente só saem com o id dele (`map_listings(p_org)`, usado pelo site do cliente); o layout
+do prédio (andares e unidades por andar) passou a ser por imobiliária, legível só pelos membros dela. Os testes
+`test:backend` e `verify:backend` conferem que o anúncio de um cliente não aparece no mapa da plataforma nem para outro
+cliente, e aparece no site dele. O risco de um banco único está na §10.
+
 ## 3. Onde hospedar
 
 ### Recomendado para começar: serviços gerenciados
@@ -141,11 +148,9 @@ fotos diferentes. Num mapa 3D isso é pior do que numa lista: viram vários pino
 - **Provável:** mesmo prédio e unidade não informada, com área, quartos e vagas iguais (dentro de uma tolerância) e
   preço próximo. Fica marcado "possivelmente o mesmo imóvel" e o anunciante confirma ou separa ao cadastrar.
 - Na importação dos XMLs das imobiliárias a mesma regra roda automaticamente.
-- **Feito em 18/10** (`src/data/dedup.ts`, no navegador, sobre os anúncios publicados que o mapa já recebe, inclusive
-  os importados): a regra certa (prédio + unidade, ou a mesma casa) e a provável (área até 5% e preço até 15%), um
-  pino por imóvel, a ficha com "anunciado por N imobiliárias" e a exclusividade escondendo os outros. Ainda falta: a
-  tabela de imóveis no banco, a matrícula e a inscrição imobiliária como chave, o anunciante confirmar ou separar ao
-  cadastrar, e a parceria.
+- **Descartado em 18/10.** Só faria sentido num portal que junta vários anunciantes, e o produto não é isso: cada
+  imobiliária vê só os seus anúncios, e um cliente nunca vê nada de outro (ver §2). O que está abaixo fica como
+  referência caso um dia exista um portal, que seria outro produto, com o consentimento de cada cliente.
 
 **Como mostrar ao visitante:**
 
@@ -244,7 +249,7 @@ README). O que muda com backend:
 3. **Camadas da Prefeitura como opções ligáveis**: mancha de inundação, zoneamento e lote real, desligadas por padrão
    para não poluir o mapa.
 4. **Anúncios repetidos** só importam num modo portal (vários anunciantes). No produto vendido por imobiliária, cada
-   site mostra só os anúncios dela; a deduplicação da seção 5 vale para o mapa geral (**feita em 18/10**, ver §5).
+   site mostra só os anúncios dela e não há mapa que junte clientes. A deduplicação foi **descartada em 18/10** (§5).
 5. **Marca da imobiliária**: tema dinâmico por cliente (cores, logo, fontes, textos) aplicado ao mapa e ao site
    embutido, como configuração (seção 2).
 
@@ -295,6 +300,23 @@ publicados, sem endereço oculto). Escrever exige login, e o banco confere em ca
 imobiliária dona do dado. Os testes automáticos (`npm run test:backend`) tentam exatamente esses ataques: visitante
 criando anúncio, corretor de uma imobiliária editando a outra, corretor se promovendo a administrador, forjando o
 preço anterior, gravando fotos na pasta de outro cliente. Todos são recusados.
+
+**Um banco para todos os clientes (decisão de 18/10).** Uma invasão do banco, ou uma regra de RLS errada, expõe os
+dados de **todos** os clientes de uma vez. É o preço do modelo (um sistema, uma correção para todos) e precisa ser
+tratado como o maior risco do produto:
+
+- a chave de serviço (`service_role`) nunca vai ao navegador e fica só nas funções e no CI; toda tabela nova nasce com
+  RLS e o Security Advisor do Supabase acusa a que não tiver;
+- os testes de isolamento rodam em todo push (um cliente tentando ler, escrever e listar o do outro); uma regra nova sem
+  teste não entra;
+- funções `security definer` só com o mínimo e sempre filtrando pelo cliente; o suporte com duas etapas obrigatória;
+- backup com restauração a um ponto no tempo (PITR), registro de auditoria e pentest externo antes do primeiro cliente
+  (item 21);
+- o que é público de propósito, e portanto enumerável por qualquer um: os anúncios publicados (`public_listings`, sem
+  endereço oculto, os mesmos que estão no site do cliente) e os dados do site da imobiliária (nome, domínio, cores);
+  nada de contatos, corretores, rascunhos ou e-mails;
+- se um cliente grande exigir, dá para passar a ele um projeto Supabase só dele, com o mesmo código e as mesmas
+  migrações (custa um projeto a mais por cliente).
 
 **O que ainda falta fechar antes do primeiro cliente:**
 

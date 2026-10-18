@@ -20,7 +20,7 @@ Confira com os mesmos testes do CI (se passam aí, o ambiente está certo):
 
 ```bash
 npm run lint && npm test && npm run build
-npm run verify:e2e     # ~10 min, 115 checagens no navegador
+npm run verify:e2e     # ~10 min, 114 checagens no navegador
 npm run verify:site    # o site da imobiliária
 ```
 
@@ -112,8 +112,9 @@ texto sugerido e o que pedir estão em `docs/dados-prefeitura.md`. Sem a autoriz
 1. Escolha 2 ou 3 imobiliárias de Joinville. Peça a URL do XML que elas já mandam para os portais (VRSync/ZAP).
 2. Importe no Supabase de homologação: `npm run import:xml` (ver `docs/importacao-xml.md`) e revise com o cliente,
    anúncio por anúncio: fotos, endereço, tipo, preço, o prédio certo no mapa.
-3. **Teste essencial:** o mesmo apartamento costuma estar em mais de uma imobiliária. Importe duas e veja se o mapa
-   mostra "Anunciado por 2 imobiliárias" (item 50) e se aparece algum agrupamento errado.
+3. **Teste essencial:** importe duas imobiliárias e confira que uma nunca vê a outra: logado como corretor da
+   primeira, o mapa só tem os anúncios dela; o site de cada uma só mostra os dela; deslogado, o mapa da plataforma só
+   mostra a demonstração. Se algum anúncio vazar de um cliente para outro, pare tudo e me avise.
 4. Pergunte: pagariam quanto? O que faria largar o portal atual? O que falta? Isso decide a P2.
 
 ## Etapa 9. Aparelhos e acessibilidade (meio dia; item 20)
