@@ -186,6 +186,29 @@ export interface ListingTableRow {
   bairro: string | null;
 }
 
+export interface ListingStats {
+  id: string;
+  title: string;
+  referenceCode: string | null;
+  published: boolean;
+  createdBy: string | null;
+  viewsMap: number;
+  viewsSite: number;
+  whatsapp: number;
+  messages: number;
+}
+
+/** A random id of this browser, so the server counts a visitor once a day (no personal data; stays on the device). */
+function visitorId(): string {
+  try {
+    let id = localStorage.getItem('mapa3d-visitante');
+    if (!id) localStorage.setItem('mapa3d-visitante', (id = crypto.randomUUID()));
+    return id;
+  } catch {
+    return '';
+  }
+}
+
 /** Text typed in a search box, safe inside a PostgREST or=(…) filter (its commas, parentheses and wildcards removed). */
 export function searchTerm(q: string | undefined): string {
   return (q ?? '').replace(/[,()*%\\"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -208,6 +231,9 @@ const toLead = (r: Record<string, any>): Lead => ({
 });
 
 export class RemoteBackend {
+  /** Listings already counted on this page (see trackView). */
+  private viewed = new Set<string>();
+
   private constructor(private sb: SupabaseClient) {}
 
   static async connect(url: string, anonKey: string): Promise<RemoteBackend> {
@@ -649,6 +675,33 @@ export class RemoteBackend {
       throw new Error(`Não foi possível enviar: ${reason ?? 'tente de novo em instantes'}`);
     }
     return (data as { id: string }).id;
+  }
+
+  /**
+   * Counts a view of a published listing (opened on the map or on the client's site): once per listing per page,
+   * and the server counts each browser once a day. Never fails for the visitor.
+   */
+  trackView(listingId: string, channel: 'map' | 'site'): void {
+    if (this.viewed.has(listingId)) return;
+    this.viewed.add(listingId);
+    void this.sb.rpc('track_listing_view', { p_listing: listingId, p_channel: channel, p_visitor: visitorId() }).then(() => {}, () => {});
+  }
+
+  /** Views, WhatsApp clicks and messages of each listing over the last `days` days (agents: their own listings). */
+  async listingStats(orgId: string, days = 30): Promise<ListingStats[]> {
+    const { data, error } = await this.sb.rpc('listing_stats', { p_org: orgId, p_days: days });
+    fail(error, 'Não foi possível ler o desempenho');
+    return ((data ?? []) as Record<string, any>[]).map((r) => ({
+      id: r.listing_id,
+      title: r.title,
+      referenceCode: r.reference_code,
+      published: r.published,
+      createdBy: r.created_by,
+      viewsMap: Number(r.views_map),
+      viewsSite: Number(r.views_site),
+      whatsapp: Number(r.whatsapp),
+      messages: Number(r.messages),
+    }));
   }
 
   /** Records a click on "Conversar no WhatsApp" (no personal data: the conversation happens in WhatsApp). */

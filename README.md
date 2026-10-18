@@ -112,7 +112,7 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   a descrição, as fotos e o resto vêm quando a ficha é aberta. Assim o limite de 1.000 linhas por consulta do
   Supabase não esconde anúncios nem fotos (teste com 5.000 em `tests/backend/volume.test.ts`).
 
-Com backend, a gestão (meus anúncios, contatos com filtro e planilha, lixeira, equipe) abre no painel do mapa ou em
+Com backend, a gestão (meus anúncios, desempenho de cada anúncio — visualizações, WhatsApp e mensagens —, contatos com filtro e planilha, lixeira, equipe) abre no painel do mapa ou em
 página própria, `painel.html`, que não carrega o mapa. Passo a passo para criar o projeto e ligar o site: [`docs/supabase.md`](docs/supabase.md). Para testar localmente:
 `npm run db:start`, `npm run test:backend` e `npm run verify:backend`.
 

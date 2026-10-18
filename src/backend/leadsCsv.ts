@@ -1,6 +1,6 @@
 // Contacts as a spreadsheet (CSV opened by Excel and Google Sheets in Portuguese): ";" between columns, a BOM so the
 // accents come out right, and no cell that a spreadsheet would run as a formula.
-import { LEAD_STATUS_LABELS, type Lead, type Member } from './remote';
+import { LEAD_STATUS_LABELS, type Lead, type ListingStats, type Member } from './remote';
 
 const SOURCE_LABELS: Record<Lead['source'], string> = {
   form: 'Anúncio',
@@ -34,4 +34,19 @@ export function leadsCsv(leads: Lead[], members: Member[] = []): string {
     l.notes,
   ]);
   return `﻿${[head, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n')}\r\n`;
+}
+
+/** "Desempenho dos anúncios" as a spreadsheet: one row per listing, numbers as plain digits. */
+export function statsCsv(rows: ListingStats[], days: number): string {
+  const head = ['Anúncio', 'Código', 'Situação', `Visualizações no mapa (${days} dias)`, 'Visualizações no site', 'Cliques no WhatsApp', 'Mensagens'];
+  const body = rows.map((r) => [
+    r.title,
+    r.referenceCode,
+    r.published ? 'Publicado' : 'Rascunho',
+    String(r.viewsMap),
+    String(r.viewsSite),
+    String(r.whatsapp),
+    String(r.messages),
+  ]);
+  return `\uFEFF${[head, ...body].map((r) => r.map(csvCell).join(';')).join('\r\n')}\r\n`;
 }

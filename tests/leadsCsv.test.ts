@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { csvCell, leadsCsv } from '../src/backend/leadsCsv';
+import { csvCell, leadsCsv, statsCsv } from '../src/backend/leadsCsv';
 import { searchTerm, type Lead } from '../src/backend/remote';
 
 const lead = (extra: Partial<Lead> = {}): Lead => ({
@@ -40,5 +40,14 @@ describe('planilha de contatos', () => {
     expect(searchTerm('(47) 99999-0000')).toBe('47 99999-0000');
     expect(searchTerm(undefined)).toBe('');
     expect(searchTerm('x'.repeat(100))).toHaveLength(60);
+  });
+
+  it('planilha de desempenho: uma linha por anúncio, números puros', () => {
+    const csv = statsCsv([{ id: 'a', title: '=Casa; nova', referenceCode: 'C-1', published: false, createdBy: null, viewsMap: 12, viewsSite: 3, whatsapp: 2, messages: 1 }], 30);
+    expect(csv.split('\r\n')).toEqual([
+      '\uFEFFAnúncio;Código;Situação;Visualizações no mapa (30 dias);Visualizações no site;Cliques no WhatsApp;Mensagens',
+      `"'=Casa; nova";C-1;Rascunho;12;3;2;1`,
+      '',
+    ]);
   });
 });

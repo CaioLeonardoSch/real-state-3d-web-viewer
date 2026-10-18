@@ -60,7 +60,7 @@ Gestão, personalização, SEO, experiência 3D e escala. Depois do retorno dos 
 | # | Item | Impacto | Esforço | Risco | Dependências | Origem |
 |---|---|---|---|---|---|---|
 | 23 | Cobrança: tabela de assinaturas, gateway (Asaas ou Iugu) com webhook, limites por plano, inadimplência em etapas | Alto para o negócio | Médio | Médio | 10; contrato | Backend §1 e §11 |
-| 24 | Métricas por cliente: visualizações, cliques e contatos por anúncio | Alto: justifica a assinatura | Médio | Baixo | 5 | Backend §1 |
+| 24 | ~~Métricas por cliente: visualizações, cliques e contatos por anúncio~~ **Feito em 17/10:** seção "Desempenho dos anúncios" em Minha conta e no painel (7/30/90/365 dias, exporta CSV); visualização contada uma vez por navegador por dia, sem a equipe e sem rascunhos | Alto: justifica a assinatura | Médio | Baixo | 5 | Backend §1 |
 | 25 | Importação XML agendada (feed lido sozinho), sem a linha de comando do suporte | Alto: menos trabalho manual | Médio | Médio | 11, 12 | A6, backend §1 |
 | 26 | Agendamento de visita na ficha | Médio: conversão | Pequeno a médio | Baixo | 6 | Auditoria §10 |
 | 27 | Simulação de financiamento real (SAC e Price, juros, FGTS) | Médio | Pequeno a médio | Baixo: textos de aviso | 2 | Concorrência |

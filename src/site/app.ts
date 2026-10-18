@@ -187,6 +187,7 @@ export class SiteApp {
       this.route = p && ROUTES.includes(p) ? p : 'inicio';
     }
     this.render();
+    if (this.route === 'imovel' && !this.data.demo && this.params.get('id')) this.data.remote?.trackView(this.params.get('id')!, 'site');
     if (scrollTop) window.scrollTo({ top: 0 });
     if (focus) {
       const h1 = this.root.querySelector<HTMLElement>('main h1');

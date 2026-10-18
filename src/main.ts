@@ -248,6 +248,7 @@ async function main() {
     const wasOpen = drawer.currentId !== null;
     if (fly) scene.flyToListing(l);
     scene.select(id);
+    if (remote && l.remote && !l.draft) remote.trackView(id, embed ? 'site' : 'map');
     const index = currentList.findIndex((x) => x.id === id);
     if (l.partial) loadDetail(l);
     drawer.open(

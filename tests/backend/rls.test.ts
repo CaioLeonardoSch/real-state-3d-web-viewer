@@ -663,6 +663,34 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await backendOf(carla).listingsTable(orgA, { q: title })).total).toBe(0);
   });
 
+  it('desempenho: uma visualização por navegador por dia; a equipe e o rascunho não contam; cada um vê o que é seu', async () => {
+    const mine = (await bruno.client.from('listings').insert(listingRow(orgA, { title: `Métrica ${tag}` })).select('id').single()).data!.id;
+    const anas = (await ana.client.from('listings').insert(listingRow(orgA, { title: `Métrica da Ana ${tag}` })).select('id').single()).data!.id;
+    const draft = (await bruno.client.from('listings').insert(listingRow(orgA, { published: false })).select('id').single()).data!.id;
+    const view = (c: SupabaseClient, id: string, visitor: string, channel = 'map') =>
+      c.rpc('track_listing_view', { p_listing: id, p_channel: channel, p_visitor: visitor });
+    for (const r of await Promise.all([
+      view(anon(), mine, 'v1'), view(anon(), mine, 'v1'), view(anon(), mine, 'v2', 'site'), view(anon(), mine, 'v3'),
+      view(bruno.client, mine, 'equipe'), view(anon(), draft, 'v1'), view(anon(), anas, 'v1'), view(anon(), mine, 'v4', 'robô'),
+    ])) expect(r.error).toBeNull();
+    expect((await anon().rpc('submit_lead', { p_listing: mine, p_source: 'whatsapp' })).error).toBeNull();
+    const stats = async (u: User) => ((await u.client.rpc('listing_stats', { p_org: orgA, p_days: 30 })).data ?? []) as Record<string, unknown>[];
+    const b = await stats(bruno);
+    expect(b.find((r) => r.listing_id === mine)).toMatchObject({ views_map: 2, views_site: 1, whatsapp: 1, messages: 0 });
+    expect(b.find((r) => r.listing_id === draft)).toMatchObject({ views_map: 0, views_site: 0, published: false });
+    expect(b.some((r) => r.listing_id === anas)).toBe(false); // corretor: só os próprios
+    const a = await stats(ana);
+    expect(a.find((r) => r.listing_id === anas)).toMatchObject({ views_map: 1 });
+    expect(a.some((r) => r.listing_id === mine)).toBe(true);
+    expect(await stats(carla)).toHaveLength(0);
+    expect((await anon().rpc('listing_stats', { p_org: orgA })).error).not.toBeNull();
+    expect((await anon().from('listing_daily_views').select('*')).data ?? []).toHaveLength(0);
+    expect((await ana.client.from('listing_view_marks').select('*')).data ?? []).toHaveLength(0);
+    // a mesma origem não infla um anúncio: no máximo 20 navegadores por dia
+    await Promise.all(Array.from({ length: 25 }, (_, i) => view(anon(), anas, `robo-${i}`)));
+    expect((await stats(ana)).find((r) => r.listing_id === anas)).toMatchObject({ views_map: 20 });
+  });
+
   it('o público lê pela view, sem o endereço exato quando o anunciante escolheu esconder', async () => {
     const tall = { building_height_m: 42.5, floors: 14, unit_floor: 12 };
     const full = await ana.client.from('listings').insert(listingRow(orgA, { address_display: 'full', ...tall })).select('id').single();

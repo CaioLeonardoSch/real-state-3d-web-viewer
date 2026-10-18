@@ -4,6 +4,7 @@ import {
   type LeadFilter,
   type ListingFilter,
   type ListingTableRow,
+  type ListingStats,
   type Lead,
   type LeadStatus,
   type Member,
@@ -18,7 +19,7 @@ import {
 import { whatsappLink } from '../data/listingText';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { actorLabel, describeAudit, type AuditEntry } from '../backend/audit';
-import { leadsCsv } from '../backend/leadsCsv';
+import { leadsCsv, statsCsv } from '../backend/leadsCsv';
 import { AVAILABILITIES, AVAILABILITY_LABELS, HIGHLIGHTS, HIGHLIGHT_LABELS, TYPE_LABELS, type Availability, type Highlight } from '../data/types';
 import { escapeHtml, formatBRL } from '../utils/format';
 
@@ -90,6 +91,8 @@ export class AccountPanel {
   /** Filters of "Contatos" and "Meus anúncios" (kept across re-renders). */
   private leadFilter: LeadFilter = {};
   private listingFilter: ListingFilter = {};
+  /** Period of "Desempenho dos anúncios", in days. */
+  private statsDays = 30;
   /** The team, for the "Responsável" of the contacts (administrators only). */
   private teamMembers: Member[] = [];
   /** Latest request of each list: an older answer arriving late is dropped. */
@@ -247,6 +250,7 @@ export class AccountPanel {
       ${this.org ? this.orgHtml() : offers.length ? '' : `<p class="account-empty">Sua conta ainda não está ligada a nenhuma imobiliária.
         Peça o link de convite ao administrador da sua imobiliária.</p>`}
       ${this.org ? this.sectionHtml('listings', 'Meus anúncios') : ''}
+      ${this.org ? this.sectionHtml('stats', 'Desempenho dos anúncios') : ''}
       ${this.org ? this.sectionHtml('leads', `Contatos${this.newLeads ? ` <span class="lead-badge">${this.newLeads} ${this.newLeads === 1 ? 'novo' : 'novos'}</span>` : ''}`) : ''}
       ${this.org ? this.sectionHtml('trash', 'Lixeira') : ''}
       ${this.org && canManage ? this.teamHtml(members, invites) : ''}
@@ -379,6 +383,7 @@ export class AccountPanel {
       if (key === 'trash') this.renderTrash(body, await this.backend.trash(this.org.id));
       else if (key === 'leads') await this.loadLeads(body, more);
       else if (key === 'listings') await this.loadListings(body, more);
+      else if (key === 'stats') await this.loadStats(body, more);
       else {
         const list = body.querySelector<HTMLElement>('.audit-list');
         const last = more && list ? Number(list.dataset.last) : undefined;
@@ -559,6 +564,61 @@ export class AccountPanel {
   }
 
   /** "Meus anúncios": the client's listings with their state, published or draft, and the quick actions. */
+  /** "Desempenho dos anúncios": views (map and site), WhatsApp clicks and messages of each listing in the period. */
+  private async loadStats(body: HTMLElement, more: boolean): Promise<void> {
+    const org = this.org!;
+    const current = this.ticket('stats');
+    if (!body.querySelector('form[data-filter="stats"]')) {
+      body.innerHTML = `<form class="list-filter stats-filter" data-filter="stats" novalidate>
+          <label class="a-field">Período<select name="days">${[7, 30, 90, 365]
+            .map((d) => `<option value="${d}" ${d === this.statsDays ? 'selected' : ''}>${d === 365 ? 'Último ano' : `Últimos ${d} dias`}</option>`)
+            .join('')}</select></label>
+        </form>
+        <p class="stats-total" role="status"></p>
+        <div class="stats-wrap"><table class="stats-table">
+          <thead><tr><th scope="col">Anúncio</th><th scope="col" title="Mapa + site da imobiliária">Visualizações</th><th scope="col">WhatsApp</th><th scope="col">Mensagens</th></tr></thead>
+          <tbody></tbody></table></div>
+        <p class="a-hint">Cada navegador conta uma vez por dia em cada anúncio; as visitas da própria equipe não contam.${
+          org.role === 'owner' || org.role === 'admin' ? '' : ' Você vê os seus anúncios.'
+        }</p>
+        <div class="list-actions">
+          <button type="button" class="btn-secondary" data-action="more" hidden>Ver todos</button>
+          <button type="button" class="link-btn" data-action="export">Baixar planilha (CSV)</button>
+        </div>`;
+      this.bindFilter(body, 'stats', (fd) => (this.statsDays = Number(fd.get('days')) || 30));
+      body.querySelector('[data-action="more"]')!.addEventListener('click', () => void this.loadSection('stats', true));
+      const exportBtn = body.querySelector<HTMLButtonElement>('[data-action="export"]')!;
+      exportBtn.addEventListener('click', () =>
+        this.act(exportBtn, async () => {
+          const rows = await this.backend.listingStats(org.id, this.statsDays);
+          download(statsCsv(rows, this.statsDays), `desempenho-${org.slug}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
+        }),
+      );
+    }
+    const rows = await this.backend.listingStats(org.id, this.statsDays);
+    if (!current()) return;
+    const n = (x: number) => x.toLocaleString('pt-BR');
+    const sum = (f: (r: ListingStats) => number) => rows.reduce((a, r) => a + f(r), 0);
+    const [map, site, wa, msg] = [sum((r) => r.viewsMap), sum((r) => r.viewsSite), sum((r) => r.whatsapp), sum((r) => r.messages)];
+    body.querySelector('.stats-total')!.textContent = rows.length
+      ? `${n(map + site)} ${map + site === 1 ? 'visualização' : 'visualizações'} (${n(map)} no mapa, ${n(site)} no site), ${n(wa)} ${
+          wa === 1 ? 'clique' : 'cliques'
+        } no WhatsApp e ${n(msg)} ${msg === 1 ? 'mensagem' : 'mensagens'}${map + site ? `: ${n(Math.round(((wa + msg) / (map + site)) * 1000) / 10)} contatos a cada 100 visualizações` : ''}.`
+      : 'Nenhum anúncio ainda.';
+    const shown = more ? rows : rows.slice(0, 20);
+    body.querySelector('.stats-table tbody')!.innerHTML = shown
+      .map(
+        (r) => `<tr${r.published ? '' : ' class="is-draft"'}><th scope="row"><button type="button" class="link-btn" data-open="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button>${
+          r.referenceCode ? ` <small class="muted">${escapeHtml(r.referenceCode)}</small>` : ''
+        }${r.published ? '' : ' <span class="draft-badge">Rascunho</span>'}</th>
+          <td title="${n(r.viewsMap)} no mapa, ${n(r.viewsSite)} no site">${n(r.viewsMap + r.viewsSite)}</td><td>${n(r.whatsapp)}</td><td>${n(r.messages)}</td></tr>`,
+      )
+      .join('');
+    body.querySelectorAll<HTMLButtonElement>('.stats-table [data-open]').forEach((b) => b.addEventListener('click', () => this.openListing(b.dataset.open!)));
+    body.querySelector<HTMLElement>('[data-action="more"]')!.hidden = shown.length >= rows.length;
+    body.querySelector<HTMLElement>('[data-action="export"]')!.hidden = !rows.length;
+  }
+
   private async loadListings(body: HTMLElement, more: boolean): Promise<void> {
     const org = this.org!;
     const admin = org.role === 'owner' || org.role === 'admin';

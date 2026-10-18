@@ -314,6 +314,16 @@ try {
       /1 clique no WhatsApp/.test(leadUi.clicks),
     JSON.stringify({ badge, ...leadUi }));
 
+  // ---- "Desempenho dos anúncios": the visitor's view, WhatsApp click and message on the broker's listing
+  await page.click('#account-panel details[data-section="stats"] summary');
+  await page.waitForSelector('#account-panel .stats-table tbody tr', { timeout: 15000 });
+  const statsUi = await page.evaluate((lid) => {
+    const tr = document.querySelector(`#account-panel .stats-table [data-open="${lid}"]`)?.closest('tr');
+    return { cells: [...(tr?.querySelectorAll('td') ?? [])].map((td) => td.textContent), total: document.querySelector('#account-panel .stats-total')?.textContent ?? '' };
+  }, id);
+  check('desempenho: o corretor vê a visualização, o clique no WhatsApp e a mensagem do visitante no anúncio',
+    JSON.stringify(statsUi.cells) === '["1","1","1"]' && /no mapa/.test(statsUi.total), JSON.stringify(statsUi));
+
   // ---- painel.html: the same management on a page of its own, without the map (same session)
   const panel = await page.context().newPage();
   const panelErrs = [];

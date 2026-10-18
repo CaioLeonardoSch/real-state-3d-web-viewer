@@ -39,6 +39,10 @@ imobiliária (white label, item 12): 13/10/2026.
 9. **Favoritos, buscas salvas e alertas** de novos imóveis (e-mail ou push).
 10. **Moderação:** fila de aprovação, denúncias, histórico de alterações.
 11. **Métricas por cliente:** visualizações, cliques e contatos por anúncio (o relatório que justifica a assinatura).
+    **Feito em 17/10:** `track_listing_view` conta a abertura do anúncio publicado (mapa ou site), uma vez por
+    navegador por dia (hash do IP com sal + id aleatório do navegador, no máximo 20 por IP por anúncio por dia),
+    sem contar a equipe; `listing_stats` junta visualizações, cliques no WhatsApp e mensagens (dos leads). O
+    administrador vê todos os anúncios, o corretor só os seus. As marcas por navegador são apagadas todo dia.
 12. **Cobrança** da assinatura (Asaas, Iugu, Stripe…).
 
 ### Dados do mapa (rotina, não servidor)
