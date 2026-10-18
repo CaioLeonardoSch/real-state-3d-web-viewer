@@ -102,7 +102,8 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
   cadastra as imobiliárias e convida o dono; o dono convida os corretores (link de convite); quem é da imobiliária
   anuncia e edita. O anúncio vai para o banco, as fotos para o storage, e todos passam a ver. Excluir manda para
   uma lixeira (30 dias para restaurar), e os administradores leem o histórico de alterações em frases. O visitante
-  manda mensagem pelo anúncio (com a autorização da LGPD); o contato chega ao corretor na conta e por e-mail. Os
+  manda mensagem ou pede uma visita (dia e período) pelo anúncio, com a autorização da LGPD; o contato chega ao
+  corretor na conta e por e-mail. Os
   convites vão por e-mail, e a equipe de suporte importa os anúncios do CRM do cliente pelo XML (VRSync), ver
   [`docs/importacao-xml.md`](docs/importacao-xml.md).
 - **Páginas para o Google:** `npm run build` gera uma página estática por anúncio (`dist/imovel/…/`), o
@@ -436,10 +437,10 @@ src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação
 src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
 src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, páginas, editor
 src/panel/      gestão em página própria (painel.html), sem o mapa
-src/utils/      simulação de pagamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
+src/utils/      simulação de financiamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
 scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)
 docs/           screenshots e análise da concorrência (docs/analise-concorrencia.md)
-tests/          Vitest: renderHeight, filtros e sugestões, ordenação/resumo de preço, URL, simulação de pagamento,
+tests/          Vitest: renderHeight, filtros e sugestões, ordenação/resumo de preço, URL, simulação de financiamento,
                 geometria de novos anúncios
 docs/screenshots/  capturas geradas pelo verify:e2e
 ```
@@ -575,11 +576,6 @@ docs/screenshots/  capturas geradas pelo verify:e2e
   a câmera enquadra todos os resultados (`fitBounds`).
 - **Contorno**: as extrusões do MapLibre não têm contorno próprio, então o destaque usa uma camada `line` na base
   do polígono.
-- **Simulação de pagamento**, sem juros, só na demonstração (o build de produção, `VITE_DEMO_LISTINGS=false`, não a
-  mostra):
-  - Pronto: 20% de entrada e 120 parcelas iguais.
-  - Em construção: 20% de entrada, 4 reforços anuais de 5% do preço e o saldo (60%) em 60 parcelas.
-  - Valores arredondados aos centavos.
 - **Iluminação**: data de referência fixa em 20/03/2026 (equinócio), fuso UTC−03:00 (Joinville não tem horário de
   verão desde 2019). Manhã às 09:00, tarde às 15:00, noite às 21:00 (sol abaixo do horizonte). As coordenadas vêm de
   `meta.json`, gravado pelo Nominatim. À noite, como não há sol, usamos uma luz fraca, fria e vinda de cima, para os
@@ -588,6 +584,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Planta**: SVG genérico com retângulos (sala, cozinha, quartos, banhos), em escala proporcional à raiz da área.
   Também só na demonstração: em produção, a ficha mostra a planta apenas quando o anunciante envia uma.
   Terrenos mostram só o contorno do lote.
+- **Simular financiamento** (imóveis à venda, no mapa e no site): SAC ou Price com a taxa efetiva anual que o
+  visitante digitar (11,5% ao ano de partida), entrada, FGTS e prazo de até 35 anos; mostra parcelas, total de
+  juros e a renda para a parcela caber em 30% dela, e avisa quando o financiado passa de 80% do valor. Sem TR,
+  seguros e taxa de administração, como diz o aviso (`src/utils/financing.ts`).
 - **Sem servidor de tiles e sem fontes externas**: o estilo não tem `glyphs` nem `sprite`. Os nomes das ruas usam
   `font-faces` do MapLibre: a fonte Inter 500 (só latim, 24 KB, servida pelo próprio site) é desenhada no navegador,
   sem arquivos de glifos. Aparecem do zoom 16 em diante, deitados ao longo da rua e de frente para a câmera, acima dos

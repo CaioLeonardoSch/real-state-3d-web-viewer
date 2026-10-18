@@ -871,17 +871,17 @@ body[data-tod='night'] .price {
   margin: 12px 0;
 }
 .facts div,
-.simulation dl div {
+.fin-out dl div {
   display: flex;
   flex-direction: column;
 }
 .facts dt,
-.simulation dt {
+.fin-out dt {
   font-size: 12px;
   color: var(--muted);
 }
 .facts dd,
-.simulation dd {
+.fin-out dd {
   margin: 0;
   font-weight: 600;
 }
@@ -1021,6 +1021,24 @@ body[data-tod='night'] .price {
 .lead-form .a-error[hidden] {
   display: none;
 }
+.lead-form .visit-toggle span {
+  font-size: 13px;
+  font-weight: 600;
+}
+.visit-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.visit-fields[hidden] {
+  display: none;
+}
+.visit-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
 /* honeypot: invisible to people, filled by bots */
 .lead-trap {
   position: absolute;
@@ -1109,19 +1127,42 @@ body[data-tod='night'] .price {
   color: var(--muted);
   text-align: center;
 }
-.simulation {
-  border: 1px dashed var(--line);
+.fin-sim {
+  margin: 12px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 8px 12px;
 }
-.simulation h3 {
-  margin: 4px 0 8px;
-  font-size: 15px;
+.fin-sim > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
 }
-.simulation dl {
+.fin-grid {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin: 0;
+  margin-top: 8px;
+}
+.fin-out dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+.fin-out small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.fin-warn {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fin-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .overview-btn {

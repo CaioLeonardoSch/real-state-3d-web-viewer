@@ -335,9 +335,25 @@ async function main() {
     const drawerOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
     check('click on a listing opens the drawer', !!clicked && drawerOpen, clicked?.id ?? 'no clickable listing found');
     check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Imóvel fictício para demonstração'));
+    // sale: the financing simulator (opened before the accessibility check, so its form is checked too)
+    const fin = await page.evaluate(() => {
+      const d = document.querySelector('#drawer .fin-sim');
+      if (!d) return { sale: false, rent: /\/mês/.test(document.querySelector('#drawer')?.textContent ?? '') };
+      d.open = true;
+      return { sale: true, sac: d.querySelector('.fin-out')?.textContent ?? '' };
+    });
+    if (fin.sale) {
+      await page.selectOption('#drawer .fin-form select[name="system"]', 'price');
+      await page.fill('#drawer .fin-form input[name="down"]', '0');
+      fin.price = await page.textContent('#drawer .fin-out');
+    }
     await axe(page, 'ficha do imóvel');
-    check('drawer shows "Planta ilustrativa" and "Simulação ilustrativa"',
-      (await page.isVisible('#drawer >> text=Planta ilustrativa')) && (await page.isVisible('#drawer >> text=Simulação ilustrativa')));
+    check('drawer shows "Planta ilustrativa"; a sale has the financing simulator (SAC and Price, warning above 80%)',
+      (await page.isVisible('#drawer >> text=Planta ilustrativa')) &&
+        (fin.sale
+          ? /Primeira parcela.*Última parcela/.test(fin.sac) && /Parcela/.test(fin.price) && !/Primeira/.test(fin.price) && /até 80%/.test(fin.price)
+          : fin.rent),
+      JSON.stringify(fin).slice(0, 300));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer.png') });
     await page.keyboard.press('Escape');
     await sleep(400);

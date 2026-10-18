@@ -478,7 +478,7 @@ export class AccountPanel {
 
   private leadHtml(l: Lead, members: Member[], admin: boolean): string {
     const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const DETAIL_LABELS: Record<string, string> = { finalidade: 'Quer', tipo: 'Tipo', bairro: 'Bairro', valor: 'Valor pretendido', area: 'Área', quartos: 'Quartos', assunto: 'Assunto' };
+    const DETAIL_LABELS: Record<string, string> = { finalidade: 'Quer', tipo: 'Tipo', bairro: 'Bairro', valor: 'Valor pretendido', area: 'Área', quartos: 'Quartos', assunto: 'Assunto', visita: 'Visita pedida', horario: 'Horário' };
     const origin = (l: Lead) =>
       l.source === 'owner'
         ? '<span class="lead-origin">Quer anunciar um imóvel (pelo site)</span>'

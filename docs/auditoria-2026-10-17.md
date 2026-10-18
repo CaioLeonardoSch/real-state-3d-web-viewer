@@ -97,6 +97,8 @@ Interface, negócio e jurídico · alta · alta · pequeno.
   retirá-la.
 - **Pronto quando:** o build com `VITE_DEMO_LISTINGS=false` não tem "ilustrativa" na ficha.
 - **Feito em 17/10:** a planta gerada e a simulação só aparecem com `DEMO`; o build de produção não tem esses textos.
+  Depois (item 27), a simulação sem juros deu lugar a uma simulação de financiamento real (SAC e Price, juros,
+  FGTS), em produção também, com o aviso de que é estimativa.
 
 ### A3. O convite depende de "Confirm email" estar ligado [prioridade 1]
 
@@ -289,7 +291,7 @@ Interface · média · média (hipótese) · pequeno.
 | Documento de exclusividade | Só interface |
 | Rascunho de anúncio | Só no banco, sem interface |
 | Busca por área (`listings_in_bbox`) | Só no banco, sem uso |
-| Agendamento de visita, alertas, IA, serviços por perto | Não existe |
+| Agendamento de visita, alertas, IA, serviços por perto | Pedido de visita feito em 17/10 (item 26); o resto não existe |
 
 ## Testes: o que falta cobrir primeiro
 

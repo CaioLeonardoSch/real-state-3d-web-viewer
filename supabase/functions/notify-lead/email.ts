@@ -24,6 +24,8 @@ const DETAIL_LABELS: Record<string, string> = {
   area: 'Área',
   quartos: 'Quartos',
   assunto: 'Assunto',
+  visita: 'Visita pedida',
+  horario: 'Horário',
 };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -70,6 +72,6 @@ ${details.map(([k, v]) => `<tr><td>${esc(label(k))}</td><td>${esc(v)}</td></tr>`
 ${lead.message ? `<p style="white-space:pre-wrap">${esc(lead.message)}</p>` : ''}
 <p>${[wa ? `<a href="https://wa.me/${wa}">Responder no WhatsApp</a>` : '', lead.listing_id ? `<a href="${esc(link)}">Ver o anúncio</a>` : ''].filter(Boolean).join(' · ')}</p>
 <p style="color:#666">Atenda e registre o andamento em Minha conta → Contatos.</p>`;
-  const subject = owner ? 'Novo imóvel oferecido pelo site' : `Novo contato: ${title}`;
+  const subject = owner ? 'Novo imóvel oferecido pelo site' : lead.details?.visita ? `Pedido de visita: ${title} (${lead.details.visita})` : `Novo contato: ${title}`;
   return { subject, text: lines.join('\n'), html };
 }

@@ -17,12 +17,13 @@ import {
 } from '../data/types';
 import { withPriceChange } from '../state/priceChange';
 import { addressLabel, formatDate, safeUrl, today, videoEmbedUrl, whatsappLink } from '../data/listingText';
-import { escapeHtml, formatArea, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
+import { escapeHtml, formatArea, formatBRL, parseNumberInput } from '../utils/format';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
 import { DEMO } from '../data/demo';
-import { simulatePayment } from '../utils/payment';
+import { financingHtml, wireFinancing } from './financingSim';
+import { readVisit, visitFieldsHtml, wireVisitFields } from './visitRequest';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
 
 /** Position of the open listing inside the current list, for previous/next navigation. */
@@ -163,7 +164,6 @@ export class Drawer {
     this.openId = l.id;
     this.nav = nav;
     const agency = this.agencies.find((a) => a.id === l.agency)?.name ?? l.agency;
-    const sim = simulatePayment(l.price, l.status);
     const sale = isForSale(l);
     const rentOnly = !sale;
     const building = l.type !== 'land';
@@ -328,7 +328,7 @@ export class Drawer {
           : ''
       }
       ${
-        // the generated plan and the payment simulation are invented: only the demonstration shows them, never a real listing
+        // the generated plan is invented: only the demonstration shows it, never a real listing
         l.floorPlanImage || l.partial || !DEMO
           ? ''
           : `<figure class="floorplan">
@@ -337,19 +337,7 @@ export class Drawer {
       </figure>`
       }
 
-      ${sale && DEMO ? `<section class="simulation">
-        <h3>Simulação ilustrativa</h3>
-        <dl>
-          <div><dt>Entrada (20%)</dt><dd>${formatBRLCents(sim.downPayment)}</dd></div>
-          ${
-            sim.balloons.count
-              ? `<div><dt>${sim.balloons.count} reforços anuais (5% cada)</dt><dd>${formatBRLCents(sim.balloons.value)}</dd></div>`
-              : ''
-          }
-          <div><dt>${sim.installments} parcelas mensais</dt><dd>${formatBRLCents(sim.installmentValue)}</dd></div>
-        </dl>
-        <p class="muted small">Sem juros nem correção. Valores apenas para demonstração; não é proposta de financiamento.</p>
-      </section>` : ''}
+      ${sale && l.price > 0 ? financingHtml(l.price, 'a-field') : ''}
       ${
         l.userAdded && !l.partial
           ? `<section class="manage">
@@ -390,6 +378,7 @@ export class Drawer {
     });
     this.bindGallery(l);
     this.bindLeadForm(l);
+    wireFinancing(this.el);
     this.el.querySelector('.btn-whatsapp')?.addEventListener('click', () => {
       if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
     });
@@ -416,14 +405,15 @@ export class Drawer {
     if (l.userAdded) return '<p class="a-hint lead-own">Os contatos deste anúncio aparecem em Minha conta → Contatos.</p>';
     const consent = `Concordo em compartilhar meus dados com ${agency} para receber contato sobre este imóvel.`;
     return `<details class="lead-box">
-      <summary>Enviar mensagem para ${escapeHtml(agency)}</summary>
+      <summary>Mensagem ou visita: ${escapeHtml(agency)}</summary>
       <form class="lead-form" novalidate>
         <label class="a-field">Seu nome<input name="name" autocomplete="name" maxlength="120" required></label>
         <label class="a-field">E-mail<input name="email" type="email" autocomplete="email" maxlength="120"></label>
         <label class="a-field">Telefone ou WhatsApp<input name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="(47) 99999-0000"></label>
         <label class="a-field">Mensagem<textarea name="message" rows="3" maxlength="2000">Olá! Tenho interesse em "${escapeHtml(l.title)}"${l.referenceCode ? ` (código ${escapeHtml(l.referenceCode)})` : ''}. Gostaria de mais informações.</textarea></label>
+        ${visitFieldsHtml('a-field', 'a-check')}
         <label class="lead-trap" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
-        <label class="a-check"><input type="checkbox" name="consent"> <span>${escapeHtml(consent)}</span></label>
+        <label class="a-check lead-consent"><input type="checkbox" name="consent"> <span>${escapeHtml(consent)}</span></label>
         ${captchaBox()}
         <p class="a-error" role="alert" hidden></p>
         <button type="submit" class="btn-primary">Enviar mensagem</button>
@@ -436,9 +426,12 @@ export class Drawer {
     const form = this.el.querySelector<HTMLFormElement>('.lead-form');
     if (!form || !this.contact) return;
     const captcha = formCaptcha(form, 'lead');
+    const label = () => (form.querySelector<HTMLInputElement>('input[name="visit"]')?.checked ? 'Pedir visita' : 'Enviar mensagem');
+    wireVisitFields(form, () => (form.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent = label()));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+      const visit = readVisit(form);
       const v = (k: string) => String(fd.get(k) ?? '').trim();
       const err = form.querySelector<HTMLElement>('.a-error')!;
       const show = (msg: string) => {
@@ -460,21 +453,24 @@ export class Drawer {
             email: v('email'),
             phone: v('phone'),
             message: v('message'),
-            consentText: form.querySelector('.a-check span')!.textContent!,
+            consentText: form.querySelector('.lead-consent span')!.textContent!,
             trap: v('website'),
             captchaToken,
+            ...visit,
           }),
         )
         .catch((err: Error) => err.message);
       // a token serves one submission
       captcha?.reset();
       btn.disabled = false;
-      btn.textContent = 'Enviar mensagem';
+      btn.textContent = label();
       if (error) return show(error);
       form.hidden = true;
       const done = this.el.querySelector<HTMLElement>('.lead-done')!;
       done.hidden = false;
-      done.textContent = `Mensagem enviada, ${v('name').split(' ')[0]}! A imobiliária vai responder pelo contato que você deixou.`;
+      done.textContent = visit.visitOn
+        ? `Pedido de visita enviado, ${v('name').split(' ')[0]}! A imobiliária vai confirmar o horário pelo contato que você deixou.`
+        : `Mensagem enviada, ${v('name').split(' ')[0]}! A imobiliária vai responder pelo contato que você deixou.`;
     });
   }
 

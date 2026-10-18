@@ -231,7 +231,7 @@ img {
 }
 .fld-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
 .box {
@@ -1489,6 +1489,50 @@ img {
   position: sticky;
   top: 90px;
 }
+.d-fin .fin-sim {
+  border: 1px solid var(--s-line, #dde1e6);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.d-fin .fin-sim > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 18px;
+}
+.fin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.fin-out dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 16px;
+  margin: 14px 0 0;
+}
+.fin-out dt {
+  font-size: 13px;
+  color: var(--s-muted);
+}
+.fin-out dd {
+  margin: 0;
+  font-weight: 700;
+}
+.fin-out small {
+  font-weight: 400;
+  color: var(--s-muted);
+}
+.fin-warn {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.fin-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--s-muted);
+}
 .side-card {
   background: var(--s-card);
   border: 1px solid var(--s-line);
@@ -1531,6 +1575,24 @@ img {
 }
 .consent input {
   margin-top: 3px;
+}
+.visit-toggle {
+  font-weight: 600;
+  color: var(--s-text);
+}
+.visit-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.visit-fields[hidden] {
+  display: none;
+}
+.visit-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  color: var(--s-muted);
 }
 .form-msg:empty {
   display: none;

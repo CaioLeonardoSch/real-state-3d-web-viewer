@@ -277,21 +277,24 @@ try {
   await visitor.page.click('#drawer .lead-form button[type="submit"]');
   const refused = await visitor.page.textContent('#drawer .lead-form .a-error');
   await visitor.page.check('#drawer .lead-form input[name="consent"]');
+  await visitor.page.check('#drawer .lead-form input[name="visit"]');
+  await visitor.page.selectOption('#drawer .lead-form select[name="visit_period"]', 'tarde');
   await visitor.page.click('#drawer .lead-form button[type="submit"]');
   await visitor.page.waitForSelector('#drawer .lead-done:not([hidden])', { timeout: 15000 });
   const done = await visitor.page.textContent('#drawer .lead-done');
   await visitor.page.screenshot({ path: path.join(SHOTS, 'backend-contato-enviado.png') });
   const [popup] = await Promise.all([visitor.ctx.waitForEvent('page'), visitor.page.click('#drawer .btn-whatsapp')]);
   await popup.close();
-  check('o visitante envia a mensagem (só com a autorização da LGPD) e clica no WhatsApp',
-    /autorização/.test(refused ?? '') && /Mensagem enviada, Maria!/.test(done ?? ''), `${refused} / ${done}`);
+  check('o visitante pede uma visita (só com a autorização da LGPD) e clica no WhatsApp',
+    /autorização/.test(refused ?? '') && /Pedido de visita enviado, Maria!/.test(done ?? ''), `${refused} / ${done}`);
   let mail;
   for (let i = 0; i < 30 && !mail; i++) {
     mail = fns?.mails().find((m) => m.text?.includes('Maria Compradora'));
     if (!mail) await sleep(500);
   }
-  check('o corretor recebe o aviso por e-mail (provedor falso), com WhatsApp do visitante e link do anúncio',
-    !!fns && mail?.to?.[0] === brokerEmail && /wa\.me\/5547988887777/.test(mail?.text ?? '') && mail?.text?.includes(`?imovel=${id}`),
+  check('o corretor recebe o aviso por e-mail (provedor falso), com WhatsApp do visitante, link do anúncio e a visita pedida',
+    !!fns && mail?.to?.[0] === brokerEmail && /wa\.me\/5547988887777/.test(mail?.text ?? '') && mail?.text?.includes(`?imovel=${id}`) &&
+      /^Pedido de visita:/.test(mail?.subject ?? '') && /Visita pedida: .+\nHorário: Tarde/.test(mail?.text ?? ''),
     JSON.stringify(mail ? { to: mail.to, subject: mail.subject } : { fns: !!fns }));
   await page.reload();
   await page.waitForSelector('body[data-ready="true"]');

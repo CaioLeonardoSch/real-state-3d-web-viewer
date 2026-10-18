@@ -7,7 +7,7 @@ import { clientIp, originHost, verifyTurnstile } from '../_shared/turnstile.ts';
 
 // the arguments each database function takes from the browser (p_client_ip is set here, never by the browser)
 const ARGS: Record<string, string[]> = {
-  submit_lead: ['p_listing', 'p_source', 'p_name', 'p_email', 'p_phone', 'p_message', 'p_consent', 'p_consent_text', 'p_trap'],
+  submit_lead: ['p_listing', 'p_source', 'p_name', 'p_email', 'p_phone', 'p_message', 'p_consent', 'p_consent_text', 'p_trap', 'p_visit_on', 'p_visit_period'],
   submit_site_lead: ['p_org', 'p_source', 'p_name', 'p_email', 'p_phone', 'p_message', 'p_details', 'p_consent', 'p_consent_text', 'p_trap'],
 };
 

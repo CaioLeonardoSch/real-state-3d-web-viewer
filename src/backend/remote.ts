@@ -69,6 +69,9 @@ export interface LeadInput {
   trap: string;
   /** Anti-bot token (Turnstile), when the site has the check on: the message then goes through the submit-lead function. */
   captchaToken?: string;
+  /** Visit asked on the listing form: day (YYYY-MM-DD) and, optionally, the period. */
+  visitOn?: string;
+  visitPeriod?: 'manha' | 'tarde' | 'noite';
 }
 
 export interface TrashItem {
@@ -651,6 +654,8 @@ export class RemoteBackend {
         p_consent: true,
         p_consent_text: l.consentText,
         p_trap: l.trap || null,
+        p_visit_on: l.visitOn || null,
+        p_visit_period: l.visitOn ? l.visitPeriod || null : null,
       },
       l.captchaToken,
     );

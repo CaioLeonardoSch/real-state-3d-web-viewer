@@ -39,6 +39,7 @@ import { cardHtml, photosOf, placeOf, priceHtml, specsHtml, wireCarousels, type 
 import type { SiteData } from './data';
 import { fontFaceCss } from './fonts';
 import { leadFormHtml, wireLeadForm } from './forms';
+import { financingHtml, wireFinancing } from '../ui/financingSim';
 import { ICONS } from './icons';
 import { ROUTES, codeOf, listingPath, pageMeta, parsePath, routePath, type Route } from './routes';
 import { MAX_COMPARE, SavedLists } from './saved';
@@ -1151,6 +1152,7 @@ export class SiteApp {
           <section><h2>Descrição</h2><p class="d-desc">${escapeHtml(l.description)}</p></section>
           ${l.features.length ? `<section><h2>Características</h2><ul class="d-feats">${l.features.map((f) => `<li>${AMENITY_LABELS[f]}</li>`).join('')}</ul></section>` : ''}
           <section><h2>Ficha do imóvel</h2><dl class="d-facts">${facts.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl></section>
+          ${!rent && l.availability !== 'sold' && (priceIn(l, false) ?? 0) > 0 ? `<section class="d-fin">${financingHtml(priceIn(l, false)!, 'fld')}</section>` : ''}
           ${video ? `<section><h2>Vídeo</h2><div class="d-video"><iframe src="${escapeHtml(video)}" title="Vídeo do imóvel" loading="lazy" allowfullscreen></iframe></div></section>` : ''}
           ${l.floorPlanImage ? `<section><h2>Planta</h2><img class="d-plan" src="${escapeHtml(l.floorPlanImage)}" alt="Planta do imóvel" loading="lazy"></section>` : ''}
           ${tour ? `<p><a class="btn btn-ghost" href="${escapeHtml(tour)}" target="_blank" rel="noopener">Tour virtual 360° ↗</a></p>` : ''}
@@ -1164,8 +1166,9 @@ export class SiteApp {
             ${l.condoFee || l.iptu ? `<p class="muted small">${[l.condoFee ? `Condomínio ${formatBRL(l.condoFee)}` : '', l.iptu ? `IPTU ${formatBRL(l.iptu.value)}/${l.iptu.period === 'year' ? 'ano' : 'mês'}` : ''].filter(Boolean).join(' · ')}</p>` : ''}
             ${c.contacts.whatsapp ? `<a class="btn btn-wa btn-block" data-contact data-listing="${escapeHtml(l.id)}" href="${escapeHtml(whatsappHref(c.contacts.whatsapp, waText))}" target="_blank" rel="noopener">${ICONS.whatsapp} Conversar no WhatsApp</a>` : ''}
             ${c.contacts.phone ? `<a class="btn btn-ghost btn-block" data-contact href="${escapeHtml(telHref(c.contacts.phone))}">${ICONS.phone} ${escapeHtml(formatPhone(c.contacts.phone))}</a>` : ''}
+            <a class="btn btn-ghost btn-block" href="#contato-imovel" data-visit>${ICONS.calendar} Agendar visita</a>
             <h2 class="side-title" id="contato-imovel">Quero saber mais</h2>
-            ${leadFormHtml({ orgName: c.name, message: `Olá! Tenho interesse no imóvel ${codeOf(l)}. Gostaria de mais informações.`, submitLabel: 'Enviar mensagem', captcha: !this.data.demo })}
+            ${leadFormHtml({ orgName: c.name, message: `Olá! Tenho interesse no imóvel ${codeOf(l)}. Gostaria de mais informações.`, submitLabel: 'Enviar mensagem', captcha: !this.data.demo, visit: true })}
           </div>
         </aside>
       </div>
@@ -1177,6 +1180,15 @@ export class SiteApp {
     </div>`;
     this.wireGallery(main, photos);
     this.lazyMap(main);
+    wireFinancing(main);
+    // no hash navigation here: it would re-render the page (popstate) and lose the ticked box
+    main.querySelector('[data-visit]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const box = main.querySelector<HTMLInputElement>('form.lead input[name="visit"]');
+      if (box && !box.checked) box.click();
+      main.querySelector('#contato-imovel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      box?.focus({ preventScroll: true });
+    });
     wireLeadForm(
       $(main, 'form.lead'),
       async (input) => {
@@ -1184,7 +1196,12 @@ export class SiteApp {
         await this.data.remote.submitLead(l.id, input);
         return null;
       },
-      this.data.demo ? 'Demonstração: nada foi enviado. No site real, a mensagem chega ao corretor e em Minha conta → Contatos.' : 'Mensagem enviada. O corretor vai responder em breve.',
+      (visit) =>
+        this.data.demo
+          ? 'Demonstração: nada foi enviado. No site real, a mensagem chega ao corretor e em Minha conta → Contatos.'
+          : visit
+            ? 'Pedido de visita enviado. O corretor vai confirmar o horário com você.'
+            : 'Mensagem enviada. O corretor vai responder em breve.',
     );
     main.querySelector('.share')!.addEventListener('click', async () => {
       const link = canonical ?? url;

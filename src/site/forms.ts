@@ -3,6 +3,7 @@
 import type { LeadInput } from '../backend/remote';
 import { captchaBox, formCaptcha } from '../backend/captcha';
 import { escapeHtml } from '../utils/format';
+import { readVisit, visitFieldsHtml, wireVisitFields } from '../ui/visitRequest';
 
 export interface ExtraField {
   name: string;
@@ -16,7 +17,8 @@ export interface ExtraField {
 let seq = 0;
 
 /** `captcha`: the form really sends (a client's site, not the demo), so it gets the anti-bot check when that is on. */
-export function leadFormHtml(opts: { orgName: string; message?: string; submitLabel: string; extra?: ExtraField[]; messageLabel?: string; captcha?: boolean }): string {
+/** `visit`: offers "Quero agendar uma visita" (listing page). */
+export function leadFormHtml(opts: { orgName: string; message?: string; submitLabel: string; extra?: ExtraField[]; messageLabel?: string; captcha?: boolean; visit?: boolean }): string {
   const id = `lf${++seq}`;
   const field = (f: ExtraField) =>
     f.type === 'select'
@@ -24,7 +26,7 @@ export function leadFormHtml(opts: { orgName: string; message?: string; submitLa
           .map((o) => `<option>${escapeHtml(o)}</option>`)
           .join('')}</select></label>`
       : `<label class="fld"><span>${escapeHtml(f.label)}</span><input name="x-${escapeHtml(f.name)}" ${f.inputmode ? `inputmode="${f.inputmode}"` : ''} placeholder="${escapeHtml(f.placeholder ?? '')}" maxlength="200"></label>`;
-  return `<form class="lead" novalidate>
+  return `<form class="lead" novalidate data-label="${escapeHtml(opts.submitLabel)}">
     ${opts.extra?.length ? `<div class="fld-grid">${opts.extra.map(field).join('')}</div>` : ''}
     <label class="fld"><span>Nome</span><input name="name" autocomplete="name" required maxlength="120"></label>
     <div class="fld-grid">
@@ -32,6 +34,7 @@ export function leadFormHtml(opts: { orgName: string; message?: string; submitLa
       <label class="fld"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="120"></label>
     </div>
     <label class="fld"><span>${escapeHtml(opts.messageLabel ?? 'Mensagem')}</span><textarea name="message" rows="3" maxlength="2000">${escapeHtml(opts.message ?? '')}</textarea></label>
+    ${opts.visit ? visitFieldsHtml('fld', 'consent') : ''}
     <label class="hp" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
     <label class="consent"><input type="checkbox" name="consent" id="${id}-c"> <span>Concordo em compartilhar meus dados com ${escapeHtml(opts.orgName)} para receber o atendimento.</span></label>
     ${opts.captcha ? captchaBox() : ''}
@@ -44,10 +47,12 @@ export function leadFormHtml(opts: { orgName: string; message?: string; submitLa
 export function wireLeadForm(
   form: HTMLFormElement,
   send: (input: LeadInput, details: Record<string, string>) => Promise<string | null>,
-  done: string,
+  done: string | ((visit: boolean) => string),
 ): void {
   const msg = form.querySelector<HTMLElement>('.form-msg')!;
   const captcha = formCaptcha(form, 'lead');
+  const submit = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+  wireVisitFields(form, (visit) => (submit.textContent = visit ? 'Pedir visita' : (form.dataset.label ?? submit.textContent)));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
@@ -66,6 +71,7 @@ export function wireLeadForm(
       msg.classList.add('err');
       return;
     }
+    const visit = readVisit(form);
     const details: Record<string, string> = {};
     for (const [k, v] of fd) if (k.startsWith('x-') && String(v).trim()) details[k.slice(2)] = String(v).trim().slice(0, 200);
     const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
@@ -82,6 +88,7 @@ export function wireLeadForm(
             consentText: consent.nextElementSibling!.textContent!.trim(),
             trap: get('website'),
             captchaToken,
+            ...visit,
           },
           details,
         ),
@@ -96,7 +103,7 @@ export function wireLeadForm(
       return;
     }
     form.reset();
-    msg.textContent = done;
+    msg.textContent = typeof done === 'string' ? done : done(!!visit.visitOn);
     msg.classList.add('ok');
   });
 }

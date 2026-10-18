@@ -305,6 +305,23 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
       expect((await anon().rpc('submit_lead', lead(draft))).error?.message).toMatch(/não encontrado/);
     });
 
+    it('pedido de visita: dia de amanhã até 30 dias, período conferido, gravado nos detalhes que a equipe não altera', async () => {
+      const day = (n: number) => {
+        const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()).split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+      };
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_visit_on: day(0) }))).error?.message).toMatch(/entre amanhã/);
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_visit_on: day(31) }))).error?.message).toMatch(/entre amanhã/);
+      expect((await anon().rpc('submit_lead', lead(listingId, { p_visit_on: day(2), p_visit_period: 'madrugada' }))).error?.message).toMatch(/período/);
+      const r = await anon().rpc('submit_lead', lead(listingId, { p_visit_on: day(2), p_visit_period: 'tarde' }));
+      expect(r.error).toBeNull();
+      const row = (await bruno.client.from('leads').select('details').eq('id', r.data).single()).data!;
+      const [y, m, d] = day(2).split('-');
+      expect(row.details).toMatchObject({ visita: expect.stringMatching(new RegExp(`^[a-zçá-]+, ${d}/${m}/${y}$`)), horario: 'Tarde' });
+      const upd = await bruno.client.from('leads').update({ details: { visita: 'outro dia' }, status: 'visit' }).eq('id', r.data).select('details, status').single();
+      expect(upd.data).toMatchObject({ details: row.details, status: 'visit' });
+    });
+
     it('o corretor muda situação e anotações, mas não os dados do visitante nem o responsável', async () => {
       const id = (await anon().rpc('submit_lead', lead(listingId))).data;
       const upd = await bruno.client.from('leads').update({ status: 'contacted', notes: 'Ligar sexta', name: 'Outro', assigned_to: ana.id }).eq('id', id).select('*').single();

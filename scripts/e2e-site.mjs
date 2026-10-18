@@ -255,6 +255,22 @@ async function main() {
     await page.waitForSelector('.side-card .form-msg.ok');
     check('formulário: valida nome, contato e consentimento (LGPD); na demonstração avisa que nada foi enviado',
       err === 'Informe seu nome.' && err2.startsWith('Marque a concordância') && (await page.locator('.side-card .form-msg').textContent()).startsWith('Demonstração'), `${err} / ${err2}`);
+    await page.click('.side-card [data-visit]');
+    const visit = await page.evaluate(() => ({
+      checked: document.querySelector('.side-card [name=visit]').checked,
+      shown: !document.querySelector('.side-card .visit-fields').hidden,
+      days: document.querySelectorAll('.side-card [name=visit_on] option').length,
+      button: document.querySelector('.side-card form.lead button[type=submit]').textContent,
+    }));
+    check('"Agendar visita" marca o pedido de visita: 14 dias para escolher, período e botão "Pedir visita"',
+      visit.checked && visit.shown && visit.days === 14 && visit.button === 'Pedir visita', JSON.stringify(visit));
+    const fin = await page.evaluate(() => {
+      const d = document.querySelector('.d-fin .fin-sim');
+      if (d) d.open = true;
+      return d?.querySelector('.fin-out')?.textContent ?? null;
+    });
+    check('imóvel à venda: simulação de financiamento (SAC por padrão) com valor financiado, parcelas e renda sugerida',
+      fin !== null && /Valor financiado.*80% do imóvel/.test(fin) && /Primeira parcela.*Última parcela/.test(fin) && /Renda familiar/.test(fin), fin?.slice(0, 200));
     await page.click('.side-card .btn-wa');
     check('contatos fictícios não abrem WhatsApp de verdade', (await page.locator('.toast').textContent()).startsWith('Demonstração') && page.url().startsWith(BASE));
     await page.screenshot({ path: path.join(SHOTS, 'site-imovel.png') });
