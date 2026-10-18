@@ -865,6 +865,7 @@ async function main() {
   // Hook for automated browser checks (scripts/e2e-check.mjs). Read-only helpers.
   (window as unknown as { __demo: unknown }).__demo = {
     map: scene.map,
+    camera: () => scene.camera(),
     get listingIds() {
       return listings.map((l) => l.id);
     },

@@ -328,6 +328,11 @@ Seis pedidos do cliente, com o caminho, os dados, o prazo e os riscos de cada um
 (etapa 1)**, descritos em cada item; os outros ainda não. Os prazos são de trabalho, sem contar a espera por dados.
 
 1. **Relevo, e a câmera sem atravessar o chão (1 a 2 semanas).**
+   - **Feito em 17/10, a câmera acima dos telhados:** ao fim de cada movimento, o mapa calcula a posição da câmera
+     (centro, zoom, inclinação, direção e campo de visão) e a altura do prédio mais alto a até 20 m dela. Se a folga
+     sobre o telhado for menor que 12 m, a câmera se inclina para cima mantendo a distância; se nem olhando para
+     baixo bastar, ela se afasta (`src/map/cameraGuard.ts`). Só é conferido abaixo de 200 m de altura. O relevo
+     (`raster-dem`, `setTerrain`) continua dependendo da licença do MDT.
    - **Hoje:** o mapa é plano. No zoom máximo, com a inclinação de 75°, a câmera fica a uns 30 m do chão e entra nas
      torres.
    - **Dados:** o modelo do terreno (MDT) de 1 m do Estado (SIGSC, 2010–2012, gratuito), conferido com as curvas de

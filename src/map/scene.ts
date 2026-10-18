@@ -1,3 +1,4 @@
+import { GUARD_MAX_ALTITUDE_M, cameraFix, cameraPosition } from './cameraGuard';
 import turfBooleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { AttributionControl, LngLatBounds, Map as MlMap, Marker, NavigationControl } from 'maplibre-gl';
 import type {
@@ -219,7 +220,10 @@ export class Scene {
     this.bindInteractions();
     this.addBairroLabels();
     // the shadows follow the camera: recomputed once the tiles it moved to are loaded
-    this.map.on('moveend', () => (this.shadowsDirty = true));
+    this.map.on('moveend', (e) => {
+      this.shadowsDirty = true;
+      if (!(e as { cameraGuard?: boolean }).cameraGuard) this.guardCamera();
+    });
     this.map.on('idle', () => this.updateShadows());
   }
 
@@ -766,6 +770,29 @@ export class Scene {
       ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { height }, geometry }] }
       : EMPTY_FC;
     (this.map.getSource('pick-preview') as GeoJSONSource | undefined)?.setData(fc);
+  }
+
+  /** After a move: lifts the camera when it ended up inside or just above a building (see cameraGuard.ts). */
+  /** Where the camera is: its point on the ground and its height (m). */
+  camera(): { lngLat: [number, number]; altitudeM: number } {
+    const c = this.map.getCenter();
+    return cameraPosition([c.lng, c.lat], this.map.getZoom(), this.map.getPitch(), this.map.getBearing(),
+      this.map.getVerticalFieldOfView(), this.map.getContainer().clientHeight);
+  }
+
+  private guardCamera(): void {
+    // "Ver a vista da janela" (DevelopmentLayer.viewFrom) puts the camera at the window on purpose, with the
+    // pitch limit raised to 85°
+    if (this.map.getMaxPitch() > 75) return;
+    const cam = this.camera();
+    const altitude = cam.altitudeM;
+    if (altitude >= GUARD_MAX_ALTITUDE_M) return;
+    const [lng, lat] = cam.lngLat;
+    const d = 0.0002; // ≈ 20 m around the camera
+    let roof = 0;
+    for (const f of this.tileFeaturesIn('buildings', [lng - d, lat - d, lng + d, lat + d])) roof = Math.max(roof, Number(f.properties?.height) || 0);
+    const fix = cameraFix(altitude, this.map.getPitch(), roof);
+    if (fix) this.map.easeTo({ pitch: fix.pitch, zoom: this.map.getZoom() + fix.zoomBy, duration: 500 }, { cameraGuard: true });
   }
 
   /** Features of a tile layer in the loaded tiles around `bbox` (used to check where a new lot fits). */

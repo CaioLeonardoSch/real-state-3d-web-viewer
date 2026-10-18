@@ -310,6 +310,29 @@ async function main() {
       check('clicking a group of pins zooms in', zoomed > overview.zoom + 0.5, `${overview.zoom.toFixed(1)} → ${zoomed.toFixed(1)}`);
       await page.evaluate(async (c) => { const m = window.__demo.map; m.jumpTo(c); await new Promise((r) => m.once('idle', r)); }, cam);
     }
+    // item 37: a camera left inside a tower (zoom 19,5, 75°) is lifted above its roof when the move ends
+    const guard = await page.evaluate(async () => {
+      const m = window.__demo.map;
+      const cam = { center: m.getCenter(), zoom: m.getZoom(), pitch: m.getPitch(), bearing: m.getBearing() };
+      m.jumpTo({ center: [-48.846, -26.304], zoom: 16.5, pitch: 0 }); // Centro: towers of 40 m and more
+      await new Promise((r) => m.once('idle', r));
+      const tall = m.queryRenderedFeatures({ layers: ['context-buildings'] }).filter((f) => f.properties.height >= 40)
+        .sort((a, b) => b.properties.height - a.properties.height)[0];
+      if (!tall) { m.jumpTo(cam); return null; }
+      const ring = tall.geometry.type === 'Polygon' ? tall.geometry.coordinates[0] : tall.geometry.coordinates[0][0];
+      const at = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]);
+      // camera inside the tower, half way up, looking north at 75°
+      const inside = tall.properties.height / 2;
+      const opts = m.calculateCameraOptionsFromTo({ lng: at[0], lat: at[1] }, inside, { lng: at[0], lat: at[1] + (inside / Math.tan((15 * Math.PI) / 180)) / 110540 }, 0);
+      m.jumpTo(opts);
+      await new Promise((r) => setTimeout(r, 1500));
+      const altitude = window.__demo.camera().altitudeM;
+      const out = { height: tall.properties.height, inside, altitude: Math.round(altitude), pitch: Math.round(m.getPitch()) };
+      m.jumpTo(cam);
+      await new Promise((r) => m.once('idle', r));
+      return out;
+    });
+    check('camera: left inside a tower, it is lifted above the roof', guard && guard.altitude > guard.height, JSON.stringify(guard));
     const pinTarget = await findListingTarget(page, ['listing-pins']);
     if (pinTarget) {
       await page.mouse.move(pinTarget.x, pinTarget.y, { steps: 4 });
