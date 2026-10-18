@@ -441,9 +441,9 @@ public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json + sites.j
 src/data/       tipos, validação em tempo de carga, carregamento
 src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
                 anúncios salvos no navegador (userListings)
-src/map/        cena MapLibre (camadas, destaque, hover, câmera) e iluminação (suncalc)
+src/map/        cena MapLibre (destaque, hover, câmera, sombras), estilo do mapa base (baseStyle.ts) e iluminação
 src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite
-src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, páginas, editor
+src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, editor; páginas em pages/
 src/panel/      gestão em página própria (painel.html), sem o mapa
 src/utils/      simulação de financiamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
 scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)

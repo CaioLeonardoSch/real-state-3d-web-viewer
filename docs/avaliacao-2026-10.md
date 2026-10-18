@@ -44,7 +44,7 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 | Área | Auditoria | 14/10 | Hoje (15/10) | Por quê |
 |---|---|---|---|---|
 | Mapa 3D | 7 | 7 | 8 | Telhados, arquivo de detalhe e abertura mais rápida (Lighthouse no celular de 51–52 para 67–69); build de produção sem textos nem dados de demonstração; axe sem violações em 8 estados. Falta medir num Android de entrada |
-| Site das imobiliárias | 5 | 6 | 8 | Comparação de aluguel, paginação no histórico, "Ver N imóveis", fotos em três tamanhos, histórico de publicações com volta a versões anteriores, "Site não encontrado" e endereços limpos no domínio do cliente. Falta: `app.ts` grande e "Joinville" fixo (M7); nunca foi visto com fotos e feed reais |
+| Site das imobiliárias | 5 | 6 | 8 | Comparação de aluguel, paginação no histórico, "Ver N imóveis", fotos em três tamanhos, histórico de publicações com volta a versões anteriores, "Site não encontrado" e endereços limpos no domínio do cliente. Falta: nunca foi visto com fotos e feed reais |
 | Desempenho | 6 | 7 | 8 | Inicial, busca e ficha do site em 99 no celular; o site abre com uma consulta em vez de quatro em série, com fontes próprias e fotos no tamanho da tela. O mapa fica em 67–69 num teste cujo WebGL por software pesa mais que um aparelho real (veja Números) |
 | Acessibilidade | 5 | 6 | 8 | Foco nas trocas de página, Esc, aviso com `aria-live`, `aria-pressed`, `h1` no mapa e painéis fechados fora do Tab; axe sem violações em 17 telas do site e 8 estados do mapa. Falta o teste com um leitor de tela de verdade |
 | SEO | 2 | 2 | 8 | No domínio do cliente, cada página sai com título, descrição, canônico, Open Graph e dados estruturados no HTML; endereços limpos, sitemap com os anúncios, robots.txt, 301 e 404. Testado no navegador e no runtime da Cloudflare. Falta publicar e acompanhar no Search Console |
@@ -193,9 +193,9 @@ ajustes menores; 5, funciona na demo, mas com defeitos visíveis; 3 ou menos, fa
 | M2. DDI repetido no `tel:` | **Corrigido** |
 | M3. Paginação com `replaceState` (Voltar pula as páginas), clique do meio bloqueado, `pagina=99` | **Parte corrigida:** a paginação entra no histórico, e `pagina=99` mostra a última página, com o endereço corrigido (5a2d8b2). O clique do meio não foi conferido de novo |
 | M4. `?p=qualquer` mostra a inicial; "Imóvel não encontrado" sem `noindex` | **Corrigido:** página desconhecida mostra "Página não encontrada", e as duas páginas têm noindex; no domínio do cliente, respondem 404 |
-| M5. O acesso ao backend (11 KB) é carregado mesmo sem backend | **Falta** |
+| M5. O acesso ao backend (11 KB) é carregado mesmo sem backend | **Feito em 17/10:** o cliente do backend e o painel da conta são importados sob demanda, só quando há backend configurado (item 30) |
 | M6. Banco e e-mail | **Corrigido:** imagens em `data:image/svg+xml` recusadas, e o aviso de contato por e-mail não sai mais duplicado (49d9120). **Conferido:** o limite de 64 KB da configuração funciona, porque a checagem vê o valor ainda sem compressão (o teste de backend com 70 mil caracteres repetidos é recusado). |
-| M7. `app.ts` com 1.200 linhas montando HTML em texto; "Joinville" fixo no código | **Falta** |
+| M7. `app.ts` com 1.200 linhas montando HTML em texto; "Joinville" fixo no código | **Feito em 17/10:** região configurável (item 29); as páginas saíram do `app.ts` para `src/site/pages/` (item 30). O HTML continua montado em texto, com `escapeHtml` |
 | M8. Detalhes de interface (rótulo do favorito, caixa "Comparar", filtros do celular sem "Ver N resultados") | **Parte:** os filtros do celular ganharam "Ver N imóveis" (5a2d8b2); os outros dois não foram conferidos de novo |
 
 ## Números

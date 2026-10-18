@@ -33,9 +33,10 @@ import { PlacementChecker } from './utils/placement';
 import { DevelopmentLayer } from './map/developmentLayer';
 import { DevelopmentPanel } from './ui/developmentPanel';
 import { countByStatus, type Development } from './data/developments';
-import { RemoteBackend, backendConfig } from './backend/remote';
+import { backendConfig } from './backend/config';
+import type { RemoteBackend } from './backend/remote';
 import { mountMapHint } from './ui/mapHint';
-import { AccountPanel } from './ui/account';
+import type { AccountPanel } from './ui/account';
 import { withPriceChange } from './state/priceChange';
 import { today } from './data/listingText';
 
@@ -112,8 +113,12 @@ async function main() {
   let remote: RemoteBackend | null = null;
   let remoteListings: Listing[] = [];
   let remoteDevelopments: Development[] = [];
+  // the back end's client and the account panel load only when there is one (the demo does without them)
+  let Account: typeof AccountPanel | null = null;
   if (backendConfig) {
     try {
+      const [{ RemoteBackend }, ui] = await Promise.all([import('./backend/remote'), import('./ui/account')]);
+      Account = ui.AccountPanel;
       remote = await RemoteBackend.connect(backendConfig.url, backendConfig.key);
       const r = await remote.loadListings(siteOrg);
       remoteListings = ofSite(r.listings);
@@ -615,8 +620,8 @@ async function main() {
     },
   });
   // account (login, client) when a back end is configured
-  const account = remote
-    ? new AccountPanel($('#account-panel'), $<HTMLButtonElement>('.account-toggle'), remote, () => {
+  const account = Account && remote
+    ? new Account($('#account-panel'), $<HTMLButtonElement>('.account-toggle'), remote, () => {
         void reloadRemote().catch((err) => console.error(err));
       })
     : null;

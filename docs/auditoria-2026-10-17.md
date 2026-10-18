@@ -254,6 +254,7 @@ Interface · média · média (hipótese) · pequeno.
 
 - Sem ESLint; e2e do mapa, do site e do backend fora do CI.
 - `src/site/app.ts` (1.418 linhas) e `src/map/scene.ts` (1.478) concentram muita responsabilidade.
+  **Feito em 17/10:** páginas do site em `src/site/pages/` e estilo do mapa base em `src/map/baseStyle.ts`.
 - O `main` publica direto no GitHub Pages, sem homologação.
 - **Feito em 17/10, em parte:** `.github/workflows/ci.yml` roda testes, build, os três e2e e o backend a cada push e
   pull request, e o `pages.yml` só publica o commit que passou. Faltam o ESLint (o projeto não tem configuração) e a
