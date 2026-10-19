@@ -35,10 +35,12 @@ export async function startLocalFunctions(apiUrl, siteUrl) {
   const stopMock = () => mock.close();
   let gateway;
   try {
-    // the functions run in a container: they reach this machine through the Docker network gateway
-    gateway = execFileSync('docker', ['network', 'inspect', 'supabase_network_real-state-3d-web-viewer', '-f', '{{(index .IPAM.Config 0).Gateway}}'], {
+    // the functions run in a container: on Linux they reach this machine through the Docker network gateway; on
+    // Docker Desktop (Windows, macOS) that gateway is inside its VM, and the machine is host.docker.internal
+    const network = execFileSync('docker', ['network', 'inspect', 'supabase_network_real-state-3d-web-viewer', '-f', '{{(index .IPAM.Config 0).Gateway}}'], {
       encoding: 'utf8',
     }).trim();
+    gateway = process.platform === 'linux' ? network : 'host.docker.internal';
   } catch (err) {
     stopMock();
     console.warn(`Sem as funções (${err.message.split('\n')[0]}).`);
