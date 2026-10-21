@@ -114,6 +114,11 @@ async function main() {
     check('home: modelo, cores e título da configuração; contagem ao vivo no "Buscar"; demonstração fora do Google',
       home.template === 'leve' && home.primary === '#1f4fd1' && home.h1 === 'Imóveis com desconto de verdade' && home.count === String(forSale.length) && home.robots === 'noindex',
       JSON.stringify(home));
+    // numbers and testimonials from the configuration (only the filled-in slots)
+    const proof = await page.evaluate(() => ({ stats: document.querySelectorAll('.proof-stats li').length, quotes: document.querySelectorAll('.proof .quote').length }));
+    const cfgProof = SITES[0].config.proof;
+    check('home: "Números e depoimentos" mostra só o que a imobiliária preencheu',
+      proof.stats === cfgProof.stats.length && proof.quotes === cfgProof.testimonials.length, JSON.stringify(proof));
     await page.screenshot({ path: path.join(SHOTS, 'site-home.png') });
     await axe(page, 'início');
     await page.click('.q-more');

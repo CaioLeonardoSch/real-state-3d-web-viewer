@@ -1355,6 +1355,57 @@ img {
   border-radius: var(--s-radius-lg);
   text-align: center;
 }
+.proof-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.proof-stats li {
+  display: grid;
+  gap: 2px;
+}
+.proof-stats strong {
+  font: 700 32px var(--s-heading-font);
+  color: var(--s-primary-text);
+}
+.proof-quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.quote {
+  margin: 0;
+  padding: 20px;
+  background: var(--s-card);
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius-lg);
+  display: grid;
+  gap: 12px;
+  align-content: space-between;
+}
+.quote blockquote {
+  margin: 0;
+}
+.quote p {
+  margin: 0;
+  line-height: 1.5;
+}
+.quote figcaption {
+  display: grid;
+  font-size: 14px;
+}
+.quote figcaption span {
+  color: var(--s-muted);
+}
+.ed-quote {
+  border: 1px solid var(--s-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
 .wanted {
   max-width: 640px;
   margin: 24px auto 0;

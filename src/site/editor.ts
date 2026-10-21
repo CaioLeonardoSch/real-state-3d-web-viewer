@@ -10,6 +10,8 @@ import {
   FONTS,
   HOME_SECTIONS,
   HOME_SECTION_LABELS,
+  PROOF_STATS,
+  PROOF_TESTIMONIALS,
   MENU_ITEMS,
   MENU_LABELS,
   SOCIALS,
@@ -179,7 +181,7 @@ export class SiteEditor {
           ${color('colors.primary', 'Cor principal (botões, preços)')}
           ${color('colors.accent', 'Cor de destaque (selos)')}
           ${color('colors.header', 'Cor do cabeçalho')}
-          ${warnings.length ? `<ul class="ed-warn" role="status">${warnings.map((w) => `<li>${escapeHtml(w.message)}</li>`).join('')}</ul>` : '<p class="hint ok" role="status">Contraste das cores: ok para leitura (WCAG AA).</p>'}
+          ${warnings.length ? `<div role="status"><ul class="ed-warn">${warnings.map((w) => `<li>${escapeHtml(w.message)}</li>`).join('')}</ul></div>` : '<p class="hint ok" role="status">Contraste das cores: ok para leitura (WCAG AA).</p>'}
           ${select('theme', 'Fundo', [['light', 'Claro'], ['dark', 'Escuro']])}
           ${select('font', 'Fonte do texto', fonts)}
           ${select('headingFont', 'Fonte dos títulos', fonts)}
@@ -202,6 +204,14 @@ export class SiteEditor {
           ${image('home.heroImage', 'Foto da capa (opcional)', 'capa')}
           <p class="hint">Seções, na ordem em que aparecem:</p>
           ${ordered('home.sections', HOME_SECTIONS, HOME_SECTION_LABELS)}
+        </details>
+        <details><summary>Números e depoimentos</summary>
+          <p class="hint">Só números e depoimentos reais, com autorização de quem falou. A seção aparece na página inicial quando algo está preenchido (e ligada em "Página inicial").</p>
+          ${Array.from({ length: PROOF_STATS }, (_, i) => `<div class="fld-grid">${text(`proof.stats.${i}.value`, `Número ${i + 1}`, { max: 12, placeholder: i === 0 ? '15' : '' })}${text(`proof.stats.${i}.label`, 'O que ele mede', { max: 60, placeholder: i === 0 ? 'anos em Joinville' : '' })}</div>`).join('')}
+          ${Array.from({ length: PROOF_TESTIMONIALS }, (_, i) => `<fieldset class="ed-quote"><legend>Depoimento ${i + 1}</legend>
+            ${text(`proof.testimonials.${i}.text`, 'Texto', { max: 400, area: true })}
+            ${text(`proof.testimonials.${i}.name`, 'Nome do cliente', { max: 60 })}
+            ${text(`proof.testimonials.${i}.detail`, 'O que fez com vocês (opcional)', { max: 80, placeholder: 'Comprou um apartamento no Glória' })}</fieldset>`).join('')}
         </details>
         <details><summary>Sobre nós</summary>
           ${text('about.title', 'Título', { max: 80 })}
