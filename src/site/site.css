@@ -475,18 +475,22 @@ img {
 .brand {
   display: inline-flex;
   flex-direction: column;
+  /* the name gives way on narrow phones, so the header buttons stay on screen */
+  min-width: 0;
   text-decoration: none;
   line-height: 1.1;
 }
 .brand img {
   display: block;
   width: auto;
-  max-width: 240px;
+  max-width: min(240px, 100%);
   object-fit: contain;
 }
 .brand-name {
   font: 700 21px var(--s-heading-font);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand-creci {
   font-size: 11px;
