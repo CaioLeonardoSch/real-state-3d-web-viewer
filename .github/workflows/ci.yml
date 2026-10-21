@@ -37,6 +37,10 @@ jobs:
       - run: npm run build
       - run: npm run verify:e2e
       - run: npm run verify:site
+      # build de produção (sem dados de demonstração): falha se sobrar texto de "fictício"/"demonstração" (vite.config.ts)
+      - run: npx vite build --outDir .cache/dist-producao --emptyOutDir
+        env:
+          VITE_DEMO_LISTINGS: 'false'
 
   backend:
     name: Backend (Supabase local)

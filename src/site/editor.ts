@@ -24,6 +24,7 @@ import {
 } from './config';
 import { demoDraftKey } from './data';
 import { ICONS } from './icons';
+import { DEMO } from '../data/demo';
 
 type Path = string;
 
@@ -412,7 +413,7 @@ export class SiteEditor {
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
     el.querySelector('[data-reset]')?.addEventListener('click', () => {
-      if (!confirm('Apagar a personalização salva neste navegador e voltar ao site original da demonstração?')) return;
+      if (!DEMO || !confirm('Apagar a personalização salva neste navegador e voltar ao site original da demonstração?')) return;
       try {
         localStorage.removeItem(demoDraftKey(this.app.data.slug));
       } catch {
@@ -438,7 +439,7 @@ export class SiteEditor {
       } else await remote.saveSiteConfig(agencyId, this.draft);
       this.saved = JSON.stringify(this.draft);
       this.history = null; // reloaded when the panel opens again (right away if it is open)
-      this.app.toast(demo ? 'Salvo neste navegador (demonstração).' : 'Site atualizado. Os visitantes já veem as mudanças.');
+      this.app.toast(DEMO && demo ? 'Salvo neste navegador (demonstração).' : 'Site atualizado. Os visitantes já veem as mudanças.');
     } catch (err) {
       this.app.toast((err as Error).message);
     }

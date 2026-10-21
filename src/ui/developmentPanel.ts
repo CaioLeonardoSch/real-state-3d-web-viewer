@@ -13,6 +13,7 @@ import { escapeHtml, formatArea, formatBRL } from '../utils/format';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, progressLabel } from '../data/construction';
 import type { TeamUnitRow } from '../backend/remote';
 import { brandVars } from '../data/devBrand';
+import { DEMO } from '../data/demo';
 
 export interface DevelopmentPanelHandlers {
   onClose: () => void;
@@ -162,7 +163,7 @@ export class DevelopmentPanel {
         <button type="button" class="link-btn dev-back" data-action="close">‹ Voltar ao bairro</button>
         <button type="button" class="icon-btn" data-action="close" aria-label="Fechar empreendimento">×</button>
       </div>
-      ${d.backend ? '<span class="badge-dev badge-live">Espelho de vendas 3D</span>' : '<span class="badge-fictional badge-dev">Espelho de vendas 3D · demonstração</span>'}
+      ${d.backend || !DEMO ? '<span class="badge-dev badge-live">Espelho de vendas 3D</span>' : '<span class="badge-fictional badge-dev">Espelho de vendas 3D · demonstração</span>'}
       ${
         b?.logo || b?.color
           ? `<div class="dev-brand-band">${b.logo ? `<img class="dev-logo" src="${escapeHtml(b.logo)}" alt="${escapeHtml(d.developer)}" loading="lazy">` : ''}
@@ -195,8 +196,10 @@ export class DevelopmentPanel {
                   ? ' <b>Você está na equipe:</b> escolha uma unidade para reservar ou mudar a situação.'
                   : ''
             }</p>`
-          : `<p class="notice-approx small">Preços e disponibilidade são <b>fictícios</b>. A distribuição por andar e a posição da
+          : DEMO
+            ? `<p class="notice-approx small">Preços e disponibilidade são <b>fictícios</b>. A distribuição por andar e a posição da
         torre são estimadas a partir da divulgação pública. Sem vínculo com a ${escapeHtml(d.developer)}.</p>`
+            : ''
       }
       <div class="dev-detail" aria-live="polite"></div>
       <div class="dev-tools">
@@ -223,7 +226,7 @@ export class DevelopmentPanel {
         ${d.backend ? '<p class="small">Unidades, situação e preços: cadastro da incorporadora, atualizado por ela.</p>' : ''}
         ${d.facts.length ? `<h3>Público</h3><ul>${d.facts.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
         ${
-          d.backend
+          d.backend || !DEMO
             ? d.estimates.length || d.locationNote
               ? `<h3>Estimado</h3><ul>${d.estimates.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}${
                   d.locationNote ? `<li>localização: ${escapeHtml(d.locationNote)}</li>` : ''
@@ -358,7 +361,7 @@ export class DevelopmentPanel {
       ['Vagas', String(u.parkingSpots)],
       ['Andar', floorLabel(level.level)],
       ['Face', `${face.direction} · ${face.sun}`],
-      [d.backend ? 'Preço' : 'Preço (ilustrativo)', u.price === null ? 'Sob consulta' : formatBRL(u.price)],
+      [d.backend || !DEMO ? 'Preço' : 'Preço (ilustrativo)', u.price === null ? 'Sob consulta' : formatBRL(u.price)],
       ...(u.price === null ? [] : ([['Preço por m²', `${formatBRL(Math.round(u.price / u.areaM2))}/m²`]] as [string, string][])),
     ];
     box.innerHTML = `<div class="dev-card">

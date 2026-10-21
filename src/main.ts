@@ -44,6 +44,7 @@ import { CLIP_BUFFER_M } from './map/baseStyle';
 import type { AccountPanel } from './ui/account';
 import { withPriceChange } from './state/priceChange';
 import { today } from './data/listingText';
+import { DEMO } from './data/demo';
 
 setWorkerUrl(workerUrl);
 // "pmtiles://" sources: vector tiles read from one static file with HTTP range requests.
@@ -130,7 +131,9 @@ async function main() {
       mergeAgencies(r.agencies);
     } catch (err) {
       console.error(err);
-      status.textContent = 'Não foi possível carregar os anúncios do servidor; mostrando só a demonstração.';
+      status.textContent = DEMO
+        ? 'Não foi possível carregar os anúncios do servidor; mostrando só a demonstração.'
+        : 'Não foi possível carregar os anúncios agora. Tente de novo em instantes.';
     }
     // sales mirrors kept by developers (an error leaves only the demonstration)
     if (remote && !embed) remoteDevelopments = await remote.loadDevelopments().catch((err: Error) => (console.error(err), []));

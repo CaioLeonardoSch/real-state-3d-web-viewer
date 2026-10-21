@@ -10,6 +10,7 @@ import { bairroCounts, queryToSearch, runSearch } from '../search';
 import { REGION } from '../../config/region';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
+import { DEMO } from '../../data/demo';
 
 // ---------------------------------------------------------------- institutional pages
 
@@ -100,7 +101,7 @@ function wireSiteForm(app: SiteApp, main: HTMLElement, kind: 'contact' | 'owner'
       await app.data.remote.submitSiteLead(app.data.agencyId, kind, input, details);
       return null;
     },
-    app.data.demo ? 'Demonstração: nada foi enviado. No site real, o contato chega aos administradores e em Minha conta → Contatos.' : done,
+    DEMO && app.data.demo ? 'Demonstração: nada foi enviado. No site real, o contato chega aos administradores e em Minha conta → Contatos.' : done,
   );
 }
 
