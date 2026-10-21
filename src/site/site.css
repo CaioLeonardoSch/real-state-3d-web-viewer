@@ -475,10 +475,18 @@ img {
 .brand {
   display: inline-flex;
   flex-direction: column;
-  /* the name gives way on narrow phones, so the header buttons stay on screen */
-  min-width: 0;
   text-decoration: none;
   line-height: 1.1;
+}
+/* with the menu collapsed, the name gives way on narrow phones, so the header buttons stay on screen; with the full
+   menu it keeps its width, or the measurement in src/site/app.ts would never see the menu overflow */
+.site-header.compact .brand {
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .brand {
+    min-width: 0;
+  }
 }
 .brand img {
   display: block;
