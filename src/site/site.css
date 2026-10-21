@@ -1355,6 +1355,21 @@ img {
   border-radius: var(--s-radius-lg);
   text-align: center;
 }
+.wanted {
+  max-width: 640px;
+  margin: 24px auto 0;
+  background: var(--s-card);
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius-lg);
+  padding: 20px;
+  box-shadow: var(--s-shadow);
+}
+.wanted h2 {
+  margin: 0 0 4px;
+}
+.wanted > p {
+  margin: 0 0 12px;
+}
 .empty ul {
   list-style: none;
   padding: 0;

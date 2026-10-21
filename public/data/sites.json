@@ -20,7 +20,7 @@
         "home": {
           "title": "Imóveis com desconto de verdade",
           "subtitle": "O preço anterior vem do histórico registrado na plataforma, não de um número inventado. E cada imóvel aparece no mapa 3D da cidade.",
-          "sections": ["destaques", "descontos", "mapa", "lancamentos", "bairros", "sobre", "anunciar"]
+          "sections": ["destaques", "descontos", "mapa", "lancamentos", "bairros", "encomenda", "sobre", "anunciar"]
         },
         "about": {
           "title": "Sobre a Exemplo A",

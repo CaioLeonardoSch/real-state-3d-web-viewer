@@ -12,6 +12,7 @@ import { captchaBox, formCaptcha } from '../../backend/captcha';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
 import { countGroup, wireCountGroups } from './home';
+import { wantedHtml, wireWanted } from '../wanted';
 
 // ---------------------------------------------------------------- search
 
@@ -294,7 +295,8 @@ function renderResults(app: SiteApp): void {
       tips.length
         ? `<p>Tente tirar um deles:</p><ul>${tips.map((t, i) => `<li><button type="button" class="chip" data-tip="${i}">Sem "${escapeHtml(t.ch.label)}": ${plural(t.n, 'imóvel', 'imóveis')}</button></li>`).join('')}</ul>`
         : ''
-    }<p>Ou <a href="${escapeHtml(app.href('contato'))}" data-nav>fale com a gente</a>: avisamos quando entrar um imóvel assim.</p></div>`;
+    }</div>${wantedHtml(app, searchLabel(s))}`;
+    wireWanted(app, list, searchLabel(s));
     list.querySelectorAll<HTMLButtonElement>('[data-tip]').forEach((b) =>
       b.addEventListener('click', () => {
         app.search = tips[Number(b.dataset.tip)].ch.without;

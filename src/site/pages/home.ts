@@ -8,6 +8,7 @@ import { bairroCounts, emptySearch, runSearch, type SiteSearch } from '../search
 import { REGION } from '../../config/region';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
+import { wantedHtml, wireWanted } from '../wanted';
 
 // ---------------------------------------------------------------- home
 
@@ -66,12 +67,15 @@ export function home(app: SiteApp, main: HTMLElement): void {
     } else if (sec === 'sobre' && c.about.text) {
       parts.push(`<section class="wrap home-sec about-teaser"><div><h2>${escapeHtml(c.about.title)}</h2><p>${escapeHtml(c.about.text.split('\n')[0])}</p>
         <a href="${escapeHtml(app.href('sobre'))}" data-nav class="more">Conheça ${ICONS.right}</a></div>${c.about.image ? `<img src="${escapeHtml(c.about.image)}" alt="" loading="lazy">` : ''}</section>`);
+    } else if (sec === 'encomenda') {
+      parts.push(`<div class="wrap home-sec">${wantedHtml(app, null)}</div>`);
     } else if (sec === 'anunciar') {
       parts.push(`<section class="cta-band"><div class="wrap"><div><h2>Quer vender ou alugar seu imóvel?</h2><p>Anuncie com a ${escapeHtml(c.name)}: seu imóvel no site, no mapa 3D e nos portais.</p></div>
         <a class="btn btn-light" href="${escapeHtml(app.href('anunciar'))}" data-nav>Anunciar meu imóvel</a></div></section>`);
     }
   }
   sections.innerHTML = parts.join('');
+  wireWanted(app, sections, null);
   sections.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-rail]');
     if (!b) return;
