@@ -38,7 +38,7 @@ export function leadFormHtml(opts: { orgName: string; message?: string; submitLa
     <label class="hp" aria-hidden="true">Não preencha<input name="website" tabindex="-1" autocomplete="off"></label>
     <label class="consent"><input type="checkbox" name="consent" id="${id}-c"> <span>Concordo em compartilhar meus dados com ${escapeHtml(opts.orgName)} para receber o atendimento.</span></label>
     ${opts.captcha ? captchaBox() : ''}
-    <p class="form-msg" role="status" aria-live="polite"></p>
+    <p class="form-msg" id="${id}-m" role="status" aria-live="polite"></p>
     <button type="submit" class="btn btn-primary btn-block">${escapeHtml(opts.submitLabel)}</button>
   </form>`;
 }
@@ -60,15 +60,25 @@ export function wireLeadForm(
     const consent = form.querySelector<HTMLInputElement>('[name=consent]')!;
     const phone = get('phone').replace(/\D/g, '');
     const email = get('email');
+    const field = (name: string) => form.querySelector<HTMLInputElement>(`[name=${name}]`)!;
     let error = '';
-    if (!get('name')) error = 'Informe seu nome.';
-    else if (!email && phone.length < 10) error = 'Informe um telefone com DDD ou um e-mail.';
-    else if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) error = 'O e-mail parece incompleto.';
-    else if (!consent.checked) error = 'Marque a concordância para enviarmos seus dados à imobiliária.';
+    let bad: HTMLInputElement | null = null;
+    if (!get('name')) [error, bad] = ['Informe seu nome.', field('name')];
+    else if (!email && phone.length < 10) [error, bad] = ['Informe um telefone com DDD ou um e-mail.', field('phone')];
+    else if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) [error, bad] = ['O e-mail parece incompleto.', field('email')];
+    else if (!consent.checked) [error, bad] = ['Marque a concordância para enviarmos seus dados à imobiliária.', consent];
     msg.className = 'form-msg';
+    form.querySelectorAll('[aria-invalid]').forEach((x) => {
+      x.removeAttribute('aria-invalid');
+      x.removeAttribute('aria-describedby');
+    });
     if (error) {
       msg.textContent = error;
       msg.classList.add('err');
+      // the visitor lands on the field to fix, which the screen reader announces with the message
+      bad!.setAttribute('aria-describedby', msg.id);
+      bad!.setAttribute('aria-invalid', 'true');
+      bad!.focus();
       return;
     }
     const visit = readVisit(form);

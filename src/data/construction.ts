@@ -8,7 +8,7 @@ export const CONSTRUCTION_SOURCE_LABELS: Record<ConstructionSource, string> = {
   anunciante: 'informado pelo anunciante',
   vistoria: 'vistoria no local',
   imagem: 'estimado por imagem aérea',
-  ilustrativo: 'ilustrativo (demonstração)',
+  ilustrativo: 'ilustrativo',
 };
 
 export interface ConstructionProgress {

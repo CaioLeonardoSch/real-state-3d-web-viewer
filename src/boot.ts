@@ -3,6 +3,11 @@
 // seconds (Lighthouse on a phone: first content 3.1 s → 1 s). Preloading it was worse: it competes with the shell.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
+import { showMapHint } from './ui/mapHint';
+
+// the first-visit hint paints with the shell (not inside the embedded map of a client's site)
+const stage = document.querySelector<HTMLElement>('.stage');
+if (stage && new URLSearchParams(location.search).get('embed') !== '1') showMapHint(stage);
 
 let started = false;
 const start = () => {

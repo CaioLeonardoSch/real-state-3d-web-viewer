@@ -1,5 +1,6 @@
 import { publicAddress } from '../data/listingText';
 import { validateListingsFile, type Agency, type Listing } from '../data/types';
+import { DEMO } from '../data/demo';
 
 /**
  * Listings added through "Anunciar imóvel". They live only in this browser (localStorage) until
@@ -75,7 +76,9 @@ const toPublic = (listing: Listing): Listing => {
 export function exportUserListings(listings: Listing[], agencies: Agency[]): UserListingsExport {
   return {
     fictional: true,
-    notice: 'Imóveis cadastrados pelo formulário "Anunciar imóvel" do protótipo. Dados de demonstração.',
+    notice: DEMO
+      ? 'Imóveis cadastrados pelo formulário "Anunciar imóvel" do protótipo. Dados de demonstração.'
+      : 'Imóveis cadastrados pelo formulário "Anunciar imóvel", salvos só neste navegador.',
     agencies,
     listings: listings.map(toPublic),
   };

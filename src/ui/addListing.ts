@@ -48,6 +48,7 @@ import { exclusivityDocProblem } from '../backend/mapping';
 import { locateAddress, streetKey, type Located } from '../data/addresses';
 import { loadAddresses, loadStreets } from '../data/load';
 import { isSynthetic, syntheticBuilding } from '../map/syntheticBuilding';
+import { DEMO } from '../data/demo';
 
 const METERS_PER_FLOOR = 3;
 const TYPE_SLUG: Record<ListingType, string> = {
@@ -1130,7 +1131,7 @@ export class AddListingPanel {
       ...((editing ? editing.fictional : !remote) ? { fictional: true as const } : {}),
       ...(editing?.remote ? { remote: true as const } : {}),
       ...((remote ? (this.form.elements.namedItem('draft') as HTMLInputElement | null)?.checked : editing?.draft) ? { draft: true as const } : {}),
-      description: this.value('description') || (remote || editing ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
+      description: this.value('description') || (remote || editing || !DEMO ? '' : 'Anúncio cadastrado no protótipo. Dados de demonstração.'),
       userAdded: true,
     };
     const btn = this.form.querySelector<HTMLButtonElement>('button[type="submit"]')!;

@@ -14,6 +14,7 @@ import { codeOf, listingPath } from '../routes';
 import type { SiteApp } from '../app';
 import { $ } from './util';
 import { mapUrl } from './search';
+import { DEMO } from '../../data/demo';
 
 /**
  * The gallery's photo: phones get up to the 1024 px version, wider screens up to the 1920 px one (photos stored in
@@ -160,7 +161,7 @@ export function detail(app: SiteApp, main: HTMLElement): void {
       return null;
     },
     (visit) =>
-      app.data.demo
+      DEMO && app.data.demo
         ? 'Demonstração: nada foi enviado. No site real, a mensagem chega ao corretor e em Minha conta → Contatos.'
         : visit
           ? 'Pedido de visita enviado. O corretor vai confirmar o horário com você.'

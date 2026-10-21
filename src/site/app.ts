@@ -16,6 +16,7 @@ import { home } from './pages/home';
 import { searchPage, onMapMessage } from './pages/search';
 import { detail } from './pages/detail';
 import { about, contact, announce, missingPage, favorites, compare } from './pages/info';
+import { DEMO } from '../data/demo';
 
 export class SiteApp {
   config: SiteConfig;
@@ -80,7 +81,7 @@ export class SiteApp {
     // demo: fictional contacts never open a real WhatsApp conversation or phone call
     document.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-contact]');
-      if (!a || !this.data.demo) return;
+      if (!a || !DEMO || !this.data.demo) return;
       e.preventDefault();
       this.toast('Demonstração: no site de uma imobiliária de verdade, este botão abre o WhatsApp (ou a ligação) com ela.');
     });
@@ -182,7 +183,7 @@ export class SiteApp {
     const parked = this.parkMap();
     this.root.innerHTML = `
       <a class="skip" href="#conteudo">Pular para o conteúdo</a>
-      ${this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária, contatos e imóveis fictícios. <button type="button" class="link-btn" data-open-editor>Personalizar este site</button></div>` : ''}
+      ${DEMO && this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária, contatos e imóveis fictícios. <button type="button" class="link-btn" data-open-editor>Personalizar este site</button></div>` : ''}
       ${this.headerHtml()}
       <main id="conteudo" tabindex="-1" class="page page-${this.route}"></main>
       ${this.footerHtml()}

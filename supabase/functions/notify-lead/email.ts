@@ -24,6 +24,7 @@ const DETAIL_LABELS: Record<string, string> = {
   area: 'Área',
   quartos: 'Quartos',
   assunto: 'Assunto',
+  procura: 'Procura',
   visita: 'Visita pedida',
   horario: 'Horário',
 };

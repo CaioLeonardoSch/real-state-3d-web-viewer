@@ -703,6 +703,9 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   font-size: 12px;
   cursor: pointer;
   padding: 2px 4px;
+  /* WCAG 2.5.8: at least 24 × 24 px to tap */
+  min-width: 24px;
+  min-height: 24px;
 }
 body[data-tod='night'] .link-btn {
   color: #ffc37a;

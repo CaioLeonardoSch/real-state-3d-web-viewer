@@ -46,6 +46,26 @@ describe('configuração do site do cliente', () => {
     expect(normalizeSiteConfig('lixo', 'Org').template).toBe('leve');
   });
 
+  it('números e depoimentos: vazios por padrão, vagas fixas, textos curtos', () => {
+    const empty = defaultSiteConfig().proof;
+    expect(empty.stats).toHaveLength(4);
+    expect(empty.testimonials).toHaveLength(3);
+    expect([...empty.stats, ...empty.testimonials].every((x) => Object.values(x).every((v) => v === ''))).toBe(true);
+    const c = normalizeSiteConfig({
+      proof: {
+        stats: [{ value: ' 15 ', label: 'anos em Joinville' }, 'lixo', { value: 12345678901234, label: 'x' }, {}, { value: 'a mais', label: 'b' }],
+        testimonials: [{ text: 'x'.repeat(500), name: 'Ana', detail: 'Comprou' }, null],
+      },
+    }).proof;
+    expect(c.stats).toHaveLength(4); // the 5th is dropped
+    expect(c.stats[0]).toEqual({ value: '15', label: 'anos em Joinville' });
+    expect(c.stats[1]).toEqual({ value: '', label: '' });
+    expect(c.stats[2].value).toBe(''); // a number is not text
+    expect(c.testimonials).toHaveLength(3);
+    expect(c.testimonials[0].text).toHaveLength(400);
+    expect(c.testimonials[1]).toEqual({ text: '', name: '', detail: '' });
+  });
+
   it('imagens: só https (ou localhost) e data: de imagem', () => {
     expect(safeImage('https://cdn.x.com/logo.png')).toBe('https://cdn.x.com/logo.png');
     expect(safeImage('http://exemplo.com/logo.png')).toBe('');

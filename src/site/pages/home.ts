@@ -8,6 +8,7 @@ import { bairroCounts, emptySearch, runSearch, type SiteSearch } from '../search
 import { REGION } from '../../config/region';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
+import { wantedHtml, wireWanted } from '../wanted';
 
 // ---------------------------------------------------------------- home
 
@@ -66,12 +67,17 @@ export function home(app: SiteApp, main: HTMLElement): void {
     } else if (sec === 'sobre' && c.about.text) {
       parts.push(`<section class="wrap home-sec about-teaser"><div><h2>${escapeHtml(c.about.title)}</h2><p>${escapeHtml(c.about.text.split('\n')[0])}</p>
         <a href="${escapeHtml(app.href('sobre'))}" data-nav class="more">Conheça ${ICONS.right}</a></div>${c.about.image ? `<img src="${escapeHtml(c.about.image)}" alt="" loading="lazy">` : ''}</section>`);
+    } else if (sec === 'depoimentos') {
+      parts.push(proofHtml(app));
+    } else if (sec === 'encomenda') {
+      parts.push(`<div class="wrap home-sec">${wantedHtml(app, null)}</div>`);
     } else if (sec === 'anunciar') {
       parts.push(`<section class="cta-band"><div class="wrap"><div><h2>Quer vender ou alugar seu imóvel?</h2><p>Anuncie com a ${escapeHtml(c.name)}: seu imóvel no site, no mapa 3D e nos portais.</p></div>
         <a class="btn btn-light" href="${escapeHtml(app.href('anunciar'))}" data-nav>Anunciar meu imóvel</a></div></section>`);
     }
   }
   sections.innerHTML = parts.join('');
+  wireWanted(app, sections, null);
   sections.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-rail]');
     if (!b) return;
@@ -193,4 +199,26 @@ export function wireCountGroups(root: HTMLElement, onChange: (name: string, v: n
       onChange(g.dataset.count!, on ? Number(b.dataset.v) : null);
     }),
   );
+}
+
+/** The agency's numbers and its clients' words, as filled in the editor; nothing when both are empty. */
+function proofHtml(app: SiteApp): string {
+  const c = app.config;
+  const stats = c.proof.stats.filter((s) => s.value && s.label);
+  const quotes = c.proof.testimonials.filter((t) => t.text && t.name);
+  if (!stats.length && !quotes.length) return '';
+  return `<section class="wrap home-sec proof" aria-labelledby="proof-title">
+    <div class="sec-head"><h2 id="proof-title">${quotes.length ? 'O que dizem nossos clientes' : `${escapeHtml(c.name)} em números`}</h2></div>
+    ${stats.length ? `<ul class="proof-stats">${stats.map((s) => `<li><strong>${escapeHtml(s.value)}</strong><span>${escapeHtml(s.label)}</span></li>`).join('')}</ul>` : ''}
+    ${
+      quotes.length
+        ? `<div class="proof-quotes">${quotes
+            .map(
+              (t) => `<figure class="quote"><blockquote><p>${escapeHtml(t.text)}</p></blockquote>
+          <figcaption><strong>${escapeHtml(t.name)}</strong>${t.detail ? `<span>${escapeHtml(t.detail)}</span>` : ''}</figcaption></figure>`,
+            )
+            .join('')}</div>`
+        : ''
+    }
+  </section>`;
 }

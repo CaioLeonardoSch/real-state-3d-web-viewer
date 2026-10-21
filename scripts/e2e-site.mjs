@@ -114,6 +114,11 @@ async function main() {
     check('home: modelo, cores e título da configuração; contagem ao vivo no "Buscar"; demonstração fora do Google',
       home.template === 'leve' && home.primary === '#1f4fd1' && home.h1 === 'Imóveis com desconto de verdade' && home.count === String(forSale.length) && home.robots === 'noindex',
       JSON.stringify(home));
+    // numbers and testimonials from the configuration (only the filled-in slots)
+    const proof = await page.evaluate(() => ({ stats: document.querySelectorAll('.proof-stats li').length, quotes: document.querySelectorAll('.proof .quote').length }));
+    const cfgProof = SITES[0].config.proof;
+    check('home: "Números e depoimentos" mostra só o que a imobiliária preencheu',
+      proof.stats === cfgProof.stats.length && proof.quotes === cfgProof.testimonials.length, JSON.stringify(proof));
     await page.screenshot({ path: path.join(SHOTS, 'site-home.png') });
     await axe(page, 'início');
     await page.click('.q-more');
@@ -188,6 +193,14 @@ async function main() {
     await page.goto(`${BASE}?p=imoveis&tipo=terreno&quartos=4`);
     await page.waitForSelector('.empty');
     check('busca sem resultado sugere qual filtro tirar', (await page.locator('.empty [data-tip]').count()) > 0);
+    // ... and offers "Não achou?": the visitor tells what they want, filled in with the search; it goes in as a contact
+    const wanted = await page.inputValue('.wanted textarea[name=message]');
+    await page.fill('.wanted [name=name]', 'Ana');
+    await page.fill('.wanted [name=phone]', '47999998888');
+    await page.check('.wanted [name=consent]');
+    await page.click('.wanted button[type=submit]');
+    await page.waitForSelector('.wanted .form-msg.ok');
+    check('busca sem resultado: "Não achou?" vem com a busca escrita e envia o pedido', wanted === 'Procuro: Venda · Terreno · 4+ quartos.', wanted);
     await page.locator('.empty [data-tip]').first().click();
     check('a sugestão refaz a busca', (await cardCount(page)) > 0);
     // a street searched on the map (?rua=) comes as a chip that can be taken off (no demo listing shows its street)

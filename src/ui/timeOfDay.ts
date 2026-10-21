@@ -32,13 +32,28 @@ export function mountTimeOfDay(
       `<button type="button" role="radio" data-tod="${v}" aria-checked="${v === initial}">${label}</button>`,
   ).join('');
   const radios = [...el.querySelectorAll<HTMLButtonElement>('button')];
-  const check = (t: TimeOfDay | null) => radios.forEach((x) => x.setAttribute('aria-checked', String(x.dataset.tod === t)));
+  // a radio group is one tab stop (the checked button, or the first when none is) and the arrows move inside it
+  const check = (t: TimeOfDay | null) => {
+    radios.forEach((x) => x.setAttribute('aria-checked', String(x.dataset.tod === t)));
+    const stop = radios.find((x) => x.dataset.tod === t) ?? radios[0];
+    radios.forEach((x) => (x.tabIndex = x === stop ? 0 : -1));
+  };
+  check(initial);
   radios.forEach((b) =>
     b.addEventListener('click', () => {
       check(b.dataset.tod as TimeOfDay);
       onChange(b.dataset.tod as TimeOfDay);
     }),
   );
+  el.addEventListener('keydown', (e) => {
+    const i = radios.indexOf(e.target as HTMLButtonElement);
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? radios.length - 1 : step && i >= 0 ? (i + step + radios.length) % radios.length : -1;
+    if (i < 0 || next < 0) return;
+    e.preventDefault();
+    radios[next].focus();
+    radios[next].click();
+  });
   if (!onRuler) return;
   const ruler = document.createElement('div');
   ruler.className = 'sun-ruler';

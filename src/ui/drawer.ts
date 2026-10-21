@@ -199,7 +199,7 @@ export class Drawer {
             [
               'Andares do edifício',
               // the generator uses the building's real floors when the cadastre (or OSM) knows them
-              l.userAdded
+              l.userAdded || !DEMO
                 ? String(l.floors)
                 : `${l.floors} (${l.buildingHeightM && Math.round(l.buildingHeightM / 3) === l.floors ? 'estimativa pelo cadastro' : 'fictício'})`,
             ],
@@ -265,7 +265,7 @@ export class Drawer {
           ? `<span class="badge-fictional badge-user">${
               l.remote ? `Seu anúncio${l.draft ? ' · rascunho' : ''}` : 'Seu anúncio · salvo só neste navegador'
             }</span>`
-          : l.fictional
+          : l.fictional && DEMO
             ? '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
             : ''
       }

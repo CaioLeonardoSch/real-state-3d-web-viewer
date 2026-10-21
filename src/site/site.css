@@ -478,15 +478,27 @@ img {
   text-decoration: none;
   line-height: 1.1;
 }
+/* with the menu collapsed, the name gives way on narrow phones, so the header buttons stay on screen; with the full
+   menu it keeps its width, or the measurement in src/site/app.ts would never see the menu overflow */
+.site-header.compact .brand {
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .brand {
+    min-width: 0;
+  }
+}
 .brand img {
   display: block;
   width: auto;
-  max-width: 240px;
+  max-width: min(240px, 100%);
   object-fit: contain;
 }
 .brand-name {
   font: 700 21px var(--s-heading-font);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand-creci {
   font-size: 11px;
@@ -1342,6 +1354,72 @@ img {
   border: 1px dashed var(--s-line);
   border-radius: var(--s-radius-lg);
   text-align: center;
+}
+.proof-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.proof-stats li {
+  display: grid;
+  gap: 2px;
+}
+.proof-stats strong {
+  font: 700 32px var(--s-heading-font);
+  color: var(--s-primary-text);
+}
+.proof-quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.quote {
+  margin: 0;
+  padding: 20px;
+  background: var(--s-card);
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius-lg);
+  display: grid;
+  gap: 12px;
+  align-content: space-between;
+}
+.quote blockquote {
+  margin: 0;
+}
+.quote p {
+  margin: 0;
+  line-height: 1.5;
+}
+.quote figcaption {
+  display: grid;
+  font-size: 14px;
+}
+.quote figcaption span {
+  color: var(--s-muted);
+}
+.ed-quote {
+  border: 1px solid var(--s-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.wanted {
+  max-width: 640px;
+  margin: 24px auto 0;
+  background: var(--s-card);
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius-lg);
+  padding: 20px;
+  box-shadow: var(--s-shadow);
+}
+.wanted h2 {
+  margin: 0 0 4px;
+}
+.wanted > p {
+  margin: 0 0 12px;
 }
 .empty ul {
   list-style: none;

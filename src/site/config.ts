@@ -28,15 +28,17 @@ export const FONTS = {
 export type FontKey = keyof typeof FONTS;
 const FONT_KEYS = Object.keys(FONTS) as FontKey[];
 
-export const HOME_SECTIONS = ['destaques', 'descontos', 'mapa', 'lancamentos', 'bairros', 'recentes', 'sobre', 'anunciar'] as const;
+export const HOME_SECTIONS = ['destaques', 'descontos', 'mapa', 'depoimentos', 'lancamentos', 'bairros', 'recentes', 'encomenda', 'sobre', 'anunciar'] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 export const HOME_SECTION_LABELS: Record<HomeSection, string> = {
   destaques: 'Imóveis em destaque',
   descontos: 'Baixaram o preço',
   mapa: 'Chamada para o mapa 3D',
+  depoimentos: 'Números e depoimentos (aparece quando preenchido)',
   lancamentos: 'Lançamentos (em construção)',
   bairros: 'Bairros com mais imóveis',
   recentes: 'Anunciados recentemente',
+  encomenda: 'Formulário "Não achou? Conte o que procura"',
   sobre: 'Resumo da imobiliária',
   anunciar: 'Chamada "Anuncie seu imóvel"',
 };
@@ -105,7 +107,28 @@ export interface SiteConfig {
   };
   whatsappButton: { enabled: boolean; message: string };
   seo: { description: string };
+  /** Social proof of the home page: the agency's own numbers and its clients' words. Empty slots are not shown. */
+  proof: { stats: ProofStat[]; testimonials: Testimonial[] };
 }
+
+/** "15" + "anos em Joinville". */
+export interface ProofStat {
+  value: string;
+  label: string;
+}
+/** A client's words, with their authorization; `detail` says what they did ("Comprou um apartamento no Glória"). */
+export interface Testimonial {
+  text: string;
+  name: string;
+  detail: string;
+}
+/** Fixed number of slots, so the editor has one field per slot. */
+export const PROOF_STATS = 4;
+export const PROOF_TESTIMONIALS = 3;
+const emptyProof = (): SiteConfig['proof'] => ({
+  stats: Array.from({ length: PROOF_STATS }, () => ({ value: '', label: '' })),
+  testimonials: Array.from({ length: PROOF_TESTIMONIALS }, () => ({ text: '', name: '', detail: '' })),
+});
 
 const TEMPLATE_DEFAULTS: Record<Template, Pick<SiteConfig, 'colors' | 'theme' | 'font' | 'headingFont' | 'corners' | 'search'>> = {
   leve: {
@@ -166,11 +189,12 @@ export function defaultSiteConfig(name = 'Sua imobiliária', template: Template 
       title: `Encontre o imóvel certo em ${REGION.city}`,
       subtitle: 'Veja cada imóvel no mapa 3D da cidade: o prédio, a rua e o que tem por perto.',
       heroImage: '',
-      sections: ['destaques', 'descontos', 'mapa', 'lancamentos', 'bairros', 'sobre', 'anunciar'],
+      sections: ['destaques', 'descontos', 'mapa', 'depoimentos', 'lancamentos', 'bairros', 'encomenda', 'sobre', 'anunciar'],
     },
     about: { title: 'Sobre nós', text: '', image: '' },
     whatsappButton: { enabled: true, message: 'Olá! Vim pelo site e gostaria de mais informações.' },
     seo: { description: '' },
+    proof: emptyProof(),
   };
 }
 
@@ -248,6 +272,8 @@ export function normalizeSiteConfig(raw: unknown, orgName = 'Sua imobiliária'):
   const search = isObj(r.search) ? r.search : {};
   const wa = isObj(r.whatsappButton) ? r.whatsappButton : {};
   const seo = isObj(r.seo) ? r.seo : {};
+  const proof = isObj(r.proof) ? r.proof : {};
+  const slot = (v: unknown, i: number) => (Array.isArray(v) && isObj(v[i]) ? v[i] : {});
   const perPage = Number(search.perPage);
   const logoHeight = Number(r.logoHeight);
   return {
@@ -292,6 +318,16 @@ export function normalizeSiteConfig(raw: unknown, orgName = 'Sua imobiliária'):
     },
     whatsappButton: { enabled: bool(wa.enabled, d.whatsappButton.enabled), message: str(wa.message, 300) || d.whatsappButton.message },
     seo: { description: str(seo.description, 300) },
+    proof: {
+      stats: d.proof.stats.map((_, i) => {
+        const s = slot(proof.stats, i);
+        return { value: str(s.value, 12), label: str(s.label, 60) };
+      }),
+      testimonials: d.proof.testimonials.map((_, i) => {
+        const t = slot(proof.testimonials, i);
+        return { text: str(t.text, 400), name: str(t.name, 60), detail: str(t.detail, 80) };
+      }),
+    },
   };
 }
 

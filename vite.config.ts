@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -8,6 +8,15 @@ import { handleSiteRequest } from './src/seo/siteServer.ts';
 
 /** Demonstration data in public/data: left out of production builds. */
 const DEMO_FILES = ['listings.json', 'developments.json', 'sites.json'];
+/** Words of the demonstration notices ("Imóvel fictício para demonstração"): a production build that has one fails. */
+const DEMO_WORDS = /fict[ií]ci|demonstra[çc]/i;
+
+/** Files of the build (pages, scripts, styles, data) that still carry a demonstration notice. */
+function demoLeftovers(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter((f) => /\.(html|m?js|css|json|xml|txt)$/.test(f))
+    .filter((f) => DEMO_WORDS.test(readFileSync(path.join(dir, f), 'utf8')));
+}
 
 /**
  * Content-Security-Policy of the build, from its own configuration (scripts/lib/csp.mjs): a <meta> tag in the HTML
@@ -57,7 +66,11 @@ function production(demo: boolean): Plugin {
       outDir = path.resolve(config.root, config.build.outDir);
     },
     closeBundle() {
-      if (!demo) for (const f of DEMO_FILES) rmSync(path.join(outDir, 'data', f), { force: true });
+      if (demo) return;
+      for (const f of DEMO_FILES) rmSync(path.join(outDir, 'data', f), { force: true });
+      // demonstration texts are written under `DEMO &&` (src/data/demo.ts), so the minifier drops them from this build
+      const left = demoLeftovers(outDir);
+      if (left.length) throw new Error(`Build de produção com texto de demonstração (fictício/demonstração) em: ${left.join(', ')}`);
     },
     transformIndexHtml(html, ctx) {
       if (demo || !ctx.filename.endsWith('index.html')) return html;
