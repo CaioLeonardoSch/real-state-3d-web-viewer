@@ -413,6 +413,11 @@ autônomo entra como uma "imobiliária" de uma pessoa só, num plano menor.
   | Construtora / Rede | espelho de vendas, várias lojas | sob consulta |
 - **Plano anual** com desconto (por exemplo, 2 meses grátis), que reduz cancelamento e melhora o caixa.
 - **Período de teste** de 14 a 30 dias com os anúncios do cliente já importados: é o argumento de venda.
+- **Alternativa a validar no piloto (22/10): cobrança por contato.** Mensalidade menor mais um valor por contato
+  recebido (formulário, pedido de visita ou clique no WhatsApp com o código do imóvel), contado pelas métricas que já
+  existem (Desempenho dos anúncios). O argumento é o contrário dos portais: o contato é só da imobiliária dona do
+  imóvel, sem leilão de destaque. Riscos: a conta do mês varia, e cliques no WhatsApp não garantem que a conversa
+  aconteceu (o limite de 20 em 10 minutos ajuda contra abuso, mas a cobrança precisa de regra para cliques repetidos).
 
 **Meio de pagamento:** um gateway brasileiro com assinatura recorrente, boleto, Pix e cartão, avisos de cobrança
 automáticos e emissão de nota fiscal de serviço, como **Asaas** (o mais usado por SaaS pequeno no Brasil) ou Iugu.
