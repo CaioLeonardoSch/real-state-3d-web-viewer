@@ -1,0 +1,3 @@
+# fim de linha LF em todo checkout, também no Windows (core.autocrlf): os arquivos ficam iguais aos do CI no Linux
+# (public/_headers com CRLF quebrava o tests/csp.test.ts e ia assim para o dist)
+* text=auto eol=lf

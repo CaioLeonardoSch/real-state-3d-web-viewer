@@ -12,3 +12,5 @@ dist-seo
 .env
 supabase/functions/.env
 .wrangler/
+# capturas e registros do MCP playwright
+.playwright-mcp/
