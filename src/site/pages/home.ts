@@ -105,6 +105,7 @@ function quickSearch(app: SiteApp, box: HTMLElement): void {
       <a class="btn btn-primary q-go" data-nav href="#">${ICONS.search}<span>Buscar</span> <span class="q-count"></span></a>
       <button type="button" class="btn btn-ghost q-more" aria-expanded="false" aria-controls="q-extra">Filtros ${ICONS.down}</button>
     </div>
+    <p class="form-msg q-msg" id="q-bairro-msg" role="status"></p>
     <div class="q-extra" id="q-extra" hidden>
       <div class="q-line">
         <div class="tabs" role="group" aria-label="Situação">
@@ -142,9 +143,47 @@ function quickSearch(app: SiteApp, box: HTMLElement): void {
     set({}, { types: v ? [v] : [] });
   });
   const bairro = box.querySelector<HTMLInputElement>('[name=bairro]')!;
+  const msg = $(box, '.q-msg');
+  const clearMsg = () => {
+    msg.className = 'form-msg q-msg';
+    msg.textContent = '';
+    bairro.removeAttribute('aria-invalid');
+    bairro.removeAttribute('aria-describedby');
+  };
   bairro.addEventListener('input', () => {
     const match = bairros.find((b) => normalizeName(b) === normalizeName(bairro.value));
     set({}, { bairros: match ? [match] : [] });
+    clearMsg();
+  });
+  // a typed neighbourhood with no listings is not silently dropped: the visitor is told and offered close names
+  go.addEventListener('click', (e) => {
+    const typed = bairro.value.trim();
+    if (!typed || s.criteria.bairros.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const n = normalizeName(typed);
+    const near = bairros
+      .filter((b) => {
+        const k = normalizeName(b);
+        return k.includes(n) || n.includes(k) || k.slice(0, 3) === n.slice(0, 3);
+      })
+      .slice(0, 4);
+    msg.className = 'form-msg q-msg err';
+    msg.innerHTML = `Nenhum imóvel no bairro “${escapeHtml(typed)}”. ${
+      near.length
+        ? `Você quis dizer ${near.map((b) => `<button type="button" class="link-btn" data-bairro="${escapeHtml(b)}">${escapeHtml(b)}</button>`).join(', ')}?`
+        : 'Confira o nome ou apague o bairro para ver todos os imóveis.'
+    }`;
+    bairro.setAttribute('aria-invalid', 'true');
+    bairro.setAttribute('aria-describedby', msg.id);
+    bairro.focus();
+  });
+  msg.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-bairro]');
+    if (!b) return;
+    bairro.value = b.dataset.bairro!;
+    bairro.dispatchEvent(new Event('input'));
+    bairro.focus();
   });
   bairro.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -177,6 +216,7 @@ function quickSearch(app: SiteApp, box: HTMLElement): void {
     box.querySelector<HTMLSelectElement>('[name=tipo]')!.value = '';
     box.querySelectorAll('[data-st]').forEach((x, i) => x.setAttribute('aria-pressed', String(i === 0)));
     box.querySelectorAll('[data-count] button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+    clearMsg();
     update();
   });
   update();
