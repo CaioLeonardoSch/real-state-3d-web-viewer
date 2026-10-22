@@ -312,6 +312,12 @@ tratado como o maior risco do produto:
 - funções `security definer` só com o mínimo e sempre filtrando pelo cliente; o suporte com duas etapas obrigatória;
 - backup com restauração a um ponto no tempo (PITR), registro de auditoria e pentest externo antes do primeiro cliente
   (item 21);
+- o Security Advisor do projeto fica sem alertas além dos aceitos de propósito
+  (`20261107000001_function_execute_grants.sql`, 21/10): as vistas públicas `public_listings`,
+  `public_developments` e `public_development_units` (security definer para mostrar só as colunas permitidas), as
+  funções security definer que o site chama pela API e as funções das regras de acesso (`is_member`, `is_staff`,
+  `mfa_satisfied`…). Funções de gatilho e as de quem entrou não respondem ao visitante. Alerta fora dessa lista é
+  problema; toda função nova precisa do `revoke` de quem não deve chamá-la (o Postgres dá EXECUTE a todos);
 - o que é público de propósito, e portanto enumerável por qualquer um: os anúncios publicados (`public_listings`, sem
   endereço oculto, os mesmos que estão no site do cliente) e os dados do site da imobiliária (nome, domínio, cores);
   nada de contatos, corretores, rascunhos ou e-mails;
