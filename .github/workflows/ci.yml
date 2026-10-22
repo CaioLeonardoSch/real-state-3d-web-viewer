@@ -31,6 +31,11 @@ jobs:
       - run: npm ci
       # oxlint: as regras de correção do ESLint (o typescript-eslint ainda não roda com o TypeScript 7)
       - run: npm run lint
+      # o Chromium do Playwright em cache (muda com o package-lock): sem ele, uma falha no CDN do Playwright derruba o CI
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - run: npm test
       # inclui tsc --noEmit (site e scripts) e as páginas estáticas dos anúncios
@@ -53,6 +58,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - run: npm run db:start
       - run: npm run test:backend
