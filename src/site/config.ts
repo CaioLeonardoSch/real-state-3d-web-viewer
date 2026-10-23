@@ -28,7 +28,7 @@ export const FONTS = {
 export type FontKey = keyof typeof FONTS;
 const FONT_KEYS = Object.keys(FONTS) as FontKey[];
 
-export const HOME_SECTIONS = ['destaques', 'descontos', 'mapa', 'depoimentos', 'lancamentos', 'bairros', 'recentes', 'encomenda', 'sobre', 'anunciar'] as const;
+export const HOME_SECTIONS = ['mapa', 'destaques', 'descontos', 'depoimentos', 'lancamentos', 'bairros', 'recentes', 'encomenda', 'sobre', 'anunciar'] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 export const HOME_SECTION_LABELS: Record<HomeSection, string> = {
   destaques: 'Imóveis em destaque',
@@ -49,10 +49,11 @@ export const MENU_LABELS: Record<MenuItem, string> = {
   venda: 'Comprar',
   locacao: 'Alugar',
   lancamentos: 'Lançamentos',
-  descontos: 'Baixaram o preço',
+  // short words: the whole menu fits next to the name on a laptop screen
+  descontos: 'Descontos',
   mapa: 'Mapa 3D',
   sobre: 'Sobre nós',
-  anunciar: 'Anunciar imóvel',
+  anunciar: 'Anunciar',
   contato: 'Contato',
   favoritos: 'Favoritos',
 };
@@ -189,7 +190,7 @@ export function defaultSiteConfig(name = 'Sua imobiliária', template: Template 
       title: `Encontre o imóvel certo em ${REGION.city}`,
       subtitle: 'Veja cada imóvel no mapa 3D da cidade: o prédio, a rua e o que tem por perto.',
       heroImage: '',
-      sections: ['destaques', 'descontos', 'mapa', 'depoimentos', 'lancamentos', 'bairros', 'encomenda', 'sobre', 'anunciar'],
+      sections: ['mapa', 'destaques', 'descontos', 'depoimentos', 'lancamentos', 'bairros', 'encomenda', 'sobre', 'anunciar'],
     },
     about: { title: 'Sobre nós', text: '', image: '' },
     whatsappButton: { enabled: true, message: 'Olá! Vim pelo site e gostaria de mais informações.' },

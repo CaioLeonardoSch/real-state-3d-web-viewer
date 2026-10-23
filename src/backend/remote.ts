@@ -360,8 +360,38 @@ export class RemoteBackend {
     return (await this.sb.auth.getSession()).data.session;
   }
 
-  onAuthChange(fn: (session: Session | null) => void): void {
-    this.sb.auth.onAuthStateChange((_event, session) => fn(session));
+  /** `recovery`: the session came from a password recovery link (the new password is asked next). */
+  onAuthChange(fn: (session: Session | null, recovery: boolean) => void): void {
+    this.sb.auth.onAuthStateChange((event, session) => fn(session, event === 'PASSWORD_RECOVERY'));
+  }
+
+  /** The account still has the temporary password it was created with (changed on the first login). */
+  async mustChangePassword(): Promise<boolean> {
+    const uid = await this.userId();
+    if (!uid) return false;
+    const { data } = await this.sb.from('password_change_required').select('user_id').eq('user_id', uid);
+    return !!data?.length;
+  }
+
+  /** New password of the logged-in account; clears the temporary-password mark. */
+  async changePassword(password: string): Promise<void> {
+    const { error } = await this.sb.auth.updateUser({ password });
+    if (error)
+      throw new Error(
+        /different from the old|same/i.test(error.message)
+          ? 'A nova senha precisa ser diferente da atual.'
+          : /weak|short|least/i.test(error.message)
+            ? 'Senha fraca: use pelo menos 8 caracteres, misturando letras e números.'
+            : `Não foi possível trocar a senha: ${error.message}`,
+      );
+    const { error: e2 } = await this.sb.rpc('password_changed');
+    fail(e2, 'Não foi possível concluir a troca de senha');
+  }
+
+  /** E-mails a link to choose a new password; it opens `returnTo` (the management page). */
+  async requestPasswordReset(email: string, returnTo: string, captchaToken?: string): Promise<void> {
+    const { error } = await this.sb.auth.resetPasswordForEmail(email, { redirectTo: returnTo, captchaToken });
+    if (error) throw new Error(/rate|seconds/i.test(error.message) ? 'Aguarde um minuto antes de pedir outro link.' : `Não foi possível enviar o link: ${error.message}`);
   }
 
   /**
@@ -425,17 +455,6 @@ export class RemoteBackend {
     return !!data?.length;
   }
 
-  /** Returns true when the account still needs e-mail confirmation. */
-  async signUp(email: string, password: string, fullName: string, captchaToken?: string): Promise<boolean> {
-    const { data, error } = await this.sb.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName }, emailRedirectTo: location.href.split('?')[0], captchaToken },
-    });
-    if (error) throw new Error(error.message);
-    return !data.session;
-  }
-
   async signOut(): Promise<void> {
     await this.sb.auth.signOut();
   }
@@ -456,7 +475,7 @@ export class RemoteBackend {
   }
 
   /** Support staff only: new client, with an invitation for its first owner. Returns the invitation token. */
-  async createOrg(name: string, slug: string, ownerEmail: string): Promise<{ org: Org; inviteToken: string | null }> {
+  async createOrg(name: string, slug: string, ownerEmail: string | null): Promise<{ org: Org; inviteToken: string | null }> {
     const { data, error } = await this.sb.rpc('create_organization', { p_name: name, p_slug: slug, p_owner_email: ownerEmail });
     fail(error, 'Não foi possível cadastrar a imobiliária');
     const row = data[0];
@@ -464,6 +483,20 @@ export class RemoteBackend {
   }
 
   // ---------------------------------------------------------------- team and invitations
+
+  /**
+   * Account of a new team member, with a temporary password (edge function create-user): the agency's administrator
+   * (support staff only, one per agency) or a broker. Returns the password, shown once to whoever created it.
+   */
+  async createMember(orgId: string, email: string, name: string, role: 'owner' | 'agent'): Promise<string> {
+    const { data, error } = await this.sb.functions.invoke('create-user', { body: { org_id: orgId, email, name, role } });
+    if (error) {
+      // the function's own message ("este e-mail já tem conta"…), when it answered
+      const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+      throw new Error(`Não foi possível criar o acesso: ${body?.error ?? error.message}`);
+    }
+    return (data as { password: string }).password;
+  }
 
   async members(orgId: string): Promise<Member[]> {
     const { data, error } = await this.sb.rpc('org_members', { p_org: orgId });

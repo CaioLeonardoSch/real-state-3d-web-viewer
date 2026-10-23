@@ -13,8 +13,8 @@ interface PagesContext {
 }
 
 export async function onRequest({ request, env, next }: PagesContext): Promise<Response> {
-  // the site's HTML: Pages serves site.html at "/site" (addresses without .html)
-  const shell = () => env.ASSETS.fetch(new URL('/site', request.url).href);
+  // the site's HTML: index.html of the build, which Pages serves at "/"
+  const shell = () => env.ASSETS.fetch(new URL('/', request.url).href);
   const site = await handleSiteRequest(request, env, shell);
   if (site) return site;
   const res = await next();

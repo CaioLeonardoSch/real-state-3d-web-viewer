@@ -19,14 +19,14 @@ export interface AlertSite {
 
 /**
  * Addresses of the client's site: on its own domain, the page paths (/imoveis, /imovel?id=); on the platform's
- * address (`platformUrl`, where site.html is), ?imobiliaria=slug&p=…
+ * address (`platformUrl`, the site's root), ?imobiliaria=slug&p=…
  */
 export function siteHref(site: AlertSite, platformUrl: string, page: string, params: Record<string, string> | URLSearchParams = {}): string {
   const p = new URLSearchParams(params);
   if (site.customDomain) return `https://${site.customDomain}/${page}${p.size ? `?${p}` : ''}`;
   const q = new URLSearchParams({ imobiliaria: site.slug, p: page });
   for (const [k, v] of p) q.append(k, v);
-  return `${platformUrl.replace(/\/$/, '')}/site.html?${q}`;
+  return `${platformUrl.replace(/\/$/, '')}/?${q}`;
 }
 
 /** Listings of the search published after `since` (ISO time), in the search's order. */

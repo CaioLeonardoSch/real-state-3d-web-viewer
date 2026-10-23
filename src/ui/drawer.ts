@@ -23,9 +23,8 @@ import { REPORT_REASONS, type ReportReason } from '../backend/mapping';
 import { floorPlanSvg } from '../utils/floorplan';
 import { photoSrcset } from '../utils/images';
 import { DEMO } from '../data/demo';
-import { SIDE_LABELS, STOREY_M, SUN_RADIUS_M, formatHours, type SunTable } from '../map/sunHours';
 import { NEARBY_MAX_M, SERVICE_COLORS, SERVICE_KINDS, SERVICE_LABELS, formatDistance, type NearbyService, type ServiceKind } from '../data/services';
-import { financingHtml, wireFinancing } from './financingSim';
+import { financingHtml, wireFinancing, type FinancingSim } from './financingSim';
 import { readVisit, visitFieldsHtml, wireVisitFields } from './visitRequest';
 import { isSynthetic } from '../map/syntheticBuilding';
 import { CONSTRUCTION_SOURCE_LABELS, builtShare, formatMonth, monthsOld, progressLabel } from '../data/construction';
@@ -64,8 +63,6 @@ export class Drawer {
   report: ((l: Listing, reason: ReportReason, details: string) => Promise<string | null>) | null = null;
   /** Closest services of each kind (null while servicos.json is not loaded). */
   nearby: ((l: Listing) => Partial<Record<ServiceKind, NearbyService>> | null) | null = null;
-  /** Hours of sun on each side of the listing's building at its floor (null without a footprint or map tiles). */
-  sunHours: ((l: Listing, floor: number) => SunTable | null) | null = null;
   /** Static page of a listing (built at publish time), when there is one. */
   pageFor: (id: string) => string | null = () => null;
 
@@ -85,6 +82,8 @@ export class Drawer {
   /** Inside a client's site (map embedded): the link opens the site's own listing page in the same tab. */
   pageInSite = false;
   private openId: string | null = null;
+  /** Financing simulator of the open listing (its installments show after the visitor's message). */
+  private fin: FinancingSim | null = null;
   private nav: DrawerNav | null = null;
   private swipeStartY: number | null = null;
   private ignoreNextClick = false;
@@ -322,9 +321,8 @@ export class Drawer {
             : ''
       }
       ${this.progressHtml(l)}
-      ${this.nearbyHtml(l)}
-      ${this.sunHtml(l)}
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+      ${this.nearbyHtml(l)}
       ${
         l.features.length
           ? `<ul class="amenities" aria-label="Comodidades">${l.features.map((f) => `<li>${AMENITY_LABELS[f]}</li>`).join('')}</ul>`
@@ -352,7 +350,7 @@ export class Drawer {
       </figure>`
       }
 
-      ${sale && l.price > 0 ? financingHtml(l.price, 'a-field') : ''}
+      ${sale && l.price > 0 ? financingHtml(l.price, 'a-field', this.finGateHtml(l)) : ''}
       ${
         l.userAdded && !l.partial
           ? `<section class="manage">
@@ -394,8 +392,17 @@ export class Drawer {
     this.bindGallery(l);
     this.bindLeadForm(l);
     this.bindReport(l);
-    this.bindSun(l);
-    wireFinancing(this.el);
+    this.fin = wireFinancing(this.el);
+    this.el.querySelector('[data-action="fin-contact"]')?.addEventListener('click', () => {
+      const box = this.el.querySelector<HTMLDetailsElement>('.lead-box');
+      // no agency form to send (local listing, no back end): the visitor sees the installments right away
+      if (!box) return this.fin?.reveal();
+      box.open = true;
+      const msg = box.querySelector<HTMLTextAreaElement>('textarea[name="message"]')!;
+      msg.value = `Olá! Quero ver as parcelas de "${l.title}". ${this.fin?.summary() ?? ''}`.trim();
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      box.querySelector<HTMLInputElement>('input[name="name"]')?.focus({ preventScroll: true });
+    });
     this.el.querySelector('.btn-whatsapp')?.addEventListener('click', () => {
       if (l.remote && !l.userAdded) this.contact?.whatsapp(l);
     });
@@ -483,6 +490,7 @@ export class Drawer {
       btn.textContent = label();
       if (error) return show(error);
       form.hidden = true;
+      this.fin?.reveal();
       const done = this.el.querySelector<HTMLElement>('.lead-done')!;
       done.hidden = false;
       done.textContent = visit.visitOn
@@ -492,40 +500,10 @@ export class Drawer {
   }
 
   /** "Denunciar": sold, outdated, wrong or fake listings of other advertisers (the support team reads them). */
-  /** Floor the sun is measured at: the unit's floor, or the ground floor of a house. */
-  private sunFloor(l: Listing): number {
-    return l.type === 'apartment' ? Math.max(1, l.unitFloor ?? 1) : 0;
-  }
-
-  /** "Sol do imóvel": hours of direct sun on each side, computed when opened (the map tiles are loaded by then). */
-  private sunHtml(l: Listing): string {
-    if (!this.sunHours || !l.footprint) return '';
-    const floor = this.sunFloor(l);
-    const where = l.type === 'apartment' ? `no ${floor}º andar${l.unitFloor ? '' : ' (andar não informado)'}` : 'no térreo';
-    return `<details class="sun-box">
-      <summary>Sol do imóvel <small>horas de sol direto em cada fachada, ${where}</small></summary>
-      <div class="sun-body"><p class="muted">Calculando…</p></div>
-    </details>`;
-  }
-
-  private bindSun(l: Listing): void {
-    const box = this.el.querySelector<HTMLDetailsElement>('.sun-box');
-    if (!box || !this.sunHours) return;
-    box.addEventListener('toggle', () => {
-      if (!box.open || box.dataset.done) return;
-      const table = this.sunHours!(l, this.sunFloor(l));
-      const body = box.querySelector('.sun-body')!;
-      if (!table?.length) {
-        body.innerHTML = '<p class="muted">Aproxime o mapa do prédio e abra de novo: os prédios em volta ainda não carregaram.</p>';
-        return;
-      }
-      box.dataset.done = '1';
-      body.innerHTML = `<table class="sun-table">
-        <thead><tr><th scope="col">Fachada</th><th scope="col">Inverno <small>(21/06)</small></th><th scope="col">Verão <small>(21/12)</small></th></tr></thead>
-        <tbody>${table.map((r) => `<tr><th scope="row">${SIDE_LABELS[r.side]}</th><td>${formatHours(r.winter)}</td><td>${formatHours(r.summer)}</td></tr>`).join('')}</tbody>
-      </table>
-      <p class="nearby-note">Desconta a sombra dos prédios em volta (até ${SUN_RADIUS_M} m), com o andar a ${STOREY_M} m por pavimento. Não considera árvores nem relevo; a fachada de cada lado é a parede mais comprida dele no mapa.</p>`;
-    });
+  /** What unlocks the simulation's installments: the agency's message form, when the listing has one. */
+  private finGateHtml(l: Listing): string {
+    const form = !!this.contact && l.remote && !l.userAdded;
+    return `<button type="button" class="btn-primary" data-action="fin-contact">${form ? 'Falar com o corretor' : 'Ver parcelas'}</button>`;
   }
 
   /** "Por perto": the closest school, market… within 2 km, in a straight line. */
@@ -538,13 +516,14 @@ export class Drawer {
       const what = s
         ? `${about}${formatDistance(s.distanceM)}${s.name ? ` <small>${escapeHtml(s.name)}</small>` : ''}`
         : `<span class="muted">nenhum mapeado até ${formatDistance(NEARBY_MAX_M)}</span>`;
-      return `<li><span class="nearby-dot" style="background:${SERVICE_COLORS[k]}" aria-hidden="true"></span><strong>${SERVICE_LABELS[k]}</strong> ${what}</li>`;
+      return `<li><span class="nearby-dot" style="background:${SERVICE_COLORS[k]}" aria-hidden="true"></span><span><strong>${SERVICE_LABELS[k]}</strong> ${what}</span></li>`;
     }).join('');
-    return `<section class="nearby">
-      <h3>Por perto</h3>
+    // closed by default: the listing's own data comes first
+    return `<details class="nearby">
+      <summary>Por perto <small>escola, mercado, farmácia…</small></summary>
       <ul>${rows}</ul>
       <p class="nearby-note">Distâncias em linha reta${l.approximateLocation ? ', medidas do centro do círculo' : ''}. Fonte: OpenStreetMap (pode faltar algum comércio).</p>
-    </section>`;
+    </details>`;
   }
 
   private reportHtml(l: Listing): string {

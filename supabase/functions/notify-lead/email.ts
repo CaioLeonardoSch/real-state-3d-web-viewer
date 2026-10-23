@@ -43,7 +43,7 @@ export function leadEmail(lead: LeadForEmail, orgName: string, siteUrl: string):
   const owner = lead.source === 'owner';
   const title = owner ? 'oferta de imóvel para anunciar' : (lead.listing_title ?? (lead.source === 'contact' ? 'contato pelo site' : 'um imóvel'));
   const about = owner || (!lead.listing_title && lead.source === 'contact') ? title : `"${title}"`;
-  const link = lead.listing_id ? `${siteUrl.replace(/\/$/, '')}/?imovel=${lead.listing_id}` : siteUrl;
+  const link = lead.listing_id ? `${siteUrl.replace(/\/$/, '')}/mapa.html?imovel=${lead.listing_id}` : siteUrl;
   const details = Object.entries(lead.details ?? {}).filter(([, v]) => v);
   const label = (k: string) => DETAIL_LABELS[k] ?? k;
   const when = new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });

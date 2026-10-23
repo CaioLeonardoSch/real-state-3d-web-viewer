@@ -73,7 +73,7 @@ function production(demo: boolean): Plugin {
       if (left.length) throw new Error(`Build de produção com texto de demonstração (fictício/demonstração) em: ${left.join(', ')}`);
     },
     transformIndexHtml(html, ctx) {
-      if (demo || !ctx.filename.endsWith('index.html')) return html;
+      if (demo || !ctx.filename.endsWith('mapa.html')) return html;
       return html
         .replace(/<title>[^<]*<\/title>/, '<title>Mapa 3D de imóveis · Joinville e região</title>')
         .replace(
@@ -97,7 +97,7 @@ function clientDomains(env: Record<string, string | undefined>): Plugin {
     configurePreviewServer(server) {
       const { VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY } = env;
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-      const shell = path.resolve(server.config.root, server.config.build.outDir, 'site.html');
+      const shell = path.resolve(server.config.root, server.config.build.outDir, 'index.html');
       server.middlewares.use((req, res, next) => {
         const request = new Request(`http://${req.headers.host}${req.url}`, { method: req.method });
         handleSiteRequest(request, { SUPABASE_URL, SUPABASE_ANON_KEY }, async () => new Response(readFileSync(shell)))
@@ -119,8 +119,9 @@ export default defineConfig(({ mode }) => {
     base: './',
     plugins: [securityPolicy(), production(env.VITE_DEMO_LISTINGS !== 'false'), clientDomains(env)],
     build: {
-      // index.html: the 3D map (also embedded by the sites); site.html: a client's site (white label)
-      rollupOptions: { input: { main: 'index.html', site: 'site.html', painel: 'painel.html' } },
+      // index.html: a client's site (white label); mapa.html: the 3D map, embedded by the site; site.html: the site's
+      // former address, which forwards to index.html
+      rollupOptions: { input: { main: 'index.html', mapa: 'mapa.html', site: 'site.html', painel: 'painel.html' } },
     },
     test: {
       include: ['tests/**/*.test.ts'],
