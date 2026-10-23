@@ -1693,7 +1693,8 @@ async function main() {
         document.querySelector('[data-action="toggle-results"][aria-expanded="true"]')?.click();
         window.__demo.map.jumpTo({ center: [-48.8274, -26.2922], zoom: 14.6, pitch: 68, bearing: 80 });
       });
-      await shot(rp, 'desktop-relief.png');
+      // an illustration, not a check: in software WebGL (CI) a frame of this view with the relief can take minutes
+      await shot(rp, 'desktop-relief.png').catch((e) => console.warn(`  (captura do relevo não tirada: ${e.message.split('\n')[0]})`));
       check('no console errors (relief)', rErrors.length === 0, rErrors.join(' | '));
       await rctx.close();
     }
