@@ -4,12 +4,12 @@
 // Usage: npm run build && npm run verify:e2e
 import { spawn } from 'node:child_process';
 import { cli } from './lib/cli.mjs';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { chromium } from 'playwright';
+import { launchBrowser } from './lib/e2e-browser.mjs';
 import turfCentroid from '@turf/centroid';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,9 +18,6 @@ const PORT = 4178;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 // the 3D map; the root is the client's site
 const MAP_ = `${URL_}mapa.html`;
-// Use a pre-installed Chromium when the Playwright-bundled one is not downloaded
-const EXEC =
-  process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 // Expected values come from the data, so the checks keep working when listings.json is regenerated.
 const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
@@ -262,10 +259,7 @@ const streetState = (page) =>
 async function main() {
   await mkdir(SHOTS, { recursive: true });
   const server = await startServer();
-  const browser = await chromium.launch({
-    executablePath: EXEC,
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
-  });
+  const browser = await launchBrowser();
   try {
     // ------------------------------------------------ desktop
     const d = await openPage(browser, { width: 1440, height: 900 }, 'desktop');
@@ -1647,6 +1641,56 @@ async function main() {
       xvClosed.card === null && xvClosed.lit === null && xvClosed.litDrawn.length === 0 && xvClosed.focus === 'f-bairro-input', JSON.stringify(xvClosed));
     check('no console errors (ruas)', st.errors.length === 0, st.errors.join(' | '));
     await st.ctx.close();
+
+    // ------------------------------------------------ relief (on here even when the other checks run without it)
+    {
+      const rctx = await browser.reliefContext({ viewport: { width: 1000, height: 640 }, deviceScaleFactor: 1 });
+      const rp = await rctx.newPage();
+      const rErrors = [];
+      rp.on('pageerror', (e) => rErrors.push(String(e)));
+      rp.on('console', (msg) => msg.type() === 'error' && rErrors.push(msg.text()));
+      await rp.goto(MAP_);
+      await rp.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
+      const style = await rp.evaluate(() => {
+        const m = window.__demo.map;
+        return { terrain: !!m.getTerrain(), shade: !!m.getLayer('relief-shade'), canopy: !!m.getLayer('wood-canopy'), minZoom: m.getMinZoom() };
+      });
+      check('relief: terrain and slope shading on, flat canopy of the woods off, zoom from 10',
+        style.terrain && style.shade && !style.canopy && style.minZoom === 10, JSON.stringify(style));
+      // the ground's height once the relief tiles of the place are in: Morro do Boa Vista and the Centro
+      const ground = await rp.evaluate(async () => {
+        const m = window.__demo.map;
+        const at = async (center) => {
+          m.jumpTo({ center, zoom: 14, pitch: 0, bearing: 0 });
+          for (let i = 0; i < 180; i++) {
+            const h = m.queryTerrainElevation(center);
+            if (h !== null && m.areTilesLoaded()) return Math.round(h);
+            await new Promise((r) => setTimeout(r, 500));
+          }
+          return null;
+        };
+        return { boaVista: await at([-48.8274, -26.2922]), centro: await at([-48.8456, -26.3044]) };
+      });
+      check('relief: Morro do Boa Vista ~220 m above the Centro (MDT of SC)',
+        ground.boaVista > 190 && ground.boaVista < 250 && ground.centro !== null && ground.centro < 30, JSON.stringify(ground));
+      // the camera does not stay inside a hill: at the foot of the Morro do Boa Vista looking east, away from it, the
+      // camera stands over the slope behind the centre
+      const cam = await rp.evaluate(async () => {
+        const m = window.__demo.map;
+        m.jumpTo({ center: [-48.8215, -26.2935], zoom: 17.5, pitch: 75, bearing: 95 });
+        await new Promise((r) => m.once('idle', r));
+        const c = window.__demo.camera();
+        await new Promise((r) => setTimeout(r, 1500));
+        const after = window.__demo.camera();
+        const groundUnder = m.queryTerrainElevation(after.lngLat) ?? 0;
+        const groundCentre = m.queryTerrainElevation(m.getCenter()) ?? 0;
+        return { altitude: Math.round(after.altitudeM + groundCentre), groundUnder: Math.round(groundUnder), before: Math.round(c.altitudeM + groundCentre) };
+      });
+      check('relief: the camera stays above the ground of the hill behind it', cam.altitude > cam.groundUnder, JSON.stringify(cam));
+      await shot(rp, 'desktop-relief.png');
+      check('no console errors (relief)', rErrors.length === 0, rErrors.join(' | '));
+      await rctx.close();
+    }
 
     // ------------------------------------------------ mobile
     const m = await openPage(browser, { width: 390, height: 844 }, 'mobile');

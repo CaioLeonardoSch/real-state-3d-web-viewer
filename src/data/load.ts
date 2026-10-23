@@ -42,6 +42,14 @@ export interface AppData {
   developments: Development[];
 }
 
+/**
+ * The map without the relief: ?relevo=0 (a slow device), or `window.__semRelevo = true` before the page loads, which is
+ * how the automated checks run (scripts/e2e-*.mjs: the CI draws without a GPU, and the relief makes each frame several
+ * times slower there; the relief has checks of its own).
+ */
+const withoutRelief = () =>
+  new URLSearchParams(location.search).get('relevo') === '0' || (globalThis as { __semRelevo?: boolean }).__semRelevo === true;
+
 const NO_DEMO_LISTINGS: ListingsFile = { fictional: true, notice: '', seed: 0, agencies: [], listings: [] };
 
 const dataUrl = (name: string) => new URL(`${import.meta.env.BASE_URL}data/${name}`, location.href).href;
@@ -112,7 +120,7 @@ export async function loadData(): Promise<AppData> {
     bairros,
     tilesUrl: url(meta.tiles),
     detailUrl: meta.detailTiles ? url(meta.detailTiles) : null,
-    terrainUrl: meta.terrainTiles && meta.terrain ? url(meta.terrainTiles) : null,
+    terrainUrl: meta.terrainTiles && meta.terrain && !withoutRelief() ? url(meta.terrainTiles) : null,
     listings,
     developments,
   };

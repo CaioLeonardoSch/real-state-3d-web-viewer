@@ -4,18 +4,17 @@
 // Screenshots go to docs/screenshots/site-*.png. Usage: npm run build && npm run verify:site
 import { spawn } from 'node:child_process';
 import { cli } from './lib/cli.mjs';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { launchBrowser } from './lib/e2e-browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 // its own port: the other browser checks use 4178 and 4179
 const PORT = 4177;
 const BASE = `http://127.0.0.1:${PORT}/`;
-const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 // expected values come from the demo data
 const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
@@ -118,7 +117,7 @@ const overflow = (page) => page.evaluate(() => document.documentElement.scrollWi
 async function main() {
   await mkdir(SHOTS, { recursive: true });
   const server = await startServer();
-  const browser = await chromium.launch({ executablePath: EXEC, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await launchBrowser();
   try {
     // ------------------------------------------------ home and quick search
     const h = await open(browser);

@@ -93,6 +93,16 @@ npm run build && npm run verify:site  # Playwright: o site das imobiliárias (bu
 O `verify:e2e` usa o Chromium indicado em `CHROMIUM_PATH` ou, se existir, `/opt/pw-browsers/chromium`. Caso
 contrário, usa o navegador baixado pelo Playwright (`npx playwright install chromium`).
 
+As suítes (`verify:e2e`, `verify:site`, `verify:backend`) desenham com WebGL por software (SwiftShader), como no CI,
+que não tem GPU, e abrem o mapa **sem o relevo**: ali cada quadro com relevo fica várias vezes mais lento e as
+checagens travavam. O relevo tem checagens próprias no `verify:e2e`, que abrem o mapa com ele (terreno ligado,
+altura do Morro do Boa Vista, câmera acima do morro). Opções (`scripts/lib/e2e-browser.mjs`):
+
+```bash
+E2E_GPU=1 npm run verify:e2e      # desenha com a GPU do computador, com o relevo em tudo (rodar numa máquina com GPU)
+E2E_RELEVO=1 npm run verify:e2e   # relevo em tudo, também em software (lento)
+```
+
 ## Backend (Supabase)
 
 O backend está começando: contas, imobiliárias (clientes), anúncios e fotos ficam num projeto
@@ -449,6 +459,8 @@ consulta o Estado: `npm run data:terrain` (`scripts/build-terrain.mjs`) baixa o 
   No Chromium com WebGL por software, cada quadro passou de ~0,25 s sem relevo para ~0,86 s com relevo (era ~1,6 s
   antes de juntar as camadas). Esse renderizador exagera o custo de pintar texturas; o desempenho numa GPU real, em
   especial num celular de entrada, ainda precisa ser medido (item 20 de `docs/prioridades.md`).
+- **Sem relevo:** `mapa.html?relevo=0` abre o mapa plano (um aparelho lento, por exemplo); o parâmetro fica no
+  endereço quando o mapa o reescreve. As suítes de teste usam o mesmo desligamento (ver "Verificações extras").
 - **Licença:** o dado é público e gratuito, mas o Estado não declara uma licença para uso em produto. Confirmar com
   geoprocessamento@sde.sc.gov.br antes de vender (item 37 de `docs/prioridades.md`). A atribuição aparece no canto
   do mapa.

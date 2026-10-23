@@ -7,10 +7,10 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import { cli, supabaseStatus } from './lib/cli.mjs';
 import { promisify } from 'node:util';
 import http from 'node:http';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { launchBrowser } from './lib/e2e-browser.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { startLocalFunctions } from './lib/local-functions.mjs';
 import { freshTotp } from './lib/totp.mjs';
@@ -21,7 +21,6 @@ const PORT = 4179;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 // the 3D map, where the account panel opens; the root is the client's site
 const MAP_ = `${URL_}mapa.html`;
-const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** The open listing's details (description, photos, history) arrived from the server. */
@@ -93,7 +92,7 @@ const server = spawn(...cli('vite', ['preview', '--outDir', OUT, '--port', Strin
   stdio: 'ignore',
   env: { ...process.env, VITE_SUPABASE_URL: status.API_URL, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
 });
-const browser = await chromium.launch({ executablePath: EXEC, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await launchBrowser();
 try {
   for (let i = 0; i < 60; i++) {
     try {
