@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão 3 · Transparência</title>
+<meta name="description" content="Sugestão de design: o custo real de morar, o preço que caiu de verdade e a comparação lado a lado.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%232340d8%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<script type="speculationrules">{"prefetch":[{"where":{"href_matches":"*sugestao-imovel.html*"},"eagerness":"moderate"}]}</script>
+<style>
+  :root { --fundo: #f6f7f9; --card: #fff; --tinta: #0e1320; --tinta-2: #5b6474; --linha: #e4e7ec; --azul: #2340d8; --azul-2: #e9edff; --verde: #0f8a5f; --verde-2: #e3f5ec; --ambar: #c27a00; --foco: var(--azul); }
+  body { background: var(--fundo); color: var(--tinta); }
+  .wrap { width: min(1240px, 100% - 32px); margin-inline: auto; }
+
+  header { position: sticky; top: 0; z-index: 30; background: rgba(246, 247, 249, 0.8); backdrop-filter: blur(14px) saturate(1.5); -webkit-backdrop-filter: blur(14px) saturate(1.5); }
+  .topo { display: flex; align-items: center; gap: 24px; height: 68px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; letter-spacing: -0.02em; font-size: 18px; }
+  .marca i { width: 28px; height: 28px; border-radius: 8px; background: var(--azul); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 15px; }
+  .topo nav { display: flex; gap: 4px; margin-left: 12px; }
+  .topo nav a { padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 14px; color: var(--tinta-2); }
+  .topo nav a:hover { background: #eceef2; color: var(--tinta); }
+  .topo .acoes { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--linha); background: var(--card); text-decoration: none; font-size: 14px; font-weight: 600; }
+  .btn.primario { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .comparar-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--azul); color: #fff; font-size: 12px; transition: transform 0.25s; }
+  .comparar-n.pula { transform: scale(1.35); }
+  @media (max-width: 860px) { .topo nav { display: none; } }
+  @media (max-width: 520px) { .topo .btn.primario { display: none; } .marca { font-size: 16px; } }
+
+  /* topo: a pergunta certa */
+  .abre { padding: clamp(40px, 6vw, 80px) 0 32px; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 4vw, 56px); align-items: end; }
+  .abre h1 { margin: 0; font-size: clamp(40px, 6vw, 80px); line-height: 1; letter-spacing: -0.04em; font-weight: 800; }
+  .abre h1 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--azul); letter-spacing: -0.02em; }
+  .abre p { margin: 0; font-size: 18px; color: var(--tinta-2); max-width: 46ch; }
+  .numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--linha); border: 1px solid var(--linha); border-radius: 18px; overflow: hidden; margin-top: 26px; }
+  .numeros div { background: var(--card); padding: 18px 20px; }
+  .numeros b { display: block; font-size: 30px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .numeros span { font-size: 13px; color: var(--tinta-2); }
+  @media (max-width: 860px) { .abre { grid-template-columns: 1fr; } }
+
+  /* simulador */
+  .simulador { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+  .painel { position: sticky; top: 88px; padding: 24px; background: var(--card); border: 1px solid var(--linha); border-radius: 20px; display: grid; gap: 22px; }
+  .painel h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+  .campo { display: grid; gap: 8px; }
+  .campo .linha { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--tinta-2); }
+  .campo output { font-size: 22px; font-weight: 700; color: var(--tinta); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  input[type=range] { width: 100%; accent-color: var(--azul); }
+  .painel .resumo { padding: 14px 16px; border-radius: 12px; background: var(--azul-2); color: #1a2c99; font-size: 14px; }
+  .painel .resumo b { font-size: 18px; }
+  .painel small { color: var(--tinta-2); font-size: 12px; line-height: 1.4; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { border: 1px solid var(--linha); background: var(--card); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+  .chips button[aria-pressed='true'] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+  @media (max-width: 960px) { .simulador { grid-template-columns: 1fr; } .painel { position: static; } }
+
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { position: relative; background: var(--card); border: 1px solid var(--linha); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.3s, transform 0.3s, opacity 0.3s; }
+  .card:hover { box-shadow: 0 18px 50px rgba(14, 19, 32, 0.1); transform: translateY(-3px); }
+  .card.fora { opacity: 0.38; }
+  .card.fora .cabe { background: #fdeceb; color: #a1281d; }
+  .card a.foto { display: block; aspect-ratio: 16 / 10; overflow: hidden; }
+  .card .foto img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+  .card:hover .foto img { transform: scale(1.05); }
+  .card .corpo { padding: 16px 18px 18px; display: grid; gap: 12px; }
+  .card h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+  .card h3 a { text-decoration: none; }
+  .card .onde { font-size: 13px; color: var(--tinta-2); }
+  .card .precos { display: flex; justify-content: space-between; align-items: center; }
+  .card .preco { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .card .antes { font-size: 12px; color: var(--tinta-2); }
+  .card .antes b { color: var(--verde); }
+  .card .spark { color: var(--verde); }
+  .barra { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eef0f3; }
+  .barra i { display: block; height: 100%; transition: flex-basis 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .barra .p { background: var(--azul); } .barra .c { background: #8ea0ff; } .barra .t { background: #c9d2ff; }
+  .mes { display: flex; justify-content: space-between; font-size: 13px; color: var(--tinta-2); }
+  .mes b { color: var(--tinta); font-size: 15px; font-variant-numeric: tabular-nums; }
+  .cabe { position: absolute; top: 12px; left: 12px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--verde-2); color: var(--verde); }
+  .card .comparar { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.92); font-size: 12px; font-weight: 600; }
+  .card .comparar[aria-pressed='true'] { background: var(--azul); color: #fff; }
+  .legenda-barra { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--tinta-2); margin: 0 0 14px; }
+  .legenda-barra i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  section { padding-top: clamp(56px, 8vw, 100px); }
+  .sec-titulo { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+  .sec-titulo h2 { margin: 0; font-size: clamp(28px, 3.6vw, 44px); letter-spacing: -0.035em; line-height: 1.05; }
+  .sec-titulo h2 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--azul); }
+  .sec-titulo p { margin: 0; color: var(--tinta-2); max-width: 46ch; }
+
+  /* histórico */
+  .historico { background: var(--card); border: 1px solid var(--linha); border-radius: 20px; overflow: hidden; }
+  .historico .item { display: grid; grid-template-columns: 64px 1.4fr 1fr 160px 120px; gap: 16px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--linha); text-decoration: none; transition: background 0.2s; }
+  .historico .item:first-child { border-top: 0; }
+  .historico .item:hover { background: #fafbfc; }
+  .historico img { width: 64px; height: 44px; object-fit: cover; border-radius: 8px; }
+  .historico .t b { display: block; font-size: 15px; }
+  .historico .t span, .historico .d { font-size: 13px; color: var(--tinta-2); }
+  .historico .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .historico .v b { display: block; }
+  .historico .v s { font-size: 12px; color: var(--tinta-2); }
+  .historico .pct { justify-self: end; padding: 4px 10px; border-radius: 999px; background: var(--verde-2); color: var(--verde); font-weight: 700; font-size: 13px; }
+  @media (max-width: 760px) { .historico .item { grid-template-columns: 56px 1fr auto; } .historico .d, .historico .item > svg { display: none; } }
+
+  /* comparador */
+  .comparador { background: var(--card); border: 1px solid var(--linha); border-radius: 20px; overflow-x: auto; }
+  .comparador table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+  .comparador th, .comparador td { padding: 12px 16px; text-align: left; border-top: 1px solid var(--linha); font-variant-numeric: tabular-nums; }
+  .comparador thead th { border-top: 0; vertical-align: bottom; }
+  .comparador thead img { width: 100%; max-width: 220px; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+  .comparador tbody th { color: var(--tinta-2); font-weight: 500; width: 180px; }
+  .comparador .melhor { color: var(--verde); font-weight: 700; }
+  .comparador .melhor::after { content: ' ★'; font-size: 11px; }
+  .vazio { padding: 40px; text-align: center; color: var(--tinta-2); }
+
+  footer { margin-top: 90px; padding: 30px 0 50px; border-top: 1px solid var(--linha); font-size: 13px; color: var(--tinta-2); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+  footer .pausa { color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão 3 de 3 · <strong>Transparência</strong> · imóveis de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+
+<header>
+  <div class="wrap topo">
+    <a class="marca" href="#"><i>E</i>Exemplo Imóveis</a>
+    <nav aria-label="Principal"><a href="#simulador">Comprar</a><a href="#simulador">Alugar</a><a href="#historico">Baixaram de preço</a><a href="mapa.html">Mapa 3D</a></nav>
+    <div class="acoes"><a class="btn" href="#comparar">Comparar <span class="comparar-n" id="comparar-n">0</span></a><a class="btn primario" href="#">Falar no WhatsApp</a></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="abre">
+    <div>
+      <h1>Quanto custa morar aqui, <em>de verdade.</em></h1>
+    </div>
+    <div>
+      <p>Parcela, condomínio e IPTU somados, o preço anterior registrado e a comparação lado a lado. Antes de pedir visita, você já sabe se cabe.</p>
+      <div class="numeros">
+        <div><b data-contar="19">19</b><span>imóveis baixaram de preço desde o anúncio</span></div>
+        <div><b data-contar="9" class="num">9</b><span>% de baixa, em média</span></div>
+        <div><b data-contar="100">100</b><span>imóveis no mapa 3D</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="simulador" id="simulador">
+    <aside class="painel" aria-label="Quanto cabe no seu bolso">
+      <h2>Cabe no bolso?</h2>
+      <div class="campo">
+        <div class="linha"><label for="teto">Quanto posso pagar por mês</label></div>
+        <output id="teto-out" for="teto">R$ 9.000</output>
+        <input type="range" id="teto" min="3000" max="25000" step="500" value="9000">
+      </div>
+      <div class="campo">
+        <div class="linha"><label for="entrada">Entrada</label><output id="entrada-out" for="entrada" style="font-size:16px">20%</output></div>
+        <input type="range" id="entrada" min="10" max="60" step="5" value="20">
+      </div>
+      <div class="campo">
+        <div class="linha"><span>Tipo</span></div>
+        <div class="chips" id="tipos"><button type="button" aria-pressed="true" data-t="">Todos</button><button type="button" aria-pressed="false" data-t="Apartamento">Apartamento</button><button type="button" aria-pressed="false" data-t="Sobrado">Casa</button></div>
+      </div>
+      <div class="resumo" id="resumo"><b>5 de 8</b> imóveis cabem nesse valor</div>
+      <small>Parcela pela tabela Price, 30 anos, juros de 11,5% ao ano. Simulação para comparar imóveis, não é proposta de banco. O corretor faz a simulação exata.</small>
+    </aside>
+    <div>
+      <p class="legenda-barra"><span><i style="background:var(--azul)"></i>Parcela</span><span><i style="background:#8ea0ff"></i>Condomínio</span><span><i style="background:#c9d2ff"></i>IPTU</span></p>
+      <div class="grade" id="grade"></div>
+    </div>
+  </div>
+
+  <section id="historico">
+    <div class="sec-titulo"><h2>Baixaram de preço, <em>com data.</em></h2><p>O preço anterior é o que ficou registrado no site, no dia em que mudou. Ninguém escolhe um "de" para parecer desconto.</p></div>
+    <div class="historico" id="lista-historico"></div>
+  </section>
+
+  <section id="comparar">
+    <div class="sec-titulo"><h2>Lado a lado, <em>sem planilha.</em></h2><p>Marque "Comparar" em até 3 imóveis. O melhor de cada linha ganha destaque.</p></div>
+    <div class="comparador" id="comparador"></div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>Exemplo Imóveis · CRECI 0000-J</span><button class="pausa" id="pausa" type="button" aria-pressed="false"><span>Pausar animações</span></button></div></footer>
+
+<script type="module">
+  import { IMOVEIS, img, brl, brlCurto, data, desconto, custoMes, sparkline, botaoPausa, contarAoVer } from './sugestoes/dados.js';
+  botaoPausa(document.getElementById('pausa'));
+  contarAoVer(document.querySelectorAll('[data-contar]'));
+
+  const teto = document.getElementById('teto');
+  const entrada = document.getElementById('entrada');
+  const grade = document.getElementById('grade');
+  let tipo = '';
+  const comparar = new Set(['apt-09', 'apt-04']);
+
+  function desenharGrade() {
+    const t = Number(teto.value);
+    const e = Number(entrada.value) / 100;
+    document.getElementById('teto-out').textContent = brl(t);
+    document.getElementById('entrada-out').textContent = `${entrada.value}%`;
+    const lista = IMOVEIS.filter((i) => !tipo || i.tipo === tipo).map((i) => ({ i, m: custoMes(i, e) })).sort((a, b) => a.m.total - b.m.total);
+    const cabem = lista.filter((x) => x.m.total <= t).length;
+    document.getElementById('resumo').innerHTML = `<b>${cabem} de ${lista.length}</b> imóveis cabem nesse valor`;
+    const fazer = () => {
+      grade.innerHTML = lista.map(({ i, m }) => {
+        const d = desconto(i);
+        const fora = m.total > t;
+        const pct = (v) => `${((v / m.total) * 100).toFixed(1)}%`;
+        return `<article class="card${fora ? ' fora' : ''}" style="view-transition-name:card-${i.id}">
+          <a class="foto" href="sugestao-imovel.html?id=${i.id}" tabindex="-1"><img src="${img(i.id)}" alt="" loading="lazy" style="view-transition-name:foto-${i.id}"></a>
+          <span class="cabe">${fora ? `passa ${brl(m.total - t)}` : 'cabe'}</span>
+          <button class="comparar" type="button" data-id="${i.id}" aria-pressed="${comparar.has(i.id)}">${comparar.has(i.id) ? '✓ ' : '+ '}Comparar</button>
+          <div class="corpo">
+            <div><h3><a href="sugestao-imovel.html?id=${i.id}">${i.titulo}, ${i.quartos} ${i.quartos > 1 ? 'quartos' : 'quarto'}</a></h3><span class="onde">${i.bairro} · ${i.area} m²</span></div>
+            <div class="precos"><div><div class="preco">${brl(i.preco)}</div><div class="antes">${d ? `era ${brlCurto(d.antes)} · <b>−${(d.pct * 100).toFixed(1).replace('.', ',')}%</b>` : 'mesmo preço desde o anúncio'}</div></div>${sparkline(i, { w: 90, h: 32 })}</div>
+            <div class="barra" role="img" aria-label="Parcela ${brl(m.parcela)}, condomínio ${brl(m.condominio)}, IPTU ${brl(m.iptu)}"><i class="p" style="flex-basis:${pct(m.parcela)}"></i><i class="c" style="flex-basis:${pct(m.condominio)}"></i><i class="t" style="flex-basis:${pct(m.iptu)}"></i></div>
+            <div class="mes"><span>Por mês, tudo somado</span><b>${brl(m.total)}</b></div>
+          </div></article>`;
+      }).join('');
+    };
+    if (document.startViewTransition && grade.children.length && !document.documentElement.classList.contains('paused')) document.startViewTransition(fazer); else fazer();
+  }
+  teto.addEventListener('input', desenharGrade);
+  entrada.addEventListener('input', desenharGrade);
+  document.getElementById('tipos').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button'); if (!b) return;
+    tipo = b.dataset.t;
+    document.querySelectorAll('#tipos button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    desenharGrade();
+  });
+  grade.addEventListener('click', (ev) => {
+    const b = ev.target.closest('.comparar'); if (!b) return;
+    const id = b.dataset.id;
+    if (comparar.has(id)) comparar.delete(id); else { if (comparar.size >= 3) comparar.delete([...comparar][0]); comparar.add(id); }
+    const n = document.getElementById('comparar-n');
+    n.classList.add('pula'); setTimeout(() => n.classList.remove('pula'), 250);
+    desenharGrade(); desenharComparador();
+  });
+  desenharGrade();
+
+  // histórico de preços
+  document.getElementById('lista-historico').innerHTML = IMOVEIS.filter(desconto).sort((a, b) => desconto(b).pct - desconto(a).pct).map((i) => {
+    const d = desconto(i);
+    return `<a class="item" href="sugestao-imovel.html?id=${i.id}"><img src="${img(i.id)}" alt="" loading="lazy">
+      <div class="t"><b>${i.titulo}, ${i.quartos} ${i.quartos > 1 ? 'quartos' : 'quarto'}</b><span>${i.bairro}</span></div>
+      <span class="d">${brl(d.antes)} até ${data(i.historico[1][0])}</span>
+      <div class="v"><b>${brl(i.preco)}</b><s>${brl(d.antes)}</s></div>
+      <span class="pct">−${(d.pct * 100).toFixed(1).replace('.', ',')}%</span></a>`;
+  }).join('');
+
+  // comparador
+  function desenharComparador() {
+    document.getElementById('comparar-n').textContent = comparar.size;
+    const sel = [...comparar].map((id) => IMOVEIS.find((i) => i.id === id));
+    const el = document.getElementById('comparador');
+    if (sel.length < 2) { el.innerHTML = '<p class="vazio">Marque "Comparar" em pelo menos dois imóveis acima.</p>'; return; }
+    const linhas = [
+      ['Preço', (i) => i.preco, brl, 'min'],
+      ['Por mês, tudo somado', (i) => custoMes(i, Number(entrada.value) / 100).total, brl, 'min'],
+      ['Preço por m²', (i) => i.preco / i.area, brl, 'min'],
+      ['Área', (i) => i.area, (v) => `${v} m²`, 'max'],
+      ['Quartos', (i) => i.quartos, String, 'max'],
+      ['Vagas', (i) => i.vagas, String, 'max'],
+      ['Condomínio', (i) => i.condominio, (v) => (v ? brl(v) : 'sem condomínio'), 'min'],
+      ['Baixa de preço', (i) => desconto(i)?.pct ?? 0, (v) => (v ? `−${(v * 100).toFixed(1).replace('.', ',')}%` : '—'), 'max'],
+    ];
+    el.innerHTML = `<table><thead><tr><th></th>${sel.map((i) => `<th><img src="${img(i.id)}" alt="">${i.titulo}<br><span style="font-weight:400;color:var(--tinta-2)">${i.bairro}</span></th>`).join('')}</tr></thead><tbody>
+      ${linhas.map(([rot, f, fmt, melhor]) => {
+        const vs = sel.map(f);
+        const alvo = melhor === 'min' ? Math.min(...vs) : Math.max(...vs);
+        return `<tr><th scope="row">${rot}</th>${vs.map((v) => `<td class="${v === alvo && new Set(vs).size > 1 ? 'melhor' : ''}">${fmt(v)}</td>`).join('')}</tr>`;
+      }).join('')}</tbody></table>`;
+  }
+  entrada.addEventListener('input', desenharComparador);
+  desenharComparador();
+</script>
+</body>
+</html>

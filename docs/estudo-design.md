@@ -114,7 +114,7 @@ Corte: entra na fase 3 o que tiver encaixe claro, funcionar no celular e não pi
 |---|---|---|---|
 | 1. Referências | Navegar e fichar de 15 a 20 sites (seção 3.1), gravando os fluxos no celular e no computador. Pesquisa feita em [`estudo-design-referencias.md`](estudo-design-referencias.md); falta a navegação prática. | Planilha e pasta de prints/vídeos. | 3 dias |
 | 2. Padrões | Fichar os padrões da seção 3.2 e outros que aparecerem. Ver o que o código já suporta. | Lista priorizada de padrões. | 2 dias |
-| 3. Direções | Um moodboard por direção (A, B, C) e a home e a página do imóvel prototipadas em código, com dados da demo. | 3 protótipos navegáveis. | 1 semana |
+| 3. Direções | Um moodboard por direção (A, B, C) e a home e a página do imóvel prototipadas em código, com dados da demo. Primeira versão publicada: `sugestoes.html` (Cidade viva, Editorial, Transparência e a página do imóvel com o mapa 3D de verdade), arquivos em `public/sugestao*.html` e `public/sugestoes/`. | 3 protótipos navegáveis. | 1 semana |
 | 4. Testes | 5 a 8 pessoas que buscaram imóvel no último ano: teste de 5 segundos, preferência entre as direções, tarefa "ache um apartamento de 2 quartos no América e marque visita". Medir também Lighthouse no celular. | Relatório com o que funcionou. | 3 dias |
 | 5. Decisão | Escolher a direção, definir o template (ou as opções de configuração) e quebrar em itens. | Itens novos em `prioridades.md`. | 1 dia |
 

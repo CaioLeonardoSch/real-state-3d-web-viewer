@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestões de design</title>
+<meta name="description" content="Três direções de design para o site das imobiliárias e uma página de imóvel, saídas do estudo de referências.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%23f2a65a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f4f1ea; --tinta: #16130f; --tinta-2: #665d50; --linha: #e2dbcf; }
+  body { background: var(--fundo); color: var(--tinta); }
+  .wrap { width: min(1200px, 100% - 32px); margin-inline: auto; }
+  header { padding: clamp(40px, 7vw, 90px) 0 40px; }
+  header span { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tinta-2); }
+  h1 { margin: 14px 0 18px; font-size: clamp(40px, 6vw, 76px); line-height: 1; letter-spacing: -0.04em; max-width: 15ch; }
+  h1 em { font-family: 'Playfair Display', serif; font-weight: 400; }
+  header p { max-width: 62ch; font-size: 18px; color: var(--tinta-2); margin: 0; }
+  .lista { display: grid; gap: 22px; }
+  .item { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 18px; border-radius: 26px; background: #fff; border: 1px solid var(--linha); text-decoration: none; transition: transform 0.3s, box-shadow 0.3s; }
+  .item:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(22, 19, 15, 0.08); }
+  .item .img { border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9; position: relative; }
+  .item img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s ease; }
+  .item:hover img { transform: scale(1.04); }
+  .item .img b { position: absolute; left: 14px; top: 14px; padding: 6px 12px; border-radius: 999px; background: rgba(13, 18, 28, 0.75); color: #fff; font-size: 13px; }
+  .item .txt { display: flex; flex-direction: column; justify-content: center; padding: 6px 8px 6px 0; }
+  .item h2 { margin: 0 0 10px; font-size: clamp(26px, 2.8vw, 36px); letter-spacing: -0.03em; }
+  .item h2 em { font-family: 'Playfair Display', serif; font-weight: 400; }
+  .item p { margin: 0 0 14px; color: var(--tinta-2); }
+  .item ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .item li { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--fundo); }
+  .item .ir { margin-top: 18px; font-weight: 600; }
+  @media (max-width: 820px) { .item { grid-template-columns: 1fr; } }
+  .notas { margin: 60px 0 80px; padding: 26px; border-radius: 20px; border: 1px dashed var(--linha); color: var(--tinta-2); font-size: 15px; }
+  .notas h3 { margin: 0 0 10px; color: var(--tinta); }
+  .notas ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <span>Estudo de design · outubro de 2026</span>
+    <h1>Três jeitos de o site <em>ganhar vida.</em></h1>
+    <p>Protótipos navegáveis que saíram do estudo de referências. Usam os imóveis de exemplo e o mapa 3D de verdade da plataforma. As imagens dos imóveis são o próprio mapa no fim da tarde; num site real, entram as fotos.</p>
+  </header>
+
+  <div class="lista">
+    <a class="item" href="sugestao1.html">
+      <div class="img"><img src="sugestoes/img/hero-tarde.jpg" alt=""><b>Sugestão 1</b></div>
+      <div class="txt"><h2>Cidade viva</h2><p>O mapa 3D é a cara do site: abre na luz real de Joinville e gira devagar atrás da busca. Escuro, quente, com cara de fim de tarde.</p>
+        <ul><li>Mapa vivo no topo</li><li>Menu em pílula</li><li>Busca por frase com etiquetas</li><li>Coleções por estilo de vida</li><li>Desconto com gráfico</li><li>Aviso de novidade</li></ul><span class="ir">Abrir →</span></div>
+    </a>
+    <a class="item" href="sugestao2.html">
+      <div class="img"><img src="sugestoes/img/apt-04.jpg" alt=""><b>Sugestão 2</b></div>
+      <div class="txt"><h2><em>Editorial</em></h2><p>O site como uma revista sobre morar em Joinville: tipografia com serifa, imóvel da semana contado como matéria, guias de bairro e poucos imóveis escolhidos.</p>
+        <ul><li>Busca em forma de frase</li><li>Formas orgânicas</li><li>Faixa de bairros</li><li>Imóvel da semana</li><li>Guias de bairro</li><li>Seções numeradas</li></ul><span class="ir">Abrir →</span></div>
+    </a>
+    <a class="item" href="sugestao3.html">
+      <div class="img"><img src="sugestoes/img/apt-22.jpg" alt=""><b>Sugestão 3</b></div>
+      <div class="txt"><h2>Transparência</h2><p>Os números em primeiro lugar: quanto custa por mês com tudo somado, se cabe no bolso, o preço que caiu com data e a comparação lado a lado.</p>
+        <ul><li>Cabe no bolso?</li><li>Custo do mês em barra</li><li>Histórico de preço</li><li>Comparar com destaque</li><li>Cards que se reorganizam</li></ul><span class="ir">Abrir →</span></div>
+    </a>
+    <a class="item" href="sugestao-imovel.html?id=apt-09">
+      <div class="img"><img src="sugestoes/img/apt-09.jpg" alt=""><b>Página do imóvel</b></div>
+      <div class="txt"><h2>O imóvel, <em>contado com o mapa</em></h2><p>Serve para as três direções. Ao rolar, o mapa desce até o prédio, mostra o sol e a sombra de verdade, passeia pela rua e pelo bairro, e termina no preço e na visita.</p>
+        <ul><li>Voo até o prédio</li><li>Sol e sombra ao vivo</li><li>Passeio pelo bairro</li><li>Gráfico do preço</li><li>Decidir a dois</li><li>Melhor horário de visita</li></ul><span class="ir">Abrir →</span></div>
+    </a>
+  </div>
+
+  <div class="notas">
+    <h3>Como ver melhor</h3>
+    <ul>
+      <li>Use o Chrome ou o Edge no computador: as transições entre páginas (o card que cresce até virar a foto do imóvel) e as animações ligadas à rolagem aparecem ali. Nos outros navegadores, tudo funciona, só que sem esses efeitos.</li>
+      <li>O mapa 3D carrega depois da página, por cima de uma imagem. No celular, a sugestão 1 fica só com a imagem para não pesar.</li>
+      <li>Todas as páginas têm o botão "Pausar animações" e respeitam o "reduzir movimento" do sistema.</li>
+      <li>O estudo completo está em <code>docs/estudo-design.md</code> e <code>docs/estudo-design-referencias.md</code>.</li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>

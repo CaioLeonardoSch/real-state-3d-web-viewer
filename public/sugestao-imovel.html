@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão · Página do imóvel</title>
+<meta name="description" content="Sugestão de design da página do imóvel: voo até o prédio, sol e sombras de verdade, passeio pelo bairro e preço com histórico.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%23f2a65a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f5f2ec; --card: #fff; --tinta: #16130f; --tinta-2: #6a6155; --linha: #e6e0d6; --dourado: #e08b3a; --verde: #0f8a5f; --verde-2: #e3f5ec; --noite: #0d121c; --foco: var(--dourado); }
+  body { background: var(--fundo); color: var(--tinta); }
+  .wrap { width: min(1280px, 100% - 32px); margin-inline: auto; }
+
+  .barra-topo { position: sticky; top: 0; z-index: 30; background: rgba(245, 242, 236, 0.86); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--linha); }
+  .barra-topo .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .voltar { text-decoration: none; font-size: 14px; color: var(--tinta-2); }
+  .barra-topo .marca { font-weight: 700; margin-right: auto; }
+  .progresso { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; background: var(--dourado); transform-origin: left; transform: scaleX(0); }
+  @supports (animation-timeline: scroll()) { .progresso { animation: progresso linear both; animation-timeline: scroll(root); } @keyframes progresso { to { transform: scaleX(1); } } }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--card); text-decoration: none; font-size: 14px; font-weight: 600; }
+  .btn.primario { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+  @media (max-width: 560px) { .barra-topo .marca { display: none; } .barra-topo .voltar { margin-right: auto; } .barra-topo .btn { padding: 8px 12px; font-size: 13px; } }
+
+  /* abertura */
+  .abre { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; padding: 28px 0 0; align-items: end; }
+  .foto-principal { position: relative; border-radius: 26px; overflow: hidden; aspect-ratio: 16 / 10; }
+  .foto-principal img { width: 100%; height: 100%; object-fit: cover; }
+  .foto-principal .selo { position: absolute; top: 16px; left: 16px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; background: #5fe08a; color: #06210f; }
+  .foto-principal .nota { position: absolute; left: 16px; bottom: 16px; padding: 6px 12px; border-radius: 999px; font-size: 12px; background: rgba(13, 18, 28, 0.6); color: #fff; backdrop-filter: blur(6px); }
+  .info h1 { margin: 6px 0 8px; font-size: clamp(30px, 3.6vw, 48px); letter-spacing: -0.035em; line-height: 1.04; }
+  .info h1 em { font-family: 'Playfair Display', serif; font-weight: 400; }
+  .info .onde { color: var(--tinta-2); }
+  .info .caract { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 22px 0; background: var(--linha); border: 1px solid var(--linha); border-radius: 16px; overflow: hidden; }
+  .info .caract div { background: var(--card); padding: 12px 14px; }
+  .info .caract b { display: block; font-size: 22px; letter-spacing: -0.02em; }
+  .info .caract span { font-size: 12px; color: var(--tinta-2); }
+  .preco { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+  .preco b { font-size: 34px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .preco s { color: var(--tinta-2); }
+  .mes-linha { margin: 6px 0 20px; color: var(--tinta-2); font-size: 14px; }
+  .mes-linha b { color: var(--tinta); }
+  .acoes { display: flex; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 900px) { .abre { grid-template-columns: 1fr; } }
+
+  /* a história com o mapa: texto à esquerda, mapa preso à direita */
+  .historia { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr); gap: 40px; padding-top: 80px; }
+  .mapa-preso { position: sticky; top: 76px; height: calc(100svh - 96px); border-radius: 26px; overflow: hidden; background: #dcd6cb; }
+  .mapa-preso .palco > img { filter: saturate(0.9); }
+  .mapa-preso .etiqueta-cap { position: absolute; left: 16px; top: 16px; z-index: 2; padding: 7px 13px; border-radius: 999px; background: rgba(13, 18, 28, 0.7); color: #fff; font-size: 13px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.3s; }
+  .mapa-preso .carregando { position: absolute; right: 16px; top: 16px; z-index: 2; padding: 7px 13px; border-radius: 999px; background: rgba(255, 255, 255, 0.85); font-size: 12px; }
+  .palco.vivo ~ .carregando { display: none; }
+  .capitulo { min-height: 88svh; display: flex; flex-direction: column; justify-content: center; padding: 20px 0; }
+  .capitulo .n { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dourado); }
+  .capitulo h2 { margin: 10px 0 14px; font-size: clamp(30px, 3.4vw, 46px); line-height: 1.04; letter-spacing: -0.03em; }
+  .capitulo h2 em { font-family: 'Playfair Display', serif; font-weight: 400; }
+  .capitulo p { font-size: 17px; line-height: 1.65; color: #3d362d; margin: 0 0 14px; max-width: 46ch; }
+  .capitulo ul { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+  .capitulo li { display: flex; justify-content: space-between; gap: 20px; padding: 10px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--linha); font-size: 15px; max-width: 420px; }
+  .capitulo li span { color: var(--tinta-2); }
+
+  /* controle do sol */
+  .sol { padding: 18px; border-radius: 20px; background: var(--noite); color: #f3ede2; max-width: 460px; display: grid; gap: 14px; }
+  .sol .hora { display: flex; justify-content: space-between; align-items: baseline; }
+  .sol .hora output { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .sol .hora span { color: #cfc6b6; font-size: 14px; }
+  .sol input[type=range] { width: 100%; accent-color: var(--dourado); }
+  .sol .ceu { height: 46px; border-radius: 12px; position: relative; background: linear-gradient(90deg, #1b2440 0%, #f0a35e 9%, #9fc6ef 30%, #8ec0f2 70%, #f39a4f 91%, #1b2440 100%); }
+  .sol .ceu i { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #fff6d8; box-shadow: 0 0 18px 6px rgba(255, 220, 140, 0.8); transition: left 0.1s linear, top 0.1s linear; }
+  .epocas { display: flex; gap: 6px; }
+  .epocas button { flex: 1; border: 1px solid rgba(255, 255, 255, 0.18); background: none; color: #cfc6b6; padding: 8px; border-radius: 10px; font-size: 13px; }
+  .epocas button[aria-pressed='true'] { background: #f3ede2; color: #16130f; font-weight: 600; }
+  .sol .dia { font-size: 13px; color: #cfc6b6; }
+  .sol .play { border: 0; border-radius: 10px; padding: 10px; background: var(--dourado); color: #1b1206; font-weight: 600; }
+
+  /* preço */
+  .grafico { background: var(--card); border: 1px solid var(--linha); border-radius: 20px; padding: 18px; max-width: 460px; }
+  .grafico svg { width: 100%; height: auto; overflow: visible; }
+  .grafico .eixo { font-size: 11px; fill: var(--tinta-2); }
+  .custo { display: grid; gap: 8px; margin-top: 14px; max-width: 460px; }
+  .custo div { display: flex; justify-content: space-between; font-size: 15px; }
+  .custo .total { padding-top: 8px; border-top: 1px solid var(--linha); font-weight: 700; }
+
+  /* decidir a dois */
+  .dois { max-width: 460px; padding: 18px; border-radius: 20px; background: var(--card); border: 1px solid var(--linha); display: grid; gap: 12px; }
+  .pessoas { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--tinta-2); }
+  .pessoas i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; color: #fff; }
+  .pessoas i + i { margin-left: -14px; border: 2px solid #fff; }
+  .votos { display: flex; gap: 8px; }
+  .votos button { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--linha); background: none; font-size: 15px; }
+  .votos button[aria-pressed='true'] { background: var(--verde-2); border-color: var(--verde); color: var(--verde); font-weight: 600; }
+  .dois textarea { width: 100%; min-height: 70px; border-radius: 12px; border: 1px solid var(--linha); padding: 10px 12px; font: inherit; resize: vertical; }
+  .nota-par { font-size: 13px; padding: 10px 12px; border-radius: 12px; background: #f6f1e7; }
+
+  @media (max-width: 900px) {
+    .historia { grid-template-columns: 1fr; gap: 0; padding-top: 40px; }
+    .mapa-preso { order: -1; top: 60px; height: 46svh; z-index: 5; border-radius: 0 0 20px 20px; margin-inline: -16px; }
+    .capitulo { min-height: auto; padding: 48px 0; }
+  }
+
+  /* barra de ação fixa no celular */
+  .acao-fixa { display: none; }
+  @media (max-width: 700px) {
+    .acao-fixa { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; gap: 10px; align-items: center; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--linha); }
+    .acao-fixa b { font-size: 18px; } .acao-fixa .btn { margin-left: auto; }
+    body { padding-bottom: 70px; }
+  }
+  footer { padding: 60px 0; color: var(--tinta-2); font-size: 13px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+  footer .pausa { color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão da página do imóvel · imóvel de exemplo · mapa 3D de verdade <a href="sugestoes.html">Ver todas as sugestões</a></div>
+
+<div class="barra-topo">
+  <div class="wrap"><a class="voltar" href="javascript:history.back()">← Voltar</a><span class="marca">Exemplo Imóveis</span><a class="btn" href="#dois">♡ Salvar</a><a class="btn primario" href="#visita">Agendar visita</a></div>
+  <div class="progresso" aria-hidden="true"></div>
+</div>
+
+<main class="wrap">
+  <div class="abre">
+    <div class="foto-principal"><img id="foto" alt=""><span class="selo" id="selo" hidden></span><span class="nota">O prédio no mapa 3D · as fotos do imóvel entram aqui</span></div>
+    <div class="info">
+      <span class="onde" id="onde"></span>
+      <h1 id="titulo"></h1>
+      <div class="caract" id="caract"></div>
+      <div class="preco" id="preco"></div>
+      <p class="mes-linha" id="mes-linha"></p>
+      <div class="acoes"><a class="btn primario" href="#visita">Agendar visita</a><a class="btn" href="#">WhatsApp</a><a class="btn" href="#voo">Ver no 3D ↓</a></div>
+    </div>
+  </div>
+
+  <div class="historia">
+    <div>
+      <article class="capitulo" id="voo" data-cap="voo">
+        <span class="n">1 · O prédio</span>
+        <h2>Da cidade <em>até a sua janela.</em></h2>
+        <p>Ao rolar, o mapa desce de Joinville até o prédio, no lugar exato, com a altura real dos vizinhos. Não é foto de drone: funciona em todo imóvel, sem custo para o corretor.</p>
+        <ul id="lista-predio"></ul>
+      </article>
+
+      <article class="capitulo" id="sol" data-cap="sol">
+        <span class="n">2 · Sol e sombra</span>
+        <h2>Arraste o sol <em>e veja a sombra andar.</em></h2>
+        <p>A posição do sol é calculada para Joinville. Veja se a sala pega sol de manhã ou à tarde, e se o prédio da frente faz sombra no inverno.</p>
+        <div class="sol">
+          <div class="hora"><output id="hora-out">17h30</output><span id="hora-txt">sol da tarde</span></div>
+          <div class="ceu" aria-hidden="true"><i id="astro"></i></div>
+          <label class="sr-only" for="hora">Hora do dia</label>
+          <input type="range" id="hora" min="330" max="1170" step="15" value="1050">
+          <div class="epocas" role="group" aria-label="Época do ano"><button type="button" data-e="summer" aria-pressed="true">Verão</button><button type="button" data-e="equinox" aria-pressed="false">Outono/primavera</button><button type="button" data-e="winter" aria-pressed="false">Inverno</button></div>
+          <p class="dia" id="dia"></p>
+          <button class="play" type="button" id="play">▶ Ver o dia passar</button>
+        </div>
+      </article>
+
+      <article class="capitulo" data-cap="rua">
+        <span class="n">3 · A rua</span>
+        <h2>O que tem <em>a uma caminhada.</em></h2>
+        <p>A câmera passeia pela rua e pelos arredores. No site, esta lista sai dos serviços que o mapa da cidade já conhece (os tempos abaixo são exemplo).</p>
+        <ul><li>Mercado <span>4 min a pé</span></li><li>Escola <span>7 min a pé</span></li><li>Farmácia <span>5 min a pé</span></li><li>Parada de ônibus <span>2 min a pé</span></li></ul>
+      </article>
+
+      <article class="capitulo" data-cap="bairro">
+        <span class="n">4 · O bairro</span>
+        <h2 id="bairro-titulo">O bairro, <em>visto de cima.</em></h2>
+        <p>Do alto, dá para ver os morros, o rio, as ruas grandes e onde ficam os outros imóveis à venda por perto.</p>
+      </article>
+
+      <article class="capitulo" id="preco-cap" data-cap="cidade">
+        <span class="n">5 · O preço</span>
+        <h2>O desconto, <em>com data.</em></h2>
+        <p>O preço anterior é o que ficou registrado no site quando mudou.</p>
+        <div class="grafico" id="grafico"></div>
+        <div class="custo" id="custo"></div>
+      </article>
+
+      <article class="capitulo" id="dois" data-cap="cidade">
+        <span class="n">6 · Decidir junto</span>
+        <h2>Para quem <em>decide a dois.</em></h2>
+        <p>Salve numa lista compartilhada: cada um vota e deixa nota. O corretor recebe a lista pronta para montar o roteiro de visitas.</p>
+        <div class="dois">
+          <div class="pessoas"><i style="background:#c2410c">V</i><i style="background:#1d4ed8">M</i><span>Lista "Apartamentos 2026" · você e Marina</span></div>
+          <div class="votos" role="group" aria-label="Seu voto"><button type="button" aria-pressed="false">👍 Gostei</button><button type="button" aria-pressed="false">🤔 Talvez</button><button type="button" aria-pressed="false">👎 Não</button></div>
+          <p class="nota-par"><b>Marina:</b> adorei a sacada, mas quero ver o sol da sala no inverno.</p>
+          <label class="sr-only" for="nota">Sua nota</label><textarea id="nota" placeholder="Escreva uma nota para a lista"></textarea>
+        </div>
+      </article>
+
+      <article class="capitulo" id="visita" data-cap="voo">
+        <span class="n">7 · Visita</span>
+        <h2>Escolha <em>o melhor horário.</em></h2>
+        <p>Dica do mapa: para ver a sala com sol, visite entre 16h e 18h.</p>
+        <div class="acoes"><a class="btn primario" href="#">Sáb., 10h</a><a class="btn" href="#">Sáb., 16h30</a><a class="btn" href="#">Seg., 17h</a><a class="btn" href="#">Outro horário</a></div>
+      </article>
+    </div>
+
+    <div class="mapa-preso" aria-label="Mapa 3D do imóvel">
+      <div class="palco" id="palco"><img id="palco-img" alt=""></div>
+      <span class="etiqueta-cap" id="etiqueta-cap">O prédio</span>
+      <span class="carregando">carregando o mapa 3D…</span>
+    </div>
+  </div>
+</main>
+
+<footer><div class="wrap"><span>Exemplo Imóveis · CRECI 0000-J</span><button class="pausa" id="pausa" type="button" aria-pressed="false"><span>Pausar animações</span></button></div></footer>
+<div class="acao-fixa"><b id="preco-fixo"></b><a class="btn primario" href="#visita">Agendar visita</a></div>
+
+<script type="module">
+  import { porId, img, brl, data, desconto, custoMes, botaoPausa } from './sugestoes/dados.js';
+  import { montarMapa } from './sugestoes/mapa-vivo.js';
+
+  const i = porId(new URLSearchParams(location.search).get('id'));
+  const d = desconto(i);
+  const m = custoMes(i);
+  document.title = `${i.titulo} · ${i.bairro} · Sugestão`;
+  const foto = document.getElementById('foto');
+  foto.src = img(i.id); foto.alt = `${i.titulo} no mapa 3D`; foto.style.viewTransitionName = `foto-${i.id}`;
+  document.getElementById('palco-img').src = img(i.id);
+  document.getElementById('onde').textContent = `${i.tipo} · ${i.bairro}, Joinville · cód. ${i.codigo}`;
+  document.getElementById('titulo').innerHTML = `${i.titulo}, <em>${i.quartos} ${i.quartos > 1 ? 'quartos' : 'quarto'}</em>`;
+  document.getElementById('caract').innerHTML = [[i.area, 'm²'], [i.quartos, i.quartos > 1 ? 'quartos' : 'quarto'], [i.banheiros, 'banheiros'], [i.vagas, i.vagas > 1 ? 'vagas' : 'vaga']].map(([v, r]) => `<div><b>${v}</b><span>${r}</span></div>`).join('');
+  document.getElementById('preco').innerHTML = `<b>${brl(i.preco)}</b>${d ? `<s>${brl(d.antes)}</s>` : ''}`;
+  document.getElementById('preco-fixo').textContent = brl(i.preco);
+  if (d) { const s = document.getElementById('selo'); s.hidden = false; s.textContent = `Baixou ${(d.pct * 100).toFixed(1).replace('.', ',')}%`; }
+  document.getElementById('mes-linha').innerHTML = `Por mês, tudo somado: <b>${brl(m.total)}</b> (parcela estimada, condomínio e IPTU)`;
+  document.getElementById('lista-predio').innerHTML = `<li>Andares do prédio <span>${i.andares}</span></li><li>Comodidades <span>${i.comodidades.join(', ')}</span></li>`;
+  document.getElementById('bairro-titulo').innerHTML = `${i.bairro}, <em>visto de cima.</em>`;
+  botaoPausa(document.getElementById('pausa'), (p) => mapa.girar(!p && capAtual !== 'sol'));
+
+  // gráfico do preço
+  (() => {
+    const pts = [...i.historico, [new Date().toISOString().slice(0, 10), i.preco]];
+    const W = 420, H = 150, P = 28;
+    const t0 = new Date(pts[0][0]).getTime(), t1 = new Date(pts.at(-1)[0]).getTime();
+    const vs = pts.map((p) => p[1]); const max = Math.max(...vs) * 1.02, min = Math.min(...vs) * 0.96;
+    const x = (t) => P + ((new Date(t).getTime() - t0) / (t1 - t0 || 1)) * (W - 2 * P);
+    const y = (v) => 12 + ((max - v) / (max - min)) * (H - 40);
+    let path = `M${x(pts[0][0])} ${y(pts[0][1])}`;
+    for (let k = 1; k < pts.length; k++) path += ` H${x(pts[k][0])} V${y(pts[k][1])}`;
+    const area = `${path} V${H - 22} H${x(pts[0][0])} Z`;
+    document.getElementById('grafico').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Preço de ${brl(pts[0][1])} em ${data(pts[0][0])} para ${brl(i.preco)} hoje">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f8a5f" stop-opacity=".22"/><stop offset="1" stop-color="#0f8a5f" stop-opacity="0"/></linearGradient></defs>
+      <path d="${area}" fill="url(#g)"/><path d="${path}" fill="none" stroke="#0f8a5f" stroke-width="2.5" pathLength="1" class="linha-preco"/>
+      ${i.historico.map((p) => `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="4" fill="#0f8a5f"/><text class="eixo" x="${x(p[0])}" y="${y(p[1]) - 10}" text-anchor="${x(p[0]) < W / 2 ? 'start' : 'end'}">${brl(p[1])}</text>`).join('')}
+      ${pts.map((p, k) => `<text class="eixo" x="${x(p[0])}" y="${H - 6}" text-anchor="${k === 0 ? 'start' : k === pts.length - 1 ? 'end' : 'middle'}">${k === pts.length - 1 ? 'hoje' : data(p[0])}</text>`).join('')}
+    </svg>`;
+    document.getElementById('custo').innerHTML = `<div><span>Parcela estimada (20% de entrada, 30 anos)</span><b>${brl(m.parcela)}</b></div><div><span>Condomínio</span><b>${m.condominio ? brl(m.condominio) : '—'}</b></div><div><span>IPTU (por mês)</span><b>${brl(m.iptu)}</b></div><div class="total"><span>Por mês, tudo somado</span><span>${brl(m.total)}</span></div>`;
+  })();
+
+  // mapa vivo, preso ao lado do texto
+  const mapa = montarMapa(document.getElementById('palco'), { foco: i.id, giro: 2 });
+  const CAMERAS = {
+    voo: { zoom: 18.8, pitch: 64, rotulo: 'O prédio' },
+    sol: { zoom: 18.4, pitch: 58, rotulo: 'Sol e sombra' },
+    rua: { zoom: 17.2, pitch: 70, delta: 70, rotulo: 'A rua' },
+    bairro: { zoom: 15.2, pitch: 55, delta: 140, rotulo: i.bairro },
+    cidade: { zoom: 14.6, pitch: 50, delta: 200, rotulo: 'Joinville' },
+  };
+  let capAtual = 'voo';
+  let bearing0 = 0;
+  mapa.pronto.then(() => {
+    bearing0 = mapa.map.getBearing();
+    // começa do alto e desce até o prédio
+    mapa.camera({ center: i.centro, zoom: 13.5, pitch: 40 }, 0);
+    mapa.hora(Number(hora.value), epoca);
+    setTimeout(() => irPara(capAtual), 300);
+  });
+  function irPara(cap) {
+    capAtual = cap;
+    const c = CAMERAS[cap];
+    document.getElementById('etiqueta-cap').textContent = c.rotulo;
+    mapa.girar(cap !== 'sol' && !document.documentElement.classList.contains('paused'));
+    if (!mapa.map) return;
+    const o = { center: i.centro, zoom: c.zoom, pitch: c.pitch };
+    if (c.delta !== undefined) o.bearing = bearing0 + c.delta;
+    mapa.camera(o, cap === 'voo' ? 3600 : 2400);
+  }
+  const io = new IntersectionObserver((es) => {
+    const v = es.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (v && v.target.dataset.cap !== capAtual) irPara(v.target.dataset.cap);
+  }, { rootMargin: '-40% 0px -40% 0px', threshold: [0, 0.2, 0.5] });
+  document.querySelectorAll('[data-cap]').forEach((c) => io.observe(c));
+
+  // sol
+  const hora = document.getElementById('hora');
+  let epoca = 'summer';
+  const DIA = { summer: ['5h22', '18h56', '13h34'], equinox: ['6h12', '18h20', '12h08'], winter: ['6h58', '17h37', '10h39'] };
+  const astro = document.getElementById('astro');
+  const textoSol = (mins) => mins < 390 || mins > 1125 ? 'antes/depois do sol' : mins < 600 ? 'sol da manhã' : mins < 840 ? 'sol alto' : mins < 1020 ? 'sol da tarde' : 'pôr do sol';
+  function atualizarSol() {
+    const mins = Number(hora.value);
+    document.getElementById('hora-out').textContent = `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, '0')}`;
+    document.getElementById('hora-txt').textContent = textoSol(mins);
+    const k = (mins - 330) / 840;
+    astro.style.left = `${k * 100}%`;
+    astro.style.top = `${75 - Math.sin(k * Math.PI) * 55}%`;
+    const [nasce, poe, dura] = DIA[epoca];
+    document.getElementById('dia').textContent = `Nasce às ${nasce} e se põe às ${poe}: ${dura} de sol (aproximado para Joinville).`;
+    mapa.hora(mins, epoca);
+  }
+  hora.addEventListener('input', atualizarSol);
+  document.querySelectorAll('.epocas button').forEach((b) => b.addEventListener('click', () => {
+    epoca = b.dataset.e;
+    document.querySelectorAll('.epocas button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    atualizarSol();
+  }));
+  let tocando = null;
+  document.getElementById('play').addEventListener('click', (ev) => {
+    if (tocando) { clearInterval(tocando); tocando = null; ev.target.textContent = '▶ Ver o dia passar'; return; }
+    ev.target.textContent = '❚❚ Parar';
+    if (Number(hora.value) >= 1170) hora.value = 330;
+    tocando = setInterval(() => {
+      hora.value = Number(hora.value) + 15; atualizarSol();
+      if (Number(hora.value) >= 1170) { clearInterval(tocando); tocando = null; ev.target.textContent = '▶ Ver o dia passar'; }
+    }, 120);
+  });
+  atualizarSol();
+
+  // votos (só nesta página, para mostrar a ideia)
+  document.querySelectorAll('.votos button').forEach((b) => b.addEventListener('click', () => document.querySelectorAll('.votos button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))));
+</script>
+</body>
+</html>
