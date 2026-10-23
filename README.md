@@ -761,8 +761,8 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - O MapLibre não projeta sombras. A "direção do sol" aparece só no sombreamento das faces dos prédios.
 - **Relevo:** cada prédio fica na altura do chão do seu centro. O telhado fica reto, mas numa encosta íngreme um lado
   da base fica um pouco enterrado e o outro um pouco no ar (1 a 2 m numa casa, mais num prédio grande numa ladeira).
-  A sombra dos prédios no chão e as horas de sol de cada fachada ("Sol do imóvel") não contam a sombra dos morros. O
-  MDT é de 2010–2012: terraplenagens depois disso não aparecem.
+  A sombra dos prédios no chão não conta a sombra dos morros. O MDT é de 2010–2012: terraplenagens depois disso não
+  aparecem.
 - **Postes e a maior parte das árvores são ilustrativos:** o OSM tem só 416 postes e cerca de mil árvores na região.
   As posições não são as reais; servem para dar escala e vida à rua.
 - O filtro por bairro usa os bairros do OSM. Araquari tem só parte dos bairros mapeados, e um imóvel sem bairro no
@@ -818,7 +818,7 @@ A lista completa do que falta, em ordem de prioridade (com impacto, esforço, ri
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 - Mapa (ver [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md)):
   - melhorias pedidas em 15/10: todas feitas (o relevo em 23/10, ver "Relevo"); falta a copa das matas em pedaços
-    pequenos, para ela voltar em 3D sobre os morros, e a sombra dos morros nas horas de sol;
+    pequenos, para ela voltar em 3D sobre os morros, e a sombra dos morros no chão;
   - pavimento da Secretaria de Infraestrutura para completar os 640 km sem informação;
   - LiDAR da Prefeitura e um estéreo único do núcleo vertical para as torres;
   - classificador de telhado (plano, duas águas, quatro águas);
