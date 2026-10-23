@@ -422,6 +422,18 @@ export class Scene {
     return [...layers.slice(0, at), base.reliefLayer(this.theme), ...layers.slice(at)];
   }
 
+  /**
+   * On the relief, the flat layers (fills, lines, the shading) first, in their order, then the rest. MapLibre paints
+   * the flat layers into textures laid on the terrain, one painting for each run of them between other layers (3D
+   * volumes, circles, labels): spread in four runs, the terrain was painted four times a frame. Laid on the ground, the
+   * flat layers sit under every volume whatever their order; without the relief the order is kept as it is.
+   */
+  private drapedFirst(layers: LayerSpecification[]): LayerSpecification[] {
+    if (!this.data.terrainUrl) return layers;
+    const flat = (l: LayerSpecification) => ['background', 'fill', 'line', 'raster', 'hillshade'].includes(l.type);
+    return [...layers.filter(flat), ...layers.filter((l) => !flat(l))];
+  }
+
   private buildStyle(): StyleSpecification {
     const t = this.theme;
     const base = this.baseStyle();
@@ -483,7 +495,7 @@ export class Scene {
       light: { anchor: 'map', ...t.light },
       sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon, ...SKY_FOG },
       ...(this.data.terrainUrl && this.data.meta.terrain ? { terrain: { source: 'terrain', exaggeration: 1 } } : {}),
-      layers: [
+      layers: this.drapedFirst([
         ...this.withRelief(base.baseLayers(t), base),
         {
           id: 'clip-line',
@@ -707,7 +719,7 @@ export class Scene {
           },
           paint: { 'text-color': CLUSTER_TEXT },
         },
-      ],
+      ]),
     };
   }
 

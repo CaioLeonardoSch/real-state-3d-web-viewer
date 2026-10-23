@@ -441,6 +441,12 @@ consulta o Estado: `npm run data:terrain` (`scripts/build-terrain.mjs`) baixa o 
 - **Matas:** com o relevo, o volume 3D das matas (`wood-canopy`) sai do mapa. Ele é uma peça só por mata (e por
   bloco), apoiada numa altura única, e numa encosta virava uma placa reta atravessando o morro. As matas ficam com o
   verde sobre o terreno, o sombreado e as árvores, que ficam cada uma no próprio chão.
+- **Custo:** com o relevo, o MapLibre pinta as camadas planas (chão, verde, água, ruas, linhas) em texturas
+  deitadas sobre o terreno, uma pintura para cada sequência delas entre camadas 3D, círculos e textos. Com o relevo,
+  o estilo põe todas as camadas planas antes das demais (`drapedFirst` em `scene.ts`): uma pintura em vez de quatro.
+  No Chromium com WebGL por software, cada quadro passou de ~0,25 s sem relevo para ~0,86 s com relevo (era ~1,6 s
+  antes de juntar as camadas). Esse renderizador exagera o custo de pintar texturas; o desempenho numa GPU real, em
+  especial num celular de entrada, ainda precisa ser medido (item 20 de `docs/prioridades.md`).
 - **Licença:** o dado é público e gratuito, mas o Estado não declara uma licença para uso em produto. Confirmar com
   geoprocessamento@sde.sc.gov.br antes de vender (item 37 de `docs/prioridades.md`). A atribuição aparece no canto
   do mapa.
