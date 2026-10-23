@@ -36,6 +36,8 @@ const COVERAGE = 'SIGSC__MDT-2012';
 const UTM = '+proj=utm +zone=22 +south +ellps=GRS80 +units=m +no_defs';
 export const TERRAIN_STEP_M = 10;
 const CHUNK_M = 10_000;
+/** Extent of the State's coverage (its DescribeCoverage); the WCS refuses requests that go past it. */
+const COVERAGE_UTM = { e0: 214_794, n0: 6_751_542, e1: 766_209, n1: 7_128_977 };
 export const TERRAIN_MIN_ZOOM = 8;
 export const TERRAIN_MAX_ZOOM = 13;
 export const TERRAIN_TILE_PX = 512;
@@ -62,12 +64,18 @@ const H = (N1 - N0) / TERRAIN_STEP_M;
 const grid = new Float32Array(W * H).fill(NaN);
 await mkdir(CACHE, { recursive: true });
 
+/** GeoTIFF of one chunk (only the part inside the State's coverage), or null when it is all outside. */
 async function chunk(e, n) {
+  const ce0 = Math.max(e, COVERAGE_UTM.e0);
+  const ce1 = Math.min(e + CHUNK_M, COVERAGE_UTM.e1);
+  const cn0 = Math.max(n, COVERAGE_UTM.n0);
+  const cn1 = Math.min(n + CHUNK_M, COVERAGE_UTM.n1);
+  if (ce1 - ce0 < TERRAIN_STEP_M || cn1 - cn0 < TERRAIN_STEP_M) return null;
   const file = path.join(CACHE, `mdt-${TERRAIN_STEP_M}m-${e}-${n}.tif`);
   if (!refresh && existsSync(file)) return (await readFile(file)).buffer;
   const url =
     `${WCS}?service=WCS&version=2.0.1&request=GetCoverage&coverageId=${COVERAGE}&format=image/tiff` +
-    `&subset=E(${e},${e + CHUNK_M})&subset=N(${n},${n + CHUNK_M})&scalefactor=${1 / TERRAIN_STEP_M}`;
+    `&subset=E(${ce0},${ce1})&subset=N(${cn0},${cn1})&scalefactor=${1 / TERRAIN_STEP_M}`;
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(300_000) });
@@ -87,7 +95,10 @@ let done = 0;
 const total = ((E1 - E0) / CHUNK_M) * ((N1 - N0) / CHUNK_M);
 for (let n = N0; n < N1; n += CHUNK_M) {
   for (let e = E0; e < E1; e += CHUNK_M) {
-    const tiff = await fromArrayBuffer(await chunk(e, n));
+    const buf = await chunk(e, n);
+    done++;
+    if (!buf) continue;
+    const tiff = await fromArrayBuffer(buf);
     const image = await tiff.getImage();
     const [bw, , , bn] = image.getBoundingBox();
     const [data] = await image.readRasters();
@@ -107,7 +118,6 @@ for (let n = N0; n < N1; n += CHUNK_M) {
         if (Number.isFinite(v) && v > -100 && v < 3000 && v !== 0) grid[gr * W + gc] = v;
       }
     }
-    done++;
     process.stdout.write(`\rMDT: ${done}/${total} trechos de ${CHUNK_M / 1000} km`);
   }
 }
