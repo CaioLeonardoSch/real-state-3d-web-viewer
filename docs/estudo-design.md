@@ -112,7 +112,7 @@ Corte: entra na fase 3 o que tiver encaixe claro, funcionar no celular e não pi
 
 | Fase | O que fazer | Entrega | Duração |
 |---|---|---|---|
-| 1. Referências | Navegar e fichar de 15 a 20 sites (seção 3.1), gravando os fluxos no celular e no computador. | Planilha e pasta de prints/vídeos. | 3 dias |
+| 1. Referências | Navegar e fichar de 15 a 20 sites (seção 3.1), gravando os fluxos no celular e no computador. Pesquisa feita em [`estudo-design-referencias.md`](estudo-design-referencias.md); falta a navegação prática. | Planilha e pasta de prints/vídeos. | 3 dias |
 | 2. Padrões | Fichar os padrões da seção 3.2 e outros que aparecerem. Ver o que o código já suporta. | Lista priorizada de padrões. | 2 dias |
 | 3. Direções | Um moodboard por direção (A, B, C) e a home e a página do imóvel prototipadas em código, com dados da demo. | 3 protótipos navegáveis. | 1 semana |
 | 4. Testes | 5 a 8 pessoas que buscaram imóvel no último ano: teste de 5 segundos, preferência entre as direções, tarefa "ache um apartamento de 2 quartos no América e marque visita". Medir também Lighthouse no celular. | Relatório com o que funcionou. | 3 dias |
@@ -122,8 +122,9 @@ Total aproximado: 3 semanas para uma pessoa.
 
 ## 6. Regras durante o estudo
 
-- **Originalidade:** nenhuma tela pode lembrar um concorrente da cidade. Se alguém olhar e disser "parece o site X",
-  volta para a prancheta.
+- **Destaque:** parecer com outros sites em convenções (menu, busca, cards) não é problema; o que importa é que o
+  site se destaque. Os sites da cidade e o do corretor são só contexto do mercado, não a base das decisões: a
+  direção sai das referências da seção 3, dos nossos diferenciais e dos testes.
 - **Desempenho antes de efeito:** LCP abaixo de 2,5 s no celular em 4G; o mapa 3D nunca bloqueia o primeiro conteúdo.
 - **Movimento com propósito:** cada animação precisa explicar algo (de onde veio, para onde foi, o que mudou).
 - **Nada quebra o que funciona:** os templates atuais continuam iguais; o resultado entra como template novo.
