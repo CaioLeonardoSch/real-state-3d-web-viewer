@@ -9,7 +9,7 @@ import { zxyToTileId } from 'pmtiles';
 const HEADER_BYTES = 127;
 const ROOT_LIMIT = 16384 - HEADER_BYTES;
 export const COMPRESSION = { none: 1, gzip: 2 };
-export const TILE_TYPE = { mvt: 1 };
+export const TILE_TYPE = { mvt: 1, png: 2, webp: 4 };
 
 function varint(out, n) {
   // non-negative integers up to 2^53
@@ -60,7 +60,7 @@ function buildDirectories(entries) {
 /**
  * @param {{ z: number, x: number, y: number, data: Buffer }[]} tiles already compressed with `tileCompression`
  * @param {{ minZoom: number, maxZoom: number, bounds: number[], center: number[], centerZoom: number,
- *   metadata: object, tileCompression?: number }} opts
+ *   metadata: object, tileCompression?: number, tileType?: number }} opts
  * @returns {Buffer}
  */
 export function writePmtiles(tiles, opts) {
@@ -109,7 +109,7 @@ export function writePmtiles(tiles, opts) {
   h.writeUInt8(1, 96); // clustered: tiles are written in tileId order
   h.writeUInt8(COMPRESSION.gzip, 97);
   h.writeUInt8(opts.tileCompression ?? COMPRESSION.gzip, 98);
-  h.writeUInt8(TILE_TYPE.mvt, 99);
+  h.writeUInt8(opts.tileType ?? TILE_TYPE.mvt, 99);
   h.writeUInt8(opts.minZoom, 100);
   h.writeUInt8(opts.maxZoom, 101);
   const e7 = (v) => Math.round(v * 1e7);

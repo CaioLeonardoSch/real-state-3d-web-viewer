@@ -218,10 +218,11 @@ export class HeroWindowsLayer implements CustomLayerInterface {
     if (!this.program || !this.dev) return;
     if (this.dirty) this.upload(gl);
     if (!this.vertexCount) return;
-    // metres around the origin → mercator, composed in double precision (no jitter close up)
-    const m = MercatorCoordinate.fromLngLat(this.origin, 0);
+    // metres around the origin → mercator, composed in double precision (no jitter close up); on the relief, the
+    // windows start at the ground of the tower's centre, as its extrusion
+    const m = MercatorCoordinate.fromLngLat(this.origin, this.map.queryTerrainElevation(this.origin) ?? 0);
     const s = m.meterInMercatorCoordinateUnits();
-    const model = [s, 0, 0, 0, 0, -s, 0, 0, 0, 0, s, 0, m.x, m.y, 0, 1];
+    const model = [s, 0, 0, 0, 0, -s, 0, 0, 0, 0, s, 0, m.x, m.y, m.z, 1];
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.program, 'u_matrix'), false, mul(args.defaultProjectionData.mainMatrix, model));
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);

@@ -261,6 +261,9 @@ await writeFile(path.join(OUT, 'bairros-areas.geojson'), JSON.stringify(areas3m)
 // in the place it lies in
 const streets = streetIndex(namedRoads, await read('bairros.geojson'), { lat0 });
 await writeFile(path.join(OUT, 'ruas.json'), streetIndexJson(streets));
+// the relief (scripts/build-terrain.mjs) is built apart and rarely: keep what the published meta.json says of it
+const published = await readFile(path.join(OUT, 'meta.json'), 'utf8').then(JSON.parse, () => ({}));
+const terrain = published.terrainTiles ? { terrainTiles: published.terrainTiles, terrain: published.terrain } : {};
 const outMeta = {
   ...meta,
   tiles: file,
@@ -289,6 +292,7 @@ const outMeta = {
   heightSources: heightCounts.cadastre
     ? ['OpenStreetMap', `${REGION.cadastre.label}: área construída por lote`]
     : ['OpenStreetMap'],
+  ...terrain,
 };
 await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + '\n');
 

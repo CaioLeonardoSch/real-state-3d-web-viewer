@@ -1,5 +1,5 @@
 export declare const COMPRESSION: { none: number; gzip: number };
-export declare const TILE_TYPE: { mvt: number };
+export declare const TILE_TYPE: { mvt: number; png: number; webp: number };
 export declare function writePmtiles(
   tiles: { z: number; x: number; y: number; data: Uint8Array }[],
   opts: {
@@ -10,5 +10,6 @@ export declare function writePmtiles(
     centerZoom: number;
     metadata: object;
     tileCompression?: number;
+    tileType?: number;
   },
 ): Uint8Array;

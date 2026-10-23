@@ -34,6 +34,8 @@ export const Z_WATER_PATTERN = 13;
  * view, the slowest moment on a phone.
  */
 export const FEATURE_BASE: ExpressionSpecification = ['coalesce', ['get', 'base'], ['get', 'b'], 0];
+/** Strength of the slope shading (0 to 1): soft, so it reads as relief and not as dark stains on the hills. */
+export const RELIEF_SHADE = 0.35;
 export const Z_LAMPS = 16;
 /**
  * Light of the street lamps at night: a pool fading out LAMP_POOL_M metres around the point under the luminaire and
@@ -210,6 +212,23 @@ export class BaseStyle {
       22,
       real(22),
     ];
+  }
+
+  /** Shading of the slopes (relief), drawn over the ground, green areas and water ('terrain' source). */
+  reliefLayer(t: Theme): LayerSpecification {
+    return { id: 'relief-shade', type: 'hillshade', source: 'terrain', paint: this.reliefPaint(t) };
+  }
+
+  /** Colours of the slope shading and where its light comes from: the sun by day (src/map/lighting.ts). */
+  reliefPaint(t: Theme) {
+    return {
+      'hillshade-shadow-color': t.relief.shadow,
+      'hillshade-highlight-color': t.relief.highlight,
+      'hillshade-accent-color': t.relief.accent,
+      'hillshade-illumination-direction': t.relief.direction,
+      'hillshade-illumination-anchor': 'map' as const,
+      'hillshade-exaggeration': RELIEF_SHADE,
+    };
   }
 
   /**
