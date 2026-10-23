@@ -21,8 +21,13 @@ export const DEFAULT_BUILDING_HEIGHT_M = 6;
 export const Z_3D_START = 14;
 export const Z_3D_FULL = 15.5;
 export const Z_FLAT_END = 14.6;
-/** Scenery from the closest tiles (scripts/lib/scenery.mjs): trees, then street lamps a little closer. */
-export const Z_TREES = 15;
+/**
+ * Scenery from the closest tiles (scripts/lib/scenery.mjs): roofs and trees, then street lamps a little closer. From
+ * zoom 16, not 15: between 15 and 16 they are a few pixels on screen, yet roofs and trees were most of the geometry the
+ * map sent to the GPU there (about 44 of 66 MB in a view of the Centro at 15.5), the zooms crossed most while moving
+ * around. With every detail layer from 16, the detail file is not even read below it.
+ */
+export const Z_TREES = 16;
 /**
  * Faceted water from this zoom; flat water before. The texture costs two more shaders and a canvas, kept out of the
  * first view of the city (the slowest moment on a phone).
