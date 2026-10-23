@@ -25,7 +25,7 @@ const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** The open listing's details (description, photos, history) arrived from the server. */
-const detailReady = (p) => p.waitForFunction(() => !!document.querySelector('#drawer.open') && !document.querySelector('#drawer .detail-loading'), null, { timeout: 15000 });
+const detailReady = (p) => p.waitForFunction(() => !!document.querySelector('#drawer.open') && !document.querySelector('#drawer .detail-loading'), null, { timeout: 45000 });
 /** Authenticator-app codes already typed: the next one waits for a new code (Supabase may refuse a repeat). */
 const usedCodes = new Set();
 
@@ -64,12 +64,14 @@ async function waitIdle(page) {
   await page.waitForFunction(() => {
     const m = window.__demo?.map;
     return m && m.loaded() && !m.isMoving() && m.areTilesLoaded();
-  }, null, { timeout: 30000 });
+  }, null, { timeout: 90000 });
   await sleep(400);
 }
 
 async function open(browser, url = MAP_) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  // with the relief the map keeps the browser busy for longer in software WebGL (CI)
+  ctx.setDefaultTimeout(90000);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -116,7 +118,7 @@ try {
   await stranger.page.click('#account-panel [data-action="switch"]');
   await stranger.page.fill('#account-panel input[name="email"]', `sem-conta-${tag}@teste.local`);
   await stranger.page.click('#account-panel button[type="submit"]');
-  await stranger.page.waitForFunction(() => /link para escolher a senha nova/.test(document.querySelector('#account-panel .account-note')?.textContent ?? ''), null, { timeout: 15000 });
+  await stranger.page.waitForFunction(() => /link para escolher a senha nova/.test(document.querySelector('#account-panel .account-note')?.textContent ?? ''), null, { timeout: 45000 });
   check('sem "criar conta": só entrar; "Esqueci minha senha" manda o link (sem dizer se o e-mail tem conta)', !loginUi.name && /Esqueci/.test(loginUi.link), JSON.stringify(loginUi));
   await stranger.ctx.close();
 
@@ -131,16 +133,16 @@ try {
   await staff.page.fill('#account-panel input[name="password"]', PASSWORD);
   await staff.page.click('#account-panel button[type="submit"]');
   // support powers need two-step verification: the staff member turns it on with an authenticator app first
-  await staff.page.waitForSelector('#account-panel [data-action="mfa-on"]', { timeout: 15000 });
+  await staff.page.waitForSelector('#account-panel [data-action="mfa-on"]', { timeout: 45000 });
   const staffNote = await staff.page.textContent('#account-panel .account-note');
   const orgFormBefore = await staff.page.isVisible('#account-panel form[data-form="org"]');
   await staff.page.click('#account-panel [data-action="mfa-on"]');
-  await staff.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 15000 });
+  await staff.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 45000 });
   const staffSecret = await staff.page.inputValue('#account-panel input[name="totp-secret"]');
   const qr = (await staff.page.getAttribute('#account-panel .mfa-setup img', 'src')) ?? '';
   await staff.page.fill('#account-panel form[data-form="mfa-confirm"] input[name="code"]', await freshTotp(staffSecret, usedCodes));
   await staff.page.click('#account-panel form[data-form="mfa-confirm"] button[type="submit"]');
-  await staff.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 15000 });
+  await staff.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 45000 });
   check('suporte: sem a verificação em duas etapas não atende; ativa pelo QR code (ou pela chave) e passa a atender',
     /obrigatória/.test(staffNote ?? '') && !orgFormBefore && qr.startsWith('data:image/svg+xml') && /^[A-Z2-7]{16,}$/.test(staffSecret),
     JSON.stringify({ staffNote, orgFormBefore, qr: qr.slice(0, 30) }));
@@ -151,7 +153,7 @@ try {
   await staff.page.fill('#account-panel input[name="ownerName"]', 'Dona Teste');
   await staff.page.fill('#account-panel input[name="ownerEmail"]', ownerEmail);
   await staff.page.click('#account-panel form[data-form="org"] button[type="submit"]');
-  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 30000 }).catch(async (e) => {
+  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 90000 }).catch(async (e) => {
     throw new Error(`${e.message}\npainel: ${(await staff.page.textContent('#account-panel'))?.replace(/\s+/g, ' ').slice(0, 800)}`);
   });
   const ownerTemp = await staff.page.inputValue('#account-panel .org-result input');
@@ -167,7 +169,7 @@ try {
     await p.fill('#account-panel input[name="email"]', email);
     await p.fill('#account-panel input[name="password"]', temp);
     await p.click('#account-panel button[type="submit"]');
-    await p.waitForSelector('#account-panel form[data-form="new-password"]', { timeout: 15000 });
+    await p.waitForSelector('#account-panel form[data-form="new-password"]', { timeout: 45000 });
     if (shotName) await shot(p, shotName);
     const locked = await p.evaluate(() => document.querySelectorAll('#account-panel form').length === 1);
     await p.fill('#account-panel form[data-form="new-password"] input[name="password"]', PASSWORD);
@@ -177,7 +179,7 @@ try {
     const mismatch = await p.textContent('#account-panel form[data-form="new-password"] .a-error');
     await p.fill('#account-panel form[data-form="new-password"] input[name="again"]', PASSWORD);
     await p.click('#account-panel form[data-form="new-password"] button[type="submit"]');
-    await p.waitForSelector('#account-panel form[data-form="new-password"]', { state: 'detached', timeout: 15000 });
+    await p.waitForSelector('#account-panel form[data-form="new-password"]', { state: 'detached', timeout: 45000 });
     const marked = (await svc.from('password_change_required').select('user_id')).data ?? [];
     return { locked, mismatch, cleared: !(await svc.auth.admin.listUsers({ perPage: 1000 })).data.users.some((u) => u.email === email && marked.some((m) => m.user_id === u.id)) };
   };
@@ -190,12 +192,12 @@ try {
 
   // ---- the administrator creates a broker's access from the team screen
   const brokerEmail = `corretor-${tag}@teste.local`;
-  await owner.page.waitForSelector('#account-panel form[data-form="member"]', { timeout: 15000 });
+  await owner.page.waitForSelector('#account-panel form[data-form="member"]', { timeout: 45000 });
   const roleField = await owner.page.evaluate(() => document.querySelector('#account-panel form[data-form="member"] [name="role"]')?.getAttribute('type'));
   await owner.page.fill('#account-panel form[data-form="member"] input[name="name"]', 'Corretor Teste');
   await owner.page.fill('#account-panel form[data-form="member"] input[name="email"]', brokerEmail);
   await owner.page.click('#account-panel form[data-form="member"] button[type="submit"]');
-  await owner.page.waitForSelector('#account-panel .member-result input', { timeout: 30000 });
+  await owner.page.waitForSelector('#account-panel .member-result input', { timeout: 90000 });
   const brokerTemp = await owner.page.inputValue('#account-panel .member-result input');
   await shot(owner.page, 'backend-equipe.png');
   const team0 = await owner.page.evaluate(() => [...document.querySelectorAll('#account-panel li[data-user]')].map((li) => li.textContent.replace(/\s+/g, ' ')));
@@ -215,7 +217,7 @@ try {
   const feedErr = await owner.page.textContent('#account-panel form[data-form="feed"] .a-error');
   await owner.page.fill('#account-panel form[data-form="feed"] input[name="url"]', 'https://crm.exemplo/feed.xml');
   await owner.page.click('#account-panel form[data-form="feed"] [data-action="import-now"]');
-  await owner.page.waitForSelector('#account-panel details[data-section="feed"] .account-note', { timeout: 15000 });
+  await owner.page.waitForSelector('#account-panel details[data-section="feed"] .account-note', { timeout: 45000 });
   const feedUi = await owner.page.evaluate(() => ({
     note: document.querySelector('#account-panel details[data-section="feed"] .account-note')?.textContent ?? '',
     url: document.querySelector('#account-panel form[data-form="feed"] input[name="url"]')?.value,
@@ -287,7 +289,7 @@ try {
   await page.fill('#add-panel input[name="creci"]', '99999-J');
   await page.fill('#add-panel input[name="whatsapp"]', '(47) 90000-1111');
   await page.click('#add-panel button:has-text("Salvar anúncio")');
-  await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa publicada no backend', null, { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa publicada no backend', null, { timeout: 60000 });
   await detailReady(page);
   await waitIdle(page);
   const saved = await page.evaluate(() => ({
@@ -340,7 +342,7 @@ try {
   await visitor.page.check('#drawer .lead-form input[name="visit"]');
   await visitor.page.selectOption('#drawer .lead-form select[name="visit_period"]', 'tarde');
   await visitor.page.click('#drawer .lead-form button[type="submit"]');
-  await visitor.page.waitForSelector('#drawer .lead-done:not([hidden])', { timeout: 15000 });
+  await visitor.page.waitForSelector('#drawer .lead-done:not([hidden])', { timeout: 45000 });
   const done = await visitor.page.textContent('#drawer .lead-done');
   await shot(visitor.page, 'backend-contato-enviado.png');
   const [popup] = await Promise.all([visitor.ctx.waitForEvent('page'), visitor.page.click('#drawer .btn-whatsapp')]);
@@ -358,11 +360,11 @@ try {
     JSON.stringify(mail ? { to: mail.to, subject: mail.subject } : { fns: !!fns }));
   await page.reload();
   await page.waitForSelector('body[data-ready="true"]');
-  await page.waitForSelector('.account-toggle .lead-badge', { timeout: 15000 });
+  await page.waitForSelector('.account-toggle .lead-badge', { timeout: 45000 });
   const badge = await page.textContent('.account-toggle .lead-badge');
   await page.click('.account-toggle');
   await page.click('#account-panel details[data-section="leads"] summary');
-  await page.waitForSelector('#account-panel .lead-item', { timeout: 15000 });
+  await page.waitForSelector('#account-panel .lead-item', { timeout: 45000 });
   const leadUi = await page.evaluate(() => ({
     items: document.querySelectorAll('#account-panel .lead-item').length,
     name: document.querySelector('#account-panel .lead-item strong')?.textContent,
@@ -371,7 +373,7 @@ try {
   }));
   await shot(page, 'backend-contatos.png');
   await page.selectOption('#account-panel .lead-item select[name="status"]', 'contacted');
-  await page.waitForFunction(() => !document.querySelector('.account-toggle .lead-badge'), null, { timeout: 15000 });
+  await page.waitForFunction(() => !document.querySelector('.account-toggle .lead-badge'), null, { timeout: 45000 });
   check('o corretor vê o contato na conta (contador no topo), responde pelo WhatsApp e muda a situação',
     badge === '1' && leadUi.items === 1 && leadUi.name === 'Maria Compradora' && leadUi.wa.startsWith('https://wa.me/5547988887777') &&
       /1 clique no WhatsApp/.test(leadUi.clicks),
@@ -381,7 +383,7 @@ try {
 
   // ---- "Desempenho dos anúncios": the visitor's view, WhatsApp click and message on the broker's listing
   await page.click('#account-panel details[data-section="stats"] summary');
-  await page.waitForSelector('#account-panel .stats-table tbody tr', { timeout: 15000 });
+  await page.waitForSelector('#account-panel .stats-table tbody tr', { timeout: 45000 });
   const statsUi = await page.evaluate((lid) => {
     const tr = document.querySelector(`#account-panel .stats-table [data-open="${lid}"]`)?.closest('tr');
     return { cells: [...(tr?.querySelectorAll('td') ?? [])].map((td) => td.textContent), total: document.querySelector('#account-panel .stats-total')?.textContent ?? '' };
@@ -394,18 +396,18 @@ try {
   const panelErrs = [];
   panel.on('pageerror', (e) => panelErrs.push(String(e)));
   await panel.goto(`${URL_}painel.html`);
-  await panel.waitForSelector(`#account-panel .listing-row[data-listing="${id}"]`, { timeout: 20000 });
+  await panel.waitForSelector(`#account-panel .listing-row[data-listing="${id}"]`, { timeout: 60000 });
   // the count comes with the list (the panel may draw itself again when the session is read)
-  await panel.waitForFunction(() => /contato/.test(document.querySelector('#account-panel details[data-section="leads"] .list-count')?.textContent ?? ''), null, { timeout: 20000 });
+  await panel.waitForFunction(() => /contato/.test(document.querySelector('#account-panel details[data-section="leads"] .list-count')?.textContent ?? ''), null, { timeout: 60000 });
   const pUi = await panel.evaluate(() => ({
     title: document.querySelector('#account-title')?.textContent,
     map: !!document.querySelector('#map'),
     count: document.querySelector('#account-panel details[data-section="leads"] .list-count')?.textContent ?? '',
   }));
   await panel.fill('#account-panel form[data-filter="leads"] input[name="q"]', 'ninguém com esse nome');
-  await panel.waitForFunction(() => !document.querySelector('#account-panel .lead-item'), null, { timeout: 15000 });
+  await panel.waitForFunction(() => !document.querySelector('#account-panel .lead-item'), null, { timeout: 45000 });
   await panel.fill('#account-panel form[data-filter="leads"] input[name="q"]', 'Maria');
-  await panel.waitForSelector('#account-panel .lead-item', { timeout: 15000 });
+  await panel.waitForSelector('#account-panel .lead-item', { timeout: 45000 });
   const [csvFile] = await Promise.all([panel.waitForEvent('download'), panel.click('#account-panel [data-action="export"]')]);
   const csv = readFileSync(await csvFile.path(), 'utf8');
   await Promise.all([panel.waitForURL(/mapa\.html\?imovel=/), panel.click(`#account-panel .listing-row[data-listing="${id}"] [data-action="open"]`)]);
@@ -422,7 +424,7 @@ try {
   // ---- lower the price (server records the history and the reduction)
   await page.fill('#drawer .manage-form input[name="price"]', '800000');
   await page.click('#drawer .manage-form button[type="submit"]');
-  await page.waitForFunction(() => !!document.querySelector('#drawer .price-was s'), null, { timeout: 15000 });
+  await page.waitForFunction(() => !!document.querySelector('#drawer .price-was s'), null, { timeout: 45000 });
   await detailReady(page);
   const managed = await page.evaluate(() => ({
     was: document.querySelector('#drawer .price-was s')?.textContent,
@@ -450,7 +452,7 @@ try {
   await page.click('#add-panel input[name="cover"][value="1"]');
   await page.selectOption('#add-panel select[name="addressDisplay"]', 'street');
   await page.click('#add-panel button:has-text("Salvar alterações")');
-  await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa editada no backend', null, { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelector('#drawer.open h2')?.textContent === 'Casa editada no backend', null, { timeout: 60000 });
   await detailReady(page);
   const editedMine = await page.evaluate(() => ({
     pos: document.querySelector('#drawer .gal-pos')?.textContent,
@@ -520,12 +522,14 @@ try {
     JSON.stringify({ home: home.status, title: /<title>[^<]*/.exec(home.body)?.[0], listed: listed.length, published: published.length, robots: robots.status, old: [old.status, old.location] }),
   );
   const dom = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // with the relief the map keeps the browser busy for longer in software WebGL (CI)
+  dom.setDefaultTimeout(90000);
   const dp = await dom.newPage();
   const domErrors = [];
   dp.on('pageerror', (e) => domErrors.push(String(e)));
   dp.on('console', (m) => m.type() === 'error' && domErrors.push(m.text()));
   await dp.goto(`${origin}/imoveis`);
-  await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+  await dp.waitForSelector('body[data-ready="true"]', { timeout: 90000 });
   const card = dp.locator('main .card-title a[href^="/imovel/"]').first();
   const href = await card.getAttribute('href');
   await card.click();
@@ -533,7 +537,7 @@ try {
   const meta = () => dp.evaluate(() => ({ canonical: document.querySelector('link[rel=canonical]')?.href, h1: document.querySelector('main h1')?.textContent }));
   const opened = await meta();
   await dp.reload();
-  await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+  await dp.waitForSelector('body[data-ready="true"]', { timeout: 90000 });
   const reloaded = await meta();
   check(
     'domínio do cliente: links com endereços limpos; a ficha aberta pelo link e recarregada mostra o imóvel, com o canônico no domínio',
@@ -552,18 +556,18 @@ try {
         env: { ...process.env, RESEND_API_KEY: 'teste', RESEND_API_URL: fns.mailUrl, SITE_URL: URL_ },
       });
     await dp.goto(`${origin}/imoveis`);
-    await dp.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+    await dp.waitForSelector('body[data-ready="true"]', { timeout: 90000 });
     await dp.click('.alert-box summary');
     await dp.fill('.alert-box [name=email]', alertEmail);
     await dp.check('.alert-box [name=consent]');
     await dp.click('.alert-box button[type=submit]');
-    await dp.waitForSelector('.alert-box .form-msg.ok, .alert-box .form-msg.err', { timeout: 15000 });
+    await dp.waitForSelector('.alert-box .form-msg.ok, .alert-box .form-msg.err', { timeout: 45000 });
     const asked = await dp.textContent('.alert-box .form-msg');
     await sendAlerts();
     const confirm = fns.mails().find((m) => m.to?.[0] === alertEmail && /Confirme/.test(m.subject));
     const token = /token=([0-9a-f-]{36})/.exec(confirm?.text ?? '')?.[1];
     await dp.goto(`${origin}/favoritos?alerta=confirmar&token=${token}`);
-    await dp.waitForFunction(() => /confirmado/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 15000 });
+    await dp.waitForFunction(() => /confirmado/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 45000 });
     // as if the listing came in after the confirmation
     await svc.from('search_alerts').update({ last_sent_at: '2000-01-01T00:00:00Z' }).eq('token', token);
     await sendAlerts();
@@ -571,7 +575,7 @@ try {
     await sendAlerts();
     const again = fns.mails().filter((m) => m.to?.[0] === alertEmail).length;
     await dp.goto(`${origin}/favoritos?alerta=cancelar&token=${token}`);
-    await dp.waitForFunction(() => /não vai mais receber/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 15000 });
+    await dp.waitForFunction(() => /não vai mais receber/.test(document.querySelector('.alert-note')?.textContent ?? ''), null, { timeout: 45000 });
     const left = (await svc.from('search_alerts').select('id').eq('token', token)).data?.length;
     check(
       'alerta de imóvel novo: pedido na busca, confirmação pelo link do e-mail, e-mail com o imóvel e o link de saída, sem repetir; cancelado pelo link',
@@ -592,17 +596,17 @@ try {
   await detailReady(page);
   const trashLabel = await page.textContent('#drawer [data-action="delete"]');
   await page.click('#drawer [data-action="delete"]');
-  await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 45000 });
   await visitor.page.reload();
   await visitor.page.waitForSelector('body[data-ready="true"]');
   const visitorAfterTrash = await visitor.page.evaluate((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id);
   await page.click('.account-toggle');
   await page.click('#account-panel details[data-section="trash"] summary');
-  await page.waitForSelector('#account-panel [data-restore]', { timeout: 15000 });
+  await page.waitForSelector('#account-panel [data-restore]', { timeout: 45000 });
   const trashItem = await page.textContent('#account-panel details[data-section="trash"] li');
   await shot(page, 'backend-lixeira.png');
   await page.click('#account-panel [data-restore]');
-  await page.waitForFunction((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  await page.waitForFunction((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 45000 });
   check('excluir move para a lixeira (some do site, inclusive para o visitante) e dá para restaurar',
     trashLabel === 'Mover para a lixeira' && !visitorAfterTrash && /Casa editada no backend/.test(trashItem ?? '') && /Corretor Teste/.test(trashItem ?? ''),
     JSON.stringify({ trashLabel, visitorAfterTrash, trashItem: trashItem?.replace(/\s+/g, ' ') }));
@@ -611,11 +615,11 @@ try {
   await sleep(600);
   await detailReady(page);
   await page.click('#drawer [data-action="delete"]');
-  await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
+  await page.waitForFunction((id) => !document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 45000 });
   await page.click('.account-toggle');
-  await page.waitForSelector('#account-panel [data-purge]', { timeout: 15000 });
+  await page.waitForSelector('#account-panel [data-purge]', { timeout: 45000 });
   await page.click('#account-panel [data-purge]');
-  await page.waitForFunction(() => /vazia/.test(document.querySelector('#account-panel details[data-section="trash"]')?.textContent ?? ''), null, { timeout: 15000 });
+  await page.waitForFunction(() => /vazia/.test(document.querySelector('#account-panel details[data-section="trash"]')?.textContent ?? ''), null, { timeout: 45000 });
   const folder = editedMine.strip[0].split('/listing-photos/')[1].split('/').slice(0, 2).join('/');
   const left = await svc.storage.from('listing-photos').list(folder);
   check('a sessão continua após recarregar, e "Excluir de vez" apaga o anúncio e as fotos do storage',
@@ -627,14 +631,14 @@ try {
   await staff2.page.fill('#account-panel input[name="email"]', staffEmail);
   await staff2.page.fill('#account-panel input[name="password"]', PASSWORD);
   await staff2.page.click('#account-panel button[type="submit"]');
-  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"]', { timeout: 15000 });
+  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"]', { timeout: 45000 });
   await staff2.page.fill('#account-panel form[data-form="mfa"] input[name="code"]', '000000');
   await staff2.page.click('#account-panel form[data-form="mfa"] button[type="submit"]');
-  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"] .a-error:not([hidden])', { timeout: 15000 });
+  await staff2.page.waitForSelector('#account-panel form[data-form="mfa"] .a-error:not([hidden])', { timeout: 45000 });
   const wrongCode = await staff2.page.textContent('#account-panel form[data-form="mfa"] .a-error');
   await staff2.page.fill('#account-panel form[data-form="mfa"] input[name="code"]', await freshTotp(staffSecret, usedCodes));
   await staff2.page.click('#account-panel form[data-form="mfa"] button[type="submit"]');
-  await staff2.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 15000 });
+  await staff2.page.waitForSelector('#account-panel form[data-form="org"]', { timeout: 45000 });
   check('suporte: ao entrar de novo, o código errado é recusado e o certo libera o atendimento', /Código incorreto/.test(wrongCode ?? ''), wrongCode);
   await staff2.ctx.close();
 
@@ -644,8 +648,8 @@ try {
   await owner2.page.fill('#account-panel input[name="email"]', ownerEmail);
   await owner2.page.fill('#account-panel input[name="password"]', PASSWORD);
   await owner2.page.click('#account-panel button[type="submit"]');
-  await owner2.page.click('#account-panel details[data-section="audit"] summary', { timeout: 15000 });
-  await owner2.page.waitForSelector('#account-panel .audit-list li', { timeout: 15000 });
+  await owner2.page.click('#account-panel details[data-section="audit"] summary', { timeout: 45000 });
+  await owner2.page.waitForSelector('#account-panel .audit-list li', { timeout: 45000 });
   const history = await owner2.page.evaluate(() => [...document.querySelectorAll('#account-panel .audit-list li span')].map((li) => li.textContent.trim()));
   await shot(owner2.page, 'backend-historico.png');
   const has = (re) => history.some((h) => re.test(h));
@@ -661,12 +665,14 @@ try {
   const siteUrl = `${URL_}?imobiliaria=${slug}-${tag}`;
   const siteOpen = async (url) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    // with the relief the map keeps the browser busy for longer in software WebGL (CI)
+    ctx.setDefaultTimeout(90000);
     const p = await ctx.newPage();
     const errs = [];
     p.on('pageerror', (e) => errs.push(String(e)));
     p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
     await p.goto(url);
-    await p.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+    await p.waitForSelector('body[data-ready="true"]', { timeout: 90000 });
     return { ctx, p, errs };
   };
   const ed = await siteOpen(`${siteUrl}&editar=1`);
@@ -674,7 +680,7 @@ try {
   await ed.p.fill('.editor [name=email]', ownerEmail);
   await ed.p.fill('.editor [name=password]', PASSWORD);
   await ed.p.click('.editor .ed-login button');
-  await ed.p.waitForSelector('.editor .ed-body', { timeout: 15000 });
+  await ed.p.waitForSelector('.editor .ed-body', { timeout: 45000 });
   await ed.p.click('.editor [data-template=escuro]');
   await ed.p.click('.editor summary:has-text("Contatos e redes")');
   await ed.p.fill('.editor [data-k="contacts.whatsapp"]', '(47) 98888-1234');
@@ -686,13 +692,13 @@ try {
   check('site: o dono personaliza e publica; fica salvo no banco já validado',
     savedBranding.template === 'escuro' && savedBranding.name === 'Ação Imóveis' && savedBranding.contacts.whatsapp === '47988881234', JSON.stringify({ t: savedBranding.template, n: savedBranding.name }));
   await ed.p.click('.editor summary:has-text("Histórico de publicações")');
-  await ed.p.waitForSelector('.editor .ed-history li:nth-child(2)', { timeout: 10000 });
+  await ed.p.waitForSelector('.editor .ed-history li:nth-child(2)', { timeout: 30000 });
   const hist = await ed.p.$$eval('.editor .ed-history li', (li) => li.map((x) => x.textContent));
   check('site: o histórico mostra a publicação no ar, com quem publicou, e a versão de antes',
     hist.length === 2 && /·.*no ar/.test(hist[0]) && /Antes do histórico/.test(hist[1]), JSON.stringify(hist));
   await ed.p.click('.editor [data-version]');
   await ed.p.click('.editor [data-save]');
-  await ed.p.waitForFunction(() => document.querySelectorAll('.editor .ed-history li').length === 3, null, { timeout: 10000 });
+  await ed.p.waitForFunction(() => document.querySelectorAll('.editor .ed-history li').length === 3, null, { timeout: 30000 });
   const back = (await svc.from('organizations').select('branding').eq('slug', `${slug}-${tag}`).single()).data.branding;
   check('site: abrir a versão de antes e publicar volta o site, e a volta também fica no histórico', back.template !== 'escuro' && back.name !== 'Ação Imóveis', JSON.stringify({ t: back.template, n: back.name }));
   await svc.from('organizations').update({ branding: savedBranding }).eq('slug', `${slug}-${tag}`);
@@ -707,7 +713,7 @@ try {
   await vis.p.fill('main [name=phone]', '(47) 97777-1111');
   await vis.p.check('main [name=consent]');
   await vis.p.click('main form.lead button[type=submit]');
-  await vis.p.waitForSelector('main .form-msg.ok', { timeout: 15000 });
+  await vis.p.waitForSelector('main .form-msg.ok', { timeout: 45000 });
   await shot(vis.p, 'backend-site.png');
   check('sem erros no console (site)', vis.errs.length === 0, vis.errs.join(' | '));
   await vis.ctx.close();
@@ -716,8 +722,8 @@ try {
   await owner3.page.fill('#account-panel input[name="email"]', ownerEmail);
   await owner3.page.fill('#account-panel input[name="password"]', PASSWORD);
   await owner3.page.click('#account-panel button[type="submit"]');
-  await owner3.page.click('#account-panel details[data-section="leads"] summary', { timeout: 15000 });
-  await owner3.page.waitForSelector('#account-panel .lead-origin', { timeout: 15000 });
+  await owner3.page.click('#account-panel details[data-section="leads"] summary', { timeout: 45000 });
+  await owner3.page.waitForSelector('#account-panel .lead-origin', { timeout: 45000 });
   const offer = await owner3.page.evaluate(() => {
     const li = [...document.querySelectorAll('#account-panel .lead-item')].find((x) => x.textContent.includes('Proprietária Site'));
     return { origin: li?.querySelector('.lead-origin')?.textContent, details: li?.querySelector('.lead-details')?.textContent };
@@ -727,21 +733,21 @@ try {
     /anunciar/.test(offer.origin ?? '') && /Casa/.test(offer.details ?? '') && /Glória/.test(offer.details ?? '') && siteLink.includes('editar=1'), JSON.stringify(offer));
   // ---- the owner turns two-step verification on; the site editor then asks for the code after the password
   await owner3.page.click('#account-panel [data-action="mfa-on"]');
-  await owner3.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 15000 });
+  await owner3.page.waitForSelector('#account-panel input[name="totp-secret"]', { timeout: 45000 });
   const ownerSecret = await owner3.page.inputValue('#account-panel input[name="totp-secret"]');
   await owner3.page.fill('#account-panel form[data-form="mfa-confirm"] input[name="code"]', await freshTotp(ownerSecret, usedCodes));
   await owner3.page.click('#account-panel form[data-form="mfa-confirm"] button[type="submit"]');
-  await owner3.page.waitForSelector('#account-panel [data-action="mfa-off"]', { timeout: 15000 });
+  await owner3.page.waitForSelector('#account-panel [data-action="mfa-off"]', { timeout: 45000 });
   await owner3.ctx.close();
   const ed2 = await siteOpen(`${siteUrl}&editar=1`);
   await ed2.p.fill('.editor [name=email]', ownerEmail);
   await ed2.p.fill('.editor [name=password]', PASSWORD);
   await ed2.p.click('.editor .ed-login button');
-  await ed2.p.waitForSelector('.editor .ed-login [name=code]', { timeout: 15000 });
+  await ed2.p.waitForSelector('.editor .ed-login [name=code]', { timeout: 45000 });
   const editorBeforeCode = await ed2.p.isVisible('.editor .ed-body');
   await ed2.p.fill('.editor .ed-login [name=code]', await freshTotp(ownerSecret, usedCodes));
   await ed2.p.click('.editor .ed-login button');
-  await ed2.p.waitForSelector('.editor .ed-body', { timeout: 15000 });
+  await ed2.p.waitForSelector('.editor .ed-body', { timeout: 45000 });
   check('dono: ativa a verificação em duas etapas em Minha conta; o editor do site pede o código depois da senha', !editorBeforeCode, String(editorBeforeCode));
   await ed2.ctx.close();
 

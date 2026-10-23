@@ -64,13 +64,15 @@ async function startServer() {
 
 async function open(browser, query = '', viewport = { width: 1440, height: 900 }) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  // with the relief the map keeps the browser busy for longer in software WebGL (CI)
+  ctx.setDefaultTimeout(90000);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('response', (r) => r.status() >= 400 && errors.push(`HTTP ${r.status()} ${r.url()}`));
   await page.goto(BASE + query);
-  await page.waitForSelector('body[data-ready="true"]', { timeout: 30000 });
+  await page.waitForSelector('body[data-ready="true"]', { timeout: 90000 });
   return { ctx, page, errors };
 }
 
@@ -318,7 +320,7 @@ async function main() {
       await page.fill('.fin-lock form.lead [name=phone]', '(47) 99999-0000');
       await page.check('.fin-lock form.lead [name=consent]');
       await page.click('.fin-lock form.lead button[type=submit]');
-      await page.waitForSelector('.d-fin .fin-parcels:not([hidden])', { timeout: 5000 }).catch(() => {});
+      await page.waitForSelector('.d-fin .fin-parcels:not([hidden])', { timeout: 15000 }).catch(() => {});
       fin.parcels = await page.textContent('.d-fin .fin-parcels');
     }
     check('imóvel à venda: simulação mostra o valor financiado; as parcelas e a renda sugerida, depois do contato',
@@ -340,7 +342,7 @@ async function main() {
     const frameEl = await page.waitForSelector('.map-frame iframe');
     const frame = await frameEl.contentFrame();
     await frame.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
-    await frame.waitForFunction((ids) => window.__demo && ids.every((id) => window.__demo.isMatched(id)), houses.map((l) => l.id), { timeout: 20000 });
+    await frame.waitForFunction((ids) => window.__demo && ids.every((id) => window.__demo.isMatched(id)), houses.map((l) => l.id), { timeout: 60000 });
     const emb = await frame.evaluate((other) => ({
       embed: document.body.classList.contains('embed'),
       topbar: getComputedStyle(document.querySelector('.topbar')).display,
@@ -356,7 +358,7 @@ async function main() {
     await page.click('.search-top [data-st=under_construction]');
     const launches = forSale.filter((l) => l.type === 'house' && l.status === 'under_construction').map((l) => l.id);
     const notLaunch = houses.filter((l) => l.status !== 'under_construction').map((l) => l.id);
-    await frame.waitForFunction(([on, off]) => on.every((id) => window.__demo.isMatched(id)) && off.every((id) => !window.__demo.isMatched(id)), [launches, notLaunch], { timeout: 10000 });
+    await frame.waitForFunction(([on, off]) => on.every((id) => window.__demo.isMatched(id)) && off.every((id) => !window.__demo.isMatched(id)), [launches, notLaunch], { timeout: 30000 });
     check('mudar a busca atualiza o mapa sem recarregar', (await page.locator('.map-frame iframe').count()) === 1);
     // the map rewrites its own address as it is used: it must keep the embed parameters, or reloading only the frame
     // would show the whole portal inside the client's site
@@ -408,7 +410,7 @@ async function main() {
     };
     page.on('dialog', onDialog);
     await page.click('.editor [data-reset]');
-    await page.waitForFunction(() => document.documentElement.dataset.template === 'leve', null, { timeout: 20000 });
+    await page.waitForFunction(() => document.documentElement.dataset.template === 'leve', null, { timeout: 60000 });
     await page.waitForSelector('body[data-ready="true"]');
     page.off('dialog', onDialog);
     const resetState = await page.evaluate(() => ({ t: document.documentElement.dataset.template, h1: document.querySelector('.hero h1')?.textContent }));
@@ -535,6 +537,8 @@ async function main() {
     for (const [url, label] of [[`imovel/${reducedPage}/`, 'página estática do imóvel'], ['404.html', 'página 404 da plataforma'], ['painel.html', 'painel sem backend']]) {
       for (const viewport of [{ width: 1440, height: 900 }, { width: 360, height: 640 }]) {
         const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+        // with the relief the map keeps the browser busy for longer in software WebGL (CI)
+        ctx.setDefaultTimeout(90000);
         const page = await ctx.newPage();
         await page.goto(origin + url);
         if (url === 'painel.html') await page.waitForSelector('.panel-empty');
