@@ -118,6 +118,16 @@ async function waitIdle(page) {
   await sleep(400);
 }
 
+/**
+ * Screenshot for docs/screenshots, once the map (when the page has one) has stopped: with the relief each frame of a
+ * camera flight is slow in software WebGL (CI), and a shot taken in flight waits for a frame for a long time. A map
+ * that does not settle in time is shot as it is.
+ */
+async function shot(page, name) {
+  if (await page.evaluate(() => !!window.__demo?.map)) await waitIdle(page).catch(() => {});
+  return page.screenshot({ path: path.join(SHOTS, name), timeout: 90000 });
+}
+
 async function openPage(browser, viewport, label, query = '', setup) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -287,7 +297,7 @@ async function main() {
     }));
     check('desktop: list of all listings is available without searching',
       initialList.heading === ALL_HEADING && initialList.rows === TOTAL && initialList.visible, JSON.stringify(initialList));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-morning.png') });
+    await shot(page, 'desktop-morning.png');
 
     // pins in the overview
     // pins that would overlap are grouped, with the count: every listing is in a pin or in a group
@@ -406,7 +416,7 @@ async function main() {
       check('hover shows tooltip with the listing price and pointer cursor',
         !tt.hidden && tt.text.includes(expectedPrice) && tt.text.includes('Clique para ver detalhes') && cursor === 'pointer',
         `${hoverTarget.id}: "${tt.text}" (expected ${expectedPrice}), cursor=${cursor}`);
-      await page.screenshot({ path: path.join(SHOTS, 'desktop-hover-tooltip.png') });
+      await shot(page, 'desktop-hover-tooltip.png');
       const emptyForHover = await emptyPoint(page);
       if (emptyForHover) await page.mouse.move(emptyForHover.x, emptyForHover.y, { steps: 4 });
       await sleep(300);
@@ -452,7 +462,7 @@ async function main() {
             /Primeira parcela[\s\S]*Última parcela/.test(fin.parcels) && /até 80%/.test(fin.zero)
           : fin.rent),
       JSON.stringify(fin).slice(0, 300));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer.png') });
+    await shot(page, 'desktop-drawer.png');
     await page.keyboard.press('Escape');
     await sleep(400);
     check('Esc closes the drawer', !(await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'))));
@@ -487,7 +497,7 @@ async function main() {
     const approxClicked = await clickSomeListing(page, ['listing-approx-fill']);
     if (approxClicked) {
       check('approximate listing shows "Localização aproximada"', await page.isVisible('#drawer >> text=Localização aproximada'), approxClicked.id);
-      await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer-approx.png') });
+      await shot(page, 'desktop-drawer-approx.png');
       await page.keyboard.press('Escape');
     } else check('approximate listing clickable', false, 'no approximate circle visible on screen');
 
@@ -505,7 +515,7 @@ async function main() {
       `dimmed ${dimBefore}→${dimAfterEdit}, camera unchanged=${stateBefore === stateAfterEdit}, list unchanged=${resultsHidden}`);
     check('"Alterações não aplicadas" hint shown', await page.isVisible('text=Alterações não aplicadas'));
     await axe(page, 'filtros');
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-filters-pending.png') });
+    await shot(page, 'desktop-filters-pending.png');
 
     await page.click('button:has-text("Buscar")');
     await sleep(300);
@@ -522,7 +532,7 @@ async function main() {
     check('search writes the applied filters to the URL', searchUrl === '?tipo=terreno&precoMax=2000000', searchUrl);
     check('"Buscar" applies filters (results list + dimmed listings)',
       header?.startsWith(`${landCount} `) && dimAfterApply > 0, `${header}; ${dimAfterApply} dimmed source features`);
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-search-results.png') });
+    await shot(page, 'desktop-search-results.png');
 
     // hover sync: list -> map and map -> list
     const firstRow = await page.$('#results button[data-id] >> nth=0');
@@ -574,7 +584,7 @@ async function main() {
     await sleep(300);
     await waitIdle(page);
     check('clicking a result opens the drawer', await page.evaluate(() => document.querySelector('#drawer').classList.contains('open')));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-result-land-closeup.png') });
+    await shot(page, 'desktop-result-land-closeup.png');
 
     // previous / next inside the drawer
     const navInfo = async () =>
@@ -597,7 +607,7 @@ async function main() {
       n0.pos === `1 de ${landCount}` && n0.prevDisabled === true && n1.pos === `2 de ${landCount}` && n1.id !== n0.id &&
         n2.pos === n0.pos && n2.id === n0.id,
       `${n0.pos} → ${n1.pos} → ${n2.pos}`);
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer-nav.png') });
+    await shot(page, 'desktop-drawer-nav.png');
     await page.keyboard.press('Escape');
 
     // close-up of a highlighted apartment
@@ -611,7 +621,7 @@ async function main() {
     await waitIdle(page);
     await page.keyboard.press('Escape');
     await sleep(400);
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-apartment-closeup.png') });
+    await shot(page, 'desktop-apartment-closeup.png');
 
     await page.click('button:has-text("Limpar")');
     await sleep(300);
@@ -630,7 +640,7 @@ async function main() {
       header: document.querySelector('#results .results-title')?.textContent,
       relax: [...document.querySelectorAll('#results [data-relax]')].map((b) => b.textContent.replace(/\s+/g, ' ').trim()),
     }));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-empty-search.png') });
+    await shot(page, 'desktop-empty-search.png');
     const dimmedPins = await page.evaluate(() => new Set(window.__demo.map.queryRenderedFeatures({ layers: ['listing-pins-dimmed'] }).map((f) => f.properties.listingId)).size);
     check('empty search keeps every listing visible as a grey pin', dimmedPins === TOTAL, `${dimmedPins} dimmed pins`);
     check('empty search suggests the blocking filter with the closest value',
@@ -660,7 +670,7 @@ async function main() {
     await sleep(200);
     const moreLabel = (await page.textContent('.f-more-toggle'))?.trim();
     await axe(page, 'mais filtros');
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-more-filters.png') });
+    await shot(page, 'desktop-more-filters.png');
     await page.click('button:has-text("Buscar")');
     await sleep(400);
     await waitIdle(page);
@@ -832,7 +842,7 @@ async function main() {
     await page.setInputFiles('#add-panel input[name="photos"]', [{ name: 'foto5.png', mimeType: 'image/png', buffer: PNG }]);
     await page.waitForFunction(() => document.querySelectorAll('#add-panel .a-photos img').length === 5);
     await page.fill('#add-panel input[name="creci"]', '12345-J');
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-add-listing.png') });
+    await shot(page, 'desktop-add-listing.png');
     await page.click('#add-panel button:has-text("Salvar anúncio")');
     await sleep(700);
     await waitIdle(page);
@@ -853,7 +863,7 @@ async function main() {
       added.gallery === '1/5' && added.whatsapp?.startsWith('https://wa.me/5547900000000') && !!houseStreet &&
         (added.address ?? '').includes(`${houseTyped} · `) && !(added.address ?? '').includes(`${houseTyped}, `),
       `bairro from map: "${autoBairro}"; ${JSON.stringify({ ...added, whatsapp: added.whatsapp?.slice(0, 40) })}`);
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-added-listing.png') });
+    await shot(page, 'desktop-added-listing.png');
     // owner lowers the price: the old one is struck through and the history records both
     await page.fill('#drawer .manage-form input[name="price"]', '950000');
     await page.click('#drawer .manage-form button[type="submit"]');
@@ -919,7 +929,7 @@ async function main() {
     check('an apartment picks its unit on the floors × units grid, and the map draws only that unit',
       !!aptBuilding && unitPick.cells === 18 && unitPick.rows === 6 && unitPick.pressed === '402' && unitPick.floor === '4' && unitPick.drawn === 1,
       JSON.stringify(unitPick));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-unit-pick.png') });
+    await shot(page, 'desktop-unit-pick.png');
     await page.click('#add-panel [data-action="close"]');
     await sleep(200);
 
@@ -995,7 +1005,7 @@ async function main() {
       const marked = { place: await placeStatus(), preview: await page.evaluate(() => window.__demo.map.getSource('pick-preview').serialize().data?.features?.length ?? 0) };
       check('a number missing from the cadastre asks to mark the place on our map, and a click on free ground draws a standard building',
         /marcar o local no mapa/.test(askMark) && picking && !!free && /prédio padrão/.test(marked.place) && marked.preview === 1, JSON.stringify({ askMark, picking, free, ...marked }));
-      await page.screenshot({ path: path.join(SHOTS, 'desktop-locate-address.png') });
+      await shot(page, 'desktop-locate-address.png');
       await page.click('#add-panel [data-action="close"]');
       await sleep(200);
     }
@@ -1114,7 +1124,7 @@ async function main() {
     check('opening a development splits the tower into units and lists every unit by floor',
       devOpen.title === 'Landhaus' && devOpen.units === lh.length && devOpen.blocks > 0 && devOpen.search === '?empreendimento=landhaus',
       JSON.stringify(devOpen));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-development.png') });
+    await shot(page, 'desktop-development.png');
 
     const pick = lh.find((u) => u.status === 'available' && Number(u.number) < 1500) ?? lh[0];
     await page.click(`#dev-panel button[data-unit="${pick.id}"]`);
@@ -1130,7 +1140,7 @@ async function main() {
       unitState.card === `Apto ${pick.number}` && unitState.ghosts > 0 &&
         unitState.search === `?empreendimento=landhaus&unidade=${pick.number}` && unitState.pageScroll === 0,
       JSON.stringify(unitState));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-development-unit.png') });
+    await shot(page, 'desktop-development-unit.png');
 
     // the open tower's windows (item 48): glass by day; at night the occupied units and the chosen one light up
     const winDay = await page.evaluate(() => window.__demo.heroWindows());
@@ -1138,7 +1148,7 @@ async function main() {
     await sleep(600);
     await waitIdle(page);
     const winNight = await page.evaluate(() => window.__demo.heroWindows());
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-development-night.png') });
+    await shot(page, 'desktop-development-night.png');
     await page.click('.time-of-day button:has-text("Manhã")');
     await sleep(400);
     await waitIdle(page);
@@ -1159,7 +1169,7 @@ async function main() {
     await sleep(500);
     await waitIdle(page);
     const view = await page.evaluate(() => ({ pitch: window.__demo.map.getPitch(), zoom: window.__demo.map.getZoom() }));
-    await page.screenshot({ path: path.join(SHOTS, 'desktop-unit-window-view.png') });
+    await shot(page, 'desktop-unit-window-view.png');
     await page.keyboard.press('Escape');
     await sleep(500);
     await waitIdle(page);
@@ -1232,7 +1242,7 @@ async function main() {
       await page.click(`.time-of-day button:has-text("${label}")`);
       await sleep(600);
       await waitIdle(page);
-      shots[tod] = await page.screenshot({ path: path.join(SHOTS, `desktop-${tod}.png`) });
+      shots[tod] = await shot(page, `desktop-${tod}.png`);
       light[tod] = await page.evaluate(() => ({
         light: window.__demo.map.getLight(),
         bg: window.__demo.map.getPaintProperty('background', 'background-color'),
@@ -1262,7 +1272,7 @@ async function main() {
     check('shared link restores filters, results and the open listing',
       sharedState.title !== null && sharedState.header?.startsWith(`${LANDS.length} `) && sharedState.chip && sharedState.search === `?imovel=${sharedId}&tipo=terreno`,
       JSON.stringify(sharedState));
-    await shared.page.screenshot({ path: path.join(SHOTS, 'desktop-shared-link.png') });
+    await shot(shared.page, 'desktop-shared-link.png');
     // static page of the open listing (scripts/prerender.mjs): linked from the panel, demo marked noindex
     const pageHref = await shared.page.getAttribute('#drawer .page-link a', 'href');
     const pageHtml = pageHref ? await (await fetch(pageHref)).text() : '';
@@ -1316,7 +1326,7 @@ async function main() {
         (branded.button === null || branded.button === 'rgb(11, 37, 69)') && /Georgia/.test(branded.font) &&
         branded.materials.length === 1 && branded.materials[0][1] === 'https://example.com/book.pdf' && /noopener/.test(branded.materials[0][2]),
       JSON.stringify(branded));
-    await devLink.page.screenshot({ path: path.join(SHOTS, 'desktop-development-brand.png') });
+    await shot(devLink.page, 'desktop-development-brand.png');
     await devLink.ctx.close();
 
     // ------------------------------------------------ neighbourhood cut ("bairro" filter)
@@ -1341,7 +1351,7 @@ async function main() {
       cutState.header.startsWith(`${inBairro.length} `) && cutState.chips.join() === BAIRRO && cutState.search === `?bairro=${encodeURIComponent(BAIRRO)}` &&
         cutState.filter.includes('"distance"') && cutState.mask > 0 && cutState.outline === 'none' && cutState.devMarkers === 0,
       JSON.stringify({ ...cutState, filter: cutState.filter.slice(0, 60) }));
-    await cut.page.screenshot({ path: path.join(SHOTS, 'desktop-bairro.png') });
+    await shot(cut.page, 'desktop-bairro.png');
     // with the neighbourhood search applied, the box suggests only the streets inside it: a word of a street of the
     // neighbourhood that streets elsewhere share
     const cutPlace = RUAS.places.findIndex(([b, c]) => b === BAIRRO && c === 'Joinville');
@@ -1425,7 +1435,7 @@ async function main() {
         inBox > 0 && inBox < sales.length && drawing.bar && /4 pontos/.test(drawing.hint) && drawing.drawn > 0 && !drawing.drawerOpen &&
           drawn.header.startsWith(`${inBox} `) && drawn.chip.startsWith('Área desenhada') && drawn.area.split(';').length === 4 && drawn.mask > 0 && !drawn.bar && drawn.sketch === 0,
         JSON.stringify({ inBox, drawing, drawn: { ...drawn, area: drawn.area.slice(0, 40) } }));
-      await dr.page.screenshot({ path: path.join(SHOTS, 'desktop-area.png') });
+      await shot(dr.page, 'desktop-area.png');
       // the link keeps the area
       const areaLink = await openPage(browser, { width: 1440, height: 900 }, 'area-link', `?area=${encodeURIComponent(drawn.area)}`);
       await areaLink.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
@@ -1465,7 +1475,7 @@ async function main() {
     });
     check('up close: low-poly roofs, trees, street lamps and roads by pavement (asphalt, paving stones…); no night lights by day',
       scDay.trees > 0 && scDay.lamps > 0 && scDay.roofs > 0 && scDay.surfaces.includes('a') && scDay.surfaces.includes('c') && scDay.glow === 0, JSON.stringify(scDay));
-    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery.png') });
+    await shot(sc.page, 'desktop-scenery.png');
     // building shadows on the ground: away from the sun (west in the morning, east in the afternoon), none at night
     const shadowsAt = async (label, east) => {
       await sc.page.click(`.time-of-day button:has-text("${label}")`);
@@ -1477,9 +1487,9 @@ async function main() {
       return sc.page.evaluate(() => ({ ...window.__demo.shadows(), drawn: window.__demo.map.queryRenderedFeatures({ layers: ['building-shadows'] }).length }));
     };
     const shMorning = await shadowsAt('Manhã', -1);
-    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-shadows-morning.png') });
+    await shot(sc.page, 'desktop-shadows-morning.png');
     const shAfternoon = await shadowsAt('Tarde', 1);
-    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-shadows-afternoon.png') });
+    await shot(sc.page, 'desktop-shadows-afternoon.png');
     check('by day the buildings cast shadows on the ground: west in the morning, east in the afternoon',
       shMorning.count > 0 && shMorning.drawn > 0 && shMorning.offset[0] < 0 && shAfternoon.count > 0 && shAfternoon.drawn > 0 && shAfternoon.offset[0] > 0,
       JSON.stringify({ morning: shMorning, afternoon: shAfternoon }));
@@ -1508,7 +1518,7 @@ async function main() {
     });
     check('at night the street lamps light up the street (a pool and a bright spot, by kind of lamp), and there are no shadows',
       scNight.lights > 0 && scNight.typed && scNight.opacity > 0 && scNight.core > scNight.opacity && scNight.shadows === 0, JSON.stringify(scNight));
-    await sc.page.screenshot({ path: path.join(SHOTS, 'desktop-scenery-night.png') });
+    await shot(sc.page, 'desktop-scenery-night.png');
     check('no console errors (scenery)', sc.errors.length === 0, sc.errors.join(' | '));
     await sc.ctx.close();
 
@@ -1644,11 +1654,11 @@ async function main() {
     check('mobile: opens less tilted (more of the city on a tall screen)', Math.abs(mPitch - 45) < 1 && Math.abs(initialCam.pitch - 58) < 1, `${mPitch} / desktop ${initialCam.pitch}`);
     check('mobile: filters collapsed behind toggle', !(await mp.isVisible('#filters')) && (await mp.isVisible('.filters-toggle')));
     await axe(mp, 'celular');
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-map.png') });
+    await shot(mp, 'mobile-map.png');
     await mp.click('.filters-toggle');
     await sleep(300);
     check('mobile: filters open on toggle', await mp.isVisible('#filters'));
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-filters.png') });
+    await shot(mp, 'mobile-filters.png');
     await mp.click('.filters-toggle');
     await sleep(300);
     await waitIdle(mp);
@@ -1665,12 +1675,12 @@ async function main() {
     check('mobile: drawer opens collapsed (summary strip, map visible)',
       !!mClicked && peek.open && !peek.expanded && peek.width === 390 && Math.abs(peek.top - (844 - 166)) <= 4 && peek.attribBottom <= peek.top,
       JSON.stringify(peek));
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-drawer.png') });
+    await shot(mp, 'mobile-drawer.png');
     await mp.click('#drawer .drawer-handle');
     await sleep(400);
     const expanded = await sheetInfo();
     check('mobile: tapping the handle expands the sheet', expanded.expanded && expanded.top < 300, JSON.stringify(expanded));
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-drawer-expanded.png') });
+    await shot(mp, 'mobile-drawer-expanded.png');
     const swipe = async (dy) => {
       const h = await mp.$eval('#drawer .drawer-handle', (el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
       await mp.mouse.move(h.x, h.y);
@@ -1696,7 +1706,7 @@ async function main() {
     await mp.click('[data-action="toggle-results"]');
     await sleep(300);
     const mRows = await mp.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-list.png') });
+    await shot(mp, 'mobile-list.png');
     await mp.click('#results button[data-id] >> nth=1');
     await sleep(600);
     const mList1 = await mp.evaluate(() => ({
@@ -1716,7 +1726,7 @@ async function main() {
     check('mobile: the development sheet is half open and leaves the tower visible above it',
       mDev.open && mDev.top > 300 && mDev.top < 600 && mDev.overflow <= 0, JSON.stringify(mDev));
     await axe(mp, 'celular: espelho de vendas');
-    await mp.screenshot({ path: path.join(SHOTS, 'mobile-development.png') });
+    await shot(mp, 'mobile-development.png');
     // a street chosen on a small screen: the filters close, its card is a bar at the bottom, clear of the results pill
     await mp.goto(MAP_);
     await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
