@@ -110,11 +110,12 @@ async function startServer() {
   throw new Error('vite preview did not start');
 }
 
+/** Waits for the map to stop and draw its tiles; with the relief that takes much longer in software WebGL (CI). */
 async function waitIdle(page) {
   await page.waitForFunction(() => {
     const m = window.__demo?.map;
     return m && m.loaded() && !m.isMoving() && m.areTilesLoaded();
-  }, null, { timeout: 30000 });
+  }, null, { timeout: 90000 });
   await sleep(400);
 }
 
@@ -144,7 +145,7 @@ async function openPage(browser, viewport, label, query = '', setup) {
     if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`);
   });
   await page.goto(MAP_ + query);
-  await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+  await page.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
   await waitIdle(page);
   return { ctx, page, errors, requests, label };
 }
@@ -215,7 +216,7 @@ async function suggestions(page, text) {
   await page.waitForFunction(() => {
     const list = document.querySelector('#f-place-list');
     return !list.hidden && !list.textContent.includes('Carregando ruas');
-  }, null, { timeout: 20000 });
+  }, null, { timeout: 60000 });
   return page.evaluate(() =>
     [...document.querySelectorAll('#f-place-list [role="option"][data-i]')].map((o) => ({
       id: o.id,
@@ -1071,7 +1072,7 @@ async function main() {
       unStreet.header === `${TOTAL + 2} imóveis à venda` && unStreet.search === '' && unStreet.chips === 0, JSON.stringify(unStreet));
     // a shared link with the street searches the same way, before the street list is even loaded
     await page.goto(`${MAP_}?rua=${encodeURIComponent(houseStreet?.name ?? '')}`);
-    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
     await waitIdle(page);
     const streetLink = await page.evaluate(() => ({
       header: document.querySelector('#results .results-title')?.textContent,
@@ -1085,7 +1086,7 @@ async function main() {
 
     // persisted across reloads (a fresh load without the street), then deleted from the drawer
     await page.goto(MAP_);
-    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
     await waitIdle(page);
     const afterReload = await rowCount();
     page.once('dialog', (dlg) => dlg.accept());
@@ -1103,7 +1104,7 @@ async function main() {
       `after reload ${afterReload}; ${JSON.stringify(afterDelete)}`);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await page.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
     await waitIdle(page);
 
     // ------------------------------------------------ developments: 3D sales chart
@@ -1335,7 +1336,7 @@ async function main() {
     const BAIRRO = 'Glória';
     const inBairro = DATA.filter((l) => l.address?.bairro === BAIRRO && (l.transaction ?? 'sale') !== 'rent');
     const cut = await openPage(browser, { width: 1440, height: 900 }, 'bairro', `?bairro=${encodeURIComponent('Gloria')}`);
-    await cut.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+    await cut.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 60000 });
     await waitIdle(cut.page);
     const cutState = await cut.page.evaluate(() => {
       const m = window.__demo.map;
@@ -1388,7 +1389,7 @@ async function main() {
     await cut.page.keyboard.press('Escape');
     await cut.page.click('.f-bairro-chip button');
     await cut.page.click('#filters button[type="submit"]');
-    await cut.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 20000 });
+    await cut.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 60000 });
     check('removing the neighbourhood shows the whole city again',
       (await cut.page.evaluate(() => JSON.stringify(window.__demo.map.getFilter('context-buildings')))).includes('distance') === false &&
         (await cut.page.textContent('#results .results-title')).startsWith(`${TOTAL} `));
@@ -1423,7 +1424,7 @@ async function main() {
       }), sketched.toString());
       // a click on the first corner closes the area
       await dr.page.mouse.click(mapBox.x + screen[0].x + 3, mapBox.y + screen[0].y - 2);
-      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 60000 });
       await waitIdle(dr.page);
       const drawn = await dr.page.evaluate(async (fn) => ({
         header: document.querySelector('#results .results-title')?.textContent ?? '',
@@ -1440,14 +1441,14 @@ async function main() {
       await shot(dr.page, 'desktop-area.png');
       // the link keeps the area
       const areaLink = await openPage(browser, { width: 1440, height: 900 }, 'area-link', `?area=${encodeURIComponent(drawn.area)}`);
-      await areaLink.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      await areaLink.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 60000 });
       const sharedHeader = await areaLink.page.textContent('#results .results-title');
       check('a link with ?area= opens with the same search and the map cut', sharedHeader.startsWith(`${inBox} `), sharedHeader);
       await areaLink.ctx.close();
       // Esc leaves the drawing without searching; "Usar a área visível" (no mouse needed) takes the screen
       await dr.page.click('.f-area-chip button');
       await dr.page.click('#filters button[type="submit"]');
-      await dr.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 20000 });
+      await dr.page.waitForFunction(() => !window.__demo.clipped, null, { timeout: 60000 });
       await dr.page.click('.draw-area-btn');
       await dr.page.keyboard.press('Escape');
       const cancelled = await dr.page.evaluate(() => ({ bar: !document.querySelector('.area-card').hidden, clipped: window.__demo.clipped, focus: document.activeElement?.className }));
@@ -1456,7 +1457,7 @@ async function main() {
       await dr.page.keyboard.press('Tab');
       const focused = await dr.page.evaluate(() => document.activeElement?.textContent);
       await dr.page.keyboard.press('Enter');
-      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 20000 });
+      await dr.page.waitForFunction(() => window.__demo.clipped, null, { timeout: 60000 });
       const visible = await dr.page.evaluate(() => new URLSearchParams(location.search).get('area')?.split(';').length);
       check('Esc cancels the drawing (focus back on the button); "Usar a área visível" works from the keyboard',
         !cancelled.bar && !cancelled.clipped && cancelled.focus === 'draw-area-btn' && focused === 'Usar a área visível' && visible === 4,
@@ -1719,7 +1720,7 @@ async function main() {
       mList0.collapsed && mList0.heading === ALL_HEADING && mRows === TOTAL && mList1.drawer && mList1.collapsed,
       `${JSON.stringify(mList0)} rows=${mRows} ${JSON.stringify(mList1)}`);
     await mp.goto(MAP_ + '?empreendimento=cora');
-    await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await mp.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
     await waitIdle(mp);
     const mDev = await mp.evaluate(() => {
       const r = document.querySelector('#dev-panel').getBoundingClientRect();
@@ -1731,7 +1732,7 @@ async function main() {
     await shot(mp, 'mobile-development.png');
     // a street chosen on a small screen: the filters close, its card is a bar at the bottom, clear of the results pill
     await mp.goto(MAP_);
-    await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
+    await mp.waitForSelector('body[data-ready="true"]', { timeout: 120000 });
     await waitIdle(mp);
     await mp.click('.filters-toggle');
     await sleep(300);
