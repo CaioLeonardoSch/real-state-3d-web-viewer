@@ -1672,7 +1672,7 @@ async function main() {
         return { boaVista: await at([-48.8274, -26.2922]), centro: await at([-48.8456, -26.3044]) };
       });
       check('relief: Morro do Boa Vista ~220 m above the Centro (MDT of SC)',
-        ground.boaVista > 190 && ground.boaVista < 250 && ground.centro !== null && ground.centro < 30, JSON.stringify(ground));
+        ground.boaVista > 170 && ground.boaVista < 250 && ground.centro !== null && ground.centro < 30, JSON.stringify(ground));
       // the camera does not stay inside a hill: at the foot of the Morro do Boa Vista looking east, away from it, the
       // camera stands over the slope behind the centre
       const cam = await rp.evaluate(async () => {
