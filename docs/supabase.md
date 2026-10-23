@@ -57,13 +57,16 @@ Para desenvolver no computador, crie `.env.local` (não versionado) com as duas 
    Verificação em duas etapas → Ativar**, leia o QR code com um aplicativo autenticador (Google Authenticator,
    Microsoft Authenticator, 1Password…) e digite o código de 6 dígitos. Só então a conta mostra "suporte da
    plataforma"; dali em diante, cada entrada pede a senha e o código do aplicativo (ver a seção 9).
-2. **Cadastrar um cliente:** em **Minha conta → Suporte: nova imobiliária**, informe o nome, o endereço do site e o
-   e-mail do dono. Aparece um **link de convite**: copie ou mande por WhatsApp. Só a equipe de suporte cadastra
-   imobiliárias; uma conta comum não consegue.
-3. **O dono entra pelo link**, cria a conta com o e-mail convidado (já vem preenchido) e clica em **Aceitar**.
-4. **O dono convida os corretores** em **Minha conta → Equipe** (e-mail e papel: corretor ou administrador). Cada
-   convite gera um link que vale 14 dias e só funciona para o e-mail convidado. Na mesma tela ele muda papéis,
-   remove pessoas e cancela convites.
+2. **Cadastrar um cliente:** em **Minha conta → Suporte: nova imobiliária**, informe o nome, o endereço do site, o
+   nome e o e-mail do administrador da imobiliária. Aparece a **senha provisória** dele, uma vez só: passe para a
+   pessoa por um canal seguro, com o endereço de entrada (`painel.html`). Só a equipe de suporte cadastra
+   imobiliárias e o administrador delas (um por imobiliária); ninguém cria conta sozinho pelo site.
+3. **O administrador entra** com o e-mail e a senha provisória e, antes de qualquer outra coisa, escolhe a senha
+   dele. Esqueceu? **Esqueci minha senha** manda um link por e-mail para escolher outra.
+4. **O administrador cria os acessos dos corretores** em **Minha conta → Equipe → Criar acesso** (nome e e-mail).
+   Cada corretor recebe uma senha provisória, também mostrada uma vez, e troca no primeiro acesso. Na mesma tela o
+   administrador muda papéis e remove pessoas. Precisa da função `create-user` publicada:
+   `npx supabase functions deploy create-user`.
 5. **+ Anunciar**: o anúncio é publicado ao salvar, com as fotos (e uma miniatura de cada) no storage.
 6. **Editar:** no painel do anúncio, **Editar anúncio** abre o mesmo formulário preenchido: título, local ("Trocar
    local"), fotos (incluir, remover, legenda, capa), planta, preço e todos os outros campos. Fotos removidas saem do
@@ -128,8 +131,8 @@ Actions → Secrets) com a chave `service_role` do projeto. O workflow "Importar
 variável `VITE_SUPABASE_URL` está definida; sem o segredo, ele falha e nenhum feed é lido.
 
 **Feito em 17/10:** alertas de imóveis novos (item 40). O workflow "Alertas de imóveis" (`.github/workflows/alertas.yml`)
-roda todo dia às 8h07 quando as variáveis `VITE_SUPABASE_URL` e `SITE_URL` (o endereço da plataforma, onde fica o
-`site.html`) estão definidas. Precisa dos segredos `SUPABASE_SERVICE_ROLE_KEY` e `RESEND_API_KEY`; a variável
+roda todo dia às 8h07 quando as variáveis `VITE_SUPABASE_URL` e `SITE_URL` (o endereço da plataforma, onde fica o site
+na raiz) estão definidas. Precisa dos segredos `SUPABASE_SERVICE_ROLE_KEY` e `RESEND_API_KEY`; a variável
 `ALERT_EMAIL_FROM` é o remetente (um domínio verificado no Resend). Para rodar à mão: `npm run alerts:send`
 (`--dry-run` só mostra o que mandaria). Pedidos sem confirmação somem depois de 30 dias.
 
@@ -157,7 +160,7 @@ domínio próprio passa a valer.
 
 ## 8. Site da imobiliária
 
-Cada imobiliária tem um site com a marca dela em `site.html?imobiliaria=<slug>` (o slug é o do cadastro). Para
+Cada imobiliária tem um site com a marca dela em `/?imobiliaria=<slug>` (raiz da plataforma) (o slug é o do cadastro). Para
 personalizar: entre como dono ou administrador e use **Minha conta → Personalizar o site** (ou abra o site com
 `&editar=1`). As alterações aparecem na hora para quem editar e, depois de **Publicar alterações**, para todos.
 Cada publicação entra no **Histórico de publicações**, no fim do editor (as 30 últimas, com data e quem publicou):
@@ -243,8 +246,11 @@ passaram nos testes de backend e no fluxo pelo navegador, no Supabase local, em 
   suporte. Imagens do site só na pasta do próprio cliente, sem SVG.
 - Cada publicação do site entra no histórico (as 30 últimas, com data e autor), que só dono e administradores leem;
   ninguém grava nele direto (`20261021000002_site_history.sql`).
-- Corretores entram só por convite, e o convite só vale para o e-mail convidado, uma vez, por 14 dias. Corretor não
-  convida; administrador não cria dono; a imobiliária nunca fica sem dono.
+- Ninguém cria conta pelo site (`enable_signup = false`): o suporte cria o administrador da imobiliária (um só;
+  `can_create_member` e o gatilho `memberships_one_owner`), e o administrador cria os corretores, pela função
+  `create-user`. A senha provisória fica marcada (`password_change_required`) até a pessoa escolher a dela; a marca
+  só sai quando a senha da conta realmente muda (`20261108000001_created_accounts.sql`). Corretor não cria acessos;
+  a imobiliária nunca fica sem dono.
 - Cada imobiliária vê e edita só os próprios anúncios; o corretor edita os dele, o dono/administrador edita todos.
 - O suporte atende qualquer imobiliária, e cada ação dele fica marcada no registro de auditoria.
 - O público lê por uma view que **esconde o endereço exato** quando o anunciante escolheu "só a rua" ou "só o
@@ -279,12 +285,13 @@ npm run test:backend    # 45 testes: permissões, convites (e o e-mail), auditor
                         # por e-mail num provedor falso, inclusive chamadas simultâneas), CAPTCHA dos contatos
                         # (verificador falso), verificação em duas etapas (suporte e dona), privacidade, preço,
                         # obra em andamento, site da imobiliária, storage e importação do XML
-npm run verify:backend  # navegador: suporte ativa a verificação em duas etapas e cria a imobiliária → dono entra
-                        # pelo link → convida o corretor → corretor anuncia com fotos → visitante → preço →
+npm run verify:backend  # navegador: suporte ativa a verificação em duas etapas e cria a imobiliária e o
+                        # administrador → ele entra com a senha provisória e escolhe a dele → cria o acesso do
+                        # corretor → corretor troca a senha e anuncia com fotos → visitante → preço →
                         # edição completa → lixeira e restauração → excluir de vez → suporte entra de novo com o
-                        # código → histórico, contato do visitante, convites por e-mail, site da imobiliária
+                        # código → histórico, contato do visitante, site da imobiliária
                         # personalizado pelo dono, e o dono ativa a verificação e entra no editor com o código
-                        # (32 checagens)
+                        # (41 checagens)
 npm run db:reset        # recria o banco local a partir das migrações
 ```
 

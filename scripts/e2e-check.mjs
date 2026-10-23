@@ -16,6 +16,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const PORT = 4178;
 const URL_ = `http://127.0.0.1:${PORT}/`;
+// the 3D map; the root is the client's site
+const MAP_ = `${URL_}mapa.html`;
 // Use a pre-installed Chromium when the Playwright-bundled one is not downloaded
 const EXEC =
   process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
@@ -131,7 +133,7 @@ async function openPage(browser, viewport, label, query = '', setup) {
   page.on('response', (r) => {
     if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`);
   });
-  await page.goto(URL_ + query);
+  await page.goto(MAP_ + query);
   await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
   await waitIdle(page);
   return { ctx, page, errors, requests, label };
@@ -417,36 +419,37 @@ async function main() {
     const drawerOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
     check('click on a listing opens the drawer', !!clicked && drawerOpen, clicked?.id ?? 'no clickable listing found');
     check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Imóvel fictício para demonstração'));
-    // items 36 and 38: services nearby, and the hours of sun on each side (computed when opened)
-    const extras = await page.evaluate(async () => {
-      const box = document.querySelector('#drawer .sun-box');
-      if (box) box.open = true;
-      await new Promise((r) => setTimeout(r, 300));
-      return {
-        nearby: document.querySelectorAll('#drawer .nearby li').length,
-        sunRows: document.querySelectorAll('#drawer .sun-table tbody tr').length,
-        sunBox: !!box,
-      };
-    });
-    check('drawer shows "Por perto" (6 kinds) and, for a building, the hours of sun on each side',
-      extras.nearby === 6 && (!extras.sunBox || extras.sunRows > 0), JSON.stringify(extras));
+    // item 36: services nearby, closed under the listing's facts
+    const extras = await page.evaluate(() => ({
+      nearby: document.querySelectorAll('#drawer details.nearby li').length,
+      closed: !document.querySelector('#drawer details.nearby')?.open,
+    }));
+    check('drawer shows "Por perto" (6 kinds), closed by default', extras.nearby === 6 && extras.closed, JSON.stringify(extras));
     // sale: the financing simulator (opened before the accessibility check, so its form is checked too)
     const fin = await page.evaluate(() => {
       const d = document.querySelector('#drawer .fin-sim');
       if (!d) return { sale: false, rent: /\/mês/.test(document.querySelector('#drawer')?.textContent ?? '') };
       d.open = true;
-      return { sale: true, sac: d.querySelector('.fin-out')?.textContent ?? '' };
+      return {
+        sale: true,
+        terms: [...d.querySelectorAll('select[name="years"] option')].map((o) => o.value).join(','),
+        locked: d.querySelector('.fin-out')?.textContent ?? '',
+        hidden: d.querySelector('.fin-parcels').hidden,
+      };
     });
     if (fin.sale) {
-      await page.selectOption('#drawer .fin-form select[name="system"]', 'price');
+      // a demonstration listing has no agency form: "Ver parcelas" shows them at once
+      await page.click('#drawer [data-action="fin-contact"]');
+      fin.parcels = await page.textContent('#drawer .fin-parcels');
       await page.fill('#drawer .fin-form input[name="down"]', '0');
-      fin.price = await page.textContent('#drawer .fin-out');
+      fin.zero = await page.textContent('#drawer .fin-out');
     }
     await axe(page, 'ficha do imóvel');
-    check('drawer shows "Planta ilustrativa"; a sale has the financing simulator (SAC and Price, warning above 80%)',
+    check('drawer shows "Planta ilustrativa"; a sale has the financing simulator (5 to 35 years, installments after "Ver parcelas", warning above 80%)',
       (await page.isVisible('#drawer >> text=Planta ilustrativa')) &&
         (fin.sale
-          ? /Primeira parcela.*Última parcela/.test(fin.sac) && /Parcela/.test(fin.price) && !/Primeira/.test(fin.price) && /até 80%/.test(fin.price)
+          ? fin.terms === '5,10,15,20,25,30,35' && /Valor financiado/.test(fin.locked) && !/parcela/i.test(fin.locked) && fin.hidden &&
+            /Primeira parcela[\s\S]*Última parcela/.test(fin.parcels) && /até 80%/.test(fin.zero)
           : fin.rent),
       JSON.stringify(fin).slice(0, 300));
     await page.screenshot({ path: path.join(SHOTS, 'desktop-drawer.png') });
@@ -1055,7 +1058,7 @@ async function main() {
     check('removing the street chip and searching lists every listing again',
       unStreet.header === `${TOTAL + 2} imóveis à venda` && unStreet.search === '' && unStreet.chips === 0, JSON.stringify(unStreet));
     // a shared link with the street searches the same way, before the street list is even loaded
-    await page.goto(`${URL_}?rua=${encodeURIComponent(houseStreet?.name ?? '')}`);
+    await page.goto(`${MAP_}?rua=${encodeURIComponent(houseStreet?.name ?? '')}`);
     await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(page);
     const streetLink = await page.evaluate(() => ({
@@ -1069,7 +1072,7 @@ async function main() {
       JSON.stringify(streetLink));
 
     // persisted across reloads (a fresh load without the street), then deleted from the drawer
-    await page.goto(URL_);
+    await page.goto(MAP_);
     await page.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(page);
     const afterReload = await rowCount();
@@ -1703,7 +1706,7 @@ async function main() {
     check('mobile: list starts collapsed, expands on tap and collapses when a listing is opened',
       mList0.collapsed && mList0.heading === ALL_HEADING && mRows === TOTAL && mList1.drawer && mList1.collapsed,
       `${JSON.stringify(mList0)} rows=${mRows} ${JSON.stringify(mList1)}`);
-    await mp.goto(URL_ + '?empreendimento=cora');
+    await mp.goto(MAP_ + '?empreendimento=cora');
     await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(mp);
     const mDev = await mp.evaluate(() => {
@@ -1715,7 +1718,7 @@ async function main() {
     await axe(mp, 'celular: espelho de vendas');
     await mp.screenshot({ path: path.join(SHOTS, 'mobile-development.png') });
     // a street chosen on a small screen: the filters close, its card is a bar at the bottom, clear of the results pill
-    await mp.goto(URL_);
+    await mp.goto(MAP_);
     await mp.waitForSelector('body[data-ready="true"]', { timeout: 60000 });
     await waitIdle(mp);
     await mp.click('.filters-toggle');

@@ -1,76 +1,104 @@
-// "Simular financiamento" on a listing for sale (map panel and client site): price, down payment, FGTS, term, rate
-// and system; the result updates as the visitor types. Estimate only: the bank's offer depends on the credit analysis.
-import { MAX_YEARS, USUAL_LTV, simulateFinancing, type AmortizationSystem } from '../utils/financing';
+// "Simular financiamento" on a listing for sale (map panel and client site): price, down payment and term; the
+// financed amount updates as the visitor types. The installments come after the visitor leaves a contact (as the big
+// portals do): the agency gets the lead, the visitor the estimate. Estimate only: the bank's offer depends on the
+// credit analysis.
+import { MAX_YEARS, USUAL_LTV, simulateFinancing } from '../utils/financing';
 import { escapeHtml, formatBRL, formatBRLCents, parseNumberInput } from '../utils/format';
 
-/** Reference rate offered as the default (SBPE, mid-2026); the visitor types the one the bank quoted. */
+/** Reference rate of the installments (SBPE, mid-2026); the bank's depends on the buyer's profile. */
 export const DEFAULT_ANNUAL_RATE = 11.5;
+/** Terms offered, 5 to 35 years. */
+export const TERMS = [5, 10, 15, 20, 25, 30, 35] as const;
+const DEFAULT_YEARS = 30;
 
 const num = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 const rateText = (r: number) => r.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 
-/** `field`: the label class of the page (a-field on the map, fld on the site). */
-export function financingHtml(price: number, field: string): string {
+/**
+ * `field`: the label class of the page (a-field on the map, fld on the site). `gate`: what unlocks the installments
+ * (the site's contact form; on the map, a button to the agency's form).
+ */
+export function financingHtml(price: number, field: string, gate: string): string {
   const down = Math.round(price * (1 - USUAL_LTV));
-  const input = (name: string, label: string, value: string, mode = 'numeric') =>
-    `<label class="${field}"><span>${label}</span><input name="${name}" inputmode="${mode}" value="${escapeHtml(value)}" autocomplete="off"></label>`;
+  const input = (name: string, label: string, value: string) =>
+    `<label class="${field}"><span>${label}</span><input name="${name}" inputmode="numeric" value="${escapeHtml(value)}" autocomplete="off"></label>`;
   return `<details class="fin-sim">
     <summary>Simular financiamento</summary>
     <form class="fin-form" novalidate>
       <div class="fin-grid">
         ${input('price', 'Valor do imóvel (R$)', num.format(price))}
         ${input('down', 'Entrada (R$)', num.format(down))}
-        ${input('fgts', 'FGTS (R$, opcional)', '')}
-        ${input('years', `Prazo (anos, até ${MAX_YEARS})`, '30')}
-        ${input('rate', 'Juros (% ao ano)', rateText(DEFAULT_ANNUAL_RATE), 'decimal')}
-        <label class="${field}"><span>Sistema</span><select name="system">
-          <option value="sac">SAC (parcelas que diminuem)</option>
-          <option value="price">Price (parcelas iguais)</option>
-        </select></label>
+        <label class="${field}"><span>Prazo</span><select name="years">${TERMS.map(
+          (y) => `<option value="${y}"${y === DEFAULT_YEARS ? ' selected' : ''}>${y} anos</option>`,
+        ).join('')}</select></label>
       </div>
     </form>
     <div class="fin-out" aria-live="polite"></div>
-    <p class="fin-note">Estimativa sem TR, seguros (MIP e DFI) e taxa de administração, que aumentam a parcela. A taxa,
-      o valor financiado e o prazo dependem do banco e da análise de crédito; não é proposta de financiamento.</p>
+    <div class="fin-lock">
+      <p class="fin-lock-title"><strong>Quer ver as parcelas?</strong> Deixe seu contato: um corretor confirma a taxa para o seu perfil e você vê a simulação na hora.</p>
+      ${gate}
+    </div>
+    <div class="fin-parcels" aria-live="polite" hidden></div>
+    <p class="fin-note">Estimativa. A taxa, o valor financiado e o prazo dependem do banco e da análise de crédito; não é proposta de financiamento.</p>
   </details>`;
 }
 
+export interface FinancingSim {
+  /** Shows the installments (after the visitor left a contact). */
+  reveal(): void;
+  /** The simulation in words, for the message the agency receives. */
+  summary(): string;
+}
+
 /** Recomputes on every change. */
-export function wireFinancing(root: ParentNode): void {
+export function wireFinancing(root: ParentNode): FinancingSim | null {
   const form = root.querySelector<HTMLFormElement>('.fin-form');
   const out = root.querySelector<HTMLElement>('.fin-out');
-  if (!form || !out) return;
-  const update = () => {
+  const parcels = root.querySelector<HTMLElement>('.fin-parcels');
+  if (!form || !out || !parcels) return null;
+  let shown = false;
+  const read = () => {
     const fd = new FormData(form);
     const money = (k: string) => parseNumberInput(String(fd.get(k) ?? '')) ?? 0;
-    const rate = Number(String(fd.get('rate') ?? '').replace(/\s|%/g, '').replace(',', '.'));
-    const years = Number(String(fd.get('years') ?? '').replace(',', '.'));
-    const system = (fd.get('system') === 'price' ? 'price' : 'sac') as AmortizationSystem;
-    const price = money('price');
-    if (!(price > 0) || !(years > 0) || !Number.isFinite(rate) || rate < 0 || rate > 40) {
-      out.innerHTML = '<p class="fin-warn">Confira o valor do imóvel, o prazo e os juros.</p>';
-      return;
-    }
-    const r = simulateFinancing({ price, downPayment: money('down'), fgts: money('fgts'), years, annualRate: rate, system });
-    if (!r) {
-      out.innerHTML = '<p class="fin-warn">A entrada e o FGTS já cobrem o valor do imóvel.</p>';
-      return;
-    }
+    const years = Math.min(MAX_YEARS, Number(fd.get('years')) || DEFAULT_YEARS);
+    return { price: money('price'), down: money('down'), years };
+  };
+  const update = () => {
+    const { price, down, years } = read();
+    const r = price > 0 ? simulateFinancing({ price, downPayment: down, fgts: 0, years, annualRate: DEFAULT_ANNUAL_RATE, system: 'sac' }) : null;
+    if (!(price > 0)) out.innerHTML = '<p class="fin-warn">Confira o valor do imóvel.</p>';
+    else if (!r) out.innerHTML = '<p class="fin-warn">A entrada já cobre o valor do imóvel.</p>';
+    else
+      out.innerHTML = `<dl><div><dt>Valor financiado</dt><dd>${formatBRL(r.financed)} <small>(${Math.round(r.ltv * 100)}% do imóvel, em ${years} anos)</small></dd></div></dl>${
+        r.ltv > USUAL_LTV + 1e-9
+          ? `<p class="fin-warn">A maioria dos bancos financia até ${Math.round(USUAL_LTV * 100)}% do valor: a entrada costuma ser de ao menos ${formatBRL(price * (1 - USUAL_LTV))}.</p>`
+          : ''
+      }`;
+    if (!shown) return;
     const row = (t: string, v: string) => `<div><dt>${t}</dt><dd>${v}</dd></div>`;
-    out.innerHTML = `<dl>
-      ${row('Valor financiado', `${formatBRL(r.financed)} <small>(${Math.round(r.ltv * 100)}% do imóvel)</small>`)}
-      ${system === 'sac' ? row('Primeira parcela', formatBRLCents(r.firstInstallment)) + row('Última parcela', formatBRLCents(r.lastInstallment)) : row('Parcela', formatBRLCents(r.firstInstallment))}
-      ${row(`Total em ${r.months} meses`, formatBRL(r.totalPaid))}
-      ${row('Juros no total', formatBRL(r.totalInterest))}
-      ${row('Renda familiar sugerida', `${formatBRL(r.incomeNeeded)} <small>(parcela até 30% da renda)</small>`)}
-    </dl>${
-      r.ltv > USUAL_LTV + 1e-9
-        ? `<p class="fin-warn">A maioria dos bancos financia até ${Math.round(USUAL_LTV * 100)}% do valor: a entrada (com o FGTS) costuma ser de ao menos ${formatBRL(price * (1 - USUAL_LTV))}.</p>`
-        : ''
-    }${years > MAX_YEARS ? `<p class="fin-warn">O prazo máximo é de ${MAX_YEARS} anos; a conta usa ${MAX_YEARS}.</p>` : ''}`;
+    parcels.innerHTML = r
+      ? `<dl>
+          ${row('Primeira parcela', formatBRLCents(r.firstInstallment))}
+          ${row('Última parcela', formatBRLCents(r.lastInstallment))}
+          ${row('Renda familiar sugerida', `${formatBRL(r.incomeNeeded)} <small>(parcela até 30% da renda)</small>`)}
+        </dl>
+        <p class="fin-note">Tabela SAC (parcelas que diminuem), juros de referência de ${rateText(DEFAULT_ANNUAL_RATE)}% ao ano, sem TR, seguros e taxa de administração.</p>`
+      : '';
   };
   form.addEventListener('input', update);
   form.addEventListener('change', update);
   form.addEventListener('submit', (e) => e.preventDefault());
   update();
+  return {
+    reveal() {
+      shown = true;
+      root.querySelector<HTMLElement>('.fin-lock')!.hidden = true;
+      parcels.hidden = false;
+      update();
+    },
+    summary() {
+      const { price, down, years } = read();
+      return `Simulação de financiamento: imóvel ${formatBRL(price)}, entrada ${formatBRL(down)}, prazo de ${years} anos.`;
+    },
+  };
 }

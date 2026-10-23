@@ -1,7 +1,8 @@
 // The pages of a client's site on the client's own domain, as search engines and link previews (WhatsApp, Facebook)
-// read them: each address gets the site's HTML (site.html) with its own title, description, canonical address, Open
+// read them: each address gets the site's HTML (index.html) with its own title, description, canonical address, Open
 // Graph tags and structured data already in it, with no JavaScript run; plus the client's /sitemap.xml and
-// /robots.txt. Old addresses (site.html?p=..., ?id=, a listing's former title) move for good (301) to the new ones.
+// /robots.txt. Old addresses (site.html?p=..., /index.html, ?id=, a listing's former title) move for good (301) to
+// the new ones.
 // Written for any host that speaks Request/Response: functions/[[path]].ts on Cloudflare Pages, and the preview
 // server in vite.config.ts for local tests.
 import { rowToListing, type ListingRow, type PhotoRow } from '../backend/mapping.ts';
@@ -89,12 +90,12 @@ const text = (body: string, type: string) => new Response(body, { headers: { 'co
 
 /**
  * Answers a request to a client's domain; null: not one (another host, a file, not a read), for the host to serve as
- * usual. `shell` gives the site's HTML (site.html of the build).
+ * usual. `shell` gives the site's HTML (index.html of the build).
  */
 export async function handleSiteRequest(req: Request, env: SiteEnv, shell: () => Promise<Response>, fetchFn: typeof fetch = fetch): Promise<Response | null> {
   const url = new URL(req.url);
   const host = url.hostname.toLowerCase();
-  const special = ['/sitemap.xml', '/robots.txt', '/site.html'].includes(url.pathname);
+  const special = ['/sitemap.xml', '/robots.txt', '/site.html', '/index.html'].includes(url.pathname);
   if ((req.method !== 'GET' && req.method !== 'HEAD') || isPlatform(host, env.PLATFORM_HOSTS) || (/\.\w+$/.test(url.pathname) && !special)) return null;
   const site = await loadSite(host, env, fetchFn);
   if (!site) return null;
@@ -102,7 +103,7 @@ export async function handleSiteRequest(req: Request, env: SiteEnv, shell: () =>
   const origin = url.origin;
 
   if (url.pathname === '/robots.txt')
-    return text(`User-agent: *\nDisallow: /favoritos\nDisallow: /comparar\nDisallow: /index.html\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
+    return text(`User-agent: *\nDisallow: /favoritos\nDisallow: /comparar\nDisallow: /mapa.html\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
   if (url.pathname === '/sitemap.xml') {
     const pages: Route[] = ['inicio', 'imoveis', ...(['sobre', 'contato', 'anunciar'] as const).filter((r) => c.menu.includes(r))];
     const urls = [
@@ -115,6 +116,7 @@ export async function handleSiteRequest(req: Request, env: SiteEnv, shell: () =>
   // the page asked for; the old addresses name it in the query (site.html?p=imovel&id=...)
   let path = url.pathname;
   const query = new URLSearchParams(url.search);
+  if (path === '/index.html') path = '/';
   if (path === '/site.html' || query.has('p')) {
     path = `/${query.get('p') ?? ''}`;
     query.delete('p');

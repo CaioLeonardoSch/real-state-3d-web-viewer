@@ -11,7 +11,7 @@ describe('lead e-mail', () => {
     expect(m.subject).toBe('Novo contato: Casa <com> quintal');
     expect(m.text).toMatch(/Nome: Maria/);
     expect(m.text).toMatch(/https:\/\/wa\.me\/5547988887777/);
-    expect(m.text).toMatch(/https:\/\/site\.com\.br\/\?imovel=abc/);
+    expect(m.text).toMatch(/https:\/\/site\.com\.br\/mapa\.html\?imovel=abc/);
     expect(m.html).toMatch(/Casa &lt;com&gt; quintal/);
     expect(m.html).not.toMatch(/<com>/);
   });

@@ -17,6 +17,7 @@ import { searchPage, onMapMessage } from './pages/search';
 import { detail } from './pages/detail';
 import { about, contact, announce, missingPage, favorites, compare } from './pages/info';
 import { DEMO } from '../data/demo';
+import { backendConfig } from '../backend/config';
 
 export class SiteApp {
   config: SiteConfig;
@@ -302,6 +303,11 @@ export class SiteApp {
     return (['sobre', 'anunciar', 'contato', 'favoritos'] as const).find((x) => x === this.route) ?? null;
   }
 
+  /** The team's login and management page (painel.html), next to the site on the platform and on the client's domain. */
+  panelHref(): string {
+    return new URL(`${this.paths ? '/' : import.meta.env.BASE_URL}painel.html`, location.href).href;
+  }
+
   private brandHtml(): string {
     const c = this.config;
     return c.logo
@@ -341,6 +347,7 @@ export class SiteApp {
             .join('')}</ul>
         </nav>
         <div class="bar-actions">
+          ${backendConfig ? `<a class="btn btn-ghost login-link" href="${escapeHtml(this.panelHref())}" rel="nofollow" aria-label="Entrar">${ICONS.user}<span>Entrar</span></a>` : ''}
           ${c.menu.includes('favoritos') ? '' : `<a class="icon-btn fav-link" href="${escapeHtml(this.href('favoritos'))}" data-nav>${ICONS.heart}<span class="sr-only">Favoritos </span><span class="nav-count" ${favCount ? '' : 'hidden'}>${favCount}</span></a>`}
           ${c.contacts.whatsapp ? `<a class="btn btn-wa" data-contact href="${escapeHtml(whatsappHref(c.contacts.whatsapp, c.whatsappButton.message))}" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">${ICONS.whatsapp}<span>WhatsApp</span></a>` : ''}
         </div>

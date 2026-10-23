@@ -31,7 +31,7 @@ describe('listing pages for search engines', () => {
     expect(data).toMatchObject({ '@type': 'RealEstateListing', offers: { price: 900000, priceCurrency: 'BRL' } });
     expect(data.about.address).toMatchObject({ streetAddress: 'Rua A, 10', postalCode: '89201-000' });
     expect(data.about.geo.latitude).toBeCloseTo(-26.2997, 3);
-    expect(html).toContain('href="https://site.com/?imovel=5c1e9a2b-1111-2222-3333-444455556666"');
+    expect(html).toContain('href="https://site.com/mapa.html?imovel=5c1e9a2b-1111-2222-3333-444455556666"');
   });
   it('hidden address stays hidden; rentals priced per month; demo listings are noindex', () => {
     const hidden = renderListingPage({ ...base, addressDisplay: 'neighborhood', approximateLocation: true, footprint: undefined }, ctx);

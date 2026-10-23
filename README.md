@@ -100,13 +100,15 @@ O backend está começando: contas, imobiliárias (clientes), anúncios e fotos 
 `supabase/migrations/`; código do site em `src/backend/` e `src/ui/account.ts`.
 
 - **Sem configuração**, o site é a demonstração de sempre (o GitHub Pages atual).
-- **Com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`**, aparece o botão **Entrar**. O suporte da plataforma
-  cadastra as imobiliárias e convida o dono; o dono convida os corretores (link de convite); quem é da imobiliária
+- **Com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`**, aparece o botão **Entrar**. Ninguém cria conta sozinho:
+  o suporte da plataforma cadastra a imobiliária e o administrador dela (um por imobiliária); o administrador cria
+  os acessos dos corretores. Cada acesso nasce com uma senha provisória, mostrada uma vez para quem criou, e a pessoa
+  escolhe a dela no primeiro acesso ("Esqueci minha senha" manda um link por e-mail). Quem é da imobiliária
   anuncia e edita. O anúncio vai para o banco, as fotos para o storage, e todos passam a ver. Excluir manda para
   uma lixeira (30 dias para restaurar), e os administradores leem o histórico de alterações em frases. O visitante
   manda mensagem ou pede uma visita (dia e período) pelo anúncio, com a autorização da LGPD; o contato chega ao
   corretor na conta e por e-mail. Os
-  convites vão por e-mail, e os anúncios do CRM do cliente entram pelo XML (VRSync): o administrador informa o
+  anúncios do CRM do cliente entram pelo XML (VRSync): o administrador informa o
   endereço do feed em Minha conta e ele é lido a cada 6 horas (workflow "Importar XML"), ou o suporte importa pela
   linha de comando, ver [`docs/importacao-xml.md`](docs/importacao-xml.md).
 - **Buscas salvas e alertas** (feito em 17/10): "Salvar busca" guarda a busca no navegador, e Favoritos mostra
@@ -125,16 +127,16 @@ página própria, `painel.html`, que não carrega o mapa. Passo a passo para cri
 
 ## Site de cada imobiliária (white label)
 
-`site.html` monta o site completo de uma imobiliária a partir da configuração dela (marca, cores, fontes, contatos,
+A raiz da plataforma (`index.html`) monta o site completo de uma imobiliária a partir da configuração dela (marca, cores, fontes, contatos,
 menu, textos, seções da página inicial e jeito da busca), com cinco modelos prontos inspirados no que o mercado de
 Joinville usa. Tem página inicial com busca rápida, busca com filtros (lateral ou no topo), chips, "Apenas com
 desconto", grade, lista ou **mapa 3D** (o mapa deste projeto embutido, só com os imóveis da imobiliária e aceso
 conforme a busca), ficha do imóvel com o prédio no mapa, favoritos, comparação, Sobre, Contato e Anunciar imóvel
 (captação de proprietários). O dono edita tudo em **Personalizar site**, com pré-visualização ao vivo.
 
-- Demonstração: `site.html` (Exemplo A, modelo *Leve*) e `site.html?imobiliaria=exemplo-b` (modelo *Escuro*),
+- Demonstração: `/` (Exemplo A, modelo *Leve*) e `/?imobiliaria=exemplo-b` (modelo *Escuro*),
   configurados em `public/data/sites.json`. Na demonstração, a personalização fica salva só no navegador.
-- Com backend: `site.html?imobiliaria=<slug>` ou o domínio próprio do cliente; configuração em
+- Com backend: `/?imobiliaria=<slug>` ou o domínio próprio do cliente; configuração em
   `organizations.branding`.
 - No domínio do cliente, cada página sai do servidor com título, descrição, canônico e dados estruturados, em
   endereços limpos (`/imoveis`, `/imovel/<título>-<código>`), com `sitemap.xml` e `robots.txt` do cliente
@@ -498,7 +500,7 @@ src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugest�
                 anúncios salvos no navegador (userListings)
 src/map/        cena MapLibre (destaque, hover, câmera, sombras), estilo do mapa base (baseStyle.ts) e iluminação
 src/ui/         filtros (+ "Mais filtros"), lista de resultados, drawer, formulário "Anunciar", seletor manhã/tarde/noite e régua de hora e época
-src/site/       site de cada imobiliária (site.html): configuração e tema, busca, cards, editor; páginas em pages/
+src/site/       site de cada imobiliária (index.html; o mapa 3D é mapa.html): configuração e tema, busca, cards, editor; páginas em pages/
 src/panel/      gestão em página própria (painel.html), sem o mapa
 src/utils/      simulação de financiamento, planta SVG ilustrativa, formatação, regras de posição de novos anúncios
 scripts/lib/    regras compartilhadas entre scripts e app (altura dos prédios, prédio residencial)
@@ -682,17 +684,16 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 - **Planta**: SVG genérico com retângulos (sala, cozinha, quartos, banhos), em escala proporcional à raiz da área.
   Também só na demonstração: em produção, a ficha mostra a planta apenas quando o anunciante envia uma.
   Terrenos mostram só o contorno do lote.
-- **Simular financiamento** (imóveis à venda, no mapa e no site): SAC ou Price com a taxa efetiva anual que o
-  visitante digitar (11,5% ao ano de partida), entrada, FGTS e prazo de até 35 anos; mostra parcelas, total de
-  juros e a renda para a parcela caber em 30% dela, e avisa quando o financiado passa de 80% do valor. Sem TR,
-  seguros e taxa de administração, como diz o aviso (`src/utils/financing.ts`).
+- **Simular financiamento** (imóveis à venda, no mapa e no site): valor, entrada e prazo (5 a 35 anos, de 5 em 5);
+  mostra o valor financiado e avisa quando passa de 80% do valor. As parcelas (SAC, 11,5% ao ano de referência) e a
+  renda para a parcela caber em 30% dela aparecem depois que o visitante deixa o contato, que vai para a imobiliária
+  com a simulação, como fazem os grandes portais. Sem TR, seguros e taxa de administração (`src/utils/financing.ts`).
 - **Sem servidor de tiles e sem fontes externas**: o estilo não tem `glyphs` nem `sprite`. Os nomes das ruas usam
   `font-faces` do MapLibre: a fonte Inter 500 (só latim, 24 KB, servida pelo próprio site) é desenhada no navegador,
   sem arquivos de glifos. Aparecem do zoom 16 em diante, deitados ao longo da rua e de frente para a câmera, acima dos
   prédios. O nome das ruas só existe no zoom 15 de `joinville.pmtiles` (+190 KB).
 - **Sol**: "Hora e época", ao lado de Manhã/Tarde/Noite, abre uma régua de hora e estação que move o sol, a luz e a
-  sombra dos prédios. Na ficha, "Sol do imóvel" mostra as horas de sol direto de cada fachada no inverno e no verão,
-  no andar da unidade, descontando os prédios em volta (`src/map/sunHours.ts`).
+  sombra dos prédios.
 - **Câmera acima dos telhados**: ao fim de cada movimento, se a câmera ficou dentro ou rente a um prédio, ela se
   inclina para cima ou se afasta (`src/map/cameraGuard.ts`); a vista da janela é a exceção.
 - **Serviços por perto**: a ficha mostra o mais próximo de cada tipo (escola, saúde, farmácia, mercado, padaria,
