@@ -7,7 +7,7 @@
 // Zooms TERRAIN_MIN_ZOOM to TERRAIN_MAX_ZOOM: at z12 a 512 px tile has ~17 m per pixel in Joinville, the detail of
 // the terrain tiles of the web map providers (MapTiler's go to z12); closer, the map stretches the z12 tiles. The
 // relief's shape barely changes (MapLibre's terrain mesh is coarser than that); z13 (~9 m) would only sharpen the
-// slope shading up close, for a file almost three times as large (64 MB instead of 24 MB). The tiles cover the whole
+// slope shading up close, for a file almost three times as large. The tiles cover the whole
 // area the map can show (the region's bbox grown by 30% on each side, as maxBounds in src/map/scene.ts), so the relief
 // never ends in a cliff inside the view. Where the WCS has no data (outside Santa Catarina, the sea) the ground is at 0 m.
 //
@@ -43,6 +43,11 @@ const COVERAGE_UTM = { e0: 214_794, n0: 6_751_542, e1: 766_209, n1: 7_128_977 };
 export const TERRAIN_MIN_ZOOM = 8;
 export const TERRAIN_MAX_ZOOM = 12;
 export const TERRAIN_TILE_PX = 512;
+/**
+ * Heights are stored in steps of this much (the encoding allows 0.1 m). With pixels of ~17 m, 0.5 m keeps the shape and
+ * the shading of the slopes and makes the tiles about a third smaller (lossless WebP compresses the coarser values better).
+ */
+export const TERRAIN_HEIGHT_STEP_M = 0.5;
 const refresh = process.argv.includes('--refresh');
 
 // ---- area: the map's maxBounds (src/map/scene.ts)
@@ -243,11 +248,12 @@ function downsample(children) {
   return out;
 }
 
-/** Terrain-RGB ("mapbox": height = -10000 + (R·65536 + G·256 + B) · 0.1) as lossless WebP. */
+/** Terrain-RGB ("mapbox": height = -10000 + (R·65536 + G·256 + B) · 0.1), in TERRAIN_HEIGHT_STEP_M steps, as lossless WebP. */
 async function encode(heights) {
   const rgb = Buffer.alloc(P * P * 3);
   for (let i = 0; i < heights.length; i++) {
-    const v = Math.max(0, Math.round((heights[i] + 10000) * 10));
+    const h = Math.round(heights[i] / TERRAIN_HEIGHT_STEP_M) * TERRAIN_HEIGHT_STEP_M;
+    const v = Math.max(0, Math.round((h + 10000) * 10));
     rgb[i * 3] = (v >> 16) & 255;
     rgb[i * 3 + 1] = (v >> 8) & 255;
     rgb[i * 3 + 2] = v & 255;
@@ -310,6 +316,7 @@ meta.terrainTiles = OUT_NAME;
 meta.terrain = {
   source: 'MDT 2010–2012, Levantamento Aerofotogramétrico de SC (SDE/SC, SIGSC)',
   stepM: TERRAIN_STEP_M,
+  heightStepM: TERRAIN_HEIGHT_STEP_M,
   minzoom: TERRAIN_MIN_ZOOM,
   maxzoom: Z,
   tileSize: P,

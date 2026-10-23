@@ -159,6 +159,7 @@
   "terrain": {
     "source": "MDT 2010–2012, Levantamento Aerofotogramétrico de SC (SDE/SC, SIGSC)",
     "stepM": 10,
+    "heightStepM": 0.5,
     "minzoom": 8,
     "maxzoom": 12,
     "tileSize": 512,

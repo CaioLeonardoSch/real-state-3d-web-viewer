@@ -225,7 +225,10 @@ O mapa base são **dois arquivos** de blocos vetoriais (vector tiles), mais o re
 - `public/data/joinville.pmtiles` (≈14 MB, 164.672 prédios): prédios, vias (com o tipo de pavimento), água, áreas
   verdes, limites de bairro e a copa das matas;
 - `public/data/joinville-detalhe.pmtiles` (≈10 MB, só o zoom 15 da área urbana): telhados, árvores, postes e a luz dos
-  postes. Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto.
+  postes. Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto: todas
+  as camadas dele começam no zoom 16, e abaixo disso o arquivo nem é lido. Entre 15 e 16 telhados e árvores eram poucos
+  pixels na tela, mas cerca de dois terços da geometria enviada à placa de vídeo (44 de 66 MB numa vista do Centro no
+  zoom 15,5), justamente nos zooms mais atravessados ao navegar: com eles só a partir do 16, a mesma vista manda 24 MB.
 
 O navegador **não baixa os arquivos inteiros**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
@@ -311,10 +314,10 @@ não muda as árvores do resto da cidade.
   (`src/map/shadows.ts`), e não pesam no arquivo do mapa.
 - **Onde aparece:** só de perto:
   - a copa das matas sobe junto com os prédios, a partir do zoom 14;
-  - os telhados sobem com os prédios, a partir do zoom 15;
-  - as árvores crescem do zoom 15 ao 16;
+  - os telhados aparecem no zoom 16;
+  - as árvores crescem do zoom 16 ao 17;
   - os postes aparecem no 16;
-  - as luzes, no 15,5.
+  - as luzes, no 16,5.
 
 ## Filtro por bairro
 
@@ -438,10 +441,11 @@ consulta o Estado: `npm run data:terrain` (`scripts/build-terrain.mjs`) baixa o 
   10 m na área, mar incluído). Elas são preenchidas pelo terreno em volta, de dentro para fora, até 600 m; sem isso,
   cada emenda abria uma vala até o nível do mar no meio dos morros. Mais longe que isso (o mar, o Paraná) o chão fica
   em 0 m.
-- **Formato:** blocos `raster-dem` de 512 px em WebP sem perdas, codificação Terrain-RGB (passos de 0,1 m), zoom 8 a
-  12: ~17 m por pixel no zoom 12, o detalhe dos blocos de terreno da MapTiler. De perto o MapLibre amplia os blocos do
-  zoom 12. O zoom 13 (~9 m) só deixaria o sombreado mais nítido de muito perto, num arquivo quase três vezes maior
-  (64 MB em vez de 24 MB). Os blocos cobrem toda a área que o mapa mostra (a região mais 30% de cada lado), para o
+- **Formato:** blocos `raster-dem` de 512 px em WebP sem perdas, codificação Terrain-RGB, zoom 8 a 12: ~17 m por
+  pixel no zoom 12, o detalhe dos blocos de terreno da MapTiler. De perto o MapLibre amplia os blocos do zoom 12. As
+  alturas vão em passos de 0,5 m (a codificação permite 0,1 m): o arquivo caiu de 24 para 16,5 MB, a abertura do mapa
+  baixa 3,0 MB de relevo em vez de 4,1 MB, e o sombreado não muda, nem nas áreas planas vistas de cima. O zoom 13
+  (~9 m) só deixaria o sombreado mais nítido de muito perto, num arquivo quase três vezes maior. Os blocos cobrem toda a área que o mapa mostra (a região mais 30% de cada lado), para o
   relevo nunca terminar num degrau dentro da tela.
 - **No mapa** (`src/map/scene.ts`): `setTerrain` com exagero 1 (altura real) e o sombreado das encostas
   (`relief-shade`, `hillshade`) sobre o chão, o verde e a água, com a luz vindo do sol da hora escolhida (de noite,
