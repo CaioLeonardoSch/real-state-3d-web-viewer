@@ -411,7 +411,9 @@ export class DevelopmentLayer {
     if (!this.savedLimits) this.savedLimits = { maxZoom: this.map.getMaxZoom(), maxPitch: this.map.getMaxPitch() };
     this.map.setMaxZoom(23);
     this.map.setMaxPitch(85);
-    const cam = this.map.calculateCameraOptionsFromCameraLngLatAltRotation(eye, level.base + 1.6, shape.facing, 80);
+    // the altitude is above sea level: on the relief, the floor stands on the ground of the tower
+    const ground = this.map.queryTerrainElevation(c as [number, number]) ?? 0;
+    const cam = this.map.calculateCameraOptionsFromCameraLngLatAltRotation(eye, ground + level.base + 1.6, shape.facing, 80);
     this.map.flyTo({ ...cam, duration: 1600, essential: true });
     this.viewing = true;
     return true;

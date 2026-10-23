@@ -20,6 +20,9 @@ export interface DataMeta {
   counts: Record<string, number>;
   /** Where building heights come from (OSM; the city cadastre when it was used). */
   heightSources?: string[];
+  /** Relief (raster-dem PMTiles, scripts/build-terrain.mjs), same rules as `tiles`; without it the map is flat. */
+  terrainTiles?: string;
+  terrain?: { source: string; minzoom: number; maxzoom: number; tileSize: number; encoding: 'mapbox' | 'terrarium'; maxHeightM: number };
 }
 
 export interface AppData {
@@ -32,10 +35,20 @@ export interface AppData {
   tilesUrl: string;
   /** Absolute URL of the close-up detail archive, when there is one. */
   detailUrl: string | null;
+  /** Absolute URL of the relief archive, when there is one. */
+  terrainUrl: string | null;
   listings: ListingsFile;
   /** Developments with units (empty when the file is missing). */
   developments: Development[];
 }
+
+/**
+ * The map without the relief: ?relevo=0 (a slow device), or `window.__semRelevo = true` before the page loads, which is
+ * how the automated checks run (scripts/e2e-*.mjs: the CI draws without a GPU, and the relief makes each frame several
+ * times slower there; the relief has checks of its own).
+ */
+const withoutRelief = () =>
+  new URLSearchParams(location.search).get('relevo') === '0' || (globalThis as { __semRelevo?: boolean }).__semRelevo === true;
 
 const NO_DEMO_LISTINGS: ListingsFile = { fictional: true, notice: '', seed: 0, agencies: [], listings: [] };
 
@@ -101,5 +114,14 @@ export async function loadData(): Promise<AppData> {
     : [];
   // the tiles can live elsewhere (object storage, one file per monthly version): an absolute URL in meta.json
   const url = (name: string) => (/^https?:\/\//.test(name) ? name : dataUrl(name));
-  return { meta, boundary, bairros, tilesUrl: url(meta.tiles), detailUrl: meta.detailTiles ? url(meta.detailTiles) : null, listings, developments };
+  return {
+    meta,
+    boundary,
+    bairros,
+    tilesUrl: url(meta.tiles),
+    detailUrl: meta.detailTiles ? url(meta.detailTiles) : null,
+    terrainUrl: meta.terrainTiles && meta.terrain && !withoutRelief() ? url(meta.terrainTiles) : null,
+    listings,
+    developments,
+  };
 }

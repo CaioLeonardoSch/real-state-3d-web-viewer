@@ -56,6 +56,8 @@ export interface Theme {
   streetHighlight: string;
   /** Where the sun is (building shadows); themes made by hand may leave it out. */
   sun?: SunInfo;
+  /** Shading of the slopes (relief): colours and the direction the light comes from (degrees from north). */
+  relief: { shadow: string; highlight: string; accent: string; direction: number };
 }
 
 export type GreenKind = 'park' | 'grass' | 'wood' | 'scrub' | 'wetland' | 'farm';
@@ -158,6 +160,8 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
         // light text on a dark halo, as the neighbourhood labels at night
         streetName: { text: '#dde3ee', halo: '#10162a' },
         streetHighlight: '#ffad42',
+        // slopes barely shaded, lit from above (no sun)
+        relief: { shadow: '#05080f', highlight: '#2c3652', accent: '#0b1020', direction: 335 },
         // street lamps light up: luminaires bright, warm pools of light on the street
         scenery: {
           asphalt: '#262d3d',
@@ -218,6 +222,8 @@ export function themeFor(tod: TimeOfDay, lat: number, lon: number): { theme: The
       // dark grey text on a light halo: readable over roofs, trees, asphalt and the tan dirt roads
       streetName: { text: '#3f4652', halo: warm ? '#f8f3ea' : '#f7f6f2' },
       streetHighlight: '#f28c18',
+      // the slopes facing away from the sun in shade, the ones facing it lit
+      relief: { shadow: warm ? '#6b5f55' : '#56606e', highlight: '#ffffff', accent: warm ? '#8c8073' : '#7c8794', direction: sun.azimuth },
       scenery: warm ? { ...DAY_SCENERY, sidewalk: '#f4efe6', asphalt: '#b9b8b6' } : DAY_SCENERY,
     },
   };

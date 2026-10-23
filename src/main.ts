@@ -195,8 +195,10 @@ async function main() {
   let closingForSearch = false;
 
   // ------------------------------------------------------------ URL / history
-  // embedded in a client's site, the frame's own URL keeps the embed parameters (reloading the frame stays embedded)
-  const embedQuery = embed ? ['embed', 'site', 'cor', 'pagina', 'foco'].flatMap((k) => (embedParams.has(k) ? [[k, embedParams.get(k)!]] : [])) : [];
+  // embedded in a client's site, the frame's own URL keeps the embed parameters (reloading the frame stays embedded);
+  // ?relevo=0 (map without the relief) is kept too
+  const keptKeys = [...(embed ? ['embed', 'site', 'cor', 'pagina', 'foco'] : []), 'relevo'];
+  const keptQuery = keptKeys.flatMap((k) => (embedParams.has(k) ? [[k, embedParams.get(k)!]] : []));
   const urlFor = (listingId: string | null) => {
     const search = stateToSearch({
       criteria: store.getApplied(),
@@ -205,8 +207,8 @@ async function main() {
       developmentId: devPanel.currentId,
       unitId: devPanel.selectedUnitId,
     });
-    if (!embedQuery.length) return `${location.pathname}${search}${location.hash}`;
-    const p = new URLSearchParams(embedQuery);
+    if (!keptQuery.length) return `${location.pathname}${search}${location.hash}`;
+    const p = new URLSearchParams(keptQuery);
     for (const [k, v] of new URLSearchParams(search)) p.append(k, v);
     return `${location.pathname}?${p}${location.hash}`;
   };

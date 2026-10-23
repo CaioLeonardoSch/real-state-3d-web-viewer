@@ -93,6 +93,16 @@ npm run build && npm run verify:site  # Playwright: o site das imobiliárias (bu
 O `verify:e2e` usa o Chromium indicado em `CHROMIUM_PATH` ou, se existir, `/opt/pw-browsers/chromium`. Caso
 contrário, usa o navegador baixado pelo Playwright (`npx playwright install chromium`).
 
+As suítes (`verify:e2e`, `verify:site`, `verify:backend`) desenham com WebGL por software (SwiftShader), como no CI,
+que não tem GPU, e abrem o mapa **sem o relevo**: ali cada quadro com relevo fica várias vezes mais lento e as
+checagens travavam. O relevo tem checagens próprias no `verify:e2e`, que abrem o mapa com ele (terreno ligado,
+altura do Morro do Boa Vista, câmera acima do morro). Opções (`scripts/lib/e2e-browser.mjs`):
+
+```bash
+E2E_GPU=1 npm run verify:e2e      # desenha com a GPU do computador, com o relevo em tudo (rodar numa máquina com GPU)
+E2E_RELEVO=1 npm run verify:e2e   # relevo em tudo, também em software (lento)
+```
+
 ## Backend (Supabase)
 
 O backend está começando: contas, imobiliárias (clientes), anúncios e fotos ficam num projeto
@@ -210,7 +220,7 @@ Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Oper
 
 ## Mapa em blocos (PMTiles) e 3D só de perto
 
-O mapa base são **dois arquivos** de blocos vetoriais (vector tiles):
+O mapa base são **dois arquivos** de blocos vetoriais (vector tiles), mais o relevo (ver "Relevo" abaixo):
 
 - `public/data/joinville.pmtiles` (≈14 MB, 164.672 prédios): prédios, vias (com o tipo de pavimento), água, áreas
   verdes, limites de bairro e a copa das matas;
@@ -247,6 +257,13 @@ algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 5
 - com a câmera inclinada, o fundo da tela usa blocos de zoom menor, que não têm os prédios pequenos: **o centro da
   tela fica em 3D e o horizonte fica plano** sem código extra; ao mover o mapa, o 3D acompanha;
 - imóveis à venda e empreendimentos ficam **sempre** em 3D, então se destacam na visão geral.
+
+**Horizonte legível:** com a câmera inclinada, o MapLibre carrega blocos de zoom cada vez menor em direção ao
+horizonte. Por padrão ele aceita até 9 níveis de zoom na mesma tela, e a cidade ao longe virava uma faixa cinza quase
+sem prédios. O mapa base usa no máximo 4 níveis (`setSourceTileLodParams(4, 4)`), então os blocos detalhados vão
+mais longe (no teste, 18 blocos em vez de 14 no desktop e 12 em vez de 9 no celular), e a névoa só começa a 85% do
+caminho até o horizonte (`fog-ground-blend`; o padrão é a metade). O zoom mínimo é 10, o primeiro zoom dos blocos:
+abaixo dele o mapa ficava sem ruas, verde e prédios.
 
 Uma "bolha" 3D exatamente circular em volta do centro não existe no MapLibre (as expressões de estilo não sabem a
 distância até o centro da tela); exigiria uma camada customizada (Three.js). O efeito acima chega perto disso.
@@ -407,6 +424,50 @@ A atribuição do mapa cita o cadastro da Prefeitura (SIMGeo). **Os dados são p
 explícita.** Antes de usar em produto, confirme os termos com a SEPUR.UGP (simgeo@joinville.sc.gov.br). Detalhes e
 outras camadas úteis em [`docs/dados-prefeitura.md`](docs/dados-prefeitura.md).
 
+## Relevo
+
+O terreno vem do **Modelo Digital de Terreno (MDT) do Levantamento Aerofotogramétrico de Santa Catarina**
+(2010–2012, 1 m, SDE/SC), que o Estado publica de graça no [SIGSC](https://sigsc2.ciasc.sc.gov.br/). O mapa não
+consulta o Estado: `npm run data:terrain` (`scripts/build-terrain.mjs`) baixa o MDT uma vez e grava
+`public/data/joinville-relevo.pmtiles`, que o site serve junto com o resto do mapa.
+
+- **De onde:** o serviço WCS público do SIGSC (`sigsc.sc.gov.br/sigserver/SIGSC/wcs`, cobertura `SIGSC__MDT-2012`),
+  sem login, já reduzido a 10 m pelo próprio servidor, em trechos de 10 km (cerca de 110, guardados em
+  `.cache/terrain/`; a primeira vez leva uns 40 minutos). O download pela página do SIGSC pede login pelo Gov.BR.
+- **Faixas sem dado:** o MDT tem emendas sem dado entre os blocos do levantamento (cerca de 4 milhões de células de
+  10 m na área, mar incluído). Elas são preenchidas pelo terreno em volta, de dentro para fora, até 600 m; sem isso,
+  cada emenda abria uma vala até o nível do mar no meio dos morros. Mais longe que isso (o mar, o Paraná) o chão fica
+  em 0 m.
+- **Formato:** blocos `raster-dem` de 512 px em WebP sem perdas, codificação Terrain-RGB (passos de 0,1 m), zoom 8 a
+  12: ~17 m por pixel no zoom 12, o detalhe dos blocos de terreno da MapTiler. De perto o MapLibre amplia os blocos do
+  zoom 12. O zoom 13 (~9 m) só deixaria o sombreado mais nítido de muito perto, num arquivo quase três vezes maior
+  (64 MB em vez de 24 MB). Os blocos cobrem toda a área que o mapa mostra (a região mais 30% de cada lado), para o
+  relevo nunca terminar num degrau dentro da tela.
+- **No mapa** (`src/map/scene.ts`): `setTerrain` com exagero 1 (altura real) e o sombreado das encostas
+  (`relief-shade`, `hillshade`) sobre o chão, o verde e a água, com a luz vindo do sol da hora escolhida (de noite,
+  de cima). O ponto mais alto da área é 1.540 m, na serra; na cidade, o Morro do Boa Vista tem 220 m e o do Iririú
+  191 m. O Centro e os bairros baixos quase não mudam.
+- **O que se apoia no relevo:** prédios, imóveis, obras, árvores, postes e pinos ficam no chão de onde estão. A câmera
+  não entra num morro que fica atrás dela (`cameraGuard.ts` soma a diferença de altura do chão), as janelas da torre
+  aberta e a "vista da janela" partem do chão da torre.
+- **Matas:** com o relevo, o volume 3D das matas (`wood-canopy`) sai do mapa. Ele é uma peça só por mata (e por
+  bloco), apoiada numa altura única, e numa encosta virava uma placa reta atravessando o morro. As matas ficam com o
+  verde sobre o terreno, o sombreado e as árvores, que ficam cada uma no próprio chão.
+- **Custo:** com o relevo, o MapLibre pinta as camadas planas (chão, verde, água, ruas, linhas) em texturas
+  deitadas sobre o terreno, uma pintura para cada sequência delas entre camadas 3D, círculos e textos. Com o relevo,
+  o estilo põe todas as camadas planas antes das demais (`drapedFirst` em `scene.ts`): uma pintura em vez de quatro.
+  No Chromium com WebGL por software, cada quadro passou de ~0,25 s sem relevo para ~0,86 s com relevo (era ~1,6 s
+  antes de juntar as camadas). Esse renderizador exagera o custo de pintar texturas; o desempenho numa GPU real, em
+  especial num celular de entrada, ainda precisa ser medido (item 20 de `docs/prioridades.md`).
+- **Sem relevo:** `mapa.html?relevo=0` abre o mapa plano (um aparelho lento, por exemplo); o parâmetro fica no
+  endereço quando o mapa o reescreve. As suítes de teste usam o mesmo desligamento (ver "Verificações extras").
+- **Licença:** o dado é público e gratuito, mas o Estado não declara uma licença para uso em produto. Confirmar com
+  geoprocessamento@sde.sc.gov.br antes de vender (item 37 de `docs/prioridades.md`). A atribuição aparece no canto
+  do mapa.
+
+O relevo quase não muda, então não entra no serviço mensal: `scripts/build-tiles.mjs` mantém no `meta.json` o que o
+`build-terrain.mjs` gravou. Rodar de novo só para outra região, outro nível de detalhe ou um levantamento mais novo.
+
 ## Como regenerar os dados
 
 Requisitos extras: Python 3 com `pip install osmium shapely`.
@@ -441,6 +502,7 @@ NODE_USE_ENV_PROXY=1 npm run data
    (`footprint`) e a altura do prédio do OSM, porque o app não tem mais o arquivo de prédios inteiro. As comodidades
    vêm de um gerador aleatório separado (seed + 1); um título que promete "piscina" ou "sacada" sempre a tem.
 5. `npm run data:developments`: empreendimentos (ver acima).
+   `npm run data:terrain` (relevo, ver "Relevo") roda à parte e só de vez em quando: não está no `npm run data`.
 6. `npm run validate:data`: verificações de consistência (ver abaixo), contra os dados de `.cache/region/`.
 
 Entre os passos 2 e 3 rodam `npm run data:cadastre` (cadastro da Prefeitura, em `.cache/cadastre/`) e
@@ -709,6 +771,10 @@ docs/screenshots/  capturas geradas pelo verify:e2e
 ## Limitações conhecidas
 
 - O MapLibre não projeta sombras. A "direção do sol" aparece só no sombreamento das faces dos prédios.
+- **Relevo:** cada prédio fica na altura do chão do seu centro. O telhado fica reto, mas numa encosta íngreme um lado
+  da base fica um pouco enterrado e o outro um pouco no ar (1 a 2 m numa casa, mais num prédio grande numa ladeira).
+  A sombra dos prédios no chão não conta a sombra dos morros. O MDT é de 2010–2012: terraplenagens depois disso não
+  aparecem.
 - **Postes e a maior parte das árvores são ilustrativos:** o OSM tem só 416 postes e cerca de mil árvores na região.
   As posições não são as reais; servem para dar escala e vida à rua.
 - O filtro por bairro usa os bairros do OSM. Araquari tem só parte dos bairros mapeados, e um imóvel sem bairro no
@@ -763,9 +829,8 @@ A lista completa do que falta, em ordem de prioridade (com impacto, esforço, ri
   integração com o sistema de vendas para a disponibilidade em tempo real, e modelo 3D da fachada.
 - Divisão do bundle (lazy-load do MapLibre) e simplificação da geometria dos prédios para dispositivos fracos.
 - Mapa (ver [`docs/avaliacao-2026-10.md`](docs/avaliacao-2026-10.md)):
-  - melhorias pedidas em 15/10: casas fora da mata, luz dos postes mais natural e sombra dos prédios no chão já
-    feitas; faltam, nesta ordem, nomes das ruas (e a rua na busca), serviços por perto, relevo com a câmera sempre
-    acima do chão, e a régua de horário com o sol de cada apartamento;
+  - melhorias pedidas em 15/10: todas feitas (o relevo em 23/10, ver "Relevo"); falta a copa das matas em pedaços
+    pequenos, para ela voltar em 3D sobre os morros, e a sombra dos morros no chão;
   - pavimento da Secretaria de Infraestrutura para completar os 640 km sem informação;
   - LiDAR da Prefeitura e um estéreo único do núcleo vertical para as torres;
   - classificador de telhado (plano, duas águas, quatro águas);
@@ -883,5 +948,7 @@ Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área ur
 
 ## Licenças e atribuição
 
-Dados de mapa © OpenStreetMap contributors, disponíveis sob a Open Database License (ODbL). Renderização com MapLibre
+Dados de mapa © OpenStreetMap contributors, disponíveis sob a Open Database License (ODbL). Relevo: MDT do
+Levantamento Aerofotogramétrico de Santa Catarina 2010–2012 (SDE/SC, SIGSC), público e gratuito; licença para uso em
+produto a confirmar com o Estado. Renderização com MapLibre
 GL JS (BSD-3-Clause). A atribuição aparece sempre no canto do mapa.

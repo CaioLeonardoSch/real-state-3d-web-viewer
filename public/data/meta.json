@@ -154,5 +154,15 @@
   "heightSources": [
     "OpenStreetMap",
     "Cadastro imobiliário da Prefeitura de Joinville (SIMGeo): área construída por lote"
-  ]
+  ],
+  "terrainTiles": "joinville-relevo.pmtiles",
+  "terrain": {
+    "source": "MDT 2010–2012, Levantamento Aerofotogramétrico de SC (SDE/SC, SIGSC)",
+    "stepM": 10,
+    "minzoom": 8,
+    "maxzoom": 12,
+    "tileSize": 512,
+    "encoding": "mapbox",
+    "maxHeightM": 1540
+  }
 }

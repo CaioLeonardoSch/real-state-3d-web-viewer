@@ -1,7 +1,8 @@
-// Keeps the camera above the roofs. The map is flat (no terrain yet: the State's DTM licence is pending), so the
-// camera's height above the ground is distance-to-centre × cos(pitch). Close in and tilted at 75°, it gets to about
-// 30 m and would go inside the towers. After each move the tallest building under the camera is checked and,
-// when needed, the camera tilts up (same distance) or, when even looking straight down is not enough, zooms out.
+// Keeps the camera above the roofs. Its height above the ground at the centre of the map is distance-to-centre ×
+// cos(pitch). Close in and tilted at 75°, it gets to about 30 m and would go inside the towers. After each move the
+// tallest building under the camera is checked and, when needed, the camera tilts up (same distance) or, when even
+// looking straight down is not enough, zooms out. With the relief, the obstacle is the roof plus how much higher the
+// ground under the camera is than the ground at the centre (a hill behind the camera counts as a building).
 
 /** Space kept between the camera and the roof below it (m). */
 export const ROOF_CLEARANCE_M = 12;

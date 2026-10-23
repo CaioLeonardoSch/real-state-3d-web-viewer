@@ -5,7 +5,9 @@ import type {
   ExpressionSpecification,
   FilterSpecification,
   GeoJSONSource,
+  LayerSpecification,
   MapGeoJSONFeature,
+  SourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Geometry, Point, Polygon, MultiPolygon } from 'geojson';
@@ -52,6 +54,19 @@ export { streetHighlightFilter, type StreetRef } from './baseStyle';
 const OSM_ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL)';
 const MAPLIBRE_ATTRIBUTION = '<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a>';
+const TERRAIN_ATTRIBUTION =
+  'Relevo: <a href="https://sigsc2.ciasc.sc.gov.br/" target="_blank" rel="noopener">MDT de Santa Catarina (SDE/SC)</a>';
+/**
+ * Fog of the far ground: from 85% of the way to the horizon (MapLibre's default is halfway), so the city stays legible
+ * far into the distance with the camera tilted.
+ */
+const SKY_FOG = { 'fog-ground-blend': 0.85 } as const;
+/**
+ * Tiles of the base map towards the horizon: at most this many zoom levels on screen and this ratio of tiles at full
+ * tilt to tiles from above (MapLibre's defaults: 9.3 and 3). Fewer levels keep the closer, detailed tiles further
+ * into the distance (the far city does not fade into a flat grey) for about 30% more tiles at full tilt.
+ */
+const BASE_TILE_LOD: [number, number] = [4, 4];
 const CADASTRE_ATTRIBUTION = REGION.cadastre
   ? `Alturas: <a href="${REGION.cadastre.url}" target="_blank" rel="noopener">${REGION.cadastre.label.replace(/^Cadastro/, 'cadastro')}</a>`
   : '';
@@ -211,7 +226,8 @@ export class Scene {
       maxPitch: 75,
       cooperativeGestures: !!opts.cooperative,
       locale: MAP_TEXTS,
-      minZoom: 9.8,
+      // the base map's tiles start at zoom 10: below it the ground, the green and the roads would be gone
+      minZoom: 10,
       maxZoom: 19.5,
       maxBounds: [w - padX, s - padY, e + padX, n + padY],
       attributionControl: false,
@@ -226,6 +242,7 @@ export class Scene {
 
     this.ready = new Promise((resolve) =>
       this.map.once('load', () => {
+        this.map.setSourceTileLodParams(...BASE_TILE_LOD, 'osm');
         // frame again: the container can change size while the page lays out (banner, panels)
         this.showOverview(false);
         resolve();
@@ -384,6 +401,39 @@ export class Scene {
     });
   }
 
+  private reliefSources(): Record<string, SourceSpecification> {
+    const t = this.data.meta.terrain;
+    if (!this.data.terrainUrl || !t) return {};
+    const dem = {
+      type: 'raster-dem' as const,
+      url: `pmtiles://${this.data.terrainUrl}`,
+      tileSize: t.tileSize,
+      encoding: t.encoding,
+      minzoom: t.minzoom,
+      maxzoom: t.maxzoom,
+    };
+    return { terrain: { ...dem, attribution: TERRAIN_ATTRIBUTION }, 'relief-shade': dem };
+  }
+
+  /** The base layers with the shading of the slopes over the ground, green areas and water, under the roads. */
+  private withRelief(layers: LayerSpecification[], base: BaseStyle): LayerSpecification[] {
+    if (!this.data.terrainUrl) return layers;
+    const at = layers.findIndex((l) => l.id === 'water-line');
+    return [...layers.slice(0, at), base.reliefLayer(this.theme), ...layers.slice(at)];
+  }
+
+  /**
+   * On the relief, the flat layers (fills, lines, the shading) first, in their order, then the rest. MapLibre paints
+   * the flat layers into textures laid on the terrain, one painting for each run of them between other layers (3D
+   * volumes, circles, labels): spread in four runs, the terrain was painted four times a frame. Laid on the ground, the
+   * flat layers sit under every volume whatever their order; without the relief the order is kept as it is.
+   */
+  private drapedFirst(layers: LayerSpecification[]): LayerSpecification[] {
+    if (!this.data.terrainUrl) return layers;
+    const flat = (l: LayerSpecification) => ['background', 'fill', 'line', 'raster', 'hillshade'].includes(l.type);
+    return [...layers.filter(flat), ...layers.filter((l) => !flat(l))];
+  }
+
   private buildStyle(): StyleSpecification {
     const t = this.theme;
     const base = this.baseStyle();
@@ -417,6 +467,9 @@ export class Scene {
         ...(this.data.detailUrl
           ? { detail: { type: 'vector' as const, url: `pmtiles://${this.data.detailUrl}`, minzoom: 15, maxzoom: 15 } }
           : {}),
+        // relief (scripts/build-terrain.mjs): the ground's height ('terrain') and the shading of the slopes
+        // ('relief-shade'); the same file twice, as MapLibre asks (one source for both draws the shading worse)
+        ...this.reliefSources(),
         boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },
         'listing-pins': {
@@ -440,9 +493,10 @@ export class Scene {
         shadows: { type: 'geojson', data: EMPTY_FC, maxzoom: 16 },
       },
       light: { anchor: 'map', ...t.light },
-      sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon },
-      layers: [
-        ...base.baseLayers(t),
+      sky: { 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon, ...SKY_FOG },
+      ...(this.data.terrainUrl && this.data.meta.terrain ? { terrain: { source: 'terrain', exaggeration: 1 } } : {}),
+      layers: this.drapedFirst([
+        ...this.withRelief(base.baseLayers(t), base),
         {
           id: 'clip-line',
           type: 'line',
@@ -665,7 +719,7 @@ export class Scene {
           },
           paint: { 'text-color': CLUSTER_TEXT },
         },
-      ],
+      ]),
     };
   }
 
@@ -989,13 +1043,14 @@ export class Scene {
     // pitch limit raised to 85°
     if (this.map.getMaxPitch() > 75) return;
     const cam = this.camera();
-    const altitude = cam.altitudeM;
-    if (altitude >= GUARD_MAX_ALTITUDE_M) return;
+    // relief: how much higher the ground under the camera is than the ground at the centre (0 on a flat map)
+    const rise = (this.map.queryTerrainElevation(cam.lngLat) ?? 0) - (this.map.queryTerrainElevation(this.map.getCenter()) ?? 0);
+    if (cam.altitudeM - rise >= GUARD_MAX_ALTITUDE_M) return;
     const [lng, lat] = cam.lngLat;
     const d = 0.0002; // ≈ 20 m around the camera
     let roof = 0;
     for (const f of this.tileFeaturesIn('buildings', [lng - d, lat - d, lng + d, lat + d])) roof = Math.max(roof, Number(f.properties?.height) || 0);
-    const fix = cameraFix(altitude, this.map.getPitch(), roof);
+    const fix = cameraFix(cam.altitudeM, this.map.getPitch(), roof + rise);
     if (fix) this.map.easeTo({ pitch: fix.pitch, zoom: this.map.getZoom() + fix.zoomBy, duration: 500 }, { cameraGuard: true });
   }
 
@@ -1169,7 +1224,11 @@ export class Scene {
     m.setPaintProperty('listing-clusters', 'circle-color', t.accent);
     m.setPaintProperty('listing-clusters', 'circle-stroke-color', t.pinStroke);
     m.setLight({ anchor: 'map', ...t.light });
-    m.setSky({ 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon });
+    m.setSky({ 'sky-color': t.sky.sky, 'horizon-color': t.sky.horizon, 'fog-color': t.sky.horizon, ...SKY_FOG });
+    if (m.getLayer('relief-shade')) {
+      const relief = base.reliefPaint(t);
+      for (const k of Object.keys(relief) as (keyof typeof relief)[]) m.setPaintProperty('relief-shade', k, relief[k]);
+    }
     this.invalidateShadows();
   }
 
