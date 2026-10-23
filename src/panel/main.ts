@@ -12,7 +12,11 @@ const mapUrl = (id?: string) => {
 
 async function start(): Promise<void> {
   if (!backendConfig) {
-    el.innerHTML = '<p class="a-hint">Esta versão do mapa não tem contas: os anúncios ficam só no navegador. Volte ao mapa para anunciar.</p>';
+    el.innerHTML = `<div class="panel-empty">
+      <h2>Gestão de anúncios</h2>
+      <p>Esta versão do mapa não tem contas: os anúncios ficam só no navegador. Volte ao mapa para anunciar.</p>
+      <a class="btn-primary" href="${mapUrl()}">Abrir o mapa</a>
+    </div>`;
     return;
   }
   const [{ RemoteBackend }, { AccountPanel }] = await Promise.all([import('../backend/remote'), import('../ui/account')]);

@@ -4,7 +4,7 @@
 // Screenshots go to docs/screenshots/site-*.png. Usage: npm run build && npm run verify:site
 import { spawn } from 'node:child_process';
 import { cli } from './lib/cli.mjs';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -500,7 +500,22 @@ async function main() {
     await axe(m.page, 'celular, início');
     check('sem erros no console (celular)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
-    check('acessibilidade (axe, WCAG 2.2 A/AA): nenhuma violação nas páginas, no editor, nos dois modelos e no celular', axeFindings.length === 0, axeFindings.join(' | '));
+    // ------------------------------------------------ pages outside site.html: the static listing page (the one
+    // search engines index; one with a reduced price, for the struck-out old price), the 404 and painel.html
+    const staticDir = path.join(ROOT, 'dist', 'imovel');
+    const reducedPage = readdirSync(staticDir).find((d) => readFileSync(path.join(staticDir, d, 'index.html'), 'utf8').includes('<s>'));
+    const origin = BASE.replace(/site\.html$/, '');
+    for (const [url, label] of [[`imovel/${reducedPage}/`, 'página estática do imóvel'], ['404.html', 'página 404 da plataforma'], ['painel.html', 'painel sem backend']]) {
+      for (const viewport of [{ width: 1440, height: 900 }, { width: 360, height: 640 }]) {
+        const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+        const page = await ctx.newPage();
+        await page.goto(origin + url);
+        if (url === 'painel.html') await page.waitForSelector('.panel-empty');
+        await axe(page, `${label} (${viewport.width} px)`);
+        await ctx.close();
+      }
+    }
+    check('acessibilidade (axe, WCAG 2.2 A/AA): nenhuma violação nas páginas, no editor, nos dois modelos, no celular, na página estática do imóvel, no 404 e no painel', axeFindings.length === 0, axeFindings.join(' | '));
   } finally {
     await browser.close();
     server.kill();

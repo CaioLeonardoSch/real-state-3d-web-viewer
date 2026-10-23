@@ -15,20 +15,23 @@ export interface PageContext {
   csp?: string;
 }
 
-/** The page's only stylesheet, inline; its hash goes into the page's Content-Security-Policy. */
+/**
+ * The page's only stylesheet, inline; its hash goes into the page's Content-Security-Policy. Text colours keep 4.5:1
+ * on the background and on the buttons (WCAG AA; e2e-site checks the page with axe).
+ */
 export const LISTING_PAGE_CSS = `
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2328;background:#f6f5f2}
 header,main,footer{max-width:880px;margin:0 auto;padding:12px 16px}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px}
-header a{color:#c8650a;text-decoration:none;font-weight:600}
+header a{color:#a85000;text-decoration:none;font-weight:600}
 h1{font-size:26px;margin:8px 0 4px}
-.price{font-size:28px;font-weight:700;color:#c8650a;margin:4px 0}.price s{font-size:18px;color:#888;font-weight:400}.price small{font-size:16px}
+.price{font-size:28px;font-weight:700;color:#c8650a;margin:4px 0}.price s{font-size:18px;color:#646b73;font-weight:400}.price small{font-size:16px}
 .addr{color:#555;margin:0 0 12px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
 .gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:#ddd}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
 .btn{display:inline-block;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;color:#fff;background:#b35600}
-.btn.wa{background:#1f9d55}
+.btn.wa{background:#177a42}
 dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:16px 0}
 dt{font-size:12px;color:#666}dd{margin:0;font-weight:600}
 ul.features{display:flex;flex-wrap:wrap;gap:6px;padding:0;list-style:none}ul.features li{padding:4px 10px;border-radius:999px;background:#fff1df;font-size:13px}

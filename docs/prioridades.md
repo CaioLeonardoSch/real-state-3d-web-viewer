@@ -1,4 +1,4 @@
-# O que falta fazer, em ordem de prioridade (17/10/2026)
+# O que falta fazer, em ordem de prioridade (17/10/2026, itens 52 a 54 em 22/10)
 
 Lista única e consolidada do que ainda está em aberto, do mais urgente ao menos urgente. Junta:
 
@@ -7,7 +7,8 @@ Lista única e consolidada do que ainda está em aberto, do mais urgente ao meno
   do lançamento" e os pedidos do mapa de 15/10);
 - o backend ([`backend.md`](backend.md): seção 1, seção 8 e a lista de segurança da seção 10);
 - a concorrência ([`analise-concorrencia.md`](analise-concorrencia.md));
-- os "Próximos passos" do [`README.md`](../README.md).
+- os "Próximos passos" do [`README.md`](../README.md);
+- a análise de concorrência e de posicionamento de 22/10 (itens 52 a 54).
 
 O que já foi feito nessas fontes não entra aqui. Quando um item terminar, marque-o nesta lista e na fonte de origem.
 
@@ -52,6 +53,8 @@ Uso no dia a dia, dados, conversão e confiabilidade.
 | 20 | Testes em Android de entrada e com leitor de tela (NVDA, VoiceOver, TalkBack) | Médio: desempenho real do 3D e acessibilidade | Pequeno | Baixo | Aparelhos | Lista antes do lançamento, I7 |
 | 21 | Teste de invasão por terceiros e "Security Advisor" do Supabase sem alertas. **Parte feita em 21/10:** no projeto de produção, gatilhos e funções de quem entrou não respondem mais ao visitante; os alertas que restam são aceitos de propósito ([backend.md §10](backend.md)). **Falta:** o teste de invasão | Médio | Pequeno (contratação) | Baixo | 1, 3, 14 a 17 | I11, backend §10 |
 | 22 | Decidir se a verificação em duas etapas vira obrigatória para donos e administradores | Médio | Pequeno | Baixo | Decisão do dono do produto | Backend §10 |
+| 52 | Importação XML localizando pelo endereço: sem `Latitude`/`Longitude`, procurar rua e número no cadastro da Prefeitura (a mesma busca de "Localizar pelo endereço", item 51) antes de mandar o anúncio para o bairro; com coordenadas, avisar no relatório quando elas caem em outro lote que não o do endereço (hoje vale o prédio mais próximo, até 25 m, e coordenada de CRM costuma ser imprecisa) | Alto: o imóvel do feed aparece no prédio certo sem o corretor ajustar | Pequeno a médio | Baixo | 7, 12 | Análise de 22/10 |
+| 53 | WhatsApp do corretor do anúncio no site do cliente, como opção do cliente: hoje o botão da ficha do site vai para o WhatsApp central da imobiliária (`src/site/pages/detail.ts`), enquanto a ficha do mapa usa o do anúncio; sem corretor ou sem número, fica o central. A importação já liga o anúncio ao corretor pelo e-mail | Médio: o contato chega a quem atende o imóvel | Pequeno | Baixo | Perguntar ao piloto (10) se prefere a central | Análise de 22/10 |
 
 ## P2: evolução do produto
 
@@ -76,6 +79,7 @@ Gestão, personalização, SEO, experiência 3D e escala. Depois do retorno dos 
 | 37 | Mapa: relevo com a câmera sempre acima do chão (pedido 1; pedir os dados do MDT já) **Feito em 17/10, a parte que não depende do MDT:** a câmera não fica mais dentro das torres. Ao fim de cada movimento o mapa calcula onde ela está e a altura do prédio mais alto a até 20 m dela; se faltar folga de 12 m sobre o telhado, a câmera se inclina para cima mantendo a distância, ou se afasta quando nem olhando para baixo bastaria (`src/map/cameraGuard.ts`). O relevo em si continua esperando a licença do MDT do Estado | Médio | Médio | Alto: mexe em câmera, prédios, obras e vista da janela | Licença do MDT | Avaliação, pedidos de 15/10 |
 | 38 | ~~Mapa: régua de horário e sol de cada apartamento (pedido 6, etapa 2)~~ **Feito em 17/10:** "Hora e época" ao lado de Manhã/Tarde/Noite abre a régua: arrastar a hora (5h30 às 19h30) e escolher verão, outono/primavera ou inverno move o sol, a luz e a sombra dos prédios (de noite o mapa passa para o tema noturno). Na ficha, "Sol do imóvel" mostra as horas de sol direto em cada fachada (norte, leste, sul, oeste) no inverno e no verão, no andar da unidade, descontando a sombra dos prédios a até 300 m (`src/map/sunHours.ts`; amostra a cada 10 minutos, cerca de 15 ms). Não considera árvores nem relevo, e a fachada de cada lado é a parede mais comprida do contorno | Médio: diferencial | Médio | Baixo | — | Avaliação, pedidos de 15/10 |
 | 39 | ~~Pendências pequenas: clique do meio na paginação (M3), detalhes de interface (M8), favoritos no modo aluguel (I1), `robots.txt` da demonstração, item 6 do `backend.md` §10 desatualizado~~ **Feito em 17/10:** favoritos seguem o modo da busca (aluguel ou venda) com link para trocar; coração com rótulo "Salvar nos favoritos" e dica; clique do meio na paginação conferido (já abria outra aba); `robots.txt` da demonstração fica como limitação do GitHub Pages (no domínio do cliente funciona); `backend.md` corrigido (a importação XML já tira o GPS das fotos) | Baixo | Pequeno | Baixo | — | M3, M8, I1, A menores |
+| 54 | Selo "Endereço conferido no cadastro": aparece quando o endereço completo do anúncio (rua e número) existe no cadastro da Prefeitura e o lote dele é o mesmo do prédio ou terreno marcado no mapa. O texto do selo diz só isso (o endereço existe e bate com o ponto), não que o anúncio ou o anunciante foram conferidos; com endereço oculto não há selo, para não revelar o local | Médio: confiança do visitante, diferencial que os portais não têm | Pequeno | Médio: texto revisado pelo advogado | 7, 52 | Análise de 22/10 |
 
 ## P3: diferenciais futuros
 
@@ -104,6 +108,7 @@ Dependem de validação comercial. Não começar antes de P0 e P1.
 - **Antes de 23 e 28:** o foco inicial (imobiliárias ou incorporadoras) e o modelo de cobrança, a partir do retorno
   de 10.
 - **Antes de 29:** quando entram outras cidades.
+- **Antes de 53:** se o contato vai para a central da imobiliária ou para o corretor do anúncio (perguntar no piloto).
 - **Sempre:** o portal com todas as imobiliárias é produto ou só vitrine; quem opera a importação XML e o suporte.
 
 *Anotado por Claude (assistente de IA), 17/10/2026, para consulta na manutenção.*
