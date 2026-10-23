@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão 2 · Editorial</title>
+<meta name="description" content="Sugestão de design: o site da imobiliária como uma revista sobre morar em Joinville.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%23b4532a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<script type="speculationrules">{"prefetch":[{"where":{"href_matches":"*sugestao-imovel.html*"},"eagerness":"moderate"}]}</script>
+<style>
+  :root { --papel: #f3eee5; --papel-2: #e9e2d5; --tinta: #1f1b16; --tinta-2: #5e564b; --telha: #b4532a; --telha-2: #8e3d1c; --musgo: #44553a; --foco: var(--telha); }
+  body { background: var(--papel); color: var(--tinta); }
+  .wrap { width: min(1280px, 100% - 32px); margin-inline: auto; }
+  .serif { font-family: 'Playfair Display', Georgia, serif; }
+
+  /* cabeçalho: marca no centro, poucos links, um botão */
+  header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--papel) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid transparent; transition: border-color 0.3s; }
+  header.rolou { border-color: var(--papel-2); }
+  .topo { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; height: 76px; }
+  .topo nav { display: flex; gap: 26px; font-size: 14px; letter-spacing: 0.02em; }
+  .topo nav a { text-decoration: none; position: relative; }
+  .topo nav a::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -4px; height: 1px; background: currentColor; transition: right 0.3s ease; }
+  .topo nav a:hover::after { right: 0; }
+  .marca { text-align: center; text-decoration: none; line-height: 1; }
+  .marca b { display: block; font-family: 'Playfair Display', serif; font-weight: 400; font-size: 28px; letter-spacing: -0.01em; }
+  .marca small { font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--tinta-2); }
+  .topo .direita { display: flex; justify-content: flex-end; align-items: center; gap: 18px; font-size: 14px; }
+  .botao { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; background: var(--tinta); color: var(--papel); text-decoration: none; font-size: 14px; font-weight: 500; border: 0; transition: background 0.25s; }
+  .botao:hover { background: var(--telha); }
+  @media (max-width: 860px) { .topo nav, .topo .tel { display: none; } .topo { grid-template-columns: auto 1fr; } .marca { text-align: left; } }
+
+  /* abertura */
+  .abertura { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(24px, 4vw, 64px); align-items: center; padding: clamp(28px, 5vw, 64px) 0 clamp(40px, 6vw, 80px); }
+  .secao-n { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--tinta-2); display: flex; gap: 14px; align-items: center; }
+  .secao-n::after { content: ''; width: 64px; height: 1px; background: currentColor; opacity: 0.5; }
+  .abertura h1 { margin: 22px 0 26px; font-family: 'Playfair Display', serif; font-weight: 400; font-size: clamp(54px, 8.6vw, 132px); line-height: 0.92; letter-spacing: -0.03em; }
+  .abertura h1 em { display: block; padding-left: 0.6em; color: var(--telha); }
+  .abertura .lead { font-size: clamp(17px, 1.5vw, 20px); color: var(--tinta-2); max-width: 44ch; margin: 0 0 34px; }
+  .moldura { position: relative; aspect-ratio: 4 / 5; }
+  .moldura .forma {
+    position: absolute; inset: 0; overflow: hidden; border-radius: 46% 54% 38% 62% / 52% 38% 62% 48%;
+    animation: forma 18s ease-in-out infinite alternate;
+  }
+  @keyframes forma { 50% { border-radius: 58% 42% 55% 45% / 40% 60% 40% 60%; } 100% { border-radius: 40% 60% 46% 54% / 60% 44% 56% 40%; } }
+  .moldura img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.15); }
+  .moldura .legenda { position: absolute; right: -6px; bottom: 8%; padding: 14px 18px; background: var(--papel); border-radius: 14px; font-size: 13px; box-shadow: 0 10px 30px rgba(31, 27, 22, 0.12); max-width: 230px; }
+  .moldura .legenda b { display: block; font-family: 'Playfair Display', serif; font-weight: 400; font-size: 20px; }
+  .moldura .selo-giro { position: absolute; left: -18px; top: 6%; width: 118px; height: 118px; animation: gira 22s linear infinite; }
+  @keyframes gira { to { rotate: 360deg; } }
+  @media (max-width: 860px) { .abertura { grid-template-columns: 1fr; } .moldura { max-width: 440px; width: 100%; margin-inline: auto; } }
+
+  /* busca em forma de frase */
+  .frase {
+    font-family: 'Playfair Display', serif; font-size: clamp(21px, 2vw, 28px); line-height: 1.7; max-width: 34ch;
+  }
+  .frase select {
+    appearance: none; -webkit-appearance: none; border: 0; border-bottom: 2px solid var(--telha); background: none; padding: 0 22px 0 2px; margin: 0 2px;
+    font: inherit; font-style: italic; color: var(--telha); cursor: pointer; border-radius: 0;
+    background-image: linear-gradient(45deg, transparent 50%, var(--telha) 50%), linear-gradient(135deg, var(--telha) 50%, transparent 50%);
+    background-position: right 6px top 55%, right 0 top 55%; background-size: 6px 6px; background-repeat: no-repeat;
+  }
+  .frase-acoes { display: flex; align-items: center; gap: 18px; margin-top: 22px; flex-wrap: wrap; font-size: 14px; color: var(--tinta-2); }
+  .frase-acoes .botao b { font-variant-numeric: tabular-nums; }
+
+  /* faixa de bairros correndo */
+  .faixa { overflow: hidden; border-block: 1px solid var(--papel-2); padding: 18px 0; white-space: nowrap; }
+  .faixa div { display: inline-flex; gap: 48px; animation: corre 50s linear infinite; padding-left: 48px; }
+  .faixa span { font-family: 'Playfair Display', serif; font-size: clamp(28px, 3.4vw, 46px); }
+  .faixa span:nth-child(even) { font-style: italic; color: var(--telha); }
+  .faixa:hover div { animation-play-state: paused; }
+  @keyframes corre { to { transform: translateX(-50%); } }
+
+  section { padding: clamp(70px, 9vw, 120px) 0 0; }
+  h2 { font-family: 'Playfair Display', serif; font-weight: 400; font-size: clamp(36px, 5vw, 68px); line-height: 1; letter-spacing: -0.02em; margin: 16px 0 0; }
+  h2 em { color: var(--telha); }
+
+  /* imóvel da semana: matéria */
+  .materia { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(24px, 5vw, 80px); margin-top: 40px; align-items: start; }
+  .materia figure { margin: 0; position: sticky; top: 100px; }
+  .materia figure img { width: 100%; aspect-ratio: 5 / 4; object-fit: cover; border-radius: 6px; }
+  .materia figcaption { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; color: var(--tinta-2); }
+  .materia .texto p { font-size: 18px; line-height: 1.7; margin: 0 0 20px; }
+  .materia .texto p:first-of-type::first-letter { float: left; font-family: 'Playfair Display', serif; font-size: 84px; line-height: 0.8; padding: 8px 10px 0 0; color: var(--telha); }
+  .citacao { margin: 34px 0; padding: 0 0 0 22px; border-left: 2px solid var(--telha); font-family: 'Playfair Display', serif; font-style: italic; font-size: 26px; line-height: 1.35; }
+  .citacao cite { display: block; margin-top: 10px; font-family: 'Inter', sans-serif; font-style: normal; font-size: 13px; color: var(--tinta-2); }
+  .ficha { display: grid; grid-template-columns: repeat(4, 1fr); border-block: 1px solid var(--papel-2); margin: 30px 0; }
+  .ficha div { padding: 16px 0; }
+  .ficha b { display: block; font-family: 'Playfair Display', serif; font-weight: 400; font-size: 30px; }
+  .ficha span { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tinta-2); }
+  .preco-materia { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+  .preco-materia b { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+  .preco-materia s { color: var(--tinta-2); }
+  .preco-materia .baixou { padding: 4px 10px; border-radius: 999px; background: var(--musgo); color: var(--papel); font-size: 13px; }
+  @media (max-width: 860px) { .materia { grid-template-columns: 1fr; } .materia figure { position: static; } .ficha { grid-template-columns: repeat(2, 1fr); } }
+
+  /* guias de bairro */
+  .guias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+  .guia { text-decoration: none; }
+  .guia .img { overflow: hidden; border-radius: 200px 200px 6px 6px; aspect-ratio: 3 / 4; }
+  .guia:nth-child(2) .img { border-radius: 6px; }
+  .guia:nth-child(3) .img { border-radius: 6px 120px 6px 120px; }
+  .guia img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .guia:hover img { transform: scale(1.06); }
+  .guia h3 { font-family: 'Playfair Display', serif; font-weight: 400; font-size: 30px; margin: 16px 0 6px; }
+  .guia p { margin: 0; color: var(--tinta-2); }
+  .guia ul { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .guia li { font-size: 12px; padding: 4px 10px; border: 1px solid var(--papel-2); border-radius: 999px; }
+  @media (max-width: 860px) { .guias { grid-template-columns: 1fr; } .guia .img { aspect-ratio: 4 / 3; } }
+
+  /* seleção */
+  .selecao { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; margin-top: 40px; }
+  .peca { grid-column: span 4; text-decoration: none; }
+  .peca:nth-child(1) { grid-column: span 7; }
+  .peca:nth-child(2) { grid-column: span 5; margin-top: 90px; }
+  .peca .img { overflow: hidden; border-radius: 6px; aspect-ratio: 4 / 3; position: relative; }
+  .peca img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .peca:hover img { transform: scale(1.05); }
+  .peca .n { position: absolute; top: 12px; left: 14px; font-family: 'Playfair Display', serif; font-style: italic; font-size: 22px; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4); }
+  .peca .meta { display: flex; justify-content: space-between; gap: 16px; padding-top: 14px; }
+  .peca h3 { margin: 0; font-family: 'Playfair Display', serif; font-weight: 400; font-size: 24px; line-height: 1.15; }
+  .peca .bairro { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--tinta-2); }
+  .peca .valor { text-align: right; white-space: nowrap; }
+  .peca .valor b { display: block; font-weight: 600; }
+  .peca .valor small { color: var(--musgo); font-weight: 600; }
+  @media (max-width: 860px) { .peca, .peca:nth-child(1), .peca:nth-child(2) { grid-column: 1 / -1; margin-top: 0; } }
+
+  /* corretor */
+  .corretor { display: grid; grid-template-columns: auto 1fr auto; gap: 28px; align-items: center; margin-top: clamp(70px, 9vw, 120px); padding: 34px; border-radius: 24px; background: var(--tinta); color: var(--papel); }
+  .corretor .rosto { width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #d9a273, var(--telha-2)); display: grid; place-items: center; font-family: 'Playfair Display', serif; font-size: 34px; }
+  .corretor p { margin: 0; font-family: 'Playfair Display', serif; font-size: clamp(20px, 2vw, 28px); line-height: 1.3; }
+  .corretor small { display: block; margin-top: 8px; font-size: 13px; opacity: 0.7; font-family: 'Inter', sans-serif; }
+  .corretor .botao { background: var(--papel); color: var(--tinta); }
+  @media (max-width: 760px) { .corretor { grid-template-columns: 1fr; } }
+
+  footer { margin-top: 90px; padding: 34px 0 50px; border-top: 1px solid var(--papel-2); font-size: 13px; color: var(--tinta-2); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+  footer .pausa { color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão 2 de 3 · <strong>Editorial</strong> · imóveis de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+
+<header id="cab">
+  <div class="wrap topo">
+    <nav aria-label="Principal"><a href="#selecao">Comprar</a><a href="#selecao">Alugar</a><a href="#guias">Bairros</a><a href="mapa.html">Mapa 3D</a></nav>
+    <a class="marca" href="#"><b>Exemplo</b><small>Imóveis · Joinville</small></a>
+    <div class="direita"><span class="tel">(47) 0000-0000</span><a class="botao" href="#materia">Fale com a corretora</a></div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap abertura">
+    <div>
+      <span class="secao-n">01 · Morar em Joinville</span>
+      <h1>Uma casa <em>com história.</em></h1>
+      <p class="lead">Escolhemos poucos imóveis e contamos cada um como ele merece: a luz da sala, a rua, a vizinhança e o preço sem rodeio.</p>
+      <form class="frase" id="frase" onsubmit="return false" aria-label="Busca">
+        Quero
+        <select id="f-negocio" aria-label="Comprar ou alugar"><option>comprar</option><option>alugar</option></select>
+        <select id="f-tipo" aria-label="Tipo de imóvel"><option value="">um imóvel</option><option value="Apartamento">um apartamento</option><option value="Sobrado">uma casa</option></select>
+        no
+        <select id="f-bairro" aria-label="Bairro"><option value="">bairro que for</option></select>
+        até
+        <select id="f-preco" aria-label="Preço máximo"><option value="">o valor que for</option><option value="600000">R$ 600 mil</option><option value="1000000">R$ 1 milhão</option><option value="1500000">R$ 1,5 milhão</option><option value="3000000">R$ 3 milhões</option></select>.
+      </form>
+      <div class="frase-acoes"><a class="botao" href="#selecao" id="ver">Ver <b id="n">8</b> imóveis</a><span>ou <a href="mapa.html">procure no mapa 3D da cidade</a></span></div>
+    </div>
+    <div class="moldura">
+      <div class="forma"><img src="sugestoes/img/apt-04.jpg" alt="Espinheiros visto no mapa 3D, com a baía ao fundo" fetchpriority="high"></div>
+      <svg class="selo-giro" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1-92 0"/></defs><circle cx="60" cy="60" r="58" fill="#1f1b16"/><text font-size="10.5" letter-spacing="3.2" fill="#f3eee5" font-family="Inter"><textPath href="#circ">IMÓVEL DA SEMANA · ESPINHEIROS · </textPath></text><text x="60" y="68" text-anchor="middle" font-size="26" fill="#f3eee5" font-family="Playfair Display" font-style="italic">nº 7</text></svg>
+      <div class="legenda"><b>Espinheiros</b>Apartamento com vista, 4 quartos. A baía no fim da rua.</div>
+    </div>
+  </div>
+
+  <div class="faixa" aria-hidden="true"><div id="faixa"></div></div>
+
+  <section id="materia">
+    <div class="wrap">
+      <span class="secao-n revela">02 · Imóvel da semana</span>
+      <h2 class="revela">O apartamento que <em>olha para a baía.</em></h2>
+      <div class="materia">
+        <figure class="revela"><img src="sugestoes/img/apt-04.jpg" alt="O prédio no mapa 3D, com as sombras do fim da tarde" style="view-transition-name:foto-apt-04"><figcaption><span>Espinheiros, fim de tarde no mapa 3D</span><span>Cód. EXB-1004</span></figcaption></figure>
+        <div class="texto revela">
+          <p>No Espinheiros, a rua termina na água. O apartamento fica num prédio baixo, de quatro andares, e a sala pega o sol da tarde de outubro a março, quando o pôr do sol cai bem em frente à sacada.</p>
+          <p>São 125 m² com quatro quartos, três vagas e uma cozinha que dá para a sala. O condomínio é pequeno e a vizinhança se conhece pelo nome.</p>
+          <blockquote class="citacao">"Quem visita sempre pergunta a mesma coisa: dá para ver o pôr do sol daqui? Dá, e o mapa mostra antes."<cite>Corretora responsável · CRECI 00000</cite></blockquote>
+          <div class="ficha"><div><b class="num" data-contar="125">125</b><span>m²</span></div><div><b>4</b><span>quartos</span></div><div><b>3</b><span>vagas</span></div><div><b>4</b><span>andares</span></div></div>
+          <div class="preco-materia"><b class="num">R$ 1.070.000</b><s>R$ 1.225.000</s><span class="baixou">baixou em 21 de ago.</span></div>
+          <a class="botao" href="sugestao-imovel.html?id=apt-04">Ler o imóvel completo, com o sol e o bairro →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="guias">
+    <div class="wrap">
+      <span class="secao-n revela">03 · Guias de bairro</span>
+      <h2 class="revela">Antes do imóvel, <em>a vizinhança.</em></h2>
+      <div class="guias">
+        <a class="guia revela" href="#selecao"><div class="img"><img src="sugestoes/img/house-39.jpg" alt="" loading="lazy"></div><h3>Nova Brasília</h3><p>Entre morros e mata, para quem quer quintal e silêncio a quinze minutos do centro.</p><ul><li>Mata a 200 m</li><li>2 escolas</li><li>Ciclovia</li></ul></a>
+        <a class="guia revela" href="#selecao"><div class="img"><img src="sugestoes/img/apt-17.jpg" alt="" loading="lazy"></div><h3>Floresta</h3><p>Prédios baixos, comércio de bairro e o parque logo ali. Bom para o primeiro apartamento.</p><ul><li>Parque a 400 m</li><li>Mercado</li><li>Ônibus</li></ul></a>
+        <a class="guia revela" href="#selecao"><div class="img"><img src="sugestoes/img/house-47.jpg" alt="" loading="lazy"></div><h3>Glória</h3><p>Ruas largas, casas grandes e árvores antigas. O bairro das famílias que já se acharam.</p><ul><li>Rua tranquila</li><li>Escolas</li><li>Hospital</li></ul></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="selecao">
+    <div class="wrap">
+      <span class="secao-n revela">04 · A seleção</span>
+      <h2 class="revela">Poucos, <em>escolhidos a dedo.</em></h2>
+      <div class="selecao" id="lista"></div>
+
+      <div class="corretor revela">
+        <div class="rosto" aria-hidden="true">A</div>
+        <p>"Eu mesma visito cada imóvel antes de ele entrar aqui. Se não moraria, não anuncio."<small>Corretora responsável · resposta em até 1 hora pelo WhatsApp</small></p>
+        <a class="botao" href="#">Conversar agora</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>Exemplo Imóveis · CRECI 0000-J · Joinville, SC</span><button class="pausa" id="pausa" type="button" aria-pressed="false"><span>Pausar animações</span></button></div></footer>
+
+<script type="module">
+  import { IMOVEIS, BAIRROS, img, brl, desconto, botaoPausa, contarAoVer } from './sugestoes/dados.js';
+
+  addEventListener('scroll', () => document.getElementById('cab').classList.toggle('rolou', scrollY > 10), { passive: true });
+  botaoPausa(document.getElementById('pausa'));
+  contarAoVer(document.querySelectorAll('[data-contar]'));
+
+  // faixa de bairros (duplicada para correr sem emenda)
+  const nomes = ['Glória', 'América', 'Floresta', 'Espinheiros', 'Bom Retiro', 'Atiradores', 'Nova Brasília', 'Saguaçu', 'Pirabeiraba', 'Costa e Silva'];
+  document.getElementById('faixa').innerHTML = [...nomes, ...nomes].map((n) => `<span>${n}</span>`).join('');
+
+  // busca em forma de frase
+  const fb = document.getElementById('f-bairro');
+  fb.insertAdjacentHTML('beforeend', [...new Set(IMOVEIS.map((i) => i.bairro))].sort().map((b) => `<option>${b}</option>`).join(''));
+  const campos = ['f-tipo', 'f-bairro', 'f-preco'].map((id) => document.getElementById(id));
+  const lista = document.getElementById('lista');
+  function desenhar() {
+    const [tipo, bairro, preco] = campos.map((c) => c.value);
+    const sel = IMOVEIS.filter((i) => (!tipo || i.tipo === tipo) && (!bairro || i.bairro === bairro) && (!preco || i.preco <= Number(preco)));
+    document.getElementById('n').textContent = sel.length;
+    const fazer = () => {
+      lista.innerHTML = sel.map((i, k) => {
+        const d = desconto(i);
+        return `<a class="peca revela" href="sugestao-imovel.html?id=${i.id}">
+          <div class="img"><img src="${img(i.id)}" alt="${i.titulo} no mapa 3D" loading="lazy" style="view-transition-name:foto-${i.id}"><span class="n">nº ${k + 1}</span></div>
+          <div class="meta"><div><span class="bairro">${i.bairro}</span><h3>${i.titulo}, ${i.quartos} ${i.quartos > 1 ? 'quartos' : 'quarto'}</h3></div>
+          <div class="valor"><b class="num">${brl(i.preco)}</b>${d ? `<small>baixou ${(d.pct * 100).toFixed(0)}%</small>` : ''}</div></div></a>`;
+      }).join('') || '<p style="grid-column:1/-1;font-family:Playfair Display,serif;font-size:24px">Nada com tudo isso agora. Quer que a gente avise quando aparecer?</p>';
+    };
+    if (document.startViewTransition && lista.children.length) document.startViewTransition(fazer); else fazer();
+  }
+  campos.forEach((c) => c.addEventListener('change', desenhar));
+  desenhar();
+</script>
+</body>
+</html>
