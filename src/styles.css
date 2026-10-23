@@ -2564,6 +2564,28 @@ body.panel-body {
   margin: 0 0 8px;
   font-size: 14px;
 }
+.panel-back a {
+  color: var(--accent-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+.panel-back a:hover {
+  text-decoration: underline;
+}
+/* without a backend (the demonstration): what the page is and the way back */
+.panel-empty h2 {
+  margin: 4px 0 6px;
+  font-size: 18px;
+}
+.panel-empty p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.panel-empty .btn-primary {
+  display: inline-block;
+  text-decoration: none;
+}
 .panel-sheet {
   padding: 14px 18px 24px;
   border-radius: 12px;
