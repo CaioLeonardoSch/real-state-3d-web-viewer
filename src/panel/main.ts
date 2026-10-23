@@ -5,7 +5,7 @@ import { backendConfig } from '../backend/config';
 
 const el = document.querySelector<HTMLElement>('#account-panel')!;
 const mapUrl = (id?: string) => {
-  const u = new URL(`${import.meta.env.BASE_URL}index.html`, location.href);
+  const u = new URL(`${import.meta.env.BASE_URL}mapa.html`, location.href);
   if (id) u.searchParams.set('imovel', id);
   return u.href;
 };

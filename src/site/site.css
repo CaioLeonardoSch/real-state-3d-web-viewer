@@ -483,7 +483,7 @@ img {
 .site-header.compact .brand {
   min-width: 0;
 }
-@media (max-width: 1180px) {
+@media (max-width: 1000px) {
   .brand {
     min-width: 0;
   }
@@ -519,7 +519,7 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 8px 7px;
   border-radius: var(--s-radius);
   text-decoration: none;
   font-weight: 500;
@@ -547,6 +547,20 @@ img {
 }
 .fav-link {
   position: relative;
+}
+.login-link {
+  white-space: nowrap;
+}
+/* the word "WhatsApp" gives way before the menu does (the icon says it, and the floating button is there too) */
+@media (max-width: 1400px) {
+  .site-header .btn-wa span {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .login-link span {
+    display: none;
+  }
 }
 .fav-link .nav-count {
   position: absolute;
@@ -583,7 +597,8 @@ img {
 .site-header.compact .nav ul {
   flex-direction: column;
 }
-@media (max-width: 1180px) {
+/* the full menu stays open down to laptop widths: a menu behind a button hides the pages (and the map) */
+@media (max-width: 1000px) {
   .bar {
     gap: 12px;
     min-height: 62px;
@@ -780,38 +795,11 @@ img {
 .rail-nav .icon-btn {
   border: 1px solid var(--s-line);
 }
-.map-cta {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-  border-radius: var(--s-radius-lg);
-  background: var(--s-primary-soft);
-  color: var(--s-text);
-  text-decoration: none;
-  flex-wrap: wrap;
+.home-map .muted {
+  margin: -6px 0 12px;
 }
-.map-cta > span:nth-child(2) {
-  flex: 1 1 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.map-cta strong {
-  font: 700 19px var(--s-heading-font);
-}
-.map-cta-icon {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--s-primary);
-  color: var(--s-primary-ink);
-}
-.map-cta-icon .ico {
-  width: 32px;
-  height: 32px;
+.map-frame.home {
+  height: min(68vh, 640px);
 }
 .bairros {
   list-style: none;
@@ -1468,8 +1456,22 @@ img {
   border: 1px solid var(--s-line);
   background: var(--s-surface);
 }
-.map-frame.small {
-  height: 420px;
+/* the search's map: the whole screen under the fixed header (the results are on the map itself) */
+.map-frame.search {
+  height: calc(100vh - 96px);
+  height: calc(100dvh - 96px);
+  min-height: 460px;
+}
+/* the listing's map: big enough to see the building, the street and the side panel of the map together */
+.map-frame.detail {
+  height: min(75vh, 680px);
+}
+.d-map {
+  scroll-margin-top: 90px;
+}
+/* focused by "Mapa 3D" only to move the reader there; no ring around the whole section */
+.d-map:focus {
+  outline: none;
 }
 .map-frame iframe {
   width: 100%;
@@ -1584,11 +1586,18 @@ img {
   margin: 0 0 4px;
 }
 .d-addr {
-  display: flex;
+  margin: 0 0 12px;
+}
+.d-addr a {
+  display: inline-flex;
   gap: 6px;
   align-items: center;
   color: var(--s-muted);
-  margin: 0 0 12px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.d-addr a:hover {
+  color: var(--s-primary);
 }
 .d-actions {
   display: flex;
@@ -1680,21 +1689,21 @@ img {
   gap: 10px;
   margin-top: 12px;
 }
-.fin-out dl {
+:is(.fin-out, .fin-parcels) dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px 16px;
   margin: 14px 0 0;
 }
-.fin-out dt {
+:is(.fin-out, .fin-parcels) dt {
   font-size: 13px;
   color: var(--s-muted);
 }
-.fin-out dd {
+:is(.fin-out, .fin-parcels) dd {
   margin: 0;
   font-weight: 700;
 }
-.fin-out small {
+:is(.fin-out, .fin-parcels) small {
   font-weight: 400;
   color: var(--s-muted);
 }
@@ -1707,6 +1716,20 @@ img {
   margin: 10px 0 0;
   font-size: 12px;
   color: var(--s-muted);
+}
+/* the installments wait for a contact: the form sits in a tinted box under the financed amount */
+.fin-lock {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--s-primary-soft);
+}
+.fin-lock-title {
+  margin: 0 0 10px;
+}
+/* the message goes as written, with the simulation added: the visitor only fills in the contact */
+.fin-lock .fld:has(textarea) {
+  display: none;
 }
 .side-card {
   background: var(--s-card);

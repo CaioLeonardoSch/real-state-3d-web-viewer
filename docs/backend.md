@@ -452,7 +452,7 @@ Lançamentos, botão **"Apenas com desconto"** e filtros que não cansam (abrem 
 desse mercado incluem Tecimob, apresenta.me, labbo e outros. Não fizemos uma análise detalhada dos produtos deles:
 a comparação abaixo vem dos prints e do que é comum nesses sites.
 
-**O que foi feito.** Um único código de site (`site.html`, `src/site/`) que monta o site de qualquer imobiliária
+**O que foi feito.** Um único código de site (`index.html`, na raiz da plataforma; `src/site/`) que monta o site de qualquer imobiliária
 a partir de uma **configuração** (dados, não código), guardada em `organizations.branding`:
 
 - **Marca:** nome, CRECI, logo (com altura), três cores (principal, destaque, cabeçalho), fundo claro ou escuro,
@@ -525,7 +525,7 @@ monta é `src/seo/siteServer.ts`, com uma consulta ao banco (`site_bootstrap`) p
 - **Compartilhar e WhatsApp** usam o endereço da ficha no domínio do cliente. O mapa da ficha já era o do próprio
   site (filtrado pelo cliente).
 - O site só usa esses endereços quando o servidor marca a página (`<meta name="site-paths">`). Na demonstração e no
-  endereço provisório (`site.html?imobiliaria=<slug>`), continua com `?p=`.
+  endereço provisório (`/?imobiliaria=<slug>`), continua com `?p=`.
 
 **Para colocar o site de um cliente no ar com o domínio dele:**
 1. **Hospedagem que atende vários domínios.** O GitHub Pages serve um domínio por repositório. O caminho previsto é

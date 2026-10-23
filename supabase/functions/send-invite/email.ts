@@ -9,7 +9,7 @@ export function inviteEmail(
   inviterName: string | null,
   siteUrl: string,
 ): { subject: string; text: string; html: string } {
-  const link = `${siteUrl.replace(/\/$/, '')}/?convite=${inv.token}`;
+  const link = `${siteUrl.replace(/\/$/, '')}/painel.html?convite=${inv.token}`;
   const until = new Date(inv.expires_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const role = ROLES[inv.role] ?? 'membro';
   const who = inviterName ? `${inviterName} convidou você` : 'Você foi convidado(a)';

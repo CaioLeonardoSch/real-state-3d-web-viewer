@@ -164,7 +164,7 @@ export function listingFacts(l: Listing): [string, string][] {
 /** Full HTML of a listing page. Demo listings are marked noindex (fictional data must not reach search results). */
 export function renderListingPage(l: Listing, ctx: PageContext): string {
   const url = `${ctx.siteUrl}${pagePath(l)}`;
-  const mapUrl = `${ctx.siteUrl}?imovel=${encodeURIComponent(l.id)}`;
+  const mapUrl = `${ctx.siteUrl}mapa.html?imovel=${encodeURIComponent(l.id)}`;
   const desc = description(l, ctx.agencyName);
   const addr = shownAddress(l);
   const rent = l.transaction === 'rent';

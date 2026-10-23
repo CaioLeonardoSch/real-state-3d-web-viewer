@@ -47,6 +47,8 @@ export class SiteEditor {
   private leaving = false;
   /** Login of an account with two-step verification: after the password, the code of the authenticator app. */
   private codeStep = false;
+  /** Logged in, but still with the temporary password (changed on the management page first). */
+  private tempPassword = false;
   /** Published versions (back end only), loaded when "Histórico de publicações" opens. */
   private history: SiteVersion[] | null = null;
 
@@ -72,6 +74,10 @@ export class SiteEditor {
     this.canSave = demo || (!!remote && (await remote.canEditSite(this.app.data.agencyId)));
     // already logged in with the password only: the code is still missing
     if (!this.canSave && remote) this.codeStep = (await remote.mfa()).pending;
+    if (this.canSave && !demo && remote && (await remote.mustChangePassword())) {
+      this.canSave = false;
+      this.tempPassword = true;
+    }
     this.render();
   }
 
@@ -84,6 +90,10 @@ export class SiteEditor {
     const url = new URL(location.href);
     url.searchParams.delete('editar');
     history.replaceState(null, '', url);
+  }
+
+  private tempPasswordMsg(): string {
+    return `Sua senha ainda é a provisória. <a href="${escapeHtml(this.app.panelHref())}">Escolha a sua senha</a> e volte para editar.`;
   }
 
   private render(): void {
@@ -101,7 +111,7 @@ export class SiteEditor {
           <label class="fld"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>
           ${captchaBox()}`
           }
-          <p class="form-msg" role="status"></p>
+          <p class="form-msg" role="status">${this.tempPassword ? this.tempPasswordMsg() : ''}</p>
           <button class="btn btn-primary btn-block">${this.codeStep ? 'Confirmar' : 'Entrar'}</button>
         </form>`;
       this.el.querySelector('[data-close]')!.addEventListener('click', () => this.close());
@@ -123,6 +133,11 @@ export class SiteEditor {
             }
           }
           this.codeStep = false;
+          // still with the temporary password: it is changed in "Entrar" (the management page) before anything else
+          if (await remote.mustChangePassword()) {
+            msg.innerHTML = this.tempPasswordMsg();
+            return;
+          }
           this.canSave = await remote.canEditSite(this.app.data.agencyId);
           if (!this.canSave) msg.textContent = 'Esta conta não é dona nem administradora desta imobiliária.';
           else this.render();

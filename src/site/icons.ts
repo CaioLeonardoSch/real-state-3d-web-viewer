@@ -8,6 +8,7 @@ export const ICONS = {
   bath: svg('<path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM6 12V6a2 2 0 0 1 4 0M7 19l-1 2M17 19l1 2"/>'),
   suite: svg('<path d="M3 18v-6h18v6M3 15h18M6 12V9h5v3M13 12V9h5v3"/>'),
   car: svg('<path d="M5 16h14v-4l-2-5H7l-2 5zM5 16v2M19 16v2M5 12h14"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>'),
+  user: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   heart: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
   compare: svg('<path d="M8 4v16M16 4v16M4 8h4M16 16h4M4 16l4 0M16 8h4"/>'),
   grid: svg('<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'),

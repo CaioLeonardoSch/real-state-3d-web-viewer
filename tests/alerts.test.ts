@@ -41,7 +41,7 @@ describe('alertas de imóveis novos', () => {
 
   it('links no domínio do cliente ou no endereço da plataforma', () => {
     expect(siteHref({ ...site, customDomain: 'imobx.com.br' }, 'https://p.app', 'imovel', { id: 'a' })).toBe('https://imobx.com.br/imovel?id=a');
-    expect(siteHref(site, 'https://p.app/', 'favoritos', { alerta: 'confirmar', token: 't' })).toBe('https://p.app/site.html?imobiliaria=imob-x&p=favoritos&alerta=confirmar&token=t');
+    expect(siteHref(site, 'https://p.app/', 'favoritos', { alerta: 'confirmar', token: 't' })).toBe('https://p.app/?imobiliaria=imob-x&p=favoritos&alerta=confirmar&token=t');
   });
 
   it('e-mails: confirmação com o link, e os imóveis novos com preço, link de cada um e o de saída', () => {

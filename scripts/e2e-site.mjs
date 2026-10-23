@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Browser checks of the clients' sites (site.html) with Playwright, on the demo data: quick search, filters and
+// Browser checks of the clients' sites (index.html) with Playwright, on the demo data: quick search, filters and
 // chips, URL, favourites, comparison, listing page, forms, the embedded 3D map, the editor and phone layout.
 // Screenshots go to docs/screenshots/site-*.png. Usage: npm run build && npm run verify:site
 import { spawn } from 'node:child_process';
@@ -14,7 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 // its own port: the other browser checks use 4178 and 4179
 const PORT = 4177;
-const BASE = `http://127.0.0.1:${PORT}/site.html`;
+const BASE = `http://127.0.0.1:${PORT}/`;
 const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 // expected values come from the demo data
@@ -293,10 +293,20 @@ async function main() {
     const fin = await page.evaluate(() => {
       const d = document.querySelector('.d-fin .fin-sim');
       if (d) d.open = true;
-      return d?.querySelector('.fin-out')?.textContent ?? null;
+      return d ? { out: d.querySelector('.fin-out').textContent, hidden: d.querySelector('.fin-parcels').hidden } : null;
     });
-    check('imóvel à venda: simulação de financiamento (SAC por padrão) com valor financiado, parcelas e renda sugerida',
-      fin !== null && /Valor financiado.*80% do imóvel/.test(fin) && /Primeira parcela.*Última parcela/.test(fin) && /Renda familiar/.test(fin), fin?.slice(0, 200));
+    // the installments only after the visitor leaves a contact (the demonstration sends nothing)
+    if (fin) {
+      await page.fill('.fin-lock form.lead [name=name]', 'Teste Financiamento');
+      await page.fill('.fin-lock form.lead [name=phone]', '(47) 99999-0000');
+      await page.check('.fin-lock form.lead [name=consent]');
+      await page.click('.fin-lock form.lead button[type=submit]');
+      await page.waitForSelector('.d-fin .fin-parcels:not([hidden])', { timeout: 5000 }).catch(() => {});
+      fin.parcels = await page.textContent('.d-fin .fin-parcels');
+    }
+    check('imóvel à venda: simulação mostra o valor financiado; as parcelas e a renda sugerida, depois do contato',
+      fin !== null && /Valor financiado.*80% do imóvel/.test(fin.out) && !/parcela/i.test(fin.out) && fin.hidden &&
+        /Primeira parcela[\s\S]*Última parcela/.test(fin.parcels) && /Renda familiar/.test(fin.parcels), JSON.stringify(fin)?.slice(0, 300));
     await page.click('.side-card .btn-wa');
     check('contatos fictícios não abrem WhatsApp de verdade', (await page.locator('.toast').textContent()).startsWith('Demonstração') && page.url().startsWith(BASE));
     await page.screenshot({ path: path.join(SHOTS, 'site-imovel.png') });
@@ -472,7 +482,7 @@ async function main() {
     check('celular: com o menu aberto o resto da página fica inerte; Esc fecha e devolve o foco ao botão',
       menuOpen.inert && menuOpen.focus && !menuClosed.inert && menuClosed.focus && menuClosed.expanded === 'false', JSON.stringify({ menuOpen, menuClosed }));
     await m.page.click('.nav-toggle');
-    await m.page.click('#site-nav a:has-text("Anunciar imóvel")');
+    await m.page.click('#site-nav a:has-text("Anunciar")');
     await m.page.waitForSelector('main.page-anunciar');
     await m.page.selectOption('[name=x-finalidade]', 'Vender');
     await m.page.fill('main [name=name]', 'João');

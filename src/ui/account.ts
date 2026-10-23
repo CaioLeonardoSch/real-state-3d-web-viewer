@@ -46,11 +46,12 @@ export function slugify(name: string): string {
 /** Invitation link sent by the admin (e-mail, WhatsApp): opens the site with the account panel. */
 export const inviteLink = (token: string) => `${location.origin}${location.pathname}?convite=${token}`;
 
-export const ROLE_LABELS: Record<Role, string> = { owner: 'dono', admin: 'administrador', agent: 'corretor' };
+// one administrator per agency (owner), created by the platform's support; "gerente" is the older admin role
+export const ROLE_LABELS: Record<Role, string> = { owner: 'administrador', admin: 'gerente', agent: 'corretor' };
 const ORG_KEY = 'mapa3d:org';
 
-/** Roles `me` may give to someone: only owners (and the support staff, who act as owners) create owners. */
-const assignable = (me: Role): Role[] => (me === 'owner' ? ['agent', 'admin', 'owner'] : me === 'admin' ? ['agent', 'admin'] : []);
+/** Roles `me` may give to someone: only the support staff makes someone the administrator (one per agency). */
+const assignable = (me: Role, staff: boolean): Role[] => (staff ? ['agent', 'admin', 'owner'] : me === 'owner' || me === 'admin' ? ['agent', 'admin'] : []);
 
 /** The management page (painel.html): the account, the listings and the contacts without the 3D map. */
 export const panelUrl = () => new URL(`${import.meta.env.BASE_URL}painel.html`, location.href).href;
@@ -88,7 +89,12 @@ export class AccountPanel {
   /** Token from an invitation link (?convite=…), until it is accepted. */
   private linkToken: string | null = new URLSearchParams(location.search).get('convite');
   private linkInfo: Awaited<ReturnType<RemoteBackend['invitationInfo']>> = null;
-  private mode: 'signin' | 'signup' = 'signin';
+  /** Login screen: the password, or "Esqueci minha senha" (the link to choose a new one). */
+  private mode: 'signin' | 'forgot' = 'signin';
+  /** Still on the temporary password the account was created with: a new one comes first. */
+  private mustChange = false;
+  /** Opened from a password recovery link: the new password comes first. */
+  private recovering = false;
   /** Form leads waiting for the user (shown on the account button). */
   private newLeads = 0;
   /** The client keeps sales mirrors (developments) in the back end. */
@@ -129,7 +135,10 @@ export class AccountPanel {
       el.hidden = false;
       this.openSections = new Set(['listings', 'leads']);
     }
-    backend.onAuthChange(() => void this.refresh(true));
+    backend.onAuthChange((_session, recovery) => {
+      if (recovery) this.recovering = true;
+      void this.refresh(true);
+    });
   }
 
   get currentOrg(): Org | null {
@@ -154,7 +163,8 @@ export class AccountPanel {
     this.email = session?.user.email ?? null;
     this.userId = session?.user.id ?? null;
     this.mfa = this.email ? await this.backend.mfa() : { enabled: false, pending: false, factorId: null };
-    if (!this.email) this.totpSetup = null;
+    if (!this.email) [this.totpSetup, this.recovering] = [null, false];
+    this.mustChange = !!this.email && !this.mfa.pending && (await this.backend.mustChangePassword());
     // password only, with two-step verification on: nothing of the account until the code (the database agrees)
     [this.orgs, this.staff, this.pending, this.staffMember] =
       this.email && !this.mfa.pending
@@ -216,8 +226,8 @@ export class AccountPanel {
     if (i.accepted) return this.open('Este convite já foi usado.');
     if (i.expired) return this.open('Este convite expirou. Peça um novo a quem convidou você.');
     if (!this.email) {
-      this.mode = 'signup';
-      this.open(`Convite da ${i.orgName} para ${i.email}, como ${ROLE_LABELS[i.role]}. Crie sua conta com esse e-mail (ou entre, se já tiver uma).`);
+      this.mode = 'signin';
+      this.open(`Convite da ${i.orgName} para ${i.email}, como ${ROLE_LABELS[i.role]}. Entre com a conta desse e-mail para aceitar.`);
       const input = this.el.querySelector<HTMLInputElement>('input[name="email"]');
       if (input) input.value = i.email;
       return;
@@ -249,6 +259,7 @@ export class AccountPanel {
       ${this.note ? `<p class="account-note" role="status">${escapeHtml(this.note)}</p>` : ''}`;
     if (!this.email) return this.renderLogin(head);
     if (this.mfa.pending) return this.renderCode(head);
+    if (this.mustChange || this.recovering) return this.renderNewPassword(head);
 
     const canManage = this.org?.role === 'owner' || this.org?.role === 'admin';
     const [members, invites] = this.org && canManage
@@ -880,7 +891,7 @@ export class AccountPanel {
     const asPartner = this.partnerDevs.filter((d) => d.orgId === org.id);
     const when = (iso: string) =>
       new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-    const mapUrl = (slug: string) => `${new URL(`${import.meta.env.BASE_URL}`, location.href).href}?empreendimento=${encodeURIComponent(slug)}`;
+    const mapUrl = (slug: string) => `${new URL(`${import.meta.env.BASE_URL}mapa.html`, location.href).href}?empreendimento=${encodeURIComponent(slug)}`;
     const quota = (p: { maxReservations: number | null; activeReservations: number }) =>
       `${p.activeReservations} ${p.activeReservations === 1 ? 'reserva ativa' : 'reservas ativas'}${p.maxReservations ? ` de ${p.maxReservations}` : ' (sem limite)'}`;
     body.innerHTML = `${
@@ -1214,37 +1225,40 @@ export class AccountPanel {
     if (entries.length < 30) body.querySelector<HTMLElement>('[data-action="audit-more"]')?.remove();
   }
 
+  /**
+   * Login. There is no "create account": the support staff creates each agency's administrator, who creates the
+   * brokers, all with a temporary password ("Criar acesso"). "Esqueci minha senha" e-mails a link to choose a new one.
+   */
   private renderLogin(head: string): void {
-    const signup = this.mode === 'signup';
+    const forgot = this.mode === 'forgot';
     this.el.innerHTML = `${head}
       <form class="add-form account-form" data-form="login" novalidate>
-        ${signup ? '<label class="a-field a-wide">Seu nome<input name="name" autocomplete="name" required></label>' : ''}
+        ${forgot ? '<p class="a-hint a-wide">Informe o e-mail da sua conta: enviamos um link para você escolher uma senha nova.</p>' : ''}
         <label class="a-field a-wide">E-mail<input name="email" type="email" autocomplete="email" required></label>
-        <label class="a-field a-wide">Senha<input name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" minlength="8" required></label>
+        ${forgot ? '' : '<label class="a-field a-wide">Senha<input name="password" type="password" autocomplete="current-password" required></label>'}
         ${captchaBox('a-wide')}
         <p class="a-error a-wide" role="alert" hidden></p>
         <div class="a-actions a-wide">
-          <button type="submit" class="btn-primary">${signup ? 'Criar conta' : 'Entrar'}</button>
-          <button type="button" class="link-btn" data-action="switch">${signup ? 'Já tenho conta' : 'Criar uma conta'}</button>
+          <button type="submit" class="btn-primary">${forgot ? 'Enviar link' : 'Entrar'}</button>
+          <button type="button" class="link-btn" data-action="switch">${forgot ? 'Voltar para entrar' : 'Esqueci minha senha'}</button>
         </div>
+        ${forgot ? '' : '<p class="a-hint a-wide">Não tem acesso? O administrador da sua imobiliária cria o seu.</p>'}
       </form>`;
     this.bindClose();
     if (this.linkInfo) this.el.querySelector<HTMLInputElement>('input[name="email"]')!.value = this.linkInfo.email;
-    const captcha = formCaptcha(this.el.querySelector<HTMLElement>('form[data-form="login"]')!, signup ? 'signup' : 'login');
+    const captcha = formCaptcha(this.el.querySelector<HTMLElement>('form[data-form="login"]')!, forgot ? 'recover' : 'login');
     this.bindForm('login', async (fd) => {
       const email = String(fd.get('email')).trim();
-      const password = String(fd.get('password'));
       if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.');
-      if (password.length < 8) throw new Error('A senha precisa ter pelo menos 8 caracteres.');
-      const name = String(fd.get('name') ?? '').trim();
-      if (signup && !name) throw new Error('Informe seu nome.');
+      const password = String(fd.get('password') ?? '');
+      if (!forgot && !password) throw new Error('Informe a senha.');
       // anti-bot token (only when the check is on); single use, so the widget is reset after each attempt
       const token = captcha ? await captcha.getToken() : undefined;
       try {
-        if (signup) {
-          const needsConfirm = await this.backend.signUp(email, password, name, token);
+        if (forgot) {
+          await this.backend.requestPasswordReset(email, panelUrl(), token);
           this.mode = 'signin';
-          this.note = needsConfirm ? `Enviamos um link de confirmação para ${email}. Depois de confirmar, entre aqui.` : '';
+          this.note = `Se ${email} tiver conta, o link para escolher a senha nova chega em alguns minutos. Confira também o spam.`;
         } else {
           // with two-step verification on, refresh() shows the step of the code next
           await this.backend.signIn(email, password, token);
@@ -1257,9 +1271,41 @@ export class AccountPanel {
       if (this.isOpen) await this.render();
     });
     this.el.querySelector('[data-action="switch"]')!.addEventListener('click', () => {
-      this.mode = signup ? 'signin' : 'signup';
+      this.mode = forgot ? 'signin' : 'forgot';
       this.note = '';
       void this.render();
+    });
+  }
+
+  /** New password: on the first login (temporary password) or from the recovery link. Nothing else until then. */
+  private renderNewPassword(head: string): void {
+    const first = this.mustChange && !this.recovering;
+    this.el.innerHTML = `${head}
+      <form class="add-form account-form" data-form="new-password" novalidate>
+        <p class="a-hint a-wide">${
+          first
+            ? `Bem-vindo(a)! ${escapeHtml(this.email!)} está com a senha provisória que recebeu. Escolha a sua senha para continuar.`
+            : `Escolha a senha nova de ${escapeHtml(this.email!)}.`
+        }</p>
+        <label class="a-field a-wide">Senha nova<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label class="a-field a-wide">Repita a senha nova<input name="again" type="password" autocomplete="new-password" minlength="8" required></label>
+        <p class="a-hint a-wide">Pelo menos 8 caracteres. Não use a mesma senha de outros sites.</p>
+        <p class="a-error a-wide" role="alert" hidden></p>
+        <div class="a-actions a-wide">
+          <button type="submit" class="btn-primary">Salvar senha</button>
+          <button type="button" class="link-btn" data-action="signout">Sair</button>
+        </div>
+      </form>`;
+    this.bindClose();
+    this.el.querySelector('[data-action="signout"]')!.addEventListener('click', () => void this.signOut());
+    this.bindForm('new-password', async (fd) => {
+      const password = String(fd.get('password') ?? '');
+      if (password.length < 8) throw new Error('A senha precisa ter pelo menos 8 caracteres.');
+      if (password !== String(fd.get('again') ?? '')) throw new Error('As duas senhas não são iguais.');
+      await this.backend.changePassword(password);
+      this.recovering = false;
+      this.note = 'Senha salva. Use ela nos próximos acessos.';
+      await this.refresh(true);
     });
   }
 
@@ -1298,9 +1344,9 @@ export class AccountPanel {
       }${this.toggle ? ` · <a href="${escapeHtml(panelUrl())}" target="_blank" rel="noopener">Gestão em página inteira ↗</a>` : ''}</p></section>`;
   }
 
-  /** The client's site (site.html), optionally with the "Personalizar site" editor open. */
+  /** The client's site (index.html), optionally with the "Personalizar site" editor open. */
   private siteUrl(slug: string, edit: boolean): string {
-    const u = new URL(`${import.meta.env.BASE_URL}site.html`, location.href);
+    const u = new URL(import.meta.env.BASE_URL, location.href);
     u.searchParams.set('imobiliaria', slug);
     if (edit) u.searchParams.set('editar', '1');
     return u.href;
@@ -1308,8 +1354,10 @@ export class AccountPanel {
 
   private teamHtml(members: Member[], invites: Invitation[]): string {
     const me = this.org!.role;
-    const roles = assignable(me);
-    const editable = (m: Member) => m.email !== this.email && (m.role !== 'owner' || me === 'owner');
+    const roles = assignable(me, this.staff);
+    const editable = (m: Member) => m.email !== this.email && (m.role !== 'owner' || this.staff);
+    // the agency's administrator is created by the support staff, once; everyone else creates brokers
+    const newRoles: Role[] = this.staff && !members.some((m) => m.role === 'owner') ? ['owner', 'agent'] : ['agent'];
     return `<section class="account-section"><h3>Equipe</h3>
       <ul class="account-list">${members
         .map(
@@ -1337,13 +1385,20 @@ export class AccountPanel {
               .join('')}</ul>`
           : ''
       }
-      <form class="add-form account-form" data-form="invite" novalidate>
-        <label class="a-field">E-mail do corretor<input name="email" type="email" required></label>
-        <label class="a-field">Papel<select name="role">${roles.map((r) => `<option value="${r}">${ROLE_LABELS[r]}</option>`).join('')}</select></label>
+      <h4>Criar acesso</h4>
+      <form class="add-form account-form" data-form="member" novalidate>
+        <label class="a-field">Nome<input name="name" autocomplete="off" maxlength="120" required></label>
+        <label class="a-field">E-mail<input name="email" type="email" autocomplete="off" required></label>
+        ${
+          newRoles.length > 1
+            ? `<label class="a-field">Papel<select name="role">${newRoles.map((r) => `<option value="${r}">${ROLE_LABELS[r]}</option>`).join('')}</select></label>`
+            : '<input type="hidden" name="role" value="agent">'
+        }
+        <p class="a-hint a-wide">A pessoa recebe uma senha provisória, que aparece uma vez aqui, e escolhe a dela no primeiro acesso.</p>
         <p class="a-error a-wide" role="alert" hidden></p>
-        <div class="a-actions a-wide"><button type="submit" class="btn-primary">Convidar</button></div>
+        <div class="a-actions a-wide"><button type="submit" class="btn-primary">Criar acesso${newRoles.length > 1 ? '' : ' de corretor'}</button></div>
       </form>
-      <div class="invite-result" hidden></div>
+      <div class="member-result" hidden></div>
     </section>`;
   }
 
@@ -1352,7 +1407,9 @@ export class AccountPanel {
       <form class="add-form account-form" data-form="org" novalidate>
         <label class="a-field a-wide">Nome da imobiliária<input name="orgName" maxlength="120"></label>
         <label class="a-field">Endereço do site<input name="orgSlug" maxlength="50" placeholder="minha-imobiliaria"></label>
-        <label class="a-field">E-mail do dono<input name="ownerEmail" type="email"></label>
+        <label class="a-field">Nome do administrador<input name="ownerName" maxlength="120" autocomplete="off"></label>
+        <label class="a-field">E-mail do administrador<input name="ownerEmail" type="email" autocomplete="off"></label>
+        <p class="a-hint a-wide">O administrador da imobiliária recebe uma senha provisória (aparece uma vez aqui) e cria os acessos dos corretores.</p>
         <p class="a-error a-wide" role="alert" hidden></p>
         <div class="a-actions a-wide"><button type="submit" class="btn-primary">Cadastrar imobiliária</button></div>
       </form>
@@ -1514,16 +1571,22 @@ export class AccountPanel {
     });
   }
 
-  /** Link box with copy and WhatsApp buttons, shown after creating an invitation. */
-  private showLink(box: HTMLElement, token: string, intro: string): void {
-    const link = inviteLink(token);
+  /** The temporary password of an account just created: shown once, with a copy button. */
+  private showPassword(box: HTMLElement, email: string, password: string, intro: string): void {
     box.hidden = false;
     box.innerHTML = `<p class="a-hint">${escapeHtml(intro)}</p>
-      <div class="invite-link"><input readonly value="${escapeHtml(link)}" aria-label="Link do convite">
-        <button type="button" class="btn-secondary" data-copy="${escapeHtml(token)}">Copiar</button>
-        <a class="btn-secondary" target="_blank" rel="noopener"
-          href="https://wa.me/?text=${encodeURIComponent(`Seu convite para anunciar: ${link}`)}">WhatsApp</a></div>`;
-    this.bindCopy(box);
+      <div class="invite-link"><input readonly value="${escapeHtml(password)}" aria-label="Senha provisória de ${escapeHtml(email)}">
+        <button type="button" class="btn-secondary" data-copy-pass>Copiar</button></div>
+      <p class="a-hint">Ela aparece só agora. Passe para a pessoa por um canal seguro (pessoalmente ou por telefone), com o endereço de entrada: ${escapeHtml(panelUrl())}. No primeiro acesso, ela escolhe a própria senha.</p>`;
+    const b = box.querySelector<HTMLButtonElement>('[data-copy-pass]')!;
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(password);
+        b.textContent = 'Copiado ✓';
+      } catch {
+        box.querySelector<HTMLInputElement>('input')!.select();
+      }
+    });
   }
 
   // ---------------------------------------------------------------- actions
@@ -1586,20 +1649,16 @@ export class AccountPanel {
       ),
     );
     this.bindCopy(el);
-    this.bindForm('invite', async (fd) => {
+    this.bindForm('member', async (fd) => {
+      const name = String(fd.get('name') ?? '').trim();
       const email = String(fd.get('email') ?? '').trim().toLowerCase();
+      const role = fd.get('role') === 'owner' ? 'owner' : 'agent';
+      if (!name) throw new Error('Informe o nome.');
       if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.');
-      const token = await this.backend.invite(this.org!.id, email, fd.get('role') as Role);
-      const emailed = await this.backend.emailInvitation(token);
+      const password = await this.backend.createMember(this.org!.id, email, name, role);
       this.note = '';
       await this.render();
-      this.showLink(
-        this.el.querySelector<HTMLElement>('.invite-result')!,
-        token,
-        emailed
-          ? `Convite enviado por e-mail para ${email} (vale por 14 dias). Se quiser, mande também o link pelo WhatsApp.`
-          : `Convite criado para ${email}. Envie este link (vale por 14 dias); a pessoa entra com esse e-mail e aceita.`,
-      );
+      this.showPassword(this.el.querySelector<HTMLElement>('.member-result')!, email, password, `Acesso de ${ROLE_LABELS[role]} criado para ${name} (${email}). Senha provisória:`);
     });
     const name = el.querySelector<HTMLInputElement>('input[name="orgName"]');
     const slug = el.querySelector<HTMLInputElement>('input[name="orgSlug"]');
@@ -1611,22 +1670,30 @@ export class AccountPanel {
       const n = String(fd.get('orgName') ?? '').trim();
       const s = slugify(String(fd.get('orgSlug') ?? '') || n);
       const owner = String(fd.get('ownerEmail') ?? '').trim().toLowerCase();
+      const ownerName = String(fd.get('ownerName') ?? '').trim();
       if (n.length < 2) throw new Error('Informe o nome da imobiliária.');
       if (!s) throw new Error('Informe o endereço do site (letras, números e hífen).');
-      if (!/^\S+@\S+\.\S+$/.test(owner)) throw new Error('Informe o e-mail do dono da imobiliária.');
-      const { org, inviteToken } = await this.backend.createOrg(n, s, owner);
-      const emailed = inviteToken ? await this.backend.emailInvitation(inviteToken) : false;
-      this.note = '';
+      if (!ownerName) throw new Error('Informe o nome do administrador da imobiliária.');
+      if (!/^\S+@\S+\.\S+$/.test(owner)) throw new Error('Informe o e-mail do administrador da imobiliária.');
+      const { org } = await this.backend.createOrg(n, s, null);
+      // the agency exists from here: a failure creating the administrator is retried in "Equipe", with the agency open
+      let password: string | null = null;
+      let failure = '';
+      try {
+        password = await this.backend.createMember(org.id, owner, ownerName, 'owner');
+      } catch (ex) {
+        failure = (ex as Error).message;
+      }
+      try {
+        localStorage.setItem(ORG_KEY, org.id);
+      } catch {
+        // not remembered
+      }
+      this.note = failure ? `"${org.name}" cadastrada, mas o administrador não: ${failure} Tente de novo em Equipe → Criar acesso.` : '';
       await this.refresh(false);
       await this.render();
-      if (inviteToken)
-        this.showLink(
-          this.el.querySelector<HTMLElement>('.org-result')!,
-          inviteToken,
-          emailed
-            ? `"${org.name}" cadastrada. O convite foi enviado por e-mail para ${owner}; o link também está aqui.`
-            : `"${org.name}" cadastrada. Envie este link para ${owner}: ao entrar com esse e-mail, a pessoa vira dona da imobiliária.`,
-        );
+      if (password)
+        this.showPassword(this.el.querySelector<HTMLElement>('.org-result')!, owner, password, `"${org.name}" cadastrada. Acesso de administrador criado para ${ownerName} (${owner}). Senha provisória:`);
     });
   }
 

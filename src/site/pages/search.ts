@@ -400,7 +400,7 @@ function renderSaveState(app: SiteApp, main: HTMLElement, matchIds?: string[]): 
 export function mapUrl(app: SiteApp, extra: Record<string, string> = {}): string {
   const detail = new URL(app.href('imovel', { id: '__ID__' }), location.href).href;
   const p = new URLSearchParams({ embed: '1', site: app.data.agencyId, cor: app.config.colors.primary.slice(1), pagina: detail, ...extra });
-  return new URL(`${app.paths ? '/' : import.meta.env.BASE_URL}index.html?${p}`, location.href).href;
+  return new URL(`${app.paths ? '/' : import.meta.env.BASE_URL}mapa.html?${p}`, location.href).href;
 }
 
 function showMap(app: SiteApp, box: HTMLElement, found: Listing[]): void {
@@ -412,12 +412,12 @@ function showMap(app: SiteApp, box: HTMLElement, found: Listing[]): void {
   // the map of the page before the redraw (parkMap), if it still shows the same thing
   const parked = app.mapFrame;
   if (parked?.parentElement === document.body && parked.getAttribute('src') === mapUrl(app)) {
-    box.innerHTML = '<div class="map-frame"></div>';
+    box.innerHTML = '<div class="map-frame search"></div>';
     box.firstElementChild!.moveBefore(parked, null);
     postResults(app, ids);
     return;
   }
-  box.innerHTML = `<div class="map-frame"><iframe title="Mapa 3D com os imóveis encontrados" src="${escapeHtml(mapUrl(app))}" allow="fullscreen"></iframe></div>`;
+  box.innerHTML = `<div class="map-frame search"><iframe title="Mapa 3D com os imóveis encontrados" src="${escapeHtml(mapUrl(app))}" allow="fullscreen"></iframe></div>`;
   app.mapFrame = box.querySelector('iframe');
   app.mapReady = false;
   app.pendingIds = ids;

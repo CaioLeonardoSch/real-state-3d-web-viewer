@@ -678,8 +678,9 @@ body[data-tod="night"] .link-btn.btn-danger-text {
   top: 60px;
   left: 12px;
   z-index: 2;
-  width: 300px;
-  max-height: calc(100% - 120px);
+  /* narrow and at most about half the height: the list helps, the map is the point */
+  width: 270px;
+  max-height: min(calc(100% - 120px), 52vh);
   overflow: auto;
   background: var(--panel);
   border-radius: var(--radius);
@@ -974,17 +975,17 @@ body[data-tod='night'] .price {
   margin: 12px 0;
 }
 .facts div,
-.fin-out dl div {
+:is(.fin-out, .fin-parcels) dl div {
   display: flex;
   flex-direction: column;
 }
 .facts dt,
-.fin-out dt {
+:is(.fin-out, .fin-parcels) dt {
   font-size: 12px;
   color: var(--muted);
 }
 .facts dd,
-.fin-out dd {
+:is(.fin-out, .fin-parcels) dd {
   margin: 0;
   font-weight: 600;
 }
@@ -1264,13 +1265,13 @@ body[data-tod='night'] .price {
   gap: 8px;
   margin-top: 8px;
 }
-.fin-out dl {
+:is(.fin-out, .fin-parcels) dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin: 10px 0 0;
 }
-.fin-out small {
+:is(.fin-out, .fin-parcels) small {
   font-weight: 400;
   color: var(--muted);
 }
@@ -1283,6 +1284,16 @@ body[data-tod='night'] .price {
   margin: 8px 0 0;
   font-size: 11px;
   color: var(--muted);
+}
+.fin-lock {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.fin-lock-title {
+  margin: 0 0 8px;
+  font-size: 13px;
 }
 
 .overview-btn,
@@ -2161,6 +2172,17 @@ body.embed .skip-link,
 body.embed .add-panel {
   display: none !important;
 }
+/* the site's floating WhatsApp button sits on the bottom right corner of the frame: the zoom buttons go above it */
+body.embed:not(.drawer-open) .maplibregl-ctrl-bottom-right {
+  bottom: 64px;
+}
+/* the site has the listing's own page: the card keeps photos, price and facts, and links to it */
+body.embed .drawer {
+  width: min(360px, 100%);
+}
+body.embed .drawer :is(.nearby, .description, .floorplan, .fin-sim, .lead-box, .report-box, .amenities, .media-links, .video) {
+  display: none;
+}
 body.embed .site-page-link {
   display: inline-block;
   padding: 8px 14px;
@@ -2722,17 +2744,45 @@ body.panel-body {
   outline-offset: 2px;
 }
 
-/* "Por perto" in the listing panel */
-.nearby ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
+/* "Por perto" in the listing panel: closed by default, a two-column grid of the closest of each kind */
+.nearby {
+  margin: 12px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
-.nearby li small {
+.nearby > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.nearby > summary small {
+  font-weight: 400;
   color: var(--muted);
   margin-left: 4px;
+}
+.nearby ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.nearby li {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 13px;
+}
+.nearby li > span:last-child {
+  min-width: 0;
+}
+.nearby li small {
+  display: block;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nearby-dot {
   display: inline-block;
@@ -2748,30 +2798,3 @@ body.panel-body {
   margin: 6px 0 0;
 }
 
-/* "Sol do imóvel" in the listing panel */
-.sun-box summary small {
-  color: var(--muted);
-  margin-left: 4px;
-}
-.sun-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 6px;
-}
-.sun-table th,
-.sun-table td {
-  text-align: left;
-  padding: 3px 6px 3px 0;
-  border-bottom: 1px solid var(--line);
-}
-.sun-table small {
-  color: var(--muted);
-  font-weight: normal;
-}
-.sun-box {
-  margin: 10px 0;
-}
-.sun-box > summary {
-  cursor: pointer;
-  font-weight: 600;
-}

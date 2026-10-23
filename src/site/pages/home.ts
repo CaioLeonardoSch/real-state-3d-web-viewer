@@ -9,6 +9,7 @@ import { REGION } from '../../config/region';
 import type { SiteApp } from '../app';
 import { $, plural } from './util';
 import { wantedHtml, wireWanted } from '../wanted';
+import { mapUrl } from './search';
 
 // ---------------------------------------------------------------- home
 
@@ -54,10 +55,11 @@ export function home(app: SiteApp, main: HTMLElement): void {
       const list = [...forSale].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
       parts.push(row('Anunciados recentemente', list.slice(0, 12), app.searchHref({ ...base, sort: 'recent' })));
     } else if (sec === 'mapa') {
-      parts.push(`<section class="wrap home-sec"><a class="map-cta" href="${escapeHtml(app.searchHref({ ...base, view: 'mapa' }))}" data-nav>
-        <span class="map-cta-icon">${ICONS.cube}</span>
-        <span><strong>Veja os imóveis no mapa 3D de ${escapeHtml(REGION.city)}</strong><span>Os prédios de verdade, a rua, o sol da manhã e da tarde, o que tem por perto. Coisa que fotos não mostram.</span></span>
-        <span class="btn btn-primary">Abrir o mapa</span></a></section>`);
+      // the map itself, live, not a link to it: it is what sets the site apart (loaded when scrolled near)
+      parts.push(`<section class="wrap home-sec home-map" aria-labelledby="home-map-title"><div class="sec-head"><h2 id="home-map-title">Nossos imóveis no mapa 3D de ${escapeHtml(REGION.city)}</h2>
+          <a href="${escapeHtml(app.searchHref({ ...base, view: 'mapa' }))}" data-nav class="more">Buscar no mapa ${ICONS.right}</a></div>
+        <p class="muted">O prédio de verdade, a rua e o que tem por perto. Clique num imóvel para ver os detalhes; gire com o botão direito (ou dois dedos).</p>
+        <div class="map-frame home"><iframe title="Mapa 3D com os imóveis" src="${escapeHtml(mapUrl(app))}" loading="lazy" allow="fullscreen"></iframe></div></section>`);
     } else if (sec === 'bairros') {
       const top = bairroCounts(all, false).slice(0, 8);
       if (top.length)

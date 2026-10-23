@@ -8,6 +8,7 @@ import { photoSrcset } from '../../utils/images';
 import { formatPhone, telHref, whatsappHref } from '../config';
 import { cardHtml, photosOf, placeOf, priceHtml, specsHtml } from '../cards';
 import { leadFormHtml, wireLeadForm } from '../forms';
+import type { LeadInput } from '../../backend/remote';
 import { financingHtml, wireFinancing } from '../../ui/financingSim';
 import { ICONS } from '../icons';
 import { codeOf, listingPath } from '../routes';
@@ -95,7 +96,7 @@ export function detail(app: SiteApp, main: HTMLElement): void {
             l.availability && l.availability !== 'active' ? ` · <span class="badge badge-off">${AVAILABILITY_LABELS[l.availability]}</span>` : ''
           }</p>
           <h1>${escapeHtml(l.title)}</h1>
-          <p class="d-addr">${ICONS.pin}${escapeHtml(addr)}</p>
+          <p class="d-addr"><a href="#mapa-3d" data-map-jump title="Ver no mapa 3D">${ICONS.pin}${escapeHtml(addr)}</a></p>
           <div class="d-price-mobile">${priceHtml(l, rent)}</div>
           ${
             l.availability === 'reserved'
@@ -108,20 +109,21 @@ export function detail(app: SiteApp, main: HTMLElement): void {
             <button type="button" class="btn btn-ghost fav" data-fav="${escapeHtml(l.id)}" aria-pressed="${app.saved.isFavorite(l.id)}">${ICONS.heart} Favorito</button>
             <label class="btn btn-ghost cmp"><input type="checkbox" data-cmp="${escapeHtml(l.id)}"${app.saved.isCompared(l.id) ? ' checked' : ''}> Comparar</label>
             <button type="button" class="btn btn-ghost share">${ICONS.share} Compartilhar</button>
+            <a class="btn btn-ghost" href="#mapa-3d" data-map-jump>${ICONS.cube} Mapa 3D</a>
           </div>
         </header>
         ${specsHtml(l, true)}
         ${progressHtml(l)}
+        <section id="mapa-3d" class="d-map" tabindex="-1"><h2>No mapa 3D</h2><p class="muted">${l.approximateLocation ? 'Localização aproximada: o anunciante preferiu não mostrar o endereço exato.' : 'O prédio em destaque é o do imóvel.'}</p>
+          <div class="map-frame detail" data-src="${escapeHtml(mapUrl(app, { foco: l.id }))}"><button type="button" class="btn btn-ghost map-load">${ICONS.cube} Ver o prédio no mapa 3D</button></div></section>
         ${red ? `<p class="d-red">${ICONS.down} O preço baixou ${red.percent}%${red.since ? ` em ${formatDate(red.since)}` : ''}: era ${formatBRL(red.previous)}. Valor anterior do histórico registrado na plataforma.</p>` : ''}
         <section><h2>Descrição</h2><p class="d-desc">${escapeHtml(l.description)}</p></section>
         ${l.features.length ? `<section><h2>Características</h2><ul class="d-feats">${l.features.map((f) => `<li>${AMENITY_LABELS[f]}</li>`).join('')}</ul></section>` : ''}
         <section><h2>Ficha do imóvel</h2><dl class="d-facts">${facts.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl></section>
-        ${!rent && l.availability !== 'sold' && (priceIn(l, false) ?? 0) > 0 ? `<section class="d-fin">${financingHtml(priceIn(l, false)!, 'fld')}</section>` : ''}
+        ${!rent && l.availability !== 'sold' && (priceIn(l, false) ?? 0) > 0 ? `<section class="d-fin">${financingHtml(priceIn(l, false)!, 'fld', leadFormHtml({ orgName: c.name, message: `Olá! Quero ver as parcelas do imóvel ${codeOf(l)}.`, submitLabel: 'Ver parcelas', captcha: !app.data.demo }))}</section>` : ''}
         ${video ? `<section><h2>Vídeo</h2><div class="d-video"><iframe src="${escapeHtml(video)}" title="Vídeo do imóvel" loading="lazy" allowfullscreen></iframe></div></section>` : ''}
         ${l.floorPlanImage ? `<section><h2>Planta</h2><img class="d-plan" src="${escapeHtml(l.floorPlanImage)}" alt="Planta do imóvel" loading="lazy"></section>` : ''}
         ${tour ? `<p><a class="btn btn-ghost" href="${escapeHtml(tour)}" target="_blank" rel="noopener">Tour virtual 360° ↗</a></p>` : ''}
-        <section><h2>No mapa 3D</h2><p class="muted">${l.approximateLocation ? 'Localização aproximada: o anunciante preferiu não mostrar o endereço exato.' : 'O prédio em destaque é o do imóvel.'}</p>
-          <div class="map-frame small" data-src="${escapeHtml(mapUrl(app, { foco: l.id }))}"><button type="button" class="btn btn-ghost map-load">${ICONS.cube} Ver o prédio no mapa 3D</button></div></section>
       </div>
       <aside class="detail-side">
         <div class="side-card">
@@ -143,8 +145,18 @@ export function detail(app: SiteApp, main: HTMLElement): void {
     <a class="btn btn-primary" href="#contato-imovel">${ICONS.mail} Mensagem</a>
   </div>`;
   wireGallery(main, photos);
-  lazyMap(main);
-  wireFinancing(main);
+  const loadMap = lazyMap(main);
+  // "Mapa 3D" and the address go to the map, no hash navigation (it would re-render the page)
+  main.querySelectorAll('[data-map-jump]').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      loadMap();
+      const sec = $(main, '#mapa-3d');
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      sec.focus({ preventScroll: true });
+    }),
+  );
+  const fin = wireFinancing(main);
   // no hash navigation here: it would re-render the page (popstate) and lose the ticked box
   main.querySelector('[data-visit]')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -153,13 +165,27 @@ export function detail(app: SiteApp, main: HTMLElement): void {
     main.querySelector('#contato-imovel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     box?.focus({ preventScroll: true });
   });
+  const sendLead = async (input: LeadInput) => {
+    if (app.data.demo || !app.data.remote) return null;
+    await app.data.remote.submitLead(l.id, input);
+    return null;
+  };
+  // the installments of the simulation: shown once the visitor leaves a contact, which carries the simulation
+  const finForm = main.querySelector<HTMLFormElement>('.fin-lock form.lead');
+  if (fin && finForm)
+    wireLeadForm(
+      finForm,
+      async (input) => {
+        const error = await sendLead({ ...input, message: `${input.message}
+${fin.summary()}`.trim() });
+        if (!error) fin.reveal();
+        return error;
+      },
+      'Pronto! As parcelas estão abaixo, e um corretor vai falar com você.',
+    );
   wireLeadForm(
-    $(main, 'form.lead'),
-    async (input) => {
-      if (app.data.demo || !app.data.remote) return null;
-      await app.data.remote.submitLead(l.id, input);
-      return null;
-    },
+    $(main, '.side-card form.lead'),
+    sendLead,
     (visit) =>
       DEMO && app.data.demo
         ? 'Demonstração: nada foi enviado. No site real, a mensagem chega ao corretor e em Minha conta → Contatos.'
@@ -190,7 +216,7 @@ function progressHtml(l: Listing): string {
   return `<section class="d-obra" aria-label="Andamento da obra">
     <p><strong>Obra: ${escapeHtml(progressLabel(p, total))}</strong></p>
     <div class="obra-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Andamento da obra"><span style="width:${pct}%"></span></div>
-    <p class="muted small">${escapeHtml(formatMonth(p.updatedAt))} · ${escapeHtml(CONSTRUCTION_SOURCE_LABELS[p.source])}. No mapa 3D abaixo, o que falta construir aparece translúcido.</p>
+    <p class="muted small">${escapeHtml(formatMonth(p.updatedAt))} · ${escapeHtml(CONSTRUCTION_SOURCE_LABELS[p.source])}. No mapa 3D, o que falta construir aparece translúcido.</p>
   </section>`;
 }
 
@@ -198,9 +224,9 @@ function progressHtml(l: Listing): string {
  * The 3D map (1.2 MB of code plus tiles) loads only when its box comes into view or on click: the listing page
  * is the one people open from Google and WhatsApp, often on a phone.
  */
-function lazyMap(main: HTMLElement): void {
+function lazyMap(main: HTMLElement): () => void {
   const box = main.querySelector<HTMLElement>('.map-frame[data-src]');
-  if (!box) return;
+  if (!box) return () => {};
   const load = () => {
     if (box.querySelector('iframe')) return;
     box.innerHTML = `<iframe title="Mapa 3D do imóvel" src="${escapeHtml(box.dataset.src!)}" allow="fullscreen"></iframe>`;
@@ -209,6 +235,7 @@ function lazyMap(main: HTMLElement): void {
   const io = 'IntersectionObserver' in window ? new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && load()) : null;
   io?.observe(box);
   box.querySelector('.map-load')?.addEventListener('click', load);
+  return load;
 }
 
 function wireGallery(main: HTMLElement, photos: { src: string; caption?: string }[]): void {

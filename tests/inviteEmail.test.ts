@@ -11,7 +11,7 @@ describe('invitation e-mail', () => {
     );
     expect(m.subject).toBe('Convite: equipe da Imobiliária <A>');
     expect(m.text).toMatch(/^Ana convidou você para a equipe da Imobiliária <A>, como corretor\(a\)\./);
-    expect(m.text).toMatch(/https:\/\/site\.com\.br\/app\/\?convite=abc-123/);
+    expect(m.text).toMatch(/https:\/\/site\.com\.br\/app\/painel\.html\?convite=abc-123/);
     expect(m.text).toMatch(/27\/10\/2026/);
     expect(m.html).toMatch(/Imobiliária &lt;A&gt;/);
     expect(inviteEmail({ email: 'x@y.z', role: 'owner', token: 't', expires_at: '2026-10-27T12:00:00Z' }, 'B', null, 'https://s/').text).toMatch(

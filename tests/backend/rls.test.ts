@@ -1009,26 +1009,25 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
     expect((await ana.client.storage.from('listing-photos').remove([own])).data).toHaveLength(1);
   });
 
-  it('administrador não rebaixa dono, não troca a pessoa de uma linha e não inclui ninguém sem convite', async () => {
+  it('um administrador (dono) por imobiliária; o gerente não rebaixa o dono, não troca a pessoa de uma linha e não inclui ninguém', async () => {
     const dani = await userClient('dani');
+    // a dona não põe uma segunda dona (nem por convite): só o suporte passa a administração adiante
     const inv = await ana.client.from('invitations').insert({ org_id: orgA, email: dani.email, role: 'owner' }).select('token').single();
-    await accept(dani, inv.data!.token);
+    if (!inv.error) expect((await dani.client.rpc('accept_invitation', { p_token: inv.data!.token })).error?.message).toMatch(/já tem administrador/);
     await ana.client.from('memberships').update({ role: 'admin' }).eq('org_id', orgA).eq('user_id', bruno.id);
     try {
-      const demote = await bruno.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', dani.id).select();
+      const demote = await bruno.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', ana.id).select();
       expect(demote.data ?? []).toHaveLength(0);
       const swap = await bruno.client.from('memberships').update({ user_id: carla.id }).eq('org_id', orgA).eq('user_id', bruno.id);
       expect(swap.error).not.toBeNull();
       const add = await bruno.client.from('memberships').insert({ org_id: orgA, user_id: carla.id, role: 'agent' });
       expect(add.error).not.toBeNull();
       const roles = (await service().from('memberships').select('user_id, role').eq('org_id', orgA)).data!;
-      expect(roles.find((r) => r.user_id === dani.id)?.role).toBe('owner');
-      expect(roles.some((r) => r.user_id === carla.id)).toBe(false);
-      // a dona continua mudando o papel de outra dona
-      expect((await ana.client.from('memberships').update({ role: 'admin' }).eq('org_id', orgA).eq('user_id', dani.id).select()).data).toHaveLength(1);
+      expect(roles.filter((r) => r.role === 'owner').map((r) => r.user_id)).toEqual([ana.id]);
+      expect(roles.some((r) => r.user_id === carla.id || r.user_id === dani.id)).toBe(false);
     } finally {
       await ana.client.from('memberships').update({ role: 'agent' }).eq('org_id', orgA).eq('user_id', bruno.id);
-      await service().from('memberships').delete().eq('org_id', orgA).eq('user_id', dani.id);
+      await service().from('invitations').delete().eq('org_id', orgA).eq('email', dani.email);
     }
   });
 

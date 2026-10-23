@@ -56,7 +56,7 @@ describe('endereços do site do cliente', () => {
 
 describe('servidor das páginas no domínio do cliente', () => {
   it('deixa passar a plataforma, os arquivos, o que não é leitura e os domínios sem cliente', async () => {
-    for (const url of ['http://localhost:4173/', 'http://127.0.0.1/', 'https://mapa.exemplo.com/', 'https://x.pages.dev/', 'https://casanova.com.br/assets/site-1.js', 'https://casanova.com.br/index.html']) {
+    for (const url of ['http://localhost:4173/', 'http://127.0.0.1/', 'https://mapa.exemplo.com/', 'https://x.pages.dev/', 'https://casanova.com.br/assets/site-1.js', 'https://casanova.com.br/mapa.html']) {
       const { res, calls } = await ask(url);
       expect(res, url).toBeNull();
       expect(calls).toHaveLength(0);
@@ -125,6 +125,8 @@ describe('servidor das páginas no domínio do cliente', () => {
       [`/imovel?id=${id}`, '/imovel/apartamento-3-quartos-no-centro-ap-102'],
       ['/?p=sobre', '/sobre'],
       ['/site.html', '/'],
+      ['/index.html', '/'],
+      ['/index.html?p=sobre', '/sobre'],
       ['/contato/', '/contato'],
     ];
     for (const [from, to] of cases) {

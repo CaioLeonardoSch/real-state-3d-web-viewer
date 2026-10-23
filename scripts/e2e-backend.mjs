@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Browser check of the site connected to the LOCAL Supabase (`npm run db:start` first):
-// builds dist-backend/ with the local URL and key, then: sign-up → client → announce with photos → the public
+// builds dist-backend/ with the local URL and key, then: support creates the client and its administrator → the
+// administrator creates a broker (temporary passwords, changed on the first login) → announce with photos → the public
 // sees it (without the private fields) → lower the price → delete. Never point this at a production project.
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { cli, supabaseStatus } from './lib/cli.mjs';
@@ -18,6 +19,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'dist-backend';
 const PORT = 4179;
 const URL_ = `http://127.0.0.1:${PORT}/`;
+// the 3D map, where the account panel opens; the root is the client's site
+const MAP_ = `${URL_}mapa.html`;
 const EXEC = process.env.CHROMIUM_PATH ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -48,7 +51,7 @@ async function waitIdle(page) {
   await sleep(400);
 }
 
-async function open(browser, url = URL_) {
+async function open(browser, url = MAP_) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   const errors = [];
@@ -82,27 +85,25 @@ try {
   const tag = Date.now().toString(36);
   const PASSWORD = 'senha-segura-123';
 
-  // ---- someone without an invitation cannot create a client
+  // ---- nobody creates an account alone: only "Entrar", and "Esqueci minha senha"
   const stranger = await open(browser);
   check('"Entrar" aparece quando há backend', await stranger.page.isVisible('.account-toggle'));
   await stranger.page.click('.add-toggle');
   await sleep(300);
   const note = await stranger.page.textContent('#account-panel .account-note');
   check('"Anunciar" sem login abre a conta e explica', /Entre na sua conta/.test(note ?? ''), note);
-  await stranger.page.click('#account-panel [data-action="switch"]');
-  await stranger.page.fill('#account-panel input[name="name"]', 'Sem Convite');
-  await stranger.page.fill('#account-panel input[name="email"]', `sem-convite-${tag}@teste.local`);
-  await stranger.page.fill('#account-panel input[name="password"]', PASSWORD);
-  await stranger.page.click('#account-panel button[type="submit"]');
-  await stranger.page.waitForSelector('#account-panel .account-empty', { timeout: 15000 });
-  const strangerUi = await stranger.page.evaluate(() => ({
-    orgForm: !!document.querySelector('#account-panel input[name="orgName"]'),
-    text: document.querySelector('#account-panel .account-empty')?.textContent ?? '',
+  const loginUi = await stranger.page.evaluate(() => ({
+    name: !!document.querySelector('#account-panel input[name="name"]'),
+    link: document.querySelector('#account-panel [data-action="switch"]')?.textContent ?? '',
   }));
-  check('conta sem convite não cadastra imobiliária', !strangerUi.orgForm && /convite/.test(strangerUi.text), JSON.stringify(strangerUi));
+  await stranger.page.click('#account-panel [data-action="switch"]');
+  await stranger.page.fill('#account-panel input[name="email"]', `sem-conta-${tag}@teste.local`);
+  await stranger.page.click('#account-panel button[type="submit"]');
+  await stranger.page.waitForFunction(() => /link para escolher a senha nova/.test(document.querySelector('#account-panel .account-note')?.textContent ?? ''), null, { timeout: 15000 });
+  check('sem "criar conta": só entrar; "Esqueci minha senha" manda o link (sem dizer se o e-mail tem conta)', !loginUi.name && /Esqueci/.test(loginUi.link), JSON.stringify(loginUi));
   await stranger.ctx.close();
 
-  // ---- the platform's support staff creates the client and invites its owner
+  // ---- the platform's support staff creates the client and its administrator
   const staffEmail = `suporte-${tag}@teste.local`;
   const svc = createClient(status.API_URL, status.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const created = await svc.auth.admin.createUser({ email: staffEmail, password: PASSWORD, email_confirm: true });
@@ -130,46 +131,65 @@ try {
   await staff.page.fill('#account-panel input[name="orgName"]', 'Imobiliária Teste Ação');
   const slug = await staff.page.inputValue('#account-panel input[name="orgSlug"]');
   await staff.page.fill('#account-panel input[name="orgSlug"]', `${slug}-${tag}`);
+  await staff.page.fill('#account-panel input[name="ownerName"]', 'Dona Teste');
   await staff.page.fill('#account-panel input[name="ownerEmail"]', ownerEmail);
   await staff.page.click('#account-panel form[data-form="org"] button[type="submit"]');
-  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 15000 }).catch(async (e) => {
+  await staff.page.waitForSelector('#account-panel .org-result input', { timeout: 30000 }).catch(async (e) => {
     throw new Error(`${e.message}\npainel: ${(await staff.page.textContent('#account-panel'))?.replace(/\s+/g, ' ').slice(0, 800)}`);
   });
-  const ownerLink = await staff.page.inputValue('#account-panel .org-result input');
+  const ownerTemp = await staff.page.inputValue('#account-panel .org-result input');
   await staff.page.screenshot({ path: path.join(SHOTS, 'backend-suporte.png') });
-  check('o suporte cadastra a imobiliária e recebe o link do convite do dono',
-    slug === 'imobiliaria-teste-acao' && /\?convite=[0-9a-f-]{36}$/.test(ownerLink), ownerLink);
+  check('o suporte cadastra a imobiliária e o administrador dela, e vê a senha provisória (uma vez)',
+    slug === 'imobiliaria-teste-acao' && /^[A-Za-z2-9]{12}$/.test(ownerTemp), ownerTemp.replace(/./g, '•'));
   await staff.ctx.close();
+  const clientId = (await svc.from('organizations').select('id').eq('slug', `${slug}-${tag}`).single()).data.id;
 
-  // ---- the owner opens the link, creates the account with the invited e-mail and accepts
-  const owner = await open(browser, ownerLink);
-  await owner.page.waitForSelector('#account-panel:not([hidden]) input[name="name"]', { timeout: 15000 });
-  const prefilled = await owner.page.inputValue('#account-panel input[name="email"]');
-  await owner.page.fill('#account-panel input[name="name"]', 'Dona Teste');
-  await owner.page.fill('#account-panel input[name="password"]', PASSWORD);
-  await owner.page.click('#account-panel button[type="submit"]');
-  await owner.page.click('#account-panel [data-accept]', { timeout: 15000 });
-  await owner.page.waitForFunction(() => document.querySelector('.account-toggle')?.textContent === 'Imobiliária Teste Ação', null, { timeout: 15000 });
-  check('o dono entra pelo link (e-mail já preenchido) e aceita o convite', prefilled === ownerEmail && !(await owner.page.evaluate(() => location.search.includes('convite'))), prefilled);
+  /** Logs in with the temporary password: nothing but "choose your password" until it is changed. */
+  const firstLogin = async (p, email, temp, shot) => {
+    await p.click('.account-toggle');
+    await p.fill('#account-panel input[name="email"]', email);
+    await p.fill('#account-panel input[name="password"]', temp);
+    await p.click('#account-panel button[type="submit"]');
+    await p.waitForSelector('#account-panel form[data-form="new-password"]', { timeout: 15000 });
+    if (shot) await p.screenshot({ path: path.join(SHOTS, shot) });
+    const locked = await p.evaluate(() => document.querySelectorAll('#account-panel form').length === 1);
+    await p.fill('#account-panel form[data-form="new-password"] input[name="password"]', PASSWORD);
+    await p.fill('#account-panel form[data-form="new-password"] input[name="again"]', 'outra-senha-123');
+    await p.click('#account-panel form[data-form="new-password"] button[type="submit"]');
+    await p.waitForSelector('#account-panel form[data-form="new-password"] .a-error:not([hidden])');
+    const mismatch = await p.textContent('#account-panel form[data-form="new-password"] .a-error');
+    await p.fill('#account-panel form[data-form="new-password"] input[name="again"]', PASSWORD);
+    await p.click('#account-panel form[data-form="new-password"] button[type="submit"]');
+    await p.waitForSelector('#account-panel form[data-form="new-password"]', { state: 'detached', timeout: 15000 });
+    const marked = (await svc.from('password_change_required').select('user_id')).data ?? [];
+    return { locked, mismatch, cleared: !(await svc.auth.admin.listUsers({ perPage: 1000 })).data.users.some((u) => u.email === email && marked.some((m) => m.user_id === u.id)) };
+  };
 
-  // ---- the owner invites a broker from the team screen
+  // ---- the administrator enters with the temporary password and must choose their own first
+  const owner = await open(browser);
+  const ownerFirst = await firstLogin(owner.page, ownerEmail, ownerTemp, 'backend-senha-nova.png');
+  check('o administrador entra com a senha provisória e só segue depois de escolher a dele',
+    ownerFirst.locked && /não são iguais/.test(ownerFirst.mismatch ?? '') && ownerFirst.cleared, JSON.stringify(ownerFirst));
+
+  // ---- the administrator creates a broker's access from the team screen
   const brokerEmail = `corretor-${tag}@teste.local`;
-  await owner.page.fill('#account-panel form[data-form="invite"] input[name="email"]', brokerEmail);
-  await owner.page.selectOption('#account-panel form[data-form="invite"] select[name="role"]', 'agent');
-  await owner.page.click('#account-panel form[data-form="invite"] button[type="submit"]');
-  await owner.page.waitForSelector('#account-panel .invite-result input', { timeout: 15000 });
-  const brokerLink = await owner.page.inputValue('#account-panel .invite-result input');
+  await owner.page.waitForSelector('#account-panel form[data-form="member"]', { timeout: 15000 });
+  const roleField = await owner.page.evaluate(() => document.querySelector('#account-panel form[data-form="member"] [name="role"]')?.getAttribute('type'));
+  await owner.page.fill('#account-panel form[data-form="member"] input[name="name"]', 'Corretor Teste');
+  await owner.page.fill('#account-panel form[data-form="member"] input[name="email"]', brokerEmail);
+  await owner.page.click('#account-panel form[data-form="member"] button[type="submit"]');
+  await owner.page.waitForSelector('#account-panel .member-result input', { timeout: 30000 });
+  const brokerTemp = await owner.page.inputValue('#account-panel .member-result input');
   await owner.page.screenshot({ path: path.join(SHOTS, 'backend-equipe.png') });
-  const pendingShown = await owner.page.evaluate((e) => [...document.querySelectorAll('#account-panel .account-list li')].some((li) => li.textContent.includes(e)), brokerEmail);
-  check('o dono convida um corretor pela tela', /\?convite=/.test(brokerLink) && pendingShown, brokerLink);
-  const inviteNote = await owner.page.textContent('#account-panel .invite-result .a-hint');
-  const mailFor = (to) => fns?.mails().find((m) => m.to?.[0] === to && /Convite/.test(m.subject));
-  const ownerMail = mailFor(ownerEmail);
-  const brokerMail = mailFor(brokerEmail);
-  check('os convites (do dono e do corretor) chegam por e-mail, com o mesmo link (provedor falso)',
-    !!fns && /enviado por e-mail/.test(inviteNote ?? '') && ownerMail?.text.includes(ownerLink) && brokerMail?.text.includes(brokerLink) &&
-      /Dona Teste convidou você para a equipe da Imobiliária Teste Ação, como corretor/.test(brokerMail?.text ?? ''),
-    JSON.stringify({ inviteNote, owner: ownerMail?.subject, broker: brokerMail?.text?.split('\n')[0] }));
+  const team0 = await owner.page.evaluate(() => [...document.querySelectorAll('#account-panel li[data-user]')].map((li) => li.textContent.replace(/\s+/g, ' ')));
+  check('o administrador cria o acesso de um corretor (só corretor) e vê a senha provisória',
+    roleField === 'hidden' && /^[A-Za-z2-9]{12}$/.test(brokerTemp) && brokerTemp !== ownerTemp && team0.some((t) => t.includes('Corretor Teste')), JSON.stringify(team0));
+  // one administrator per agency: even through the function, the administrator cannot create another
+  const asOwner = createClient(status.API_URL, status.ANON_KEY, { auth: { persistSession: false } });
+  await asOwner.auth.signInWithPassword({ email: ownerEmail, password: PASSWORD });
+  const second = await asOwner.functions.invoke('create-user', { body: { org_id: clientId, email: `outro-${tag}@teste.local`, name: 'Outro', role: 'owner' } });
+  const stray = (await svc.auth.admin.listUsers({ perPage: 1000 })).data.users.some((u) => u.email === `outro-${tag}@teste.local`);
+  check('um administrador por imobiliária: o administrador não cria outro (nem pela função)', !!second.error && !stray, String(second.error?.context?.status ?? second.error));
 
   // ---- "Importação automática (XML)": the owner sets the CRM's feed and asks for a reading now
   await owner.page.click('#account-panel details[data-section="feed"] summary');
@@ -188,20 +208,14 @@ try {
     /https:\/\//.test(feedErr ?? '') && /até 1 hora/.test(feedUi.note) && feedUi.url === 'https://crm.exemplo/feed.xml' && feedUi.remove,
     JSON.stringify({ feedErr, ...feedUi }));
 
-  // ---- the broker joins through the link and announces
-  const { page, errors } = await open(browser, brokerLink);
+  // ---- the broker enters with the temporary password, chooses their own, and announces
+  const { page, errors } = await open(browser);
   const rows = () => page.evaluate(() => document.querySelectorAll('#results button[data-id]').length);
   const before = await rows();
-  await page.waitForSelector('#account-panel:not([hidden]) input[name="name"]', { timeout: 15000 });
-  await page.fill('#account-panel input[name="name"]', 'Corretor Teste');
-  await page.fill('#account-panel input[name="password"]', PASSWORD);
-  await page.click('#account-panel button[type="submit"]');
-  await page.waitForSelector('#account-panel [data-accept]', { timeout: 15000 });
-  await page.screenshot({ path: path.join(SHOTS, 'backend-convite.png') });
-  await page.click('#account-panel [data-accept]');
-  await page.waitForFunction(() => document.querySelector('.account-toggle')?.textContent === 'Imobiliária Teste Ação', null, { timeout: 15000 });
-  const brokerUi = await page.evaluate(() => ({ team: !!document.querySelector('#account-panel form[data-form="invite"]') }));
-  check('o corretor entra pelo link; corretor não vê a gestão da equipe', !brokerUi.team, JSON.stringify(brokerUi));
+  const brokerFirst = await firstLogin(page, brokerEmail, brokerTemp);
+  const brokerUi = await page.evaluate(() => ({ team: !!document.querySelector('#account-panel form[data-form="member"]') }));
+  check('o corretor entra com a senha provisória e escolhe a dele; corretor não vê a gestão da equipe',
+    brokerFirst.locked && brokerFirst.cleared && !brokerUi.team, JSON.stringify({ ...brokerFirst, ...brokerUi }));
   await owner.page.reload();
   await owner.page.waitForSelector('body[data-ready="true"]');
   await owner.page.click('.account-toggle');
@@ -278,7 +292,7 @@ try {
   await platform.ctx.close();
   check('o mapa da plataforma não mostra os anúncios dos clientes ao público (nem map_listings sem o cliente)',
     !onPlatform && Array.isArray(viaRpc) && viaRpc.length === 0, JSON.stringify({ onPlatform, viaRpc: viaRpc?.length }));
-  const visitor = await open(browser, `${URL_}?embed=1&site=${orgId}&imovel=${id}`);
+  const visitor = await open(browser, `${MAP_}?embed=1&site=${orgId}&imovel=${id}`);
   await detailReady(visitor.page);
   const pub = await visitor.page.evaluate((id) => ({
     rows: document.querySelectorAll('#results button[data-id]').length,
@@ -296,6 +310,10 @@ try {
   // ---- the visitor sends a message and clicks WhatsApp; the broker gets it
   // every local run comes from the same origin: age earlier test leads so the 5-per-10-minutes limit does not apply
   await svc.from('leads').update({ created_at: '2020-01-01T00:00:00Z' }).gt('created_at', '2020-01-02');
+  // embedded in the site the drawer is slim (the message form is on the site's listing page): the drawer's own form,
+  // used on the map page, is exercised here by leaving the slim mode
+  const slim = await visitor.page.isHidden('#drawer .lead-box');
+  await visitor.page.evaluate(() => document.body.classList.remove('embed'));
   await visitor.page.click('#drawer .lead-box summary');
   await visitor.page.fill('#drawer .lead-form input[name="name"]', 'Maria Compradora');
   await visitor.page.fill('#drawer .lead-form input[name="phone"]', '(47) 98888-7777');
@@ -311,7 +329,7 @@ try {
   const [popup] = await Promise.all([visitor.ctx.waitForEvent('page'), visitor.page.click('#drawer .btn-whatsapp')]);
   await popup.close();
   check('o visitante pede uma visita (só com a autorização da LGPD) e clica no WhatsApp',
-    /autorização/.test(refused ?? '') && /Pedido de visita enviado, Maria!/.test(done ?? ''), `${refused} / ${done}`);
+    slim && /autorização/.test(refused ?? '') && /Pedido de visita enviado, Maria!/.test(done ?? ''), `${slim} / ${refused} / ${done}`);
   let mail;
   for (let i = 0; i < 30 && !mail; i++) {
     mail = fns?.mails().find((m) => m.text?.includes('Maria Compradora'));
@@ -373,7 +391,7 @@ try {
   await panel.waitForSelector('#account-panel .lead-item', { timeout: 15000 });
   const [csvFile] = await Promise.all([panel.waitForEvent('download'), panel.click('#account-panel [data-action="export"]')]);
   const csv = readFileSync(await csvFile.path(), 'utf8');
-  await Promise.all([panel.waitForURL(/index\.html\?imovel=/), panel.click(`#account-panel .listing-row[data-listing="${id}"] [data-action="open"]`)]);
+  await Promise.all([panel.waitForURL(/mapa\.html\?imovel=/), panel.click(`#account-panel .listing-row[data-listing="${id}"] [data-action="open"]`)]);
   check('painel.html: gestão sem o mapa — anúncios e contatos, busca, planilha (CSV) e "Ver no mapa"',
     pUi.title === 'Gestão' && !pUi.map && /1 contato/.test(pUi.count) && csv.startsWith('\uFEFFData;Nome') && csv.includes('Maria Compradora') &&
       panel.url().includes(`imovel=${id}`) && panelErrs.length === 0,
@@ -618,12 +636,12 @@ try {
     has(/^Corretor Teste criou o anúncio "Casa publicada no backend"/) && has(/alterou "Casa publicada no backend": preço de R\$ 880\.000 para R\$ 800\.000/) &&
       has(/moveu "Casa editada no backend" para a lixeira/) && has(/restaurou "Casa editada no backend"/) && has(/excluiu definitivamente "Casa editada no backend"/) &&
       has(/alterou "Casa editada no backend": título, exibição do endereço/) && !history.some((h) => /um anúncio/.test(h)) &&
-      has(/Corretor Teste entrou na equipe como corretor/) && has(/convidou corretor-/),
+      has(/Corretor Teste entrou na equipe como corretor/),
     JSON.stringify(history.slice(0, 12)));
   await owner2.ctx.close();
 
-  // ---- the client's site (site.html): the owner customizes it, a visitor offers a property
-  const siteUrl = `${URL_}site.html?imobiliaria=${slug}-${tag}`;
+  // ---- the client's site (index.html): the owner customizes it, a visitor offers a property
+  const siteUrl = `${URL_}?imobiliaria=${slug}-${tag}`;
   const siteOpen = async (url) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
