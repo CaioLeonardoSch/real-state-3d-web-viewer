@@ -1687,6 +1687,12 @@ async function main() {
         return { altitude: Math.round(after.altitudeM + groundCentre), groundUnder: Math.round(groundUnder), before: Math.round(c.altitudeM + groundCentre) };
       });
       check('relief: the camera stays above the ground of the hill behind it', cam.altitude > cam.groundUnder, JSON.stringify(cam));
+      // for the README: the Morro do Boa Vista from the west, without the list and the first-visit hint
+      await rp.evaluate(() => {
+        document.querySelector('.map-hint button')?.click();
+        document.querySelector('[data-action="toggle-results"][aria-expanded="true"]')?.click();
+        window.__demo.map.jumpTo({ center: [-48.8274, -26.2922], zoom: 14.6, pitch: 68, bearing: 80 });
+      });
       await shot(rp, 'desktop-relief.png');
       check('no console errors (relief)', rErrors.length === 0, rErrors.join(' | '));
       await rctx.close();
