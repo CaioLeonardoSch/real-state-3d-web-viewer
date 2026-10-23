@@ -4,10 +4,12 @@
 // and written as public/data/<region>-relevo.pmtiles (raster-dem, "mapbox" Terrain-RGB encoding, 0.1 m steps,
 // lossless WebP). meta.json gets "terrainTiles" and "terrain" (source, zooms), which the map reads (src/data/load.ts).
 //
-// Zooms TERRAIN_MIN_ZOOM to TERRAIN_MAX_ZOOM: at z13 a 512 px tile has ~8.6 m per pixel in Joinville, the detail of
-// the terrain of the big web maps; closer, the map stretches the z13 tiles. The tiles cover the whole area the map can
-// show (the region's bbox grown by 30% on each side, as maxBounds in src/map/scene.ts), so the relief never ends in a
-// cliff inside the view. Where the WCS has no data (outside Santa Catarina, the sea) the ground is at 0 m.
+// Zooms TERRAIN_MIN_ZOOM to TERRAIN_MAX_ZOOM: at z12 a 512 px tile has ~17 m per pixel in Joinville, the detail of
+// the terrain tiles of the web map providers (MapTiler's go to z12); closer, the map stretches the z12 tiles. The
+// relief's shape barely changes (MapLibre's terrain mesh is coarser than that); z13 (~9 m) would only sharpen the
+// slope shading up close, for a file almost three times as large (64 MB instead of 24 MB). The tiles cover the whole
+// area the map can show (the region's bbox grown by 30% on each side, as maxBounds in src/map/scene.ts), so the relief
+// never ends in a cliff inside the view. Where the WCS has no data (outside Santa Catarina, the sea) the ground is at 0 m.
 //
 // Downloads are kept in .cache/terrain (not versioned), one GeoTIFF per CHUNK_M square, one request at a time.
 // Behind a proxy, Node's fetch needs NODE_USE_ENV_PROXY=1.
@@ -39,7 +41,7 @@ const CHUNK_M = 10_000;
 /** Extent of the State's coverage (its DescribeCoverage); the WCS refuses requests that go past it. */
 const COVERAGE_UTM = { e0: 214_794, n0: 6_751_542, e1: 766_209, n1: 7_128_977 };
 export const TERRAIN_MIN_ZOOM = 8;
-export const TERRAIN_MAX_ZOOM = 13;
+export const TERRAIN_MAX_ZOOM = 12;
 export const TERRAIN_TILE_PX = 512;
 const refresh = process.argv.includes('--refresh');
 
@@ -122,6 +124,61 @@ for (let n = N0; n < N1; n += CHUNK_M) {
   }
 }
 process.stdout.write('\n');
+
+// Gaps in the survey (seams between its blocks, a few cells wide, that would cut trenches down to 0 m across the
+// hills): filled from the cells around them, ring by ring, up to FILL_MAX_CELLS cells from the data. Beyond that (the
+// sea, outside Santa Catarina) the ground stays at 0 m.
+const FILL_MAX_CELLS = 60;
+{
+  const mark = new Uint8Array(W * H);
+  const isGap = (i) => Number.isNaN(grid[i]);
+  const neighbours = (i, out) => {
+    out.length = 0;
+    const x = i % W;
+    const y = (i - x) / W;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if ((dx || dy) && x + dx >= 0 && x + dx < W && y + dy >= 0 && y + dy < H) out.push(i + dy * W + dx);
+      }
+    }
+    return out;
+  };
+  const nb = [];
+  let frontier = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (isGap(i) && neighbours(i, nb).some((j) => !isGap(j))) {
+      frontier.push(i);
+      mark[i] = 1;
+    }
+  }
+  let filled = 0;
+  for (let ring = 0; ring < FILL_MAX_CELLS && frontier.length; ring++) {
+    const values = frontier.map((i) => {
+      let sum = 0;
+      let n = 0;
+      for (const j of neighbours(i, nb)) {
+        if (!isGap(j)) {
+          sum += grid[j];
+          n++;
+        }
+      }
+      return sum / n;
+    });
+    frontier.forEach((i, k) => (grid[i] = values[k]));
+    filled += frontier.length;
+    const next = [];
+    for (const i of frontier) {
+      for (const j of neighbours(i, nb)) {
+        if (isGap(j) && !mark[j]) {
+          mark[j] = 1;
+          next.push(j);
+        }
+      }
+    }
+    frontier = next;
+  }
+  console.log(`MDT: ${filled} células sem dado preenchidas pelo terreno em volta`);
+}
 
 /** Height at a UTM point, bilinear between the grid cells (cell centres); 0 m where there is no data. */
 function heightAt(e, n) {

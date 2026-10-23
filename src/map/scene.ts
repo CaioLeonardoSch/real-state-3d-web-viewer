@@ -7,6 +7,7 @@ import type {
   GeoJSONSource,
   LayerSpecification,
   MapGeoJSONFeature,
+  SourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Geometry, Point, Polygon, MultiPolygon } from 'geojson';
@@ -400,6 +401,20 @@ export class Scene {
     });
   }
 
+  private reliefSources(): Record<string, SourceSpecification> {
+    const t = this.data.meta.terrain;
+    if (!this.data.terrainUrl || !t) return {};
+    const dem = {
+      type: 'raster-dem' as const,
+      url: `pmtiles://${this.data.terrainUrl}`,
+      tileSize: t.tileSize,
+      encoding: t.encoding,
+      minzoom: t.minzoom,
+      maxzoom: t.maxzoom,
+    };
+    return { terrain: { ...dem, attribution: TERRAIN_ATTRIBUTION }, 'relief-shade': dem };
+  }
+
   /** The base layers with the shading of the slopes over the ground, green areas and water, under the roads. */
   private withRelief(layers: LayerSpecification[], base: BaseStyle): LayerSpecification[] {
     if (!this.data.terrainUrl) return layers;
@@ -440,20 +455,9 @@ export class Scene {
         ...(this.data.detailUrl
           ? { detail: { type: 'vector' as const, url: `pmtiles://${this.data.detailUrl}`, minzoom: 15, maxzoom: 15 } }
           : {}),
-        // relief (scripts/build-terrain.mjs): the ground's height, also shaded on the slopes ('relief-shade')
-        ...(this.data.terrainUrl && this.data.meta.terrain
-          ? {
-              terrain: {
-                type: 'raster-dem' as const,
-                url: `pmtiles://${this.data.terrainUrl}`,
-                tileSize: this.data.meta.terrain.tileSize,
-                encoding: this.data.meta.terrain.encoding,
-                minzoom: this.data.meta.terrain.minzoom,
-                maxzoom: this.data.meta.terrain.maxzoom,
-                attribution: TERRAIN_ATTRIBUTION,
-              },
-            }
-          : {}),
+        // relief (scripts/build-terrain.mjs): the ground's height ('terrain') and the shading of the slopes
+        // ('relief-shade'); the same file twice, as MapLibre asks (one source for both draws the shading worse)
+        ...this.reliefSources(),
         boundary: { type: 'geojson', data: this.data.boundary },
         listings: { type: 'geojson', data: this.listingCollection() },
         'listing-pins': {

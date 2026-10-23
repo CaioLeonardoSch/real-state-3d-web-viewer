@@ -57,6 +57,13 @@ com download gratuito na plataforma [SIGSC](https://sigsc2.ciasc.sc.gov.br/) (o 
 contato geoprocessamento@sde.sc.gov.br). Dá para calcular a altura de **todos** os contornos do OSM de uma vez: a
 média de (MDS − MDT) dentro de cada contorno. Mesma limitação de data: não tem os prédios depois de 2012.
 
+**Atualização de 23/10:** o download pela página do SIGSC pede login pelo Gov.BR, mas o servidor de mapas do Estado
+publica o MDT e o MDS num **WCS público, sem login** (`https://sigsc.sc.gov.br/sigserver/SIGSC/wcs`, coberturas
+`SIGSC__MDT-2012` e `SIGSC__MDS-2012`, em SIRGAS 2000 / UTM 22S, 1 m), que já entrega o recorte reduzido
+(`scalefactor`). O relevo do mapa vem daí (`scripts/build-terrain.mjs`, README, "Relevo"). O GetCapabilities declara
+"Fees: NONE" e "AccessConstraints: NONE", mas isso é a configuração padrão do servidor, não uma licença: o uso em
+produto continua a confirmar.
+
 ### Prédios novos
 
 - **`SEPUR/outorga_onerosa_do_direito_de_construir_oodc_sepur`**: 51 lotes na região com outorga para construir acima

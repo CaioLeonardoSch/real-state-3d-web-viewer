@@ -214,9 +214,9 @@ export class BaseStyle {
     ];
   }
 
-  /** Shading of the slopes (relief), drawn over the ground, green areas and water ('terrain' source). */
+  /** Shading of the slopes (relief), drawn over the ground, green areas and water ('relief-shade' source). */
   reliefLayer(t: Theme): LayerSpecification {
-    return { id: 'relief-shade', type: 'hillshade', source: 'terrain', paint: this.reliefPaint(t) };
+    return { id: 'relief-shade', type: 'hillshade', source: 'relief-shade', paint: this.reliefPaint(t) };
   }
 
   /** Colours of the slope shading and where its light comes from: the sun by day (src/map/lighting.ts). */
@@ -477,21 +477,27 @@ export class BaseStyle {
           'fill-extrusion-vertical-gradient': false,
         },
       },
-      {
-        // canopy mass of woods (woods shrunk by 6 m): the edge trees stand in front of it and taller crowns
-        // (trees layer) poke out of its top
-        id: 'wood-canopy',
-        type: 'fill-extrusion',
-        source: 'osm',
-        'source-layer': 'canopy',
-        minzoom: Z_3D_START,
-        paint: {
-          'fill-extrusion-pattern': 'canopy-facets',
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, WOOD_CANOPY_M],
-          'fill-extrusion-base': 0,
-          'fill-extrusion-vertical-gradient': false,
-        },
-      },
+      // canopy mass of woods (woods shrunk by 6 m): the edge trees stand in front of it and taller crowns
+      // (trees layer) poke out of its top. Not on the relief: one block per wood (and per tile) stands at a single
+      // height, a flat slab cutting through the hillside; there the woods are their green ground, the slope shading
+      // and the trees, which stand each on its own ground
+      ...(this.data.terrainUrl
+        ? []
+        : ([
+            {
+              id: 'wood-canopy',
+              type: 'fill-extrusion',
+              source: 'osm',
+              'source-layer': 'canopy',
+              minzoom: Z_3D_START,
+              paint: {
+                'fill-extrusion-pattern': 'canopy-facets',
+                'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, WOOD_CANOPY_M],
+                'fill-extrusion-base': 0,
+                'fill-extrusion-vertical-gradient': false,
+              },
+            },
+          ] satisfies LayerSpecification[])),
       {
         // low-poly trees: trunk, faceted crown and its top (properties p, b, h, v from scripts/lib/scenery.mjs)
         id: 'trees',
