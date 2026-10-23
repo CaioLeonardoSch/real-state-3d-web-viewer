@@ -466,6 +466,8 @@ async function main() {
     await page.keyboard.press('Escape');
     await sleep(400);
     check('Esc closes the drawer', !(await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'))));
+    // Esc closes through history.back(): wait for it to land, or it could close the drawer the next click opens
+    await page.waitForFunction(() => !new URLSearchParams(location.search).has('imovel'), null, { timeout: 15000 });
 
     // close button
     await clickSomeListing(page);
