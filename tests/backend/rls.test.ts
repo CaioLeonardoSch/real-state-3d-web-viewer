@@ -798,6 +798,9 @@ describe.skipIf(!run)('backend: clientes, anúncios e permissões', () => {
   it('visitante não cria cliente nem anúncio', async () => {
     const r = await anon().rpc('create_organization', { p_name: 'X', p_slug: `x-${tag}` });
     expect(r.error).not.toBeNull();
+    // as funções de quem entrou nem respondem ao visitante (antes devolviam lista vazia)
+    for (const [fn, args] of [['my_organizations', {}], ['org_members', { p_org: orgA }], ['org_audit', { p_org: orgA }]] as const)
+      expect((await anon().rpc(fn, args)).error?.code).toBe('42501');
     const l = await anon().from('listings').insert(listingRow(orgA));
     expect(l.error).not.toBeNull();
   });
