@@ -43,6 +43,23 @@ const check = (name, pass, detail = '') => {
   console.log(`${pass ? '✔' : '✘'} ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
+/**
+ * Screenshot for docs/screenshots, once the 3D map of the page (or of an embedded frame) has stopped: with the relief
+ * each frame is slow in software WebGL (CI) while the map still draws, and a shot then waits for a frame for a long
+ * time. A map that does not settle in time is shot as it is.
+ */
+async function shot(page, name) {
+  for (const frame of page.frames()) {
+    await frame
+      .waitForFunction(() => {
+        const m = window.__demo?.map;
+        return !m || (m.loaded() && !m.isMoving() && m.areTilesLoaded());
+      }, null, { timeout: 30000 })
+      .catch(() => {});
+  }
+  return page.screenshot({ path: path.join(SHOTS, name), timeout: 90000 });
+}
+
 async function waitIdle(page) {
   await page.waitForFunction(() => {
     const m = window.__demo?.map;
@@ -138,20 +155,20 @@ try {
     throw new Error(`${e.message}\npainel: ${(await staff.page.textContent('#account-panel'))?.replace(/\s+/g, ' ').slice(0, 800)}`);
   });
   const ownerTemp = await staff.page.inputValue('#account-panel .org-result input');
-  await staff.page.screenshot({ path: path.join(SHOTS, 'backend-suporte.png') });
+  await shot(staff.page, 'backend-suporte.png');
   check('o suporte cadastra a imobiliária e o administrador dela, e vê a senha provisória (uma vez)',
     slug === 'imobiliaria-teste-acao' && /^[A-Za-z2-9]{12}$/.test(ownerTemp), ownerTemp.replace(/./g, '•'));
   await staff.ctx.close();
   const clientId = (await svc.from('organizations').select('id').eq('slug', `${slug}-${tag}`).single()).data.id;
 
   /** Logs in with the temporary password: nothing but "choose your password" until it is changed. */
-  const firstLogin = async (p, email, temp, shot) => {
+  const firstLogin = async (p, email, temp, shotName) => {
     await p.click('.account-toggle');
     await p.fill('#account-panel input[name="email"]', email);
     await p.fill('#account-panel input[name="password"]', temp);
     await p.click('#account-panel button[type="submit"]');
     await p.waitForSelector('#account-panel form[data-form="new-password"]', { timeout: 15000 });
-    if (shot) await p.screenshot({ path: path.join(SHOTS, shot) });
+    if (shotName) await shot(p, shotName);
     const locked = await p.evaluate(() => document.querySelectorAll('#account-panel form').length === 1);
     await p.fill('#account-panel form[data-form="new-password"] input[name="password"]', PASSWORD);
     await p.fill('#account-panel form[data-form="new-password"] input[name="again"]', 'outra-senha-123');
@@ -180,7 +197,7 @@ try {
   await owner.page.click('#account-panel form[data-form="member"] button[type="submit"]');
   await owner.page.waitForSelector('#account-panel .member-result input', { timeout: 30000 });
   const brokerTemp = await owner.page.inputValue('#account-panel .member-result input');
-  await owner.page.screenshot({ path: path.join(SHOTS, 'backend-equipe.png') });
+  await shot(owner.page, 'backend-equipe.png');
   const team0 = await owner.page.evaluate(() => [...document.querySelectorAll('#account-panel li[data-user]')].map((li) => li.textContent.replace(/\s+/g, ' ')));
   check('o administrador cria o acesso de um corretor (só corretor) e vê a senha provisória',
     roleField === 'hidden' && /^[A-Za-z2-9]{12}$/.test(brokerTemp) && brokerTemp !== ownerTemp && team0.some((t) => t.includes('Corretor Teste')), JSON.stringify(team0));
@@ -325,7 +342,7 @@ try {
   await visitor.page.click('#drawer .lead-form button[type="submit"]');
   await visitor.page.waitForSelector('#drawer .lead-done:not([hidden])', { timeout: 15000 });
   const done = await visitor.page.textContent('#drawer .lead-done');
-  await visitor.page.screenshot({ path: path.join(SHOTS, 'backend-contato-enviado.png') });
+  await shot(visitor.page, 'backend-contato-enviado.png');
   const [popup] = await Promise.all([visitor.ctx.waitForEvent('page'), visitor.page.click('#drawer .btn-whatsapp')]);
   await popup.close();
   check('o visitante pede uma visita (só com a autorização da LGPD) e clica no WhatsApp',
@@ -352,7 +369,7 @@ try {
     wa: document.querySelector('#account-panel .lead-contact a')?.getAttribute('href') ?? '',
     clicks: document.querySelector('#account-panel details[data-section="leads"] .a-hint')?.textContent ?? '',
   }));
-  await page.screenshot({ path: path.join(SHOTS, 'backend-contatos.png') });
+  await shot(page, 'backend-contatos.png');
   await page.selectOption('#account-panel .lead-item select[name="status"]', 'contacted');
   await page.waitForFunction(() => !document.querySelector('.account-toggle .lead-badge'), null, { timeout: 15000 });
   check('o corretor vê o contato na conta (contador no topo), responde pelo WhatsApp e muda a situação',
@@ -583,7 +600,7 @@ try {
   await page.click('#account-panel details[data-section="trash"] summary');
   await page.waitForSelector('#account-panel [data-restore]', { timeout: 15000 });
   const trashItem = await page.textContent('#account-panel details[data-section="trash"] li');
-  await page.screenshot({ path: path.join(SHOTS, 'backend-lixeira.png') });
+  await shot(page, 'backend-lixeira.png');
   await page.click('#account-panel [data-restore]');
   await page.waitForFunction((id) => !!document.querySelector(`#results button[data-id="${id}"]`), id, { timeout: 15000 });
   check('excluir move para a lixeira (some do site, inclusive para o visitante) e dá para restaurar',
@@ -630,7 +647,7 @@ try {
   await owner2.page.click('#account-panel details[data-section="audit"] summary', { timeout: 15000 });
   await owner2.page.waitForSelector('#account-panel .audit-list li', { timeout: 15000 });
   const history = await owner2.page.evaluate(() => [...document.querySelectorAll('#account-panel .audit-list li span')].map((li) => li.textContent.trim()));
-  await owner2.page.screenshot({ path: path.join(SHOTS, 'backend-historico.png') });
+  await shot(owner2.page, 'backend-historico.png');
   const has = (re) => history.some((h) => re.test(h));
   check('o dono vê o histórico em frases: quem criou, alterou, mandou para a lixeira, restaurou e excluiu',
     has(/^Corretor Teste criou o anúncio "Casa publicada no backend"/) && has(/alterou "Casa publicada no backend": preço de R\$ 880\.000 para R\$ 800\.000/) &&
@@ -691,7 +708,7 @@ try {
   await vis.p.check('main [name=consent]');
   await vis.p.click('main form.lead button[type=submit]');
   await vis.p.waitForSelector('main .form-msg.ok', { timeout: 15000 });
-  await vis.p.screenshot({ path: path.join(SHOTS, 'backend-site.png') });
+  await shot(vis.p, 'backend-site.png');
   check('sem erros no console (site)', vis.errs.length === 0, vis.errs.join(' | '));
   await vis.ctx.close();
   const owner3 = await open(browser);

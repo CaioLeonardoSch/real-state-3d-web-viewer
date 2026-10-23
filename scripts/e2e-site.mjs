@@ -32,6 +32,23 @@ const check = (name, pass, detail = '') => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Screenshot for docs/screenshots, once the 3D map of the page (or of an embedded frame) has stopped: with the relief
+ * each frame is slow in software WebGL (CI) while the map still draws, and a shot then waits for a frame for a long
+ * time. A map that does not settle in time is shot as it is.
+ */
+async function shot(page, name) {
+  for (const frame of page.frames()) {
+    await frame
+      .waitForFunction(() => {
+        const m = window.__demo?.map;
+        return !m || (m.loaded() && !m.isMoving() && m.areTilesLoaded());
+      }, null, { timeout: 30000 })
+      .catch(() => {});
+  }
+  return page.screenshot({ path: path.join(SHOTS, name), timeout: 90000 });
+}
+
 async function startServer() {
   // vite itself, not through npx: killing npx would leave the server running on the port
   const proc = spawn(...cli('vite', ['preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1']), { cwd: ROOT, stdio: 'ignore' });
@@ -119,7 +136,7 @@ async function main() {
     const cfgProof = SITES[0].config.proof;
     check('home: "Números e depoimentos" mostra só o que a imobiliária preencheu',
       proof.stats === cfgProof.stats.length && proof.quotes === cfgProof.testimonials.length, JSON.stringify(proof));
-    await page.screenshot({ path: path.join(SHOTS, 'site-home.png') });
+    await shot(page, 'site-home.png');
     await axe(page, 'início');
     await page.click('.q-more');
     await page.click('.quick .switch');
@@ -222,7 +239,7 @@ async function main() {
     const lista = await page.locator('.r-list.r-lista .card-lista').count();
     check('paginação e visualização em lista', p2.url.includes('pagina=2') && p2.current === '2' && lista > 0, JSON.stringify({ ...p2, lista }));
     await page.click('[data-view=grade]');
-    await page.screenshot({ path: path.join(SHOTS, 'site-busca.png') });
+    await shot(page, 'site-busca.png');
 
     // ------------------------------------------------ favourites and comparison
     const ids = await page.locator('.r-list .card').evaluateAll((cs) => cs.slice(0, 3).map((c) => c.dataset.id));
@@ -234,7 +251,7 @@ async function main() {
     await page.waitForSelector('.cmp-table');
     const cmp = { cols: await page.locator('.cmp-table thead th').count(), best: await page.locator('.cmp-table td.best').count() };
     check('comparar: barra flutuante e tabela lado a lado com o melhor valor destacado', bar.includes('2 imóveis') && cmp.cols === 3 && cmp.best >= 2, JSON.stringify(cmp));
-    await page.screenshot({ path: path.join(SHOTS, 'site-comparar.png') });
+    await shot(page, 'site-comparar.png');
     await axe(page, 'comparar');
     await page.reload();
     await page.waitForSelector('body[data-ready="true"]');
@@ -309,7 +326,7 @@ async function main() {
         /Primeira parcela[\s\S]*Última parcela/.test(fin.parcels) && /Renda familiar/.test(fin.parcels), JSON.stringify(fin)?.slice(0, 300));
     await page.click('.side-card .btn-wa');
     check('contatos fictícios não abrem WhatsApp de verdade', (await page.locator('.toast').textContent()).startsWith('Demonstração') && page.url().startsWith(BASE));
-    await page.screenshot({ path: path.join(SHOTS, 'site-imovel.png') });
+    await shot(page, 'site-imovel.png');
     await axe(page, 'imóvel');
     const desk = await withPhotos(page);
     const d1 = await shownPhoto(page);
@@ -347,7 +364,7 @@ async function main() {
     check('o endereço do mapa embutido mantém embed e site depois de usar a busca',
       frameUrl.searchParams.get('embed') === '1' && frameUrl.searchParams.has('site'), frame.url());
     await sleep(1500);
-    await page.screenshot({ path: path.join(SHOTS, 'site-mapa.png') });
+    await shot(page, 'site-mapa.png');
 
     // ------------------------------------------------ editor
     // in the demo, the button is in the demonstration bar (no floating button over the content)
@@ -377,7 +394,7 @@ async function main() {
     }));
     check('editor: modelo, textos e cores mudam o site na hora; cor clara demais gera aviso e o texto é corrigido',
       tpl.t === 'lateral' && tpl.header === '#0f3d2e' && warn.ink === '#16181d' && warn.text !== '#f7f3a0', JSON.stringify({ tpl, warn }));
-    await page.screenshot({ path: path.join(SHOTS, 'site-editor.png') });
+    await shot(page, 'site-editor.png');
     await page.click('.editor [data-save]');
     await page.reload();
     await page.waitForSelector('body[data-ready="true"]');
@@ -434,7 +451,7 @@ async function main() {
     }));
     const bIds = new Set(DATA.filter((l) => l.agency === SITES[1].agency).map((l) => l.id));
     check('outra imobiliária: tema escuro, o menu dela e só os imóveis dela', bInfo.theme === 'dark' && !bInfo.menu.includes('Alugar') && bInfo.ids.every((id) => bIds.has(id)), JSON.stringify(bInfo.menu));
-    await b.page.screenshot({ path: path.join(SHOTS, 'site-escuro.png') });
+    await shot(b.page, 'site-escuro.png');
     await axe(b.page, 'outra imobiliária (busca, tema escuro)');
     await b.page.goto(`${BASE}?imobiliaria=${SITES[1].slug}`);
     await b.page.waitForSelector('body[data-ready="true"]');
@@ -506,7 +523,7 @@ async function main() {
     check('galeria no celular: fotos de até 1024 px, nunca a versão grande', phone[0].thumb === p1 || phone[0].src === p1, p1 === phone[0].thumb ? 'thumb' : p1 === phone[0].src ? 'src' : 'large');
     await m.page.goto(BASE);
     await m.page.waitForSelector('body[data-ready="true"]');
-    await m.page.screenshot({ path: path.join(SHOTS, 'site-celular.png') });
+    await shot(m.page, 'site-celular.png');
     await axe(m.page, 'celular, início');
     check('sem erros no console (celular)', m.errors.length === 0, m.errors.join(' | '));
     await m.ctx.close();
