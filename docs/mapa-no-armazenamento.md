@@ -1,17 +1,19 @@
 # Mapa base no armazenamento de objetos
 
-O mapa base são dois arquivos, `public/data/joinville.pmtiles` (~15 MB) e `joinville-detalhe.pmtiles` (~11 MB),
-regenerados todo mês pelo workflow "Mapa mensal". Guardados no git, eles fazem o repositório crescer ~25 MB por mês.
+O mapa base são três arquivos, `public/data/joinville.pmtiles` (~15 MB), `joinville-detalhe.pmtiles` (~7 MB) e
+`joinville-arvores.pmtiles` (~1,6 MB), regenerados todo mês pelo workflow "Mapa mensal". Guardados no git, eles fazem o
+repositório crescer ~25 MB por mês.
 Por isso podem ir para o bucket público `map-tiles` do Supabase, com **nome por versão**:
 
 ```
 joinville-2026-11-88bad5962e.pmtiles          (região, mês do OSM, 10 primeiros dígitos do SHA-256)
 joinville-detalhe-2026-11-1afbdd0f30.pmtiles
+joinville-arvores-2026-11-5c03e9b7a1.pmtiles
 ```
 
 Um nome publicado nunca muda de conteúdo: o arquivo é enviado com `cache-control: max-age=31536000` e o navegador ou
 a CDN podem guardá-lo para sempre. O mês anterior continua no bucket, para comparação e para voltar atrás (basta
-restaurar o `meta.json` antigo). O `meta.json` passa a ter a URL completa em `tiles` e `detailTiles`; o app, a CSP
+restaurar o `meta.json` antigo). O `meta.json` passa a ter a URL completa em `tiles`, `detailTiles` e `treeTiles`; o app, a CSP
 (`scripts/lib/csp.mjs`) e os scripts de dados aceitam isso.
 
 ## Como ligar

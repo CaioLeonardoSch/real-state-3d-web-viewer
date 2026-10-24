@@ -37,7 +37,7 @@ void main() {
   p.xy = vec2(c * p.x - s * p.y, s * p.x + c * p.y);
   vec3 n = a_normal;
   n.xy = vec2(c * n.x - s * n.y, s * n.x + c * n.y);
-  vec3 base = mix(u_trunk, i_color, a_part);
+  vec3 base = mix(u_trunk, i_color, min(a_part, 1.0));
   // sun on the facets, a little sky from above, the rest ambient (close to the fill-extrusions' look)
   float light = 0.58 + 0.34 * max(dot(n, u_light), 0.0) + 0.1 * n.z;
   v_color = base * light;

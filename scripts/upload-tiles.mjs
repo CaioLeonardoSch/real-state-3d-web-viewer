@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Sends the map tiles (public/data/<região>.pmtiles and <região>-detalhe.pmtiles, from npm run data:tiles) to the
-// "map-tiles" bucket of the back end and points public/data/meta.json at them, so the .pmtiles leave the git history
-// (~25 MB a month). Each file gets a name by version, <região>-<mês do OSM>-<hash>.pmtiles: a published name never
-// changes content, so browsers and CDNs can keep it for good, and the previous month stays there for comparison.
+// Sends the map tiles (public/data/<região>.pmtiles, <região>-detalhe.pmtiles and <região>-arvores.pmtiles, from
+// npm run data:tiles) to the "map-tiles" bucket of the back end and points public/data/meta.json at them, so the
+// .pmtiles leave the git history (~25 MB a month). Each file gets a name by version,
+// <região>-<mês do OSM>-<hash>.pmtiles: a published name never changes content, so browsers and CDNs can keep it
+// for good, and the previous month stays there for comparison.
 //
 //   npm run tiles:upload [-- --local] [--dry-run]
 //
@@ -41,7 +42,7 @@ const month = (meta.osmTimestamp ?? new Date().toISOString()).slice(0, 7);
 const localName = (entry, suffix) => (/^https?:\/\//.test(entry) ? `${meta.region}${suffix}.pmtiles` : entry);
 
 const out = {};
-for (const [field, suffix] of [['tiles', ''], ['detailTiles', '-detalhe']]) {
+for (const [field, suffix] of [['tiles', ''], ['detailTiles', '-detalhe'], ['treeTiles', '-arvores']]) {
   if (!meta[field]) continue;
   const file = localName(meta[field], suffix);
   const body = await readFile(path.join(DATA, file)).catch(() => fail(`${file} não está em public/data (rode npm run data:tiles)`));

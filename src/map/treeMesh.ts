@@ -4,7 +4,7 @@
  * city). Metres, x east, y north, z up, the trunk's foot at the origin; about 2.4 m of trunk and 6.5 m in all at scale 1.
  * Flat shaded: each triangle has its own three vertices with the triangle's normal.
  *
- * Per vertex, 7 floats: position (3), normal (3) and part (0 trunk, 1 foliage).
+ * Per vertex, 7 floats: position (3), normal (3) and part (0 trunk, 1 the crown's main lobe, 2 the smaller one on top).
  */
 
 export const TREE_VERTEX_FLOATS = 7;
@@ -105,9 +105,27 @@ export function treeMesh(detail: 0 | 1 = 1): Float32Array {
       const outward = n[0] * mid[0] + n[1] * mid[1] + n[2] * mid[2] >= 0;
       const [x, y, z] = outward ? [pa, pb, pc] : [pa, pc, pb];
       const nn = norm(cross([y[0] - x[0], y[1] - x[1], y[2] - x[2]], [z[0] - x[0], z[1] - x[1], z[2] - x[2]]));
-      for (const p of [x, y, z]) out.push(p[0], p[1], p[2], nn[0], nn[1], nn[2], 1);
+      for (const p of [x, y, z]) out.push(p[0], p[1], p[2], nn[0], nn[1], nn[2], 1 + k);
     }
     k++;
   }
   return new Float32Array(out);
+}
+
+/**
+ * Measures of the model (metres, scale 1): the top, where the crown starts (its lowest point) and the main lobe's
+ * radius. The map sizes each tree from them (src/map/cityTrees.ts).
+ */
+export function treeMeshSize(mesh: Float32Array = treeMesh(1)): { top: number; crownBottom: number; crownRadius: number } {
+  let top = 0;
+  let crownBottom = Infinity;
+  let crownRadius = 0;
+  for (let i = 0; i < mesh.length; i += TREE_VERTEX_FLOATS) {
+    const [x, y, z, part] = [mesh[i], mesh[i + 1], mesh[i + 2], mesh[i + 6]];
+    top = Math.max(top, z);
+    if (part === 0) continue;
+    crownBottom = Math.min(crownBottom, z);
+    if (part === 1) crownRadius = Math.max(crownRadius, Math.hypot(x, y));
+  }
+  return { top, crownBottom, crownRadius };
 }

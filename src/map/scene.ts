@@ -15,6 +15,7 @@ import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
 import { OverviewControl } from './overviewControl';
+import { CityTreesLayer } from './cityTrees';
 import { DrawAreaControl } from './drawArea';
 import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
@@ -194,6 +195,8 @@ export class Scene {
   private baseFilters = new Map<string, FilterSpecification | undefined>();
   /** Area the map is cut to (neighbourhood filter), or null. */
   private clip: Polygon | MultiPolygon | null = null;
+  /** The trees (src/map/cityTrees.ts), when the data has them. */
+  readonly trees: CityTreesLayer | null;
   private labelMarkers: { marker: Marker; kind: string; name: string }[] = [];
   /** The shadows must be recomputed at the map's next idle moment (camera stopped, sun or listings changed). */
   private shadowsDirty = true;
@@ -209,6 +212,7 @@ export class Scene {
     opts: { cooperative?: boolean; drawArea?: boolean } = {},
   ) {
     this.listings = listings;
+    this.trees = data.treesUrl ? new CityTreesLayer(data.treesUrl, theme) : null;
     this.pxPerM0 = 512 / (40075016.686 * Math.cos(((data.meta.center?.[1] ?? -26.3) * Math.PI) / 180));
     const [w, s, e, n] = data.meta.boundaryBbox;
     // maxBounds: region bbox expanded by 30% of its size on each side
@@ -243,6 +247,8 @@ export class Scene {
     this.ready = new Promise((resolve) =>
       this.map.once('load', () => {
         this.map.setSourceTileLodParams(...BASE_TILE_LOD, 'osm');
+        // the trees: one low-poly model repeated by the GPU, among the street lamps and the other 3D scenery
+        if (this.trees) this.map.addLayer(this.trees, 'lamps');
         // frame again: the container can change size while the page lays out (banner, panels)
         this.showOverview(false);
         resolve();
@@ -879,7 +885,10 @@ export class Scene {
     );
     this.clip = area;
     this.clipNames = area ? new Set(names) : null;
-    if (!same) for (const id of CLIP_LAYERS) this.applyFilter(id);
+    if (!same) {
+      for (const id of CLIP_LAYERS) this.applyFilter(id);
+      this.trees?.setClip(area);
+    }
     // the chosen area has its own outline: hide the other neighbourhoods' and the region's
     for (const id of ['bairros-line', 'boundary-line']) if (this.map.getLayer(id)) this.map.setLayoutProperty(id, 'visibility', area ? 'none' : 'visible');
     (this.map.getSource('clip-area') as GeoJSONSource | undefined)?.setData(
@@ -1182,7 +1191,7 @@ export class Scene {
     m.setPaintProperty('road-highlight', 'line-color', t.streetHighlight);
     m.setPaintProperty('road-names', 'text-color', t.streetName.text);
     m.setPaintProperty('road-names', 'text-halo-color', t.streetName.halo);
-    m.setPaintProperty('trees', 'fill-extrusion-color', base.treeColor(t));
+    this.trees?.setTheme(t);
     m.setPaintProperty('roofs', 'fill-extrusion-color', base.roofColor(t));
     m.setPaintProperty('lamps', 'fill-extrusion-color', base.lampColor(sc));
     for (const [id, share] of [['lamp-glow', LAMP_POOL_OPACITY], ['lamp-core', LAMP_CORE_OPACITY]] as const) {

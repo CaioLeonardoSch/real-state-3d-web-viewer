@@ -22,10 +22,11 @@ export const Z_3D_START = 14;
 export const Z_3D_FULL = 15.5;
 export const Z_FLAT_END = 14.6;
 /**
- * Scenery from the closest tiles (scripts/lib/scenery.mjs): roofs and trees, then street lamps a little closer. From
- * zoom 16, not 15: between 15 and 16 they are a few pixels on screen, yet roofs and trees were most of the geometry the
- * map sent to the GPU there (about 44 of 66 MB in a view of the Centro at 15.5), the zooms crossed most while moving
- * around. With every detail layer from 16, the detail file is not even read below it.
+ * Scenery from the closest tiles (scripts/lib/scenery.mjs): roofs, then street lamps a little closer. From zoom 16,
+ * not 15: between 15 and 16 they are a few pixels on screen, yet roofs and trees were most of the geometry the map
+ * sent to the GPU there (about 44 of 66 MB in a view of the Centro at 15.5), the zooms crossed most while moving
+ * around. With every detail layer from 16, the detail file is not even read below it. The trees, one model repeated
+ * by the GPU, cost little: they stand from zoom 15 (src/map/cityTrees.ts).
  */
 export const Z_TREES = 16;
 /**
@@ -138,7 +139,6 @@ export const CLIP_LAYERS = [
   'buildings-flat',
   'context-buildings',
   'roofs',
-  'trees',
   'lamps',
   'listing-dimmed',
   'listing-shell-dimmed',
@@ -504,20 +504,6 @@ export class BaseStyle {
             },
           ] satisfies LayerSpecification[])),
       {
-        // low-poly trees: trunk, faceted crown and its top (properties p, b, h, v from scripts/lib/scenery.mjs)
-        id: 'trees',
-        type: 'fill-extrusion',
-        source: this.detailSource,
-        'source-layer': 'trees',
-        minzoom: Z_TREES,
-        paint: {
-          'fill-extrusion-color': this.treeColor(t),
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], Z_TREES, 0, Z_TREES + 1, ['get', 'b']],
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_TREES, 0, Z_TREES + 1, ['get', 'h']],
-          'fill-extrusion-vertical-gradient': true,
-        },
-      },
-      {
         // illustrative street lamps: pole, arm and luminaire (bright at night)
         id: 'lamps',
         type: 'fill-extrusion',
@@ -606,12 +592,6 @@ export class BaseStyle {
   /** Pole and arm, and the luminaire in the colour of its light (orange for sodium). */
   lampColor(sc: Theme['scenery']): ExpressionSpecification {
     return ['match', ['get', 'p'], 'lum', ['match', ['coalesce', ['get', 't'], 'w'], 's', sc.lumSodium, sc.lum], sc.pole];
-  }
-
-  treeColor(t: Theme): ExpressionSpecification {
-    const sc = t.scenery;
-    const shade = (c: [string, string, string]): ExpressionSpecification => ['match', ['get', 'v'], 0, c[0], 1, c[1], c[2]];
-    return ['match', ['get', 'p'], 'trunk', sc.trunk, 'bush', sc.bush, 'top', shade(sc.tops), shade(sc.crowns)];
   }
 
   /** Source of the close-up detail layers (older data has them in the base archive). */
