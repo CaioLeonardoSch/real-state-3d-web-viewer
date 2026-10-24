@@ -84,6 +84,8 @@ const embed = embedParams.get('embed') === '1'
   ? {
       agency: embedParams.get('site'),
       focus: embedParams.get('foco'),
+      // the map is the whole page (the site's search): the wheel zooms it; else it scrolls the page until a click
+      freeGestures: embedParams.get('gestos') === 'livre',
       // the site's listing page; only on this same origin
       page: (() => {
         try {
@@ -255,7 +257,7 @@ async function main() {
       else tooltip.hide();
       results.highlight(l ? l.id : null);
     },
-  }, listings, { cooperative: !!embed, drawArea: !embed });
+  }, listings, { cooperative: embed ? (embed.freeGestures ? false : 'until-click') : false, drawArea: !embed });
   if (!embed) mountMapHint($('.stage'), scene.map);
 
   function openListing(id: string, fly: boolean) {

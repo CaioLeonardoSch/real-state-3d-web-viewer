@@ -403,6 +403,9 @@ export function mapUrl(app: SiteApp, extra: Record<string, string> = {}): string
   return new URL(`${app.paths ? '/' : import.meta.env.BASE_URL}mapa.html?${p}`, location.href).href;
 }
 
+/** The search's map: the whole screen under the header, so the wheel zooms it (no page to scroll past it). */
+const searchMapUrl = (app: SiteApp) => mapUrl(app, { gestos: 'livre' });
+
 function showMap(app: SiteApp, box: HTMLElement, found: Listing[]): void {
   const ids = found.map((l) => l.id);
   if (app.mapFrame && box.contains(app.mapFrame)) {
@@ -411,13 +414,13 @@ function showMap(app: SiteApp, box: HTMLElement, found: Listing[]): void {
   }
   // the map of the page before the redraw (parkMap), if it still shows the same thing
   const parked = app.mapFrame;
-  if (parked?.parentElement === document.body && parked.getAttribute('src') === mapUrl(app)) {
+  if (parked?.parentElement === document.body && parked.getAttribute('src') === searchMapUrl(app)) {
     box.innerHTML = '<div class="map-frame search"></div>';
     box.firstElementChild!.moveBefore(parked, null);
     postResults(app, ids);
     return;
   }
-  box.innerHTML = `<div class="map-frame search"><iframe title="Mapa 3D com os imóveis encontrados" src="${escapeHtml(mapUrl(app))}" allow="fullscreen"></iframe></div>`;
+  box.innerHTML = `<div class="map-frame search"><iframe title="Mapa 3D com os imóveis encontrados" src="${escapeHtml(searchMapUrl(app))}" allow="fullscreen"></iframe></div>`;
   app.mapFrame = box.querySelector('iframe');
   app.mapReady = false;
   app.pendingIds = ids;

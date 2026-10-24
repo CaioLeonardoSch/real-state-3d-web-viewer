@@ -350,8 +350,8 @@ async function main() {
       cooperative: window.__demo.map.cooperativeGestures.isEnabled(),
       hint: !!document.querySelector('.map-hint'),
     }), A.filter((l) => l.type !== 'house').map((l) => l.id));
-    check('mapa 3D embutido: só os imóveis desta imobiliária, sem a barra do mapa, só os resultados acesos; um dedo rola a página',
-      emb.embed && emb.topbar === 'none' && emb.ids === A.length && !emb.otherLit && emb.cooperative && !emb.hint, JSON.stringify(emb));
+    check('mapa 3D da busca: só os imóveis desta imobiliária, sem a barra do mapa, só os resultados acesos; a roda dá zoom (o mapa é a tela toda)',
+      emb.embed && emb.topbar === 'none' && emb.ids === A.length && !emb.otherLit && !emb.cooperative && !emb.hint, JSON.stringify(emb));
     // changing the search lights other listings without reloading the map
     await page.click('[data-view=mapa]');
     await page.click('.search-top [data-st=under_construction]');
@@ -366,6 +366,25 @@ async function main() {
       frameUrl.searchParams.get('embed') === '1' && frameUrl.searchParams.has('site'), frame.url());
     await sleep(1500);
     await shot(page, 'site-mapa.png');
+
+    // the home page's map, a block in the middle of the page: the wheel scrolls the page until the map is clicked,
+    // then zooms it until the mouse leaves it
+    await page.goto(BASE);
+    await page.waitForSelector('body[data-ready="true"]');
+    const homeEl = await page.waitForSelector('.map-frame.home iframe');
+    await homeEl.scrollIntoViewIfNeeded();
+    const homeMap = await homeEl.contentFrame();
+    await homeMap.waitForFunction(() => window.__demo?.map?.loaded(), null, { timeout: 60000 });
+    const coop = () => homeMap.evaluate(() => window.__demo.map.cooperativeGestures.isEnabled());
+    const before = await coop();
+    const hb = await homeEl.boundingBox();
+    await page.mouse.click(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    const clicked = await coop();
+    await page.mouse.move(hb.x + hb.width / 2, hb.y - 40);
+    await homeMap.waitForFunction(() => window.__demo.map.cooperativeGestures.isEnabled(), null, { timeout: 5000 }).catch(() => {});
+    const left = await coop();
+    check('mapa da página inicial: a roda rola a página; depois de um clique no mapa ela dá zoom, até o mouse sair dele',
+      before && !clicked && left, JSON.stringify({ before, clicked, left }));
 
     // ------------------------------------------------ editor
     // in the demo, the button is in the demonstration bar (no floating button over the content)
