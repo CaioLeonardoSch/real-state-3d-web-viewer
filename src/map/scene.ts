@@ -15,7 +15,9 @@ import turfCircle from '@turf/circle';
 import turfBbox from '@turf/bbox';
 import type { AppData } from '../data/load';
 import { OverviewControl } from './overviewControl';
-import { CityTreesLayer } from './cityTrees';
+import { cityRoofs } from './cityRoofs';
+import { cityTrees } from './cityTrees';
+import type { InstancedTilesLayer } from './instancedTiles';
 import { DrawAreaControl } from './drawArea';
 import type { Listing } from '../data/types';
 import type { Theme } from './lighting';
@@ -195,8 +197,9 @@ export class Scene {
   private baseFilters = new Map<string, FilterSpecification | undefined>();
   /** Area the map is cut to (neighbourhood filter), or null. */
   private clip: Polygon | MultiPolygon | null = null;
-  /** The trees (src/map/cityTrees.ts), when the data has them. */
-  readonly trees: CityTreesLayer | null;
+  /** The trees and the roofs (src/map/cityTrees.ts, cityRoofs.ts), when the data has them. */
+  readonly trees: InstancedTilesLayer | null;
+  readonly roofs: InstancedTilesLayer | null;
   private labelMarkers: { marker: Marker; kind: string; name: string }[] = [];
   /** The shadows must be recomputed at the map's next idle moment (camera stopped, sun or listings changed). */
   private shadowsDirty = true;
@@ -212,7 +215,8 @@ export class Scene {
     opts: { cooperative?: boolean; drawArea?: boolean } = {},
   ) {
     this.listings = listings;
-    this.trees = data.treesUrl ? new CityTreesLayer(data.treesUrl, theme) : null;
+    this.trees = data.treesUrl ? cityTrees(data.treesUrl, theme) : null;
+    this.roofs = data.roofsUrl ? cityRoofs(data.roofsUrl, theme) : null;
     this.pxPerM0 = 512 / (40075016.686 * Math.cos(((data.meta.center?.[1] ?? -26.3) * Math.PI) / 180));
     const [w, s, e, n] = data.meta.boundaryBbox;
     // maxBounds: region bbox expanded by 30% of its size on each side
@@ -247,7 +251,12 @@ export class Scene {
     this.ready = new Promise((resolve) =>
       this.map.once('load', () => {
         this.map.setSourceTileLodParams(...BASE_TILE_LOD, 'osm');
-        // the trees: one low-poly model repeated by the GPU, among the street lamps and the other 3D scenery
+        // roofs and trees: a few low-poly models repeated by the GPU, among the street lamps and the other 3D
+        // scenery; listing buildings (drawn by the listing layers) have no roof
+        if (this.roofs) {
+          this.roofs.setHidden(this.roofHiddenIds());
+          this.map.addLayer(this.roofs, 'lamps');
+        }
         if (this.trees) this.map.addLayer(this.trees, 'lamps');
         // frame again: the container can change size while the page lays out (banner, panels)
         this.showOverview(false);
@@ -386,9 +395,9 @@ export class Scene {
     return hideFilter(['get', 'osmId'], this.contextHiddenIds());
   }
 
-  /** The same for the roofs, which carry the building as a numeric feature id (src/data/osmId.ts). */
-  private roofFilter(): ExpressionSpecification {
-    return hideFilter(['id'], this.contextHiddenIds().map(osmNumericId));
+  /** The same for the roofs, which carry the building as a numeric id (src/data/osmId.ts). */
+  private roofHiddenIds(): number[] {
+    return this.contextHiddenIds().map(osmNumericId);
   }
 
   private contextHiddenIds(): string[] {
@@ -403,7 +412,6 @@ export class Scene {
   private baseStyle(): BaseStyle {
     return new BaseStyle(this.theme, this.data, this.pxPerM0, this.baseFilters, {
       contextFilter: () => this.contextFilter(),
-      roofFilter: () => this.roofFilter(),
     });
   }
 
@@ -469,7 +477,7 @@ export class Scene {
           maxzoom: 15,
           attribution: (this.data.meta.heightSources?.length ?? 0) > 1 ? `${OSM_ATTRIBUTION} · ${CADASTRE_ATTRIBUTION}` : OSM_ATTRIBUTION,
         },
-        // close-up detail (roofs, trees, street lamps): a second file, read only from zoom 15
+        // close-up detail (street lamps): a second file, read only from zoom 15
         ...(this.data.detailUrl
           ? { detail: { type: 'vector' as const, url: `pmtiles://${this.data.detailUrl}`, minzoom: 15, maxzoom: 15 } }
           : {}),
@@ -854,10 +862,11 @@ export class Scene {
     (this.map.getSource('listings') as GeoJSONSource | undefined)?.setData(this.listingCollection());
     this.updatePins();
     (this.map.getSource('construction') as GeoJSONSource | undefined)?.setData(this.constructionCollection());
-    for (const id of ['context-buildings', 'buildings-flat', 'roofs']) {
-      this.baseFilters.set(id, id === 'roofs' ? this.roofFilter() : this.contextFilter());
+    for (const id of ['context-buildings', 'buildings-flat']) {
+      this.baseFilters.set(id, this.contextFilter());
       this.applyFilter(id);
     }
+    this.roofs?.setHidden(this.roofHiddenIds());
     this.invalidateShadows();
   }
 
@@ -888,6 +897,7 @@ export class Scene {
     if (!same) {
       for (const id of CLIP_LAYERS) this.applyFilter(id);
       this.trees?.setClip(area);
+      this.roofs?.setClip(area);
     }
     // the chosen area has its own outline: hide the other neighbourhoods' and the region's
     for (const id of ['bairros-line', 'boundary-line']) if (this.map.getLayer(id)) this.map.setLayoutProperty(id, 'visibility', area ? 'none' : 'visible');
@@ -1192,7 +1202,7 @@ export class Scene {
     m.setPaintProperty('road-names', 'text-color', t.streetName.text);
     m.setPaintProperty('road-names', 'text-halo-color', t.streetName.halo);
     this.trees?.setTheme(t);
-    m.setPaintProperty('roofs', 'fill-extrusion-color', base.roofColor(t));
+    this.roofs?.setTheme(t);
     m.setPaintProperty('lamps', 'fill-extrusion-color', base.lampColor(sc));
     for (const [id, share] of [['lamp-glow', LAMP_POOL_OPACITY], ['lamp-core', LAMP_CORE_OPACITY]] as const) {
       m.setPaintProperty(id, 'circle-color', base.glowColor(sc));

@@ -22,14 +22,6 @@ export const Z_3D_START = 14;
 export const Z_3D_FULL = 15.5;
 export const Z_FLAT_END = 14.6;
 /**
- * Scenery from the closest tiles (scripts/lib/scenery.mjs): roofs, then street lamps a little closer. From zoom 16,
- * not 15: between 15 and 16 they are a few pixels on screen, yet roofs and trees were most of the geometry the map
- * sent to the GPU there (about 44 of 66 MB in a view of the Centro at 15.5), the zooms crossed most while moving
- * around. With every detail layer from 16, the detail file is not even read below it. The trees, one model repeated
- * by the GPU, cost little: they stand from zoom 15 (src/map/cityTrees.ts).
- */
-export const Z_TREES = 16;
-/**
  * Faceted water from this zoom; flat water before. The texture costs two more shaders and a canvas, kept out of the
  * first view of the city (the slowest moment on a phone).
  */
@@ -42,6 +34,12 @@ export const Z_WATER_PATTERN = 13;
 export const FEATURE_BASE: ExpressionSpecification = ['coalesce', ['get', 'base'], ['get', 'b'], 0];
 /** Strength of the slope shading (0 to 1): soft, so it reads as relief and not as dark stains on the hills. */
 export const RELIEF_SHADE = 0.35;
+/**
+ * Street lamps from the closest tiles (scripts/lib/scenery.mjs), from zoom 16: the detail file is not even read below
+ * it. Roofs and trees were once most of the geometry the map sent to the GPU between 15 and 16 (about 44 of 66 MB in
+ * a view of the Centro at 15.5); drawn now as a few models repeated by the GPU, they cost little and stand from zoom
+ * 15 (src/map/cityRoofs.ts, src/map/cityTrees.ts).
+ */
 export const Z_LAMPS = 16;
 /**
  * Light of the street lamps at night: a pool fading out LAMP_POOL_M metres around the point under the luminaire and
@@ -138,7 +136,6 @@ export const CLIP_LAYERS = [
   'lamp-core',
   'buildings-flat',
   'context-buildings',
-  'roofs',
   'lamps',
   'listing-dimmed',
   'listing-shell-dimmed',
@@ -182,7 +179,7 @@ export class BaseStyle {
     private pxPerM0: number,
     /** Own filter of each layer before the neighbourhood cut is added (filled here, read by the scene). */
     private baseFilters: Map<string, FilterSpecification | undefined>,
-    private hidden: { contextFilter(): ExpressionSpecification; roofFilter(): ExpressionSpecification },
+    private hidden: { contextFilter(): ExpressionSpecification },
   ) {}
 
   texture(id: string): TextureImage | null {
@@ -365,13 +362,13 @@ export class BaseStyle {
         type: 'circle',
         source: this.detailSource,
         'source-layer': 'lights',
-        minzoom: Z_TREES + 0.5,
+        minzoom: Z_LAMPS + 0.5,
         // always visible, transparent by day: a layer hidden when the tiles load gets no features when it is shown
         // later (the night chosen up close would stay dark)
         paint: {
           'circle-color': this.glowColor(sc),
           'circle-opacity': sc.glowOpacity * LAMP_POOL_OPACITY,
-          'circle-radius': this.meters(['*', LAMP_POOL_M, LAMP_STRENGTH], Z_TREES),
+          'circle-radius': this.meters(['*', LAMP_POOL_M, LAMP_STRENGTH], Z_LAMPS),
           'circle-blur': 1,
           'circle-pitch-alignment': 'map',
           'circle-pitch-scale': 'map',
@@ -383,11 +380,11 @@ export class BaseStyle {
         type: 'circle',
         source: this.detailSource,
         'source-layer': 'lights',
-        minzoom: Z_TREES + 0.5,
+        minzoom: Z_LAMPS + 0.5,
         paint: {
           'circle-color': this.glowColor(sc),
           'circle-opacity': sc.glowOpacity * LAMP_CORE_OPACITY,
-          'circle-radius': this.meters(['*', LAMP_CORE_M, LAMP_STRENGTH], Z_TREES),
+          'circle-radius': this.meters(['*', LAMP_CORE_M, LAMP_STRENGTH], Z_LAMPS),
           'circle-blur': 1,
           'circle-pitch-alignment': 'map',
           'circle-pitch-scale': 'map',
@@ -462,24 +459,6 @@ export class BaseStyle {
           'fill-extrusion-base': 0,
           'fill-extrusion-opacity': 0.95,
           'fill-extrusion-vertical-gradient': true,
-        },
-      },
-      {
-        // low-poly roofs up close (scripts/lib/roofs.mjs): stepped gabled and hipped roofs on houses, the water
-        // tank on towers; they rise with the buildings, and listing buildings (drawn by the listing layers) have none
-        id: 'roofs',
-        type: 'fill-extrusion',
-        source: this.detailSource,
-        'source-layer': 'roofs',
-        minzoom: Z_TREES,
-        filter: this.hidden.roofFilter(),
-        paint: {
-          'fill-extrusion-color': this.roofColor(t),
-          // b and h in decimetres
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, ['/', ['get', 'b'], 10]],
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], Z_3D_START, 0, Z_3D_FULL, ['/', ['get', 'h'], 10]],
-          'fill-extrusion-opacity': 0.95,
-          'fill-extrusion-vertical-gradient': false,
         },
       },
       // canopy mass of woods (woods shrunk by 6 m): the edge trees stand in front of it and taller crowns
@@ -599,9 +578,4 @@ export class BaseStyle {
     return this.data.detailUrl ? 'detail' : 'osm';
   }
 
-  /** Roof colour per variant v (clay tiles, fibre cement, dark tiles, concrete). */
-  roofColor(t: Theme): ExpressionSpecification {
-    const r = t.scenery.roofs;
-    return ['match', ['get', 'v'], 1, r[1], 2, r[2], 3, r[3], r[0]];
-  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EAVE_M, orientedRect, roofKind, roofShapes } from '../scripts/lib/roofs.mjs';
+import { EAVE_M, orientedRect, roofKind, roofParams } from '../scripts/lib/roofs.mjs';
 import { frame } from '../scripts/lib/scenery.mjs';
 import { osmNumericId } from '../src/data/osmId';
 
@@ -56,31 +56,23 @@ describe('telhados low poly', () => {
     expect(osmNumericId('node/1')).toBe(-1);
   });
 
-  it('desenha o telhado em degraus sobre o prédio', () => {
-    const rect = orientedRect(rotated(12, 8, 0), LAT)!;
-    const gable = roofShapes('way/7', rect, 'gable', 6, LAT);
-    expect(gable).toHaveLength(3);
-    // steps stack from the top of the walls up to the ridge (26°: 4 m × 0.49 ≈ 2 m)
-    // heights in decimetres
-    expect(gable.map((g) => g.properties.b)).toEqual([60, 67, 73]);
-    expect(gable[2].properties.h / 10).toBeCloseTo(8, 0);
-    expect(gable.every((g) => g.id === osmNumericId('way/7'))).toBe(true);
-    const span = (g: (typeof gable)[number], axis: 0 | 1) => {
-      const c = g.geometry.coordinates[0].map((p) => p[axis]);
-      return ((Math.max(...c) - Math.min(...c)) * (axis === 0 ? f.kx : f.ky));
-    };
-    // gable: the first step overhangs the walls (eaves); the steps narrow across the width, not along the length
-    expect(span(gable[0], 1)).toBeCloseTo(8 + 2 * EAVE_M, 1);
-    expect(span(gable[2], 1)).toBeLessThan(4);
-    expect(span(gable[2], 0)).toBeCloseTo(12, 1);
-    // hip: the steps narrow along the length too
-    const hip = roofShapes('way/7', rect, 'hip', 6, LAT);
-    expect(span(hip[2], 0)).toBeLessThan(10);
-    // towers: one box (water tank and lift room) on the flat roof
-    const tank = roofShapes('way/8', orientedRect(rotated(30, 20, 10), LAT), 'tank', 45, LAT);
-    expect(tank).toHaveLength(1);
-    expect(tank[0].properties).toEqual({ b: 450, h: 482, v: 3 });
-    expect(tank[0].id).toBe(16);
-    expect(roofShapes('way/9', rect, 'flat', 6, LAT)).toEqual([]);
+  it('telhado sobre o prédio: comprimento e largura com o beiral, caimento de 26°, tom e prédio', () => {
+    const rect = orientedRect(rotated(12, 8, 30), LAT)!;
+    const gable = roofParams('way/7', rect, 'gable', 6)!;
+    expect(gable).toMatchObject({ kind: 'gable', base: 6, id: osmNumericId('way/7') });
+    expect(gable.length).toBeCloseTo(12 + 2 * EAVE_M, 1);
+    expect(gable.width).toBeCloseTo(8 + 2 * EAVE_M, 1);
+    // 4 m de meia largura × 0,49 ≈ 2 m acima das paredes
+    expect(gable.rise).toBeCloseTo(1.96, 2);
+    // o lado comprido girado 30° do leste para o norte
+    expect(gable.angle).toBeCloseTo(Math.PI / 6, 2);
+    expect(gable.v).toBeLessThan(3);
+    expect(roofParams('way/7', rect, 'hip', 6)).toMatchObject({ kind: 'hip', rise: gable.rise });
+    // prédios altos: a caixa-d'água e a casa de máquinas, uma caixa no meio da laje
+    const tank = roofParams('way/8', orientedRect(rotated(30, 20, 10), LAT), 'tank', 45)!;
+    expect(tank).toMatchObject({ kind: 'tank', base: 45, rise: 3.2, v: 3, id: 16 });
+    expect(tank.length).toBeCloseTo(8, 1);
+    expect(tank.width).toBeCloseTo(6, 1);
+    expect(roofParams('way/9', rect, 'flat', 6)).toBeNull();
   });
 });

@@ -224,17 +224,21 @@ O mapa base são **dois arquivos** de blocos vetoriais (vector tiles), mais as �
 
 - `public/data/joinville.pmtiles` (≈14 MB, 164.672 prédios): prédios, vias (com o tipo de pavimento), água, áreas
   verdes, limites de bairro e a copa das matas;
-- `public/data/joinville-detalhe.pmtiles` (≈7 MB, só o zoom 15 da área urbana): telhados, postes e a luz dos postes.
-  Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto: todas as
-  camadas dele começam no zoom 16, e abaixo disso o arquivo nem é lido. Entre 15 e 16 telhados e árvores eram poucos
-  pixels na tela, mas cerca de dois terços da geometria enviada à placa de vídeo (44 de 66 MB numa vista do Centro no
-  zoom 15,5), justamente nos zooms mais atravessados ao navegar: com eles só a partir do 16, a mesma vista manda 24 MB.
+- `public/data/joinville-detalhe.pmtiles` (≈1,2 MB, só o zoom 15 da área urbana): postes e a luz dos postes, a partir
+  do zoom 16 (abaixo disso o arquivo nem é lido).
 - `public/data/joinville-arvores.pmtiles` (≈1,6 MB, zoom 15): as árvores como números, 8 bytes cada (onde está, tipo,
   tom, altura, copa e giro; `scripts/lib/tree-tiles.mjs`). O mapa repete um só modelo low poly para todas
   (`src/map/cityTrees.ts`, WebGL2 instanciado): 10 mil árvores ocupam 0,3 MB na placa de vídeo em vez de 18–25 MB e
   entram em menos de 30 ms em vez de meio segundo travando o mapa (medido em `lab-arvores.html`), por isso voltam a
   aparecer no zoom 15. As mais próximas da câmera têm o modelo completo (172 triângulos; até 12 mil no computador e
   1.500 no celular), as outras um mais leve (52).
+- `public/data/joinville-telhados.pmtiles` (≈1,9 MB, zoom 15): os telhados como números, 18 bytes cada (meio, giro,
+  comprimento e largura com o beiral, caimento, altura das paredes, cor, tipo e o prédio; `scripts/lib/roof-tiles.mjs`).
+  Três modelos (duas águas, quatro águas, caixa-d'água; `src/map/roofMesh.ts`) esticados sobre cada telhado pela placa
+  de vídeo (`src/map/cityRoofs.ts`), com caimento de verdade onde antes eram degraus de prismas. Telhados e árvores em
+  prismas eram cerca de dois terços da geometria enviada à placa de vídeo (44 de 66 MB numa vista do Centro no zoom
+  15,5) e por isso só apareciam do zoom 16; assim, os ~7.500 telhados de uma vista dessas ocupam cerca de 0,3 MB e
+  voltam no zoom 15.
 
 O navegador **não baixa os arquivos inteiros**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
@@ -248,9 +252,9 @@ o `vite preview`).
 | 12 | + verde ≥ 0,5 ha, água ≥ 0,1 ha, córregos; prédios ≥ 250 m² | até 168 KB |
 | 13 | + vias de serviço e estradas rurais, verde ≥ 0,1 ha; prédios ≥ 120 m² | até 201 KB |
 | 14–15 | todos os prédios, com altura e marca de residencial; calçadas e caminhos; copa das matas | até 214 KB (z14) e 75 KB (z15) |
-| 15 (detalhe) | telhados, postes e luzes (low poly, em 3D) | até 113 KB |
+| 15 (detalhe) | postes e luzes (low poly, em 3D) | poucos KB |
 
-São 2.532 blocos no arquivo base, 396 no de detalhe e 456 no das árvores. De longe, cada camada leva só o que se enxerga naquele zoom
+São 2.532 blocos no arquivo base, 348 no de detalhe, 456 no das árvores e 316 no dos telhados. De longe, cada camada leva só o que se enxerga naquele zoom
 (e com a geometria simplificada): a primeira tela no celular, que usa os blocos 10 e 11, ficou com menos da metade
 dos bytes. Vias apenas planejadas, em obra, plataformas e corredores internos não entram no mapa. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
 algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 58 MB só de prédios.
@@ -287,7 +291,8 @@ não muda as árvores do resto da cidade.
   (`building=yes`), então o telhado é estimado pelo formato, pelos andares e pelo uso; a tag `roof:shape`, quando existe,
   manda.
   - casas alongadas ganham **duas águas** e as quadradas **quatro águas** (um quarto troca, para as ruas não parecerem
-    carimbadas), desenhados em degraus, com beiral e três cores (cerâmica, fibrocimento, telha escura);
+    carimbadas), com o mesmo caimento (26°) em todas as águas, beiral, oitão da cor das paredes e três cores
+    (cerâmica, fibrocimento, telha escura);
   - torres de 5 andares ou mais ganham laje com a **caixa d'água e a casa de máquinas**;
   - contornos complexos (em L, com pátio), galpões grandes e prédios de 4 andares ficam com laje;
   - na última geração: 66.819 de duas águas, 60.794 de quatro águas, 925 torres com caixa d'água e 36.134 lajes;
@@ -321,7 +326,7 @@ não muda as árvores do resto da cidade.
   (`src/map/shadows.ts`), e não pesam no arquivo do mapa.
 - **Onde aparece:** só de perto:
   - a copa das matas sobe junto com os prédios, a partir do zoom 14;
-  - os telhados aparecem no zoom 16;
+  - os telhados aparecem no zoom 15, sobre os prédios que sobem até o 15,5;
   - as árvores crescem do zoom 15 ao 15,8;
   - os postes aparecem no 16;
   - as luzes, no 16,5.
