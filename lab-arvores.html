@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Laboratório: árvores do mapa 3D</title>
+  </head>
+  <body class="lab">
+    <header class="lab-bar">
+      <h1>Árvores: técnica atual × instanciada</h1>
+      <div class="lab-controls">
+        <fieldset>
+          <legend>Técnica</legend>
+          <label><input type="radio" name="tech" value="atual" checked /> Atual (prismas)</label>
+          <label><input type="radio" name="tech" value="instanciada" /> Instanciada</label>
+          <label><input type="radio" name="tech" value="leve" /> Instanciada leve</label>
+        </fieldset>
+        <fieldset>
+          <legend>Árvores</legend>
+          <label><input type="radio" name="n" value="1" /> 1</label>
+          <label><input type="radio" name="n" value="100" checked /> 100</label>
+          <label><input type="radio" name="n" value="1000" /> 1.000</label>
+          <label><input type="radio" name="n" value="10000" /> 10.000</label>
+        </fieldset>
+        <button type="button" data-action="one">Medir esta</button>
+        <button type="button" data-action="all">Medir todas (12)</button>
+        <button type="button" data-action="copy" disabled>Copiar resultados</button>
+      </div>
+      <p class="lab-status" role="status">Carregando…</p>
+    </header>
+    <main class="lab-main">
+      <div id="lab-map"></div>
+      <section class="lab-results" aria-label="Resultados">
+        <table>
+          <thead>
+            <tr><th>Técnica</th><th>Árvores</th><th>Montagem (ms)</th><th>Quadro mediana (ms)</th><th>Quadro p95 (ms)</th><th>Placa de vídeo (MB)</th><th>Triângulos</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="lab-note">
+          Instanciada: a árvore nova com 172 triângulos (de perto). Instanciada leve: a mesma árvore com 52 triângulos (de
+          longe). Montagem: do envio das árvores até o mapa parado. Quadro: tempo para desenhar um quadro e a placa de vídeo terminar
+          (girando a câmera, 40 quadros). Placa de vídeo: geometria enviada a ela. A mesma câmera para as duas técnicas em
+          cada quantidade.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="/src/lab/trees.ts"></script>
+  </body>
+</html>
