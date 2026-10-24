@@ -18,6 +18,13 @@ export function joinvilleAgora() {
   return { minutos, epoca, noite, rotulo: `${parts.hour}h${parts.minute}` };
 }
 
+/** Ponto do olho na vista da janela: do lado de fora da fachada, raio do prédio + 2 m na direção `rumo`. */
+function olhoEm(centro, raio, rumo) {
+  const r = Math.PI / 180;
+  const d = raio + 2;
+  return [centro[0] + (d * Math.sin(rumo * r)) / (111320 * Math.cos(centro[1] * r)), centro[1] + (d * Math.cos(rumo * r)) / 111320];
+}
+
 export const animacoesPausadas = () =>
   document.documentElement.classList.contains('paused') || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -38,6 +45,8 @@ export function montarMapa(el, { foco = null, interativo = false, giro = 1.2 } =
   let map = null;
   let doc = null;
   let girando = giro > 0;
+  let limites = null;
+  let naVista = false;
   let ultimo = 0;
 
   const pronto = new Promise((resolve) => {
@@ -67,7 +76,7 @@ export function montarMapa(el, { foco = null, interativo = false, giro = 1.2 } =
   pronto.then(() => {
     el.classList.add('vivo');
     const passo = (t) => {
-      if (map && girando && !animacoesPausadas() && document.visibilityState === 'visible' && !map.isMoving()) {
+      if (map && girando && !naVista && !animacoesPausadas() && document.visibilityState === 'visible' && !map.isMoving()) {
         const dt = ultimo ? Math.min(t - ultimo, 100) : 16;
         map.setBearing(map.getBearing() + (giro * dt) / 1000);
       }
@@ -108,11 +117,57 @@ export function montarMapa(el, { foco = null, interativo = false, giro = 1.2 } =
     },
     camera(opcoes, duracao = 2200) {
       if (!map) return;
+      controle.sairDaVista();
       if (animacoesPausadas()) map.jumpTo(opcoes);
       else map.easeTo({ ...opcoes, duration: duracao, essential: false });
     },
     girar(sim) {
       girando = sim;
+    },
+    /**
+     * Câmera na janela: do lado de fora da fachada (raio do prédio + 2 m), na altura do andar, olhando para `rumo`
+     * (graus a partir do norte). Como a "vista da janela" dos empreendimentos (src/map/developmentLayer.ts).
+     */
+    vista(centro, raio, alturaOlho, rumo) {
+      if (!map) return;
+      if (!limites) limites = { zoom: map.getMaxZoom(), pitch: map.getMaxPitch() };
+      // acima de 75° a trava da câmera (src/map/scene.ts) entende que a câmera está na janela de propósito
+      map.setMaxZoom(23);
+      map.setMaxPitch(85);
+      const olho = olhoEm(centro, raio, rumo);
+      const chao = map.queryTerrainElevation?.(centro) ?? 0;
+      const cam = map.calculateCameraOptionsFromCameraLngLatAltRotation(olho, chao + alturaOlho, rumo, 82);
+      if (animacoesPausadas()) map.jumpTo(cam);
+      else map.flyTo({ ...cam, duration: 1800, essential: false });
+      naVista = true;
+    },
+    /** Se a janela que olha para `rumo` dá para a parede de um vizinho mais alto que o olho (prédio colado). */
+    bloqueado(centro, raio, alturaOlho, rumo) {
+      if (!map) return false;
+      const [x, y] = olhoEm(centro, raio, rumo);
+      const dentro = (anel) => {
+        let c = false;
+        for (let k = 0, j = anel.length - 1; k < anel.length; j = k++) {
+          const [xi, yi] = anel[k], [xj, yj] = anel[j];
+          if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+        }
+        return c;
+      };
+      return map.querySourceFeatures('osm', { sourceLayer: 'buildings' }).some((f) => {
+        if (!(Number(f.properties?.height) > alturaOlho - 1.6)) return false;
+        const g = f.geometry;
+        const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+        return polys.some((p) => dentro(p[0]));
+      });
+    },
+    sairDaVista() {
+      if (!map || !naVista) return;
+      naVista = false;
+      map.jumpTo({ elevation: 0, roll: 0 });
+      if (limites) { map.setMaxPitch(limites.pitch); map.setMaxZoom(limites.zoom); limites = null; }
+    },
+    get naVista() {
+      return naVista;
     },
   };
   return controle;

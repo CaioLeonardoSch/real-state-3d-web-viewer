@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão · Busca no mapa</title>
+<meta name="description" content="Sugestão de busca no mapa: desenhar a área com o dedo e criar um alerta, ou filtrar pelo tempo até o trabalho.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%231d4ed8%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f4f5f7; --card: #fff; --tinta: #10141d; --tinta-2: #5d6574; --linha: #e3e6eb; --azul: #1d4ed8; --azul-2: #e8eefc; --verde: #0f8a5f; --foco: var(--azul); --gaveta-fundo: #fff; --gaveta-tinta: #10141d; --gaveta-destaque: #1d4ed8; --gaveta-destaque-tinta: #fff; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--tinta); display: flex; flex-direction: column; }
+  header { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--linha); }
+  header .marca { font-weight: 700; text-decoration: none; margin-right: auto; }
+  .tela { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(340px, 420px) 1fr; }
+
+  /* lista */
+  .lista { min-height: 0; overflow-y: auto; background: var(--fundo); border-right: 1px solid var(--linha); }
+  .lista-topo { position: sticky; top: 0; z-index: 2; padding: 14px 16px 10px; background: var(--fundo); }
+  .lista-topo h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+  .lista-topo p { margin: 2px 0 0; font-size: 13px; color: var(--tinta-2); }
+  .filtros-ativos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .filtro { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--tinta); color: #fff; font-size: 13px; }
+  .filtro button { border: 0; background: none; color: inherit; width: 22px; height: 22px; border-radius: 50%; }
+  .alerta-cta { display: none; margin-top: 10px; width: 100%; padding: 12px; border: 0; border-radius: 12px; background: var(--azul); color: #fff; font-weight: 600; }
+  .com-area .alerta-cta { display: block; }
+  .itens { display: grid; gap: 10px; padding: 0 16px 24px; }
+  .item { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--linha); text-decoration: none; cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
+  .item:hover { border-color: var(--azul); transform: translateY(-1px); }
+  .item .img { width: 96px; height: 76px; border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, #dfe5ee, #c9d3e1); display: grid; place-items: center; font-size: 11px; color: var(--tinta-2); text-align: center; padding: 4px; }
+  .item img { width: 100%; height: 100%; object-fit: cover; }
+  .item b { display: block; font-size: 17px; letter-spacing: -0.02em; }
+  .item .t { font-size: 14px; }
+  .item .s { font-size: 12px; color: var(--tinta-2); }
+  .item .tempo { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: var(--azul-2); color: var(--azul); font-size: 12px; font-weight: 600; }
+  .item s { font-size: 12px; color: var(--verde); text-decoration: none; font-weight: 600; margin-left: 6px; }
+
+  /* mapa e ferramentas */
+  .mapa { position: relative; min-height: 0; background: #e5e1d8; }
+  .ferramentas { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+  .ferramentas > * { pointer-events: auto; }
+  .ferr { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; border: 0; background: var(--card); box-shadow: 0 4px 18px rgba(16, 20, 29, 0.16); font-size: 14px; font-weight: 600; }
+  .ferr[aria-pressed='true'] { background: var(--tinta); color: #fff; }
+  .ferr svg { flex: none; }
+  .tempo-ctrl { display: none; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 16px; background: var(--card); box-shadow: 0 4px 18px rgba(16, 20, 29, 0.16); font-size: 14px; }
+  .tempo-ctrl.aberto { display: flex; }
+  .tempo-ctrl select, .tempo-ctrl input { font-size: 14px; }
+  .tempo-ctrl select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--linha); background: var(--fundo); }
+  .tempo-ctrl output { font-weight: 700; min-width: 4.5ch; }
+  .tempo-ctrl input[type=range] { width: 120px; accent-color: var(--azul); }
+  .desenho { position: absolute; inset: 0; z-index: 4; display: none; cursor: crosshair; touch-action: none; }
+  .desenhando .desenho { display: block; background: rgba(29, 78, 216, 0.06); }
+  .desenho svg { width: 100%; height: 100%; }
+  .dica-desenho { position: absolute; left: 50%; bottom: 20px; translate: -50% 0; z-index: 5; padding: 10px 16px; border-radius: 999px; background: var(--tinta); color: #fff; font-size: 14px; display: none; white-space: nowrap; }
+  .desenhando .dica-desenho { display: block; }
+  .nota-mapa { position: absolute; right: 12px; bottom: 12px; z-index: 3; max-width: 300px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.92); font-size: 12px; color: var(--tinta-2); }
+
+  /* celular: mapa inteiro e lista como gaveta de baixo */
+  @media (max-width: 760px) {
+    .tela { display: block; position: relative; }
+    .mapa { position: absolute; inset: 0; }
+    .lista { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; height: 34%; border-radius: 20px 20px 0 0; border: 0; box-shadow: 0 -10px 30px rgba(16, 20, 29, 0.18); transition: height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .lista.aberta { height: 78%; }
+    .lista-topo { border-radius: 20px 20px 0 0; padding-top: 22px; cursor: grab; }
+    .lista-topo::before { content: ''; position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 40px; height: 5px; border-radius: 3px; background: #c9ced6; }
+    .nota-mapa { display: none; }
+    .dica-desenho { bottom: calc(34% + 14px); }
+  }
+
+  /* alerta */
+  dialog { border: 0; border-radius: 22px; padding: 22px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3); }
+  dialog::backdrop { background: rgba(16, 20, 29, 0.45); }
+  dialog h2 { margin: 0 0 6px; font-size: 20px; }
+  dialog p { margin: 0 0 14px; color: var(--tinta-2); font-size: 14px; }
+  dialog .canais { display: flex; gap: 6px; margin-bottom: 12px; }
+  dialog .canais button { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--linha); background: var(--fundo); }
+  dialog .canais button[aria-pressed='true'] { background: var(--tinta); color: #fff; }
+  dialog input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--linha); margin-bottom: 12px; }
+  dialog .acoes { display: flex; gap: 8px; justify-content: flex-end; }
+  dialog .acoes button { padding: 11px 16px; border-radius: 10px; border: 1px solid var(--linha); background: var(--card); font-weight: 600; }
+  dialog .acoes .ok { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .toast { position: fixed; left: 50%; top: 70px; translate: -50% -20px; opacity: 0; pointer-events: none; z-index: 120; padding: 12px 18px; border-radius: 999px; background: var(--verde); color: #fff; font-weight: 600; transition: translate 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s; }
+  .toast.mostra { translate: -50% 0; opacity: 1; }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão · busca no mapa · imóveis de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+<header><a class="marca" href="sugestoes.html">Exemplo Imóveis</a><a class="ferr" href="mapa.html" style="box-shadow:none;border:1px solid var(--linha)">Mapa completo</a></header>
+
+<div class="tela" id="tela">
+  <aside class="lista" id="lista">
+    <div class="lista-topo" id="lista-topo">
+      <h1 id="contagem">100 imóveis</h1>
+      <p id="sub">em Joinville e Araquari</p>
+      <div class="filtros-ativos" id="filtros"></div>
+      <button class="alerta-cta" type="button" id="alerta-btn">🔔 Avisar quando surgir imóvel nesta área</button>
+    </div>
+    <div class="itens" id="itens"></div>
+  </aside>
+
+  <div class="mapa" id="mapa">
+    <div class="palco interativo" id="palco"><img src="sugestoes/img/hero-tarde.jpg" alt=""></div>
+    <div class="desenho" id="desenho"><svg aria-hidden="true"><polyline id="traco" fill="rgba(29,78,216,.15)" stroke="#1d4ed8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points=""/></svg></div>
+    <div class="ferramentas">
+      <button class="ferr" type="button" id="btn-desenhar" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l6-3 6 4-2 9-9-2z" stroke-dasharray="3 2"/></svg>Desenhar área</button>
+      <button class="ferr" type="button" id="btn-tempo" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l3 2M8 2h4" stroke-linecap="round"/></svg>Até o trabalho</button>
+      <div class="tempo-ctrl" id="tempo-ctrl">
+        Até <output id="min-out">20 min</output><input type="range" id="min" min="5" max="45" step="5" value="20" aria-label="Minutos">
+        de <select id="destino" aria-label="Destino"></select>
+        de <select id="meio" aria-label="Meio de transporte"></select>
+      </div>
+    </div>
+    <p class="dica-desenho">Contorne a área com o dedo ou o mouse</p>
+    <p class="nota-mapa">O tempo é uma estimativa em linha reta, sem trânsito. Num site real viria de um motor de rotas.</p>
+  </div>
+</div>
+
+<dialog id="dialogo">
+  <h2>Alerta para esta área</h2>
+  <p id="dialogo-txt">Quando entrar um imóvel novo dentro do desenho, a gente avisa.</p>
+  <div class="canais" role="group" aria-label="Por onde avisar"><button type="button" aria-pressed="true" data-c="WhatsApp">WhatsApp</button><button type="button" aria-pressed="false" data-c="E-mail">E-mail</button></div>
+  <label class="sr-only" for="contato">Seu contato</label><input id="contato" placeholder="(47) 90000-0000" autocomplete="tel">
+  <div class="acoes"><button type="button" id="cancelar">Agora não</button><button type="button" class="ok" id="confirmar">Criar alerta</button></div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module">
+  import { TODOS } from './sugestoes/todos.js';
+  import { IMOVEIS, img, brlCurto } from './sugestoes/dados.js';
+  import { montarMapa } from './sugestoes/mapa-vivo.js';
+  import { DESTINOS, MEIOS, minutos, raioAlcancavel, circulo, camada } from './sugestoes/deslocamento.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('header'), links: [['#', 'Comprar'], ['#', 'Alugar'], ['mapa.html', 'Mapa 3D completo']] });
+  const comFoto = new Set(IMOVEIS.map((i) => i.id));
+  const mapa = montarMapa(document.getElementById('palco'), { interativo: true, giro: 0 });
+  mapa.pronto.then(() => { mapa.hora(1080, 'summer'); mapa.camera({ center: [-48.846, -26.295], zoom: 12.6, pitch: 35, bearing: 0 }, 0); desenhar(); });
+
+  let area = null; // anel [lng, lat][]
+  let tempo = null; // { destino, min, meio }
+
+  const dentro = (anel, [x, y]) => {
+    let c = false;
+    for (let k = 0, j = anel.length - 1; k < anel.length; j = k++) {
+      const [xi, yi] = anel[k], [xj, yj] = anel[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+
+  function desenhar() {
+    const lista = TODOS.filter((i) => (!area || dentro(area, i.centro)) && (!tempo || minutos(i.centro, tempo.destino.centro, tempo.meio)[1] <= tempo.min))
+      .map((i) => ({ i, t: tempo ? minutos(i.centro, tempo.destino.centro, tempo.meio) : null }))
+      .sort((a, b) => (a.t?.[1] ?? 0) - (b.t?.[1] ?? 0) || a.i.preco - b.i.preco);
+    document.getElementById('contagem').textContent = `${lista.length} ${lista.length === 1 ? 'imóvel' : 'imóveis'}`;
+    document.getElementById('sub').textContent = area ? 'dentro da área desenhada' : tempo ? `até ${tempo.min} min de ${tempo.destino.nome}, de ${MEIOS[tempo.meio].rotulo.toLowerCase()}` : 'em Joinville e Araquari';
+    document.getElementById('lista').classList.toggle('com-area', !!area);
+    document.getElementById('filtros').innerHTML = [
+      area ? '<span class="filtro">Área desenhada<button type="button" data-tirar="area" aria-label="Tirar a área">×</button></span>' : '',
+      tempo ? `<span class="filtro">Até ${tempo.min} min · ${tempo.destino.nome}<button type="button" data-tirar="tempo" aria-label="Tirar o tempo">×</button></span>` : '',
+    ].join('');
+    document.getElementById('itens').innerHTML = lista.slice(0, 60).map(({ i, t }) => `<a class="item" data-id="${i.id}" href="${comFoto.has(i.id) ? `sugestao-imovel.html?id=${i.id}` : '#'}">
+      <div class="img">${comFoto.has(i.id) ? `<img src="${img(i.id)}" alt="" loading="lazy">` : `${i.tipo}<br>${i.bairro}`}</div>
+      <div><b>${brlCurto(i.preco)}${i.antes ? `<s>baixou ${Math.round((1 - i.preco / i.antes) * 100)}%</s>` : ''}</b><div class="t">${i.titulo}</div><div class="s">${i.bairro}${i.area ? ` · ${i.area} m²` : ''}</div>${t ? `<span class="tempo">${t[0]}–${t[1]} min</span>` : ''}</div></a>`).join('');
+    if (!mapa.map) return;
+    camada(mapa.map, 'area', area ? { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...area, area[0]]] } } : { type: 'FeatureCollection', features: [] }, { cor: '#1d4ed8', opacidade: 0.12, linha: 3 });
+    camada(mapa.map, 'alcance', tempo ? { type: 'FeatureCollection', features: [circulo(tempo.destino.centro, raioAlcancavel(tempo.min, tempo.meio)), { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: tempo.destino.centro } }] } : { type: 'FeatureCollection', features: [] }, { cor: '#0f8a5f', opacidade: 0.1, linha: 2, tracejado: true });
+  }
+
+  // lista: tocar num item leva o mapa até ele (os que têm página de sugestão abrem a página)
+  document.getElementById('itens').addEventListener('click', (e) => {
+    const a = e.target.closest('.item'); if (!a) return;
+    if (a.getAttribute('href') === '#') {
+      e.preventDefault();
+      const i = TODOS.find((x) => x.id === a.dataset.id);
+      mapa.camera({ center: i.centro, zoom: 17.4, pitch: 60 }, 1800);
+    }
+  });
+  document.getElementById('filtros').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tirar]'); if (!b) return;
+    if (b.dataset.tirar === 'area') area = null;
+    else { tempo = null; btnTempo.setAttribute('aria-pressed', 'false'); tempoCtrl.classList.remove('aberto'); }
+    desenhar();
+  });
+  // celular: puxar a lista para cima e para baixo
+  document.getElementById('lista-topo').addEventListener('click', () => document.getElementById('lista').classList.toggle('aberta'));
+
+  // desenhar a área
+  const tela = document.getElementById('mapa');
+  const camadaDesenho = document.getElementById('desenho');
+  const traco = document.getElementById('traco');
+  const btnDesenhar = document.getElementById('btn-desenhar');
+  let pontos = [];
+  btnDesenhar.addEventListener('click', () => {
+    const ligar = !tela.classList.contains('desenhando');
+    tela.classList.toggle('desenhando', ligar);
+    btnDesenhar.setAttribute('aria-pressed', String(ligar));
+  });
+  camadaDesenho.addEventListener('pointerdown', (e) => { pontos = [[e.offsetX, e.offsetY]]; camadaDesenho.setPointerCapture(e.pointerId); traco.setAttribute('points', ''); });
+  camadaDesenho.addEventListener('pointermove', (e) => {
+    if (!pontos.length) return;
+    const [x0, y0] = pontos.at(-1);
+    if (Math.hypot(e.offsetX - x0, e.offsetY - y0) < 6) return;
+    pontos.push([e.offsetX, e.offsetY]);
+    traco.setAttribute('points', pontos.map((p) => p.join(',')).join(' '));
+  });
+  camadaDesenho.addEventListener('pointerup', () => {
+    if (pontos.length >= 5 && mapa.map) {
+      // até 40 cantos, como o desenho do mapa completo
+      const passo = Math.max(1, Math.ceil(pontos.length / 40));
+      area = pontos.filter((_, k) => k % passo === 0).map(([x, y]) => { const ll = mapa.map.unproject([x, y]); return [Math.round(ll.lng * 1e5) / 1e5, Math.round(ll.lat * 1e5) / 1e5]; });
+      desenhar();
+      document.getElementById('lista').classList.add('aberta');
+    }
+    pontos = [];
+    traco.setAttribute('points', '');
+    tela.classList.remove('desenhando');
+    btnDesenhar.setAttribute('aria-pressed', 'false');
+  });
+
+  // até o trabalho
+  const btnTempo = document.getElementById('btn-tempo');
+  const tempoCtrl = document.getElementById('tempo-ctrl');
+  const selDestino = document.getElementById('destino');
+  const selMeio = document.getElementById('meio');
+  const minIn = document.getElementById('min');
+  selDestino.innerHTML = DESTINOS.map((d, k) => `<option value="${k}">${d.nome}</option>`).join('');
+  selMeio.innerHTML = Object.entries(MEIOS).map(([k, v]) => `<option value="${k}">${v.rotulo.toLowerCase()}</option>`).join('');
+  const lerTempo = () => {
+    document.getElementById('min-out').textContent = `${minIn.value} min`;
+    tempo = { destino: DESTINOS[Number(selDestino.value)], min: Number(minIn.value), meio: selMeio.value };
+    desenhar();
+  };
+  btnTempo.addEventListener('click', () => {
+    const ligar = btnTempo.getAttribute('aria-pressed') !== 'true';
+    btnTempo.setAttribute('aria-pressed', String(ligar));
+    tempoCtrl.classList.toggle('aberto', ligar);
+    if (ligar) { lerTempo(); mapa.camera({ center: tempo.destino.centro, zoom: 12.4, pitch: 30 }, 1600); } else { tempo = null; desenhar(); }
+  });
+  [selDestino, selMeio, minIn].forEach((el) => el.addEventListener('input', () => { lerTempo(); if (el === selDestino) mapa.camera({ center: tempo.destino.centro, zoom: 12.4, pitch: 30 }, 1600); }));
+
+  // alerta da área
+  const dialogo = document.getElementById('dialogo');
+  document.getElementById('alerta-btn').addEventListener('click', () => {
+    const n = TODOS.filter((i) => dentro(area, i.centro)).length;
+    document.getElementById('dialogo-txt').textContent = `Hoje há ${n} ${n === 1 ? 'imóvel' : 'imóveis'} dentro do desenho. Quando entrar um novo ou algum baixar de preço, a gente avisa.`;
+    dialogo.showModal();
+  });
+  dialogo.querySelector('.canais').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    dialogo.querySelectorAll('.canais button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.getElementById('contato').placeholder = b.dataset.c === 'WhatsApp' ? '(47) 90000-0000' : 'voce@email.com';
+  });
+  document.getElementById('cancelar').addEventListener('click', () => dialogo.close());
+  document.getElementById('confirmar').addEventListener('click', () => {
+    dialogo.close();
+    const t = document.getElementById('toast');
+    t.textContent = 'Alerta criado (exemplo: nada é enviado)';
+    t.classList.add('mostra');
+    setTimeout(() => t.classList.remove('mostra'), 3200);
+  });
+
+  desenhar();
+</script>
+</body>
+</html>

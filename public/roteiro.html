@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão · Roteiro de visitas</title>
+<meta name="description" content="Sugestão: os favoritos viram um roteiro de visitas no mapa 3D, com ordem, horários e envio ao corretor.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M3 13c3-8 7 0 10-10%22 stroke=%22%23e08b3a%22 stroke-width=%222.5%22 fill=%22none%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f5f2ec; --card: #fff; --tinta: #16130f; --tinta-2: #6a6155; --linha: #e6e0d6; --dourado: #e08b3a; --foco: var(--dourado); --gaveta-fundo: #fff; --gaveta-tinta: #16130f; --gaveta-destaque: #16130f; --gaveta-destaque-tinta: #fff; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--tinta); display: flex; flex-direction: column; }
+  header { flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--linha); background: var(--card); }
+  header .marca { font-weight: 700; text-decoration: none; margin-right: auto; }
+  .tela { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(360px, 440px) 1fr; }
+  .painel { min-height: 0; overflow-y: auto; padding: 22px 20px 30px; border-right: 1px solid var(--linha); }
+  h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: -0.035em; line-height: 1.05; }
+  h1 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--dourado); }
+  .sub { margin: 0 0 18px; color: var(--tinta-2); font-size: 15px; }
+  .pessoas { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta-2); margin-bottom: 16px; }
+  .pessoas i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; color: #fff; font-size: 12px; }
+  .pessoas i + i { margin-left: -12px; border: 2px solid var(--fundo); }
+  .inicio { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; font-size: 14px; flex-wrap: wrap; }
+  .inicio select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--linha); background: var(--card); }
+  .paradas { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+  .parada { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; }
+  .parada .num { width: 34px; height: 34px; border-radius: 50%; background: var(--tinta); color: #fff; display: grid; place-items: center; font-weight: 700; position: relative; z-index: 1; }
+  .parada .corpo { padding: 2px 0 18px; }
+  .parada .hora { font-size: 13px; font-weight: 700; color: var(--dourado); }
+  .parada b { display: block; font-size: 16px; }
+  .parada small { color: var(--tinta-2); }
+  .parada .dica { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 999px; background: #fbefe0; color: #9a5512; font-size: 12px; }
+  .parada .mover { display: flex; flex-direction: column; gap: 4px; }
+  .parada .mover button { width: 30px; height: 26px; border-radius: 8px; border: 1px solid var(--linha); background: var(--card); font-size: 12px; }
+  .trecho { grid-column: 1 / -1; display: grid; grid-template-columns: 34px 1fr; gap: 12px; margin: -10px 0 8px; }
+  .trecho span:first-child { justify-self: center; width: 2px; background: repeating-linear-gradient(var(--tinta-2) 0 4px, transparent 4px 8px); }
+  .trecho span:last-child { font-size: 12px; color: var(--tinta-2); padding: 4px 0 12px; }
+  .acoes { display: grid; gap: 8px; margin-top: 10px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 14px; border: 1px solid var(--linha); background: var(--card); font-weight: 600; text-decoration: none; font-size: 15px; }
+  .btn.primario { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+  .btn.zap { background: #25d366; border-color: #25d366; color: #06301a; }
+  .total { display: flex; justify-content: space-between; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--linha); font-size: 14px; margin: 6px 0 10px; }
+  .fora { margin-top: 18px; font-size: 13px; color: var(--tinta-2); }
+  .fora button { margin: 6px 6px 0 0; padding: 6px 10px; border-radius: 999px; border: 1px dashed var(--linha); background: none; font-size: 13px; }
+  .mapa { position: relative; min-height: 0; }
+  .mapa .rotulo-mapa { position: absolute; left: 14px; top: 14px; z-index: 2; padding: 8px 14px; border-radius: 999px; background: rgba(22, 19, 15, 0.8); color: #fff; font-size: 14px; font-weight: 600; }
+  .nota { position: absolute; right: 14px; bottom: 14px; z-index: 2; max-width: 280px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.92); font-size: 12px; color: var(--tinta-2); }
+  @media (max-width: 820px) {
+    body { height: auto; }
+    .tela { display: flex; flex-direction: column; }
+    .mapa { position: sticky; top: 0; height: 42svh; flex: none; z-index: 3; order: -1; }
+    .painel { border: 0; overflow: visible; }
+    .nota { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão · roteiro de visitas · imóveis de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+<header><a class="marca" href="sugestoes.html">Exemplo Imóveis</a></header>
+<div class="tela">
+  <aside class="painel">
+    <h1>Seu sábado <em>de visitas.</em></h1>
+    <p class="sub">Os favoritos viraram um roteiro: na ordem do caminho, com o horário de cada visita e a melhor luz de cada imóvel.</p>
+    <div class="pessoas"><i style="background:#c2410c">V</i><i style="background:#1d4ed8">M</i>Lista "Apartamentos 2026" · você e Marina</div>
+    <div class="inicio">Começar <select id="inicio"><option value="540">sáb., 9h</option><option value="600" selected>sáb., 10h</option><option value="840">sáb., 14h</option><option value="900">sáb., 15h</option></select> saindo do <select id="partida"></select></div>
+    <ol class="paradas" id="paradas"></ol>
+    <div class="total" id="total"></div>
+    <div class="acoes">
+      <button class="btn primario" type="button" id="previa">▶ Prévia do caminho no mapa</button>
+      <a class="btn zap" id="zap" href="#" target="_blank" rel="noopener">Enviar o roteiro ao corretor</a>
+    </div>
+    <div class="fora" id="fora"></div>
+  </aside>
+  <div class="mapa">
+    <div class="palco interativo" id="palco"><img src="sugestoes/img/hero-tarde.jpg" alt=""></div>
+    <span class="rotulo-mapa" id="rotulo-mapa">Roteiro</span>
+    <p class="nota">Tempos estimados em linha reta, sem trânsito, mais 30 min em cada visita. Num site real, viriam de um motor de rotas.</p>
+  </div>
+</div>
+
+<script type="module">
+  import { IMOVEIS, brl, brlCurto } from './sugestoes/dados.js';
+  import { montarMapa } from './sugestoes/mapa-vivo.js';
+  import { DESTINOS, minutos, distancia, camada, doMapa } from './sugestoes/deslocamento.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('header'), links: [['sugestao-imovel.html?id=apt-09', 'Imóveis'], ['sugestao-busca.html', 'Busca no mapa']] });
+  const VISITA = 30;
+  let escolhidos = ['apt-09', 'apt-04', 'apt-01', 'apt-22'];
+  const selPartida = document.getElementById('partida');
+  selPartida.innerHTML = DESTINOS.map((d, k) => `<option value="${k}">${d.nome}</option>`).join('');
+  const selInicio = document.getElementById('inicio');
+  const relogio = (m) => `${Math.floor(m / 60)}h${String(Math.round(m % 60)).padStart(2, '0')}`;
+
+  /** Ordem do caminho: sempre o mais perto do ponto atual (bom o bastante para 3 a 6 visitas). */
+  function ordenar(partida, ids) {
+    const resto = ids.map((id) => IMOVEIS.find((i) => i.id === id));
+    const ordem = [];
+    let atual = partida;
+    while (resto.length) {
+      resto.sort((a, b) => distancia(atual, a.centro) - distancia(atual, b.centro));
+      const prox = resto.shift();
+      ordem.push(prox);
+      atual = prox.centro;
+    }
+    return ordem;
+  }
+  let ordemManual = null;
+
+  /** Dica de luz para a hora da visita. */
+  const dicaLuz = (m, i) => m >= 960 ? 'luz dourada: bom para ver a vista' : m <= 660 ? 'sol da manhã: veja os quartos' : i.andar >= 3 ? 'sol alto: a sala fica clara' : 'pouca sombra dos vizinhos agora';
+
+  function calcular() {
+    const partida = DESTINOS[Number(selPartida.value)].centro;
+    const lista = ordemManual ? ordemManual.map((id) => IMOVEIS.find((i) => i.id === id)) : ordenar(partida, escolhidos);
+    let t = Number(selInicio.value);
+    let ponto = partida;
+    let deslocamento = 0;
+    const paradas = lista.map((i, k) => {
+      const viagem = minutos(ponto, i.centro, 'carro')[1];
+      deslocamento += viagem;
+      t += viagem;
+      const p = { i, chegada: t, viagem, k };
+      t += VISITA;
+      ponto = i.centro;
+      return p;
+    });
+    return { partida, paradas, fim: t, deslocamento };
+  }
+
+  function desenhar() {
+    const { partida, paradas, fim, deslocamento } = calcular();
+    document.getElementById('paradas').innerHTML = paradas.map((p) => `
+      <li class="trecho"><span></span><span>🚗 ${p.viagem} min${p.k === 0 ? ` saindo do ${DESTINOS[Number(selPartida.value)].nome}` : ''}</span></li>
+      <li class="parada" data-id="${p.i.id}"><span class="num">${p.k + 1}</span>
+        <div class="corpo"><span class="hora">${relogio(p.chegada)}–${relogio(p.chegada + VISITA)}</span><b>${p.i.titulo}</b><small>${p.i.bairro} · ${brlCurto(p.i.preco)}</small><br><span class="dica">☀ ${dicaLuz(p.chegada, p.i)}</span></div>
+        <div class="mover"><button type="button" data-mover="-1" aria-label="Subir">▲</button><button type="button" data-mover="1" aria-label="Descer">▼</button><button type="button" data-tirar aria-label="Tirar do roteiro">×</button></div></li>`).join('');
+    document.getElementById('total').innerHTML = `<span>${paradas.length} visitas · ${deslocamento} min no carro</span><b>${relogio(Number(selInicio.value))} até ${relogio(fim)}</b>`;
+    const fora = IMOVEIS.filter((i) => !escolhidos.includes(i.id));
+    document.getElementById('fora').innerHTML = fora.length ? `Outros favoritos:<br>${fora.map((i) => `<button type="button" data-por="${i.id}">+ ${i.titulo.split(' ')[0]} no ${i.bairro}</button>`).join('')}` : '';
+    const txt = `Olá! Montei um roteiro de visitas para ${selInicio.selectedOptions[0].textContent}:\n${paradas.map((p) => `${p.k + 1}. ${relogio(p.chegada)} · ${p.i.titulo} no ${p.i.bairro} (cód. ${p.i.codigo})`).join('\n')}\nDá para confirmar?`;
+    document.getElementById('zap').href = `https://wa.me/?text=${encodeURIComponent(txt)}`;
+    if (!mapa.map) return;
+    const linha = [partida, ...paradas.map((p) => p.i.centro)];
+    camada(mapa.map, 'roteiro', { type: 'FeatureCollection', features: [
+      { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: linha } },
+      { type: 'Feature', properties: { n: '★' }, geometry: { type: 'Point', coordinates: partida } },
+      ...paradas.map((p) => ({ type: 'Feature', properties: { n: String(p.k + 1) }, geometry: { type: 'Point', coordinates: p.i.centro } })),
+    ] }, { cor: '#16130f', linha: 3, tracejado: true });
+    // números das paradas sobre os pontos, na fonte das ruas do mapa
+    if (!mapa.map.getLayer('roteiro-num')) {
+      const fonte = mapa.map.getLayoutProperty('road-names', 'text-font');
+      mapa.map.addLayer(doMapa(mapa.map, { id: 'roteiro-num', type: 'symbol', source: 'roteiro', filter: ['==', '$type', 'Point'], layout: { 'text-field': ['get', 'n'], 'text-font': fonte, 'text-size': 13, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } }));
+      mapa.map.setPaintProperty('roteiro-ponto', 'circle-radius', 12);
+    }
+    const xs = linha.map((p) => p[0]), ys = linha.map((p) => p[1]);
+    mapa.map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 60, pitch: 35, bearing: 0, duration: 1800, maxZoom: 15 });
+  }
+
+  document.getElementById('paradas').addEventListener('click', (e) => {
+    const li = e.target.closest('.parada'); if (!li) return;
+    const ids = calcular().paradas.map((p) => p.i.id);
+    const k = ids.indexOf(li.dataset.id);
+    if (e.target.closest('[data-tirar]')) { escolhidos = escolhidos.filter((x) => x !== li.dataset.id); ordemManual = ordemManual?.filter((x) => x !== li.dataset.id) ?? null; }
+    else if (e.target.closest('[data-mover]')) {
+      const j = k + Number(e.target.closest('[data-mover]').dataset.mover);
+      if (j < 0 || j >= ids.length) return;
+      [ids[k], ids[j]] = [ids[j], ids[k]];
+      ordemManual = ids;
+    } else { const i = IMOVEIS.find((x) => x.id === li.dataset.id); mapa.camera({ center: i.centro, zoom: 17.8, pitch: 62 }, 1800); return; }
+    desenhar();
+  });
+  document.getElementById('fora').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-por]'); if (!b) return;
+    escolhidos.push(b.dataset.por); ordemManual = null; desenhar();
+  });
+  [selInicio, selPartida].forEach((s) => s.addEventListener('change', () => { if (s === selPartida) ordemManual = null; desenhar(); }));
+
+  // prévia: a câmera percorre as paradas
+  document.getElementById('previa').addEventListener('click', async () => {
+    if (!mapa.map) return;
+    const { paradas } = calcular();
+    const rot = document.getElementById('rotulo-mapa');
+    for (const p of paradas) {
+      rot.textContent = `${p.k + 1}. ${p.i.bairro} · ${relogio(p.chegada)}`;
+      mapa.camera({ center: p.i.centro, zoom: 17.6, pitch: 64, bearing: mapa.map.getBearing() + 60 }, 2600);
+      await new Promise((r) => setTimeout(r, 3600));
+    }
+    rot.textContent = 'Roteiro';
+    desenhar();
+  });
+
+  const mapa = montarMapa(document.getElementById('palco'), { interativo: true, giro: 0 });
+  mapa.pronto.then(() => { mapa.hora(600, 'summer'); desenhar(); });
+  desenhar();
+</script>
+</body>
+</html>

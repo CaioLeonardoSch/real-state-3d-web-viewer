@@ -5,7 +5,12 @@ const SUGESTOES = [
   ['sugestao1.html', 'Cidade viva'],
   ['sugestao2.html', 'Editorial'],
   ['sugestao3.html', 'Transparência'],
+  ['sugestao4.html', 'Maquete'],
+  ['sugestao5.html', 'Bairro primeiro'],
+  ['sugestao6.html', 'Conversa'],
   ['sugestao-imovel.html?id=apt-09', 'Página do imóvel'],
+  ['sugestao-busca.html', 'Busca no mapa'],
+  ['roteiro.html', 'Roteiro de visitas'],
 ];
 
 export function menuCelular({ links, botao = null, onde = null, cta = null }) {

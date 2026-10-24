@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão 6 · Conversa</title>
+<meta name="description" content="Sugestão de design: a busca é uma conversa, e o mapa 3D responde junto com cada mensagem.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 3h12v8H6l-4 3z%22 fill=%22%237c3aed%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f6f5fb; --card: #fff; --tinta: #16141f; --tinta-2: #66637a; --linha: #e6e3f0; --roxo: #6d3df0; --roxo-2: #efe9ff; --foco: var(--roxo); --gaveta-fundo: #fff; --gaveta-tinta: #16141f; --gaveta-destaque: #6d3df0; --gaveta-destaque-tinta: #fff; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--tinta); display: flex; flex-direction: column; }
+  header { flex: none; display: flex; align-items: center; gap: 14px; padding: 12px 18px; }
+  header .marca { font-weight: 700; text-decoration: none; margin-right: auto; display: flex; align-items: center; gap: 8px; }
+  header .marca i { width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, var(--roxo), #b48cff); }
+  header a.l { font-size: 14px; color: var(--tinta-2); text-decoration: none; }
+  .tela { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(360px, 460px) 1fr; gap: 14px; padding: 0 14px 14px; }
+
+  /* conversa */
+  .conversa { min-height: 0; display: flex; flex-direction: column; background: var(--card); border-radius: 26px; border: 1px solid var(--linha); overflow: hidden; }
+  .msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 18px 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .boas { padding: 6px 4px 10px; }
+  .boas h1 { margin: 0 0 8px; font-size: clamp(28px, 3vw, 38px); line-height: 1.02; letter-spacing: -0.04em; }
+  .boas h1 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--roxo); }
+  .boas p { margin: 0; color: var(--tinta-2); }
+  .msg { max-width: 88%; padding: 11px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; animation: entra 0.3s ease both; }
+  .msg.eu { align-self: flex-end; background: var(--tinta); color: #fff; border-bottom-right-radius: 6px; }
+  .msg.ela { align-self: flex-start; background: var(--fundo); border-bottom-left-radius: 6px; }
+  .msg .entendi { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .msg .entendi span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--roxo-2); color: var(--roxo); font-weight: 600; }
+  .msg .cards { display: grid; gap: 6px; margin-top: 10px; }
+  .msg .card { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--linha); text-decoration: none; font-size: 14px; cursor: pointer; transition: border-color 0.2s; }
+  .msg .card:hover { border-color: var(--roxo); }
+  .msg .card small { display: block; color: var(--tinta-2); font-size: 12px; }
+  .msg .card b { white-space: nowrap; }
+  .digitando { align-self: flex-start; display: flex; gap: 4px; padding: 14px 16px; border-radius: 18px; background: var(--fundo); }
+  .digitando i { width: 7px; height: 7px; border-radius: 50%; background: #a9a5bd; animation: pula 1s infinite; }
+  .digitando i:nth-child(2) { animation-delay: 0.15s; } .digitando i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes pula { 30% { transform: translateY(-5px); background: var(--roxo); } }
+  .sugestoes-chat { display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px; scrollbar-width: none; }
+  .sugestoes-chat button { flex: none; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--linha); background: var(--card); font-size: 13px; white-space: nowrap; }
+  .sugestoes-chat button:hover { border-color: var(--roxo); color: var(--roxo); }
+  form.entrada { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--linha); }
+  form.entrada input { flex: 1; min-width: 0; padding: 13px 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--fundo); font-size: 16px; outline: none; }
+  form.entrada input:focus { border-color: var(--roxo); }
+  form.entrada button { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--roxo); color: #fff; font-size: 18px; }
+  form.entrada .voz { background: var(--fundo); color: var(--tinta); border: 1px solid var(--linha); }
+  form.entrada .voz.ouvindo { background: #ffe1e1; color: #c0262d; animation: pulsa-voz 1s infinite; }
+  @keyframes pulsa-voz { 50% { box-shadow: 0 0 0 6px rgba(192, 38, 45, 0.15); } }
+
+  /* mapa */
+  .mapa { position: relative; min-height: 0; border-radius: 26px; overflow: hidden; background: #e2dfd6; }
+  .mapa .resumo { position: absolute; left: 14px; top: 14px; z-index: 2; padding: 9px 14px; border-radius: 999px; background: rgba(22, 20, 31, 0.8); color: #fff; font-size: 14px; font-weight: 600; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .nota { position: absolute; right: 14px; bottom: 14px; z-index: 2; max-width: 300px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.92); font-size: 12px; color: var(--tinta-2); }
+  @media (max-width: 820px) {
+    .tela { grid-template-columns: 1fr; grid-template-rows: 34% 1fr; padding: 0 8px 8px; gap: 8px; }
+    .mapa { order: -1; border-radius: 20px; }
+    .nota { display: none; }
+    .msg { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão 6 · <strong>Conversa</strong> · imóveis de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+<header><a class="marca" href="#"><i aria-hidden="true"></i>Exemplo Imóveis</a><a class="l" href="mapa.html">Mapa 3D</a></header>
+
+<div class="tela">
+  <section class="conversa" aria-label="Conversa">
+    <div class="msgs" id="msgs" aria-live="polite">
+      <div class="boas"><h1>O que você <em>procura?</em></h1><p>Escreva do seu jeito, como falaria com o corretor. Dá para ir ajustando: "mais perto do centro", "só casa", "até 900 mil".</p></div>
+    </div>
+    <div class="sugestoes-chat" id="sugestoes"></div>
+    <form class="entrada" id="entrada" onsubmit="return false">
+      <label class="sr-only" for="texto">Sua mensagem</label>
+      <input id="texto" autocomplete="off" placeholder="Ex.: 3 quartos até 1 milhão perto do centro">
+      <button type="button" class="voz" id="voz" aria-label="Falar">🎙</button>
+      <button type="submit" aria-label="Enviar">↑</button>
+    </form>
+  </section>
+  <div class="mapa">
+    <div class="palco interativo" id="palco"><img src="sugestoes/img/hero-tarde.jpg" alt=""></div>
+    <span class="resumo" id="resumo">100 imóveis em Joinville</span>
+    <p class="nota">As respostas aqui vêm de regras simples. Num site real, um modelo de linguagem entenderia frases mais livres; os filtros continuariam visíveis.</p>
+  </div>
+</div>
+
+<script type="module">
+  import { TODOS } from './sugestoes/todos.js';
+  import { IMOVEIS, brl, brlCurto, parcela } from './sugestoes/dados.js';
+  import { montarMapa } from './sugestoes/mapa-vivo.js';
+  import { DESTINOS, minutos, distancia, camada } from './sugestoes/deslocamento.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('header'), links: [['#', 'Comprar'], ['#', 'Alugar'], ['mapa.html', 'Mapa 3D']] });
+  const CENTRO = DESTINOS.find((d) => d.nome === 'Centro').centro;
+  const BAIRROS = [...new Set(TODOS.map((t) => t.bairro).filter(Boolean))];
+  const comPagina = new Set(IMOVEIS.map((i) => i.id));
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const mapa = montarMapa(document.getElementById('palco'), { interativo: true, giro: 0.8 });
+  mapa.pronto.then(() => { mapa.hora(1080, 'summer'); mostrar(TODOS); });
+
+  // o que já foi entendido na conversa
+  let f = {};
+  let ordem = null;
+
+  /** Lê a mensagem e muda os filtros. Devolve o que entendeu (para mostrar) ou uma resposta direta. */
+  function entender(texto) {
+    const t = norm(texto);
+    const ent = [];
+    if (/recome|limpa|do zero|esquece/.test(t)) { f = {}; ordem = null; return { ent: ['tudo limpo'] }; }
+    const q = t.match(/(\d+)\s*(quartos?|dorm)/);
+    if (q) { f.quartos = Number(q[1]); ent.push(`${q[1]}+ quartos`); }
+    if (/\b(casa|sobrado|quintal)/.test(t)) { f.tipo = ['Casa', 'Geminado']; ent.push('casa'); }
+    else if (/\b(ap|apto|apartamento)/.test(t)) { f.tipo = ['Apartamento']; ent.push('apartamento'); }
+    else if (/terreno|lote/.test(t)) { f.tipo = ['Terreno']; ent.push('terreno'); }
+    if (/qualquer bairro|outros bairros|tira o bairro/.test(t)) { delete f.bairro; ent.push('qualquer bairro'); }
+    // "perto do centro" é ordem, não o bairro Centro
+    const pertoCentro = /perto do centro|mais central|mais perto/.test(t);
+    const b = BAIRROS.filter((x) => t.includes(norm(x)) && !(pertoCentro && x === 'Centro')).sort((a, c) => c.length - a.length)[0];
+    if (b) { f.bairro = b; ent.push(b); }
+    const p = t.match(/(ate|max|maximo|no maximo)\s*(r\$\s*)?([\d.,]+)\s*(milh\w*|mil|mi)?/);
+    if (p) {
+      let v = Number(p[3].replace(/\./g, '').replace(',', '.'));
+      if (p[4]?.startsWith('mil') && !p[4].startsWith('milh')) v *= 1e3; else if (p[4]) v *= 1e6; else if (v < 1e4) v *= 1e3;
+      f.preco = v; ent.push(`até ${brlCurto(v)}`);
+    }
+    if (/mais barat|menor preco|economi/.test(t)) {
+      if (f.preco) { f.preco = Math.round(f.preco * 0.85 / 1e4) * 1e4; ent.push(`até ${brlCurto(f.preco)}`); }
+      ordem = 'preco'; ent.push('mais baratos primeiro');
+    }
+    if (pertoCentro) { ordem = 'centro'; ent.push('mais perto do centro'); }
+    if (/maior|mais espaco|grande/.test(t)) { ordem = 'area'; ent.push('maiores primeiro'); }
+    if (/baix|desconto|promo|reduz/.test(t)) { f.baixou = true; ent.push('baixou de preço'); }
+    if (/alug/.test(t)) { f.negocio = 'rent'; ent.push('para alugar'); }
+    if (/compr|venda/.test(t)) { f.negocio = 'sale'; ent.push('para comprar'); }
+    if (/parcela|financ|por mes/.test(t)) return { ent, pergunta: 'parcela' };
+    if (/quanto tempo|minutos|demora/.test(t)) return { ent, pergunta: 'tempo' };
+    return { ent };
+  }
+
+  function resultados() {
+    let r = TODOS.filter((i) => (!f.quartos || i.quartos >= f.quartos) && (!f.tipo || f.tipo.includes(i.tipo)) && (!f.bairro || i.bairro === f.bairro)
+      && (!f.preco || i.preco <= f.preco) && (!f.baixou || i.antes) && (!f.negocio || i.negocio === f.negocio || i.negocio === 'both'));
+    if (ordem === 'preco') r = r.sort((a, b) => a.preco - b.preco);
+    else if (ordem === 'centro') r = r.sort((a, b) => distancia(a.centro, CENTRO) - distancia(b.centro, CENTRO));
+    else if (ordem === 'area') r = r.sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
+    return r;
+  }
+
+  const msgs = document.getElementById('msgs');
+  const add = (html, quem) => { const d = document.createElement('div'); d.className = `msg ${quem}`; d.innerHTML = html; msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d; };
+  const card = (i) => `<a class="card" data-id="${i.id}" href="${comPagina.has(i.id) ? `sugestao-imovel.html?id=${i.id}` : '#'}"><span>${i.titulo}<small>${i.bairro}${i.area ? ` · ${i.area} m²` : ''}${ordem === 'centro' ? ` · ${minutos(i.centro, CENTRO, 'carro').join('–')} min do centro` : ''}</small></span><b>${brlCurto(i.preco)}</b></a>`;
+
+  async function responder(texto) {
+    add(texto.replace(/</g, '&lt;'), 'eu');
+    const dig = document.createElement('div'); dig.className = 'digitando'; dig.innerHTML = '<i></i><i></i><i></i>'; msgs.appendChild(dig); msgs.scrollTop = msgs.scrollHeight;
+    await new Promise((r) => setTimeout(r, 700));
+    dig.remove();
+    const { ent, pergunta } = entender(texto);
+    const r = resultados();
+    const chips = ent.length ? `<div class="entendi">${ent.map((e) => `<span>${e}</span>`).join('')}</div>` : '';
+    if (pergunta && !r[0]) {
+      add('Primeiro me diga o que procura (tipo, quartos, bairro ou preço) e eu calculo para o imóvel que aparecer.', 'ela');
+    } else if (pergunta === 'parcela') {
+      add(`Para o primeiro da lista (${r[0].titulo}, ${brl(r[0].preco)}), com 20% de entrada em 30 anos, a parcela fica perto de <b>${brl(parcela(r[0].preco))}</b> por mês.${chips}<div class="cards">${card(r[0])}</div>`, 'ela');
+    } else if (pergunta === 'tempo') {
+      add(`Do primeiro da lista até o Centro, de carro: <b>${minutos(r[0].centro, CENTRO, 'carro').join(' a ')} min</b> (estimativa sem trânsito).${chips}`, 'ela');
+    } else if (!ent.length) {
+      add('Não entendi bem. Tente dizer o tipo, os quartos, o bairro ou o preço, como "apartamento de 2 quartos no Floresta até 600 mil".', 'ela');
+    } else if (!r.length) {
+      add(`Com tudo isso não há nada agora.${chips}<br>Quer que eu tire o bairro ou aumente o preço? Também posso avisar quando aparecer.`, 'ela');
+    } else {
+      add(`${r.length === 1 ? 'Achei 1 imóvel' : `Achei ${r.length} imóveis`}${ordem ? '' : ''}. Os primeiros:${chips}<div class="cards">${r.slice(0, 3).map(card).join('')}</div>`, 'ela');
+    }
+    mostrar(r);
+    sugerir();
+  }
+
+  function mostrar(r) {
+    document.getElementById('resumo').textContent = `${r.length} ${r.length === 1 ? 'imóvel' : 'imóveis'}${f.bairro ? ` no ${f.bairro}` : ' em Joinville'}`;
+    if (!mapa.map) return;
+    // os outros imóveis ficam apagados: o roxo é a resposta
+    for (const id of ['listing-pins', 'listing-clusters']) if (mapa.map.getLayer(id)) mapa.map.setPaintProperty(id, 'circle-opacity', 0.28);
+    if (mapa.map.getLayer('listing-cluster-count')) mapa.map.setPaintProperty('listing-cluster-count', 'text-opacity', 0.3);
+    camada(mapa.map, 'conversa', { type: 'FeatureCollection', features: r.slice(0, 40).map((i) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: i.centro } })) }, { cor: '#6d3df0' });
+    if (!r.length) return;
+    const xs = r.map((i) => i.centro[0]), ys = r.map((i) => i.centro[1]);
+    if (r.length === 1) mapa.camera({ center: r[0].centro, zoom: 17.4, pitch: 62 }, 2200);
+    else mapa.map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 70, pitch: 50, duration: 2200, maxZoom: 16.5 });
+  }
+
+  function sugerir() {
+    const s = Object.keys(f).length === 0
+      ? ['3 quartos até 1 milhão', 'casa com quintal', 'apartamento no Floresta', 'o que baixou de preço', 'terreno até 700 mil']
+      : ['mais perto do centro', 'mais baratos', 'só casa', 'qualquer bairro', 'quanto fica a parcela?', 'quanto tempo até o centro?', 'recomeçar'];
+    document.getElementById('sugestoes').innerHTML = s.map((x) => `<button type="button">${x}</button>`).join('');
+  }
+  document.getElementById('sugestoes').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) responder(b.textContent); });
+  const texto = document.getElementById('texto');
+  document.getElementById('entrada').addEventListener('submit', () => { const v = texto.value.trim(); if (!v) return; texto.value = ''; responder(v); });
+  msgs.addEventListener('click', (e) => {
+    const c = e.target.closest('.card'); if (!c || c.getAttribute('href') !== '#') return;
+    e.preventDefault();
+    const i = TODOS.find((x) => x.id === c.dataset.id);
+    mapa.camera({ center: i.centro, zoom: 17.6, pitch: 62 }, 1800);
+  });
+
+  // falar em vez de escrever, onde o navegador permite
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voz = document.getElementById('voz');
+  if (!Rec) voz.remove();
+  else voz.addEventListener('click', () => {
+    const r = new Rec(); r.lang = 'pt-BR'; r.interimResults = false;
+    voz.classList.add('ouvindo');
+    r.onresult = (e) => { const v = e.results[0][0].transcript; responder(v); };
+    r.onend = () => voz.classList.remove('ouvindo');
+    r.start();
+  });
+  sugerir();
+</script>
+</body>
+</html>

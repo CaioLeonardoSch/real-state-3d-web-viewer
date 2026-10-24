@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestão 5 · Bairro primeiro</title>
+<meta name="description" content="Sugestão de design: a busca começa pelo bairro e pelo jeito de viver, com o mapa 3D voando até cada um.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 13l4-6 3 4 2-3 3 5z%22 fill=%22%23256d4f%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<script type="speculationrules">{"prefetch":[{"where":{"href_matches":"*sugestao-imovel.html*"},"eagerness":"moderate"}]}</script>
+<style>
+  :root { --fundo: #f1efe8; --card: #fbfaf6; --tinta: #1a1d17; --tinta-2: #626a5c; --linha: #dedbd0; --verde: #256d4f; --verde-2: #dfeee5; --foco: var(--verde); --gaveta-fundo: #fbfaf6; --gaveta-tinta: #1a1d17; --gaveta-destaque: #256d4f; --gaveta-destaque-tinta: #fff; }
+  body { background: var(--fundo); color: var(--tinta); }
+  .wrap { width: min(1320px, 100% - 32px); margin-inline: auto; }
+  header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--fundo) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .topo { display: flex; align-items: center; gap: 18px; height: 64px; }
+  .topo .marca { font-weight: 700; text-decoration: none; margin-right: auto; display: flex; gap: 8px; align-items: center; }
+  .topo .marca i { width: 22px; height: 22px; border-radius: 6px 6px 6px 0; background: var(--verde); }
+  .topo nav { display: flex; gap: 20px; font-size: 14px; }
+  .topo nav a { text-decoration: none; color: var(--tinta-2); }
+  .topo .cta { padding: 10px 16px; border-radius: 999px; background: var(--verde); color: #fff; font-weight: 600; font-size: 14px; text-decoration: none; }
+  @media (max-width: 860px) { .topo nav { display: none; } }
+  @media (max-width: 520px) { .topo .cta { display: none; } }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px; padding-top: 24px; }
+  .mapa-lado { position: sticky; top: 80px; height: calc(100svh - 100px); border-radius: 28px; overflow: hidden; background: #dfdccf; }
+  .mapa-lado .rotulo-mapa { position: absolute; left: 16px; top: 16px; z-index: 2; padding: 8px 14px; border-radius: 999px; background: rgba(26, 29, 23, 0.78); color: #fff; font-size: 14px; font-weight: 600; transition: opacity 0.3s; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    .mapa-lado { order: -1; top: 64px; height: 38svh; z-index: 5; border-radius: 0 0 22px 22px; margin-inline: -16px; }
+  }
+
+  h1 { margin: 6px 0 12px; font-size: clamp(38px, 5vw, 68px); line-height: 0.98; letter-spacing: -0.04em; }
+  h1 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--verde); }
+  .lead { margin: 0 0 20px; font-size: 18px; color: var(--tinta-2); max-width: 46ch; }
+  .jeitos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .jeitos button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--card); font-size: 15px; transition: all 0.2s; }
+  .jeitos button[aria-pressed='true'] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+
+  .bairros { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .bairro { position: relative; text-align: left; padding: 18px; border-radius: 22px; border: 1px solid var(--linha); background: var(--card); display: grid; gap: 8px; align-content: start; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s, opacity 0.3s; }
+  .bairro:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(26, 29, 23, 0.08); }
+  .bairro[aria-pressed='true'] { border-color: var(--verde); box-shadow: 0 0 0 2px var(--verde) inset; }
+  .bairro.apagado { opacity: 0.35; }
+  .bairro h3 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+  .bairro .frase { margin: 0; font-family: 'Playfair Display', serif; font-style: italic; font-size: 17px; color: var(--verde); }
+  .bairro .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .bairro .tags span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--verde-2); color: var(--verde); }
+  .bairro .numeros { display: flex; gap: 14px; font-size: 13px; color: var(--tinta-2); padding-top: 8px; border-top: 1px solid var(--linha); }
+  .bairro .numeros b { color: var(--tinta); }
+  @media (max-width: 560px) { .bairros { grid-template-columns: 1fr; } }
+
+  .detalhe { margin-top: 28px; padding: 22px; border-radius: 26px; background: var(--tinta); color: #f1efe8; scroll-margin-top: 90px; }
+  .detalhe[hidden] { display: none; }
+  .detalhe h2 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.03em; }
+  .detalhe h2 em { font-family: 'Playfair Display', serif; font-weight: 400; color: #a7dcc0; }
+  .detalhe .texto { margin: 0 0 16px; color: #cfd3c8; }
+  .detalhe .fatos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #353a31; border-radius: 16px; overflow: hidden; margin-bottom: 16px; }
+  .detalhe .fatos div { background: #23271f; padding: 12px 14px; }
+  .detalhe .fatos b { display: block; font-size: 22px; letter-spacing: -0.02em; }
+  .detalhe .fatos span { font-size: 12px; color: #aab0a2; }
+  .detalhe .itens { display: grid; gap: 8px; }
+  .detalhe .item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #2b3027; text-decoration: none; transition: background 0.2s; }
+  .detalhe .item:hover { background: #353b30; }
+  .detalhe .item small { display: block; color: #aab0a2; }
+  .detalhe .item b { white-space: nowrap; }
+  .nota { margin-top: 10px; font-size: 12px; color: var(--tinta-2); }
+  footer { margin-top: 80px; padding: 30px 0 50px; border-top: 1px solid var(--linha); font-size: 13px; color: var(--tinta-2); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; }
+  footer .pausa { color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<div class="aviso-sugestao">Sugestão 5 · <strong>Bairro primeiro</strong> · imóveis e textos de exemplo <a href="sugestoes.html">Ver todas as sugestões</a></div>
+<header><div class="wrap topo">
+  <a class="marca" href="#"><i aria-hidden="true"></i>Exemplo Imóveis</a>
+  <nav aria-label="Principal"><a href="#bairros">Bairros</a><a href="mapa.html">Mapa 3D</a><a href="#">Contato</a></nav>
+  <a class="cta" href="#bairros">Achar meu bairro</a>
+</div></header>
+
+<main class="wrap layout">
+  <div>
+    <span style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2)">Antes do imóvel</span>
+    <h1>Por onde você <em>quer morar?</em></h1>
+    <p class="lead">Escolha o jeito de viver. O mapa voa até os bairros que combinam e mostra o que está à venda em cada um.</p>
+    <div class="jeitos" id="jeitos" role="group" aria-label="Jeito de viver">
+      <button type="button" data-j="" aria-pressed="true">Todos</button>
+      <button type="button" data-j="verde" aria-pressed="false">🌳 Perto do verde</button>
+      <button type="button" data-j="centro" aria-pressed="false">🏙 Perto do centro</button>
+      <button type="button" data-j="familia" aria-pressed="false">🏡 Família</button>
+      <button type="button" data-j="conta" aria-pressed="false">💰 Mais em conta</button>
+      <button type="button" data-j="agua" aria-pressed="false">🌊 Beira d'água</button>
+    </div>
+    <div class="bairros" id="bairros"></div>
+    <section class="detalhe" id="detalhe" hidden aria-live="polite"></section>
+    <p class="nota">Os textos dos bairros são exemplos; num site real, o corretor escreve. Os números saem dos imóveis de exemplo do site.</p>
+  </div>
+  <div class="mapa-lado">
+    <div class="palco" id="palco"><img src="sugestoes/img/hero-tarde.jpg" alt=""></div>
+    <span class="rotulo-mapa" id="rotulo-mapa">Joinville</span>
+  </div>
+</main>
+
+<footer><div class="wrap"><span>Exemplo Imóveis · CRECI 0000-J</span><button class="pausa" id="pausa" type="button" aria-pressed="false"><span>Pausar animações</span></button></div></footer>
+
+<script type="module">
+  import { TODOS } from './sugestoes/todos.js';
+  import { IMOVEIS, brl, brlCurto, botaoPausa } from './sugestoes/dados.js';
+  import { montarMapa } from './sugestoes/mapa-vivo.js';
+  import { DESTINOS, minutos, camada } from './sugestoes/deslocamento.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('.topo'), links: [['#bairros', 'Bairros'], ['mapa.html', 'Mapa 3D'], ['#', 'Contato']], cta: ['#bairros', 'Achar meu bairro'] });
+
+  const PERFIS = [
+    { nome: 'Glória', frase: 'Ruas largas e casas grandes.', jeitos: ['familia', 'centro'], tags: ['Casas', 'Arborizado', 'Escolas'], texto: 'Residencial e tranquilo, com casas de quintal e árvores antigas, a poucos minutos do centro.' },
+    { nome: 'Costa e Silva', frase: 'Tudo perto, sem sair do bairro.', jeitos: ['familia', 'conta'], tags: ['Comércio', 'Serviços', 'Ônibus'], texto: 'Bairro grande e completo: mercado, farmácia, escola e comércio de rua a uma caminhada.' },
+    { nome: 'Vila Nova', frase: 'Mais espaço pelo mesmo preço.', jeitos: ['verde', 'conta'], tags: ['Lotes grandes', 'Verde', 'Sossego'], texto: 'Clima de interior: terrenos maiores, mais verde e menos movimento, com o centro a uns 20 minutos.' },
+    { nome: 'Aventureiro', frase: 'Movimentado e cheio de serviços.', jeitos: ['conta', 'familia'], tags: ['Comércio', 'Escolas', 'Zona norte'], texto: 'Um dos bairros mais populosos, com comércio forte e opções para todos os bolsos.' },
+    { nome: 'Floresta', frase: 'O primeiro apartamento.', jeitos: ['conta', 'centro'], tags: ['Prédios baixos', 'Parque', 'Mercado'], texto: 'Prédios baixos, comércio de bairro e área verde por perto: bom para começar.' },
+    { nome: 'Nova Brasília', frase: 'Entre morros e mata.', jeitos: ['verde', 'familia'], tags: ['Mata', 'Quintal', 'Silêncio'], texto: 'Para quem quer acordar com o verde da janela e ainda chegar rápido ao centro.' },
+    { nome: 'Pirabeiraba Centro', frase: 'Cidade pequena, pé da serra.', jeitos: ['verde'], tags: ['Serra', 'Ar puro', 'Tradição'], texto: 'O jeito de cidade do interior aos pés da serra, com casas e terrenos amplos.' },
+    { nome: 'Espinheiros', frase: 'A baía no fim da rua.', jeitos: ['agua', 'conta'], tags: ['Baía', 'Pôr do sol', 'Pesca'], texto: 'Bairro à beira da baía, com o pôr do sol sobre a água e ruas tranquilas.' },
+    { nome: 'Jardim Paraíso', frase: 'Rio por perto, bairro em crescimento.', jeitos: ['agua', 'conta'], tags: ['Rio', 'Novos prédios', 'Preço bom'], texto: 'Bairro em crescimento na zona norte, com imóveis novos e preço mais acessível.' },
+    { nome: 'Bom Retiro', frase: 'Universidade e rua arborizada.', jeitos: ['centro', 'familia'], tags: ['Universidade', 'Arborizado', 'Prédios'], texto: 'Perto da universidade, com prédios novos e ruas com árvores.' },
+  ];
+  const centro = DESTINOS.find((d) => d.nome === 'Centro').centro;
+  const areas = fetch('data/bairros-areas.geojson').then((r) => r.json()).catch(() => null);
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  // números de cada bairro a partir dos imóveis de exemplo
+  for (const p of PERFIS) {
+    const lista = TODOS.filter((t) => norm(t.bairro) === norm(p.nome));
+    const precos = lista.map((t) => t.preco).sort((a, b) => a - b);
+    p.lista = lista;
+    p.mediana = precos.length ? precos[Math.floor(precos.length / 2)] : null;
+    const c = lista.length ? [lista.reduce((s, t) => s + t.centro[0], 0) / lista.length, lista.reduce((s, t) => s + t.centro[1], 0) / lista.length] : centro;
+    p.centro = c;
+    p.tempo = minutos(c, centro, 'carro');
+  }
+
+  const grade = document.getElementById('bairros');
+  let jeito = '';
+  let escolhido = null;
+  function desenharGrade() {
+    grade.innerHTML = PERFIS.map((p, k) => `<button type="button" class="bairro${jeito && !p.jeitos.includes(jeito) && escolhido !== k ? ' apagado' : ''}" data-k="${k}" aria-pressed="${escolhido === k}">
+      <h3>${p.nome}</h3><p class="frase">${p.frase}</p>
+      <div class="tags">${p.tags.map((t) => `<span>${t}</span>`).join('')}</div>
+      <div class="numeros"><span><b>${p.lista.length}</b> à venda</span>${p.mediana ? `<span>mediana <b>${brlCurto(p.mediana)}</b></span>` : ''}<span><b>${p.tempo[0]}–${p.tempo[1]}</b> min do centro</span></div>
+    </button>`).join('');
+  }
+  document.getElementById('jeitos').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    jeito = b.dataset.j;
+    document.querySelectorAll('#jeitos button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    const fazer = () => desenharGrade();
+    if (document.startViewTransition) document.startViewTransition(fazer); else fazer();
+    // o mapa mostra todos os bairros que combinam
+    if (mapa.map) mostrarBairros(PERFIS.filter((p) => !jeito || p.jeitos.includes(jeito)), null);
+  });
+  grade.addEventListener('click', (e) => {
+    const b = e.target.closest('.bairro'); if (!b) return;
+    escolher(Number(b.dataset.k));
+  });
+
+  function escolher(k) {
+    escolhido = k;
+    const p = PERFIS[k];
+    desenharGrade();
+    const comPagina = new Set(IMOVEIS.map((i) => i.id));
+    const det = document.getElementById('detalhe');
+    det.hidden = false;
+    det.innerHTML = `<h2>${p.nome}, <em>${p.frase.toLowerCase().replace(/\.$/, '')}.</em></h2><p class="texto">${p.texto}</p>
+      <div class="fatos"><div><b>${p.lista.length}</b><span>imóveis à venda</span></div><div><b>${p.mediana ? brlCurto(p.mediana) : '—'}</b><span>preço mediano</span></div><div><b>${p.tempo[0]}–${p.tempo[1]} min</b><span>até o centro, de carro</span></div></div>
+      <div class="itens">${p.lista.map((t) => `<a class="item" href="${comPagina.has(t.id) ? `sugestao-imovel.html?id=${t.id}` : 'mapa.html'}"><span>${t.titulo}<small>${t.tipo}${t.area ? ` · ${t.area} m²` : ''}</small></span><b>${brl(t.preco)}</b></a>`).join('') || '<p>Nenhum imóvel agora. Quer que a gente avise?</p>'}</div>`;
+    if (matchMedia('(max-width: 900px)').matches) det.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (mapa.map) mostrarBairros([p], p);
+  }
+
+  // mapa: contorno dos bairros e voo até o escolhido
+  const mapa = montarMapa(document.getElementById('palco'), { giro: 1.5 });
+  async function mostrarBairros(lista, foco) {
+    const g = await areas;
+    const nomes = new Set(lista.map((p) => norm(p.nome)));
+    const feats = g ? g.features.filter((f) => nomes.has(norm(f.properties.name))).map((f) => ({ type: 'Feature', properties: {}, geometry: f.properties.grown ?? f.geometry })) : [];
+    camada(mapa.map, 'bairros-escolhidos', { type: 'FeatureCollection', features: feats }, { cor: '#256d4f', opacidade: foco ? 0.16 : 0.1, linha: 3 });
+    document.getElementById('rotulo-mapa').textContent = foco ? foco.nome : lista.length === PERFIS.length ? 'Joinville' : `${lista.length} bairros`;
+    // enquadra os contornos
+    const pts = feats.flatMap((f) => (f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] : f.geometry.coordinates.flatMap((p) => p[0])));
+    if (!pts.length) { mapa.camera({ center: foco?.centro ?? centro, zoom: foco ? 15 : 12.3, pitch: 50 }, 2200); return; }
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    mapa.girar(!document.documentElement.classList.contains('paused'));
+    mapa.map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 40, pitch: foco ? 58 : 40, duration: 2400, maxZoom: 15.6 });
+  }
+  mapa.pronto.then(() => { mapa.hora(1080, 'summer'); mostrarBairros(PERFIS, null); });
+  botaoPausa(document.getElementById('pausa'), (p) => mapa.girar(!p));
+
+  desenharGrade();
+</script>
+</body>
+</html>

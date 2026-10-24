@@ -21,6 +21,8 @@
   .segmento button[aria-pressed='true'] { background: var(--tinta); color: #15171c; font-weight: 600; }
   .opcao { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta-2); cursor: pointer; }
   .opcao input { accent-color: var(--destaque); width: 16px; height: 16px; }
+  .opcao select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--linha); background: var(--fundo-2); color: var(--tinta); font-size: 13px; }
+  .opcao[hidden] { display: none; }
 
   .palco-celulares { flex: 1; display: flex; align-items: flex-start; justify-content: center; gap: 28px; padding: 22px 24px 30px; overflow: auto; }
 
@@ -71,8 +73,9 @@
   <h1><a href="sugestoes.html">← Sugestões</a>No celular</h1>
   <div class="segmento" role="group" aria-label="Como mostrar">
     <button type="button" data-modo="um" aria-pressed="true">Uma por vez</button>
-    <button type="button" data-modo="lado" aria-pressed="false">As três lado a lado</button>
+    <button type="button" data-modo="lado" aria-pressed="false">Três lado a lado</button>
   </div>
+  <span class="opcao" id="escolhas-lado" hidden></span>
   <label class="opcao" id="opcao-juntos" hidden><input type="checkbox" id="juntos" checked> Rolar as três juntas</label>
 </header>
 
@@ -92,9 +95,22 @@
       dicas: ['Monte a busca em forma de frase: "Quero comprar um apartamento no…".', 'Role até o imóvel da semana, contado como matéria.', 'Veja os guias de bairro e a seleção.'] },
     { href: 'sugestao3.html', nome: 'Transparência', resumo: 'Sugestão 3 · números primeiro',
       dicas: ['Arraste "Quanto posso pagar por mês": os imóveis que passam ficam apagados.', 'Marque "Comparar" em dois ou três imóveis e role até a tabela.', 'Toque no ☰ para ir direto ao histórico de preços.'] },
-    { href: 'sugestao-imovel.html?id=apt-09', nome: 'Página do imóvel', resumo: 'Serve para as três',
-      dicas: ['Role devagar: o mapa 3D desce até o prédio e passeia pelo bairro.', 'No capítulo do sol, o controle fica preso logo abaixo do mapa: arraste a hora ou toque em "Ver o dia passar".', 'A barra com o preço e "Agendar visita" fica fixa embaixo.'] },
+    { href: 'sugestao4.html', nome: 'Maquete', resumo: 'Sugestão 4 · cidade branca, imóveis em cor',
+      dicas: ['Arraste a maquete para girar; troque entre Cidade, De perto e De cima.', 'Role até o índice: cada linha é um imóvel.', 'Nos destaques, toque numa maquete para ver a cor de verdade.'] },
+    { href: 'sugestao5.html', nome: 'Bairro primeiro', resumo: 'Sugestão 5 · escolha o jeito de viver',
+      dicas: ['Toque num jeito de viver ("Perto do verde", "Família"): os bairros que combinam ficam acesos e o mapa mostra o contorno deles.', 'Toque num bairro para ver os números e os imóveis dele.'] },
+    { href: 'sugestao6.html', nome: 'Conversa', resumo: 'Sugestão 6 · a busca é uma conversa',
+      dicas: ['Escreva "casa com 3 quartos até 1,5 milhão" e depois "mais perto do centro".', 'Pergunte "quanto fica a parcela?".', 'Use as sugestões acima do campo de texto.'] },
+    { href: 'sugestao-imovel.html?id=apt-09', nome: 'Página do imóvel', resumo: 'Serve para todas',
+      dicas: ['Role devagar: o mapa 3D desce até o prédio e passeia pelo bairro.', 'No capítulo do sol, o controle fica preso logo abaixo do mapa: arraste a hora ou toque em "Ver o dia passar".', 'Na vista do andar, escolha para onde a janela olha.', 'Na visita, a mensagem do WhatsApp já sai pronta.'] },
+    { href: 'sugestao-busca.html', nome: 'Busca no mapa', resumo: 'Desenhar a área · até X min',
+      dicas: ['Toque em "Desenhar área" e contorne um pedaço da cidade com o dedo.', 'Crie um alerta para a área desenhada.', 'Toque em "Até o trabalho" e escolha o destino e os minutos.'] },
+    { href: 'roteiro.html', nome: 'Roteiro de visitas', resumo: 'Os favoritos viram um caminho',
+      dicas: ['Mude a hora de início e o ponto de partida.', 'Suba ou desça as visitas e veja os horários mudarem.', 'Toque em "Prévia do caminho" para a câmera percorrer as paradas.'] },
   ];
+  // lado a lado: quais três aparecem (escolhidos nas listas do topo)
+  let lado = (new URLSearchParams(location.search).get('lado') ?? '0,1,2').split(',').map(Number).filter((n) => SUGESTOES[n]).slice(0, 3);
+  while (lado.length < 3) lado.push(lado.length);
   const palco = document.getElementById('palco');
   const juntos = document.getElementById('juntos');
   let modo = new URLSearchParams(location.search).get('modo') === 'lado' ? 'lado' : 'um';
@@ -108,9 +124,11 @@
   function desenhar() {
     document.body.classList.toggle('modo-lado', modo === 'lado');
     document.getElementById('opcao-juntos').hidden = modo !== 'lado';
+    document.getElementById('escolhas-lado').hidden = modo !== 'lado';
     document.querySelectorAll('[data-modo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modo === modo)));
     if (modo === 'lado') {
-      palco.innerHTML = SUGESTOES.slice(0, 3).map(aparelho).join('');
+      palco.innerHTML = lado.map((k) => SUGESTOES[k]).map(aparelho).join('');
+      document.querySelectorAll('.escolha-lado').forEach((s, j) => (s.value = String(lado[j])));
     } else {
       const s = SUGESTOES[atual];
       palco.innerHTML = aparelho(s) + `<aside class="painel">
@@ -120,7 +138,7 @@
       </aside>`;
       desenharQr(new URL(s.href, location.href).href);
     }
-    const p = new URLSearchParams({ modo, pagina: SUGESTOES[atual].href.split('?')[0] });
+    const p = new URLSearchParams({ modo, pagina: SUGESTOES[atual].href.split('?')[0], lado: lado.join(',') });
     history.replaceState(null, '', `?${p}`);
     escalar();
     if (modo === 'lado') ligarRolagem();
@@ -172,6 +190,9 @@
     }));
   }
 
+  const escolhas = document.getElementById('escolhas-lado');
+  escolhas.innerHTML = [0, 1, 2].map((j) => `<select class="escolha-lado" data-j="${j}" aria-label="Celular ${j + 1}">${SUGESTOES.map((s, k) => `<option value="${k}">${s.nome}</option>`).join('')}</select>`).join('');
+  escolhas.addEventListener('change', (e) => { const s = e.target.closest('select'); lado[Number(s.dataset.j)] = Number(s.value); desenhar(); });
   document.querySelector('.segmento').addEventListener('click', (e) => {
     const b = e.target.closest('[data-modo]'); if (!b) return;
     modo = b.dataset.modo; desenhar();
