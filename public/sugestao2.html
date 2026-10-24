@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="sugestoes/base.css">
 <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"*sugestao-imovel.html*"},"eagerness":"moderate"}]}</script>
 <style>
-  :root { --papel: #f3eee5; --papel-2: #e9e2d5; --tinta: #1f1b16; --tinta-2: #5e564b; --telha: #b4532a; --telha-2: #8e3d1c; --musgo: #44553a; --foco: var(--telha); }
+  :root { --gaveta-fundo: #f3eee5; --gaveta-tinta: #1f1b16; --gaveta-destaque: #1f1b16; --gaveta-destaque-tinta: #f3eee5; --papel: #f3eee5; --papel-2: #e9e2d5; --tinta: #1f1b16; --tinta-2: #5e564b; --telha: #b4532a; --telha-2: #8e3d1c; --musgo: #44553a; --foco: var(--telha); }
   body { background: var(--papel); color: var(--tinta); }
   .wrap { width: min(1280px, 100% - 32px); margin-inline: auto; }
   .serif { font-family: 'Playfair Display', Georgia, serif; }
@@ -29,7 +29,8 @@
   .topo .direita { display: flex; justify-content: flex-end; align-items: center; gap: 18px; font-size: 14px; }
   .botao { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; background: var(--tinta); color: var(--papel); text-decoration: none; font-size: 14px; font-weight: 500; border: 0; transition: background 0.25s; }
   .botao:hover { background: var(--telha); }
-  @media (max-width: 860px) { .topo nav, .topo .tel { display: none; } .topo { grid-template-columns: auto 1fr; } .marca { text-align: left; } }
+  @media (max-width: 860px) { .topo nav, .topo .tel { display: none; } .topo { grid-template-columns: auto 1fr; } .marca { text-align: left; } .topo .direita { gap: 4px; } }
+  @media (max-width: 420px) { .topo .direita .botao { padding: 9px 12px; font-size: 12.5px; white-space: nowrap; } .marca b { font-size: 23px; } .marca small { letter-spacing: 0.2em; } }
 
   /* abertura */
   .abertura { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(24px, 4vw, 64px); align-items: center; padding: clamp(28px, 5vw, 64px) 0 clamp(40px, 6vw, 80px); }
@@ -224,7 +225,10 @@
 <footer><div class="wrap"><span>Exemplo Imóveis · CRECI 0000-J · Joinville, SC</span><button class="pausa" id="pausa" type="button" aria-pressed="false"><span>Pausar animações</span></button></div></footer>
 
 <script type="module">
-  import { IMOVEIS, BAIRROS, img, brl, desconto, botaoPausa, contarAoVer } from './sugestoes/dados.js';
+  import { IMOVEIS, img, brl, desconto, botaoPausa, contarAoVer } from './sugestoes/dados.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('.topo .direita'), links: [['#selecao', 'Comprar'], ['#selecao', 'Alugar'], ['#guias', 'Bairros'], ['#materia', 'Imóvel da semana'], ['mapa.html', 'Mapa 3D']], cta: ['#materia', 'Fale com a corretora'] });
 
   addEventListener('scroll', () => document.getElementById('cab').classList.toggle('rolou', scrollY > 10), { passive: true });
   botaoPausa(document.getElementById('pausa'));
