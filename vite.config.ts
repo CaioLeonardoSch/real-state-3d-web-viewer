@@ -120,8 +120,8 @@ export default defineConfig(({ mode }) => {
     plugins: [securityPolicy(), production(env.VITE_DEMO_LISTINGS !== 'false'), clientDomains(env)],
     build: {
       // index.html: a client's site (white label); mapa.html: the 3D map, embedded by the site; site.html: the site's
-      // former address, which forwards to index.html
-      rollupOptions: { input: { main: 'index.html', mapa: 'mapa.html', site: 'site.html', painel: 'painel.html' } },
+      // former address, which forwards to index.html; lab-arvores.html: the trees laboratory (src/lab/trees.ts)
+      rollupOptions: { input: { main: 'index.html', mapa: 'mapa.html', site: 'site.html', painel: 'painel.html', lab: 'lab-arvores.html' } },
     },
     test: {
       include: ['tests/**/*.test.ts'],
