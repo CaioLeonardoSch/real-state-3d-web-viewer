@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Teste das sugestões</title>
+<meta name="description" content="Roteiro guiado para testar as sugestões de design com pessoas: teste de 5 segundos, perguntas, preferência e resultados.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%226%22 fill=%22none%22 stroke=%22%23f2a65a%22 stroke-width=%223%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #f4f1ea; --card: #fff; --tinta: #16130f; --tinta-2: #6a6155; --linha: #e2dbcf; --dourado: #e08b3a; --foco: var(--dourado); }
+  body { background: var(--fundo); color: var(--tinta); }
+  .wrap { width: min(860px, 100% - 32px); margin-inline: auto; padding: 32px 0 60px; }
+  .topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 26px; font-size: 14px; color: var(--tinta-2); }
+  .topo a { color: inherit; }
+  .barra { height: 6px; border-radius: 3px; background: var(--linha); overflow: hidden; margin-bottom: 28px; }
+  .barra i { display: block; height: 100%; background: var(--dourado); transition: width 0.4s; }
+  h1 { margin: 0 0 10px; font-size: clamp(32px, 4.4vw, 52px); letter-spacing: -0.04em; line-height: 1.02; }
+  h1 em, h2 em { font-family: 'Playfair Display', serif; font-weight: 400; color: var(--dourado); }
+  h2 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.03em; }
+  p.lead { font-size: 18px; color: var(--tinta-2); margin: 0 0 22px; }
+  .caixa { padding: 22px; border-radius: 22px; background: var(--card); border: 1px solid var(--linha); margin-bottom: 16px; }
+  .caixa ol, .caixa ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  label.campo { display: grid; gap: 6px; margin-bottom: 14px; font-weight: 600; font-size: 15px; }
+  label.campo span { font-weight: 400; color: var(--tinta-2); font-size: 13px; }
+  input[type=text], textarea, select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--linha); background: var(--fundo); font-size: 16px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .escala { display: flex; gap: 6px; }
+  .escala button, .opcoes button { flex: 1; padding: 12px 6px; border-radius: 12px; border: 1px solid var(--linha); background: var(--fundo); font-size: 15px; }
+  .escala button[aria-pressed='true'], .opcoes button[aria-pressed='true'] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+  .escala-rotulos { display: flex; justify-content: space-between; font-size: 12px; color: var(--tinta-2); margin-top: 4px; }
+  .opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opcoes button { flex: 1 1 40%; }
+  .botoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn { padding: 14px 22px; border-radius: 999px; border: 1px solid var(--linha); background: var(--card); font-weight: 600; font-size: 15px; text-decoration: none; }
+  .btn.primario { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+
+  /* a tela de 5 segundos */
+  .mostra { position: fixed; inset: 0; z-index: 100; background: #000; display: none; }
+  .mostra.ativa { display: block; }
+  .mostra iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .mostra .contagem { position: absolute; top: 14px; right: 14px; z-index: 2; width: 56px; height: 56px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); color: #fff; display: grid; place-items: center; font-size: 24px; font-weight: 800; }
+  .mostra .concluir { position: absolute; bottom: 16px; right: 16px; z-index: 2; display: none; }
+  .mostra.tarefa .concluir { display: block; }
+  .mostra.tarefa .contagem { width: auto; padding: 0 16px; border-radius: 999px; font-size: 16px; }
+
+  .miniaturas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .miniaturas button { padding: 0; border-radius: 16px; overflow: hidden; border: 2px solid transparent; background: var(--card); text-align: left; }
+  .miniaturas button[aria-pressed='true'] { border-color: var(--dourado); }
+  .miniaturas img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+  .miniaturas span { display: block; padding: 8px 10px; font-size: 14px; font-weight: 600; }
+  @media (max-width: 600px) { .miniaturas { grid-template-columns: repeat(2, 1fr); } }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--linha); vertical-align: top; }
+  th { color: var(--tinta-2); font-weight: 500; }
+  .barras-res { display: grid; gap: 8px; }
+  .barras-res div { display: grid; grid-template-columns: 140px 1fr 40px; gap: 10px; align-items: center; font-size: 14px; }
+  .barras-res i { display: block; height: 12px; border-radius: 6px; background: var(--dourado); }
+  .aviso { font-size: 13px; color: var(--tinta-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo"><a href="sugestoes.html">← Sugestões</a><span id="passo-txt"></span></div>
+  <div class="barra"><i id="barra" style="width:0"></i></div>
+  <main id="tela"></main>
+</div>
+<div class="mostra" id="mostra"><iframe id="quadro" title="Sugestão em teste"></iframe><div class="contagem" id="contagem">5</div><button class="btn primario concluir" id="concluir" type="button">Terminei</button></div>
+
+<script type="module">
+  const SUGESTOES = [
+    { id: 's1', nome: 'Cidade viva', href: 'sugestao1.html', img: 'sugestoes/img/hero-tarde.jpg' },
+    { id: 's2', nome: 'Editorial', href: 'sugestao2.html', img: 'sugestoes/img/apt-04.jpg' },
+    { id: 's3', nome: 'Transparência', href: 'sugestao3.html', img: 'sugestoes/img/apt-22.jpg' },
+    { id: 's4', nome: 'Maquete', href: 'sugestao4.html', img: 'sugestoes/img/maquete-hero.jpg' },
+    { id: 's5', nome: 'Bairro primeiro', href: 'sugestao5.html', img: 'sugestoes/img/house-39.jpg' },
+    { id: 's6', nome: 'Conversa', href: 'sugestao6.html', img: 'sugestoes/img/apt-17.jpg' },
+  ];
+  const CHAVE = 'teste-sugestoes-respostas';
+  const lerTodas = () => { try { return JSON.parse(localStorage.getItem(CHAVE) || '[]'); } catch { return []; } };
+  const salvarTodas = (v) => { try { localStorage.setItem(CHAVE, JSON.stringify(v)); } catch { /* sem armazenamento: só esta sessão */ } };
+
+  let r = null; // respostas desta pessoa
+  let ordem = [];
+  const tela = document.getElementById('tela');
+  const embaralhar = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  const passos = () => 2 + ordem.length + 2;
+  function progresso(n, txt) { document.getElementById('barra').style.width = `${(n / passos()) * 100}%`; document.getElementById('passo-txt').textContent = txt; }
+
+  function inicio() {
+    progresso(0, 'Preparação');
+    const todas = lerTodas();
+    tela.innerHTML = `<h1>Teste das <em>sugestões.</em></h1>
+      <p class="lead">Um roteiro para mostrar as sugestões a quem procurou imóvel no último ano. Leva uns 10 minutos por pessoa. Quem conduz lê as instruções; a pessoa só olha e responde.</p>
+      <div class="caixa"><b>Como funciona</b><ol style="margin-top:10px">
+        <li>Cada sugestão aparece por <b>5 segundos</b>, em ordem sorteada. Depois, perguntas rápidas sobre o que ficou na memória.</li>
+        <li>No fim, a pessoa escolhe a preferida e diz por quê.</li>
+        <li>Opcional: uma tarefa cronometrada ("ache um apartamento e marque a visita").</li>
+        <li>As respostas ficam neste aparelho; no fim dá para copiar para uma planilha.</li></ol></div>
+      <div class="caixa">
+        <label class="campo">Quem está respondendo <span>Primeiro nome ou um código. Opcional.</span><input type="text" id="quem" placeholder="Ex.: Ana, P3"></label>
+        <label class="campo">Quais sugestões entram</label>
+        <div class="opcoes" id="quais">${SUGESTOES.map((s) => `<button type="button" aria-pressed="true" data-id="${s.id}">${s.nome}</button>`).join('')}</div>
+        <label class="campo" style="margin-top:14px">Fazer a tarefa cronometrada?</label>
+        <div class="opcoes" id="tarefa"><button type="button" aria-pressed="true" data-v="sim">Sim</button><button type="button" aria-pressed="false" data-v="nao">Não</button></div>
+      </div>
+      ${todas.length ? `<p class="aviso">Já há ${todas.length} ${todas.length === 1 ? 'pessoa' : 'pessoas'} registradas neste aparelho. <a href="#" id="ver-res">Ver resultados</a></p>` : ''}
+      <div class="botoes"><button class="btn primario" type="button" id="comecar">Começar</button></div>`;
+    tela.querySelectorAll('.opcoes').forEach((g) => g.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (g.id === 'tarefa') g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      else b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+    }));
+    document.getElementById('ver-res')?.addEventListener('click', (e) => { e.preventDefault(); resultados(); });
+    document.getElementById('comecar').addEventListener('click', () => {
+      const ids = [...tela.querySelectorAll('#quais [aria-pressed=true]')].map((b) => b.dataset.id);
+      if (!ids.length) return;
+      ordem = embaralhar(SUGESTOES.filter((s) => ids.includes(s.id)));
+      r = { quem: document.getElementById('quem').value.trim() || `P${lerTodas().length + 1}`, quando: new Date().toISOString().slice(0, 16).replace('T', ' '), ordem: ordem.map((s) => s.id), notas: {}, tarefa: tela.querySelector('#tarefa [aria-pressed=true]').dataset.v === 'sim' };
+      cincoSegundos(0);
+    });
+  }
+
+  // 5 segundos de tela cheia e as perguntas
+  const mostra = document.getElementById('mostra');
+  const quadro = document.getElementById('quadro');
+  const contagem = document.getElementById('contagem');
+  function cincoSegundos(k) {
+    const s = ordem[k];
+    progresso(1 + k, `Sugestão ${k + 1} de ${ordem.length}`);
+    tela.innerHTML = `<h2>Prepare-se: <em>${k + 1} de ${ordem.length}</em></h2><p class="lead">Leia para a pessoa: "Vou mostrar o site de uma imobiliária por 5 segundos. Só olhe, sem clicar. Depois faço umas perguntas."</p><div class="botoes"><button class="btn primario" type="button" id="ver">Mostrar por 5 segundos</button></div>`;
+    document.getElementById('ver').addEventListener('click', () => {
+      quadro.src = s.href;
+      mostra.className = 'mostra ativa';
+      let n = 5;
+      contagem.textContent = n;
+      // conta só depois que a página aparece
+      quadro.onload = () => {
+        // só a primeira carga conta (limpar o quadro com about:blank dispara load de novo)
+        quadro.onload = null;
+        esconderFaixa();
+        const t = setInterval(() => {
+          n -= 1; contagem.textContent = n;
+          if (n <= 0) { clearInterval(t); mostra.className = 'mostra'; quadro.src = 'about:blank'; perguntas(k); }
+        }, 1000);
+      };
+    });
+  }
+  const escala = (id, esq, dir) => `<div class="escala" data-q="${id}">${[1, 2, 3, 4, 5].map((v) => `<button type="button" aria-pressed="false" data-v="${v}">${v}</button>`).join('')}</div><div class="escala-rotulos"><span>${esq}</span><span>${dir}</span></div>`;
+  /** A faixa "Sugestão N · nome" no topo das páginas influenciaria a pessoa: no teste, fica escondida. */
+  function esconderFaixa() {
+    try {
+      const st = quadro.contentDocument.createElement('style');
+      st.textContent = '.aviso-sugestao{display:none!important}';
+      quadro.contentDocument.head.appendChild(st);
+    } catch { /* outra origem */ }
+  }
+  function perguntas(k) {
+    const s = ordem[k];
+    tela.innerHTML = `<h2>O que ficou?</h2><p class="lead">Pergunte e anote com as palavras da pessoa.</p>
+      <div class="caixa">
+        <label class="campo">Do que você lembra? <span>Qualquer coisa: cor, imagem, frase, sensação.</span><textarea id="lembra"></textarea></label>
+        <label class="campo">Que tipo de site parecia?</label>
+        <div class="opcoes" data-q="tipo"><button type="button" aria-pressed="false">Imobiliária</button><button type="button" aria-pressed="false">Portal de imóveis</button><button type="button" aria-pressed="false">Mapa ou app</button><button type="button" aria-pressed="false">Não sei</button></div>
+        <label class="campo" style="margin-top:16px">Pareceu moderno?</label>${escala('moderno', 'nada', 'muito')}
+        <label class="campo" style="margin-top:16px">Confiaria nessa imobiliária?</label>${escala('confianca', 'nada', 'muito')}
+        <label class="campo" style="margin-top:16px">Teve vontade de continuar olhando?</label>${escala('vontade', 'nenhuma', 'muita')}
+      </div>
+      <div class="botoes"><button class="btn primario" type="button" id="prox">${k + 1 < ordem.length ? 'Próxima sugestão' : 'Comparar todas'}</button></div>`;
+    tela.querySelectorAll('[data-q]').forEach((g) => g.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+    document.getElementById('prox').addEventListener('click', () => {
+      const val = (q) => tela.querySelector(`[data-q="${q}"] [aria-pressed=true]`);
+      r.notas[s.id] = { lembra: document.getElementById('lembra').value.trim(), tipo: val('tipo')?.textContent ?? '', moderno: Number(val('moderno')?.dataset.v ?? 0), confianca: Number(val('confianca')?.dataset.v ?? 0), vontade: Number(val('vontade')?.dataset.v ?? 0) };
+      if (k + 1 < ordem.length) cincoSegundos(k + 1); else preferencia();
+    });
+  }
+
+  function preferencia() {
+    progresso(1 + ordem.length, 'Preferência');
+    tela.innerHTML = `<h2>Se fosse procurar imóvel hoje, <em>qual site usaria?</em></h2><p class="lead">Mostre as miniaturas. A pessoa escolhe uma e diz por quê.</p>
+      <div class="miniaturas" id="mini">${ordem.map((s) => `<button type="button" aria-pressed="false" data-id="${s.id}"><img src="${s.img}" alt=""><span>${s.nome}</span></button>`).join('')}</div>
+      <div class="caixa" style="margin-top:16px"><label class="campo">Por quê? <textarea id="porque"></textarea></label><label class="campo">E qual menos? <select id="menos"><option value="">—</option>${ordem.map((s) => `<option value="${s.id}">${s.nome}</option>`).join('')}</select></label></div>
+      <div class="botoes"><button class="btn primario" type="button" id="prox">${r.tarefa ? 'Tarefa cronometrada' : 'Terminar'}</button></div>`;
+    document.getElementById('mini').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) document.querySelectorAll('#mini button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
+    document.getElementById('prox').addEventListener('click', () => {
+      r.preferida = document.querySelector('#mini [aria-pressed=true]')?.dataset.id ?? '';
+      r.porque = document.getElementById('porque').value.trim();
+      r.menos = document.getElementById('menos').value;
+      if (r.tarefa) tarefa(); else fim();
+    });
+  }
+
+  function tarefa() {
+    progresso(2 + ordem.length, 'Tarefa');
+    const s = SUGESTOES.find((x) => x.id === r.preferida) ?? ordem[0];
+    tela.innerHTML = `<h2>Tarefa: <em>ache e marque.</em></h2><p class="lead">Leia: "Neste site, ache um apartamento de até 1 milhão e mostre como marcaria uma visita. Pense em voz alta." Toque em "Terminei" quando a pessoa conseguir ou desistir.</p>
+      <div class="caixa">Site da tarefa: <b>${s.nome}</b> (a preferida da pessoa).</div>
+      <div class="botoes"><button class="btn primario" type="button" id="ir">Começar a tarefa</button></div>`;
+    document.getElementById('ir').addEventListener('click', () => {
+      quadro.src = s.href;
+      mostra.className = 'mostra ativa tarefa';
+      quadro.onload = () => { quadro.onload = null; esconderFaixa(); };
+      const t0 = Date.now();
+      const t = setInterval(() => { contagem.textContent = `${Math.round((Date.now() - t0) / 1000)} s`; }, 500);
+      document.getElementById('concluir').onclick = () => {
+        clearInterval(t);
+        mostra.className = 'mostra';
+        quadro.src = 'about:blank';
+        r.tarefaSite = s.id;
+        r.tarefaSegundos = Math.round((Date.now() - t0) / 1000);
+        tela.innerHTML = `<h2>Conseguiu?</h2><div class="opcoes" id="ok"><button type="button" data-v="sim">Sim, sem ajuda</button><button type="button" data-v="ajuda">Com ajuda</button><button type="button" data-v="nao">Não conseguiu</button></div><label class="campo" style="margin-top:16px">Onde travou? <textarea id="travou"></textarea></label><div class="botoes"><button class="btn primario" type="button" id="prox">Terminar</button></div>`;
+        document.getElementById('ok').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) document.querySelectorAll('#ok button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
+        document.getElementById('prox').addEventListener('click', () => { r.tarefaOk = document.querySelector('#ok [aria-pressed=true]')?.dataset.v ?? ''; r.travou = document.getElementById('travou').value.trim(); fim(); });
+      };
+    });
+  }
+
+  function fim() {
+    const todas = lerTodas(); todas.push(r); salvarTodas(todas);
+    resultados(`Obrigado! As respostas de ${r.quem} foram guardadas neste aparelho.`);
+  }
+
+  function resultados(msg = '') {
+    progresso(passos(), 'Resultados');
+    const todas = lerTodas();
+    const nome = (id) => SUGESTOES.find((s) => s.id === id)?.nome ?? '—';
+    const pref = Object.fromEntries(SUGESTOES.map((s) => [s.id, 0]));
+    todas.forEach((x) => { if (x.preferida) pref[x.preferida] += 1; });
+    const media = (id, q) => { const v = todas.map((x) => x.notas?.[id]?.[q]).filter((n) => n > 0); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1).replace('.', ',') : '—'; };
+    const max = Math.max(1, ...Object.values(pref));
+    tela.innerHTML = `${msg ? `<p class="lead">${msg}</p>` : ''}<h2>Resultados <em>até agora</em></h2><p class="lead">${todas.length} ${todas.length === 1 ? 'pessoa' : 'pessoas'} neste aparelho.</p>
+      <div class="caixa"><b>Preferida</b><div class="barras-res" style="margin-top:12px">${SUGESTOES.map((s) => `<div><span>${s.nome}</span><i style="width:${(pref[s.id] / max) * 100}%"></i><b>${pref[s.id]}</b></div>`).join('')}</div></div>
+      <div class="caixa"><b>Notas médias (1 a 5)</b><table style="margin-top:10px"><tr><th>Sugestão</th><th>Moderno</th><th>Confiança</th><th>Vontade</th></tr>${SUGESTOES.map((s) => `<tr><td>${s.nome}</td><td>${media(s.id, 'moderno')}</td><td>${media(s.id, 'confianca')}</td><td>${media(s.id, 'vontade')}</td></tr>`).join('')}</table></div>
+      <div class="caixa"><b>O que as pessoas lembraram</b><table style="margin-top:10px">${todas.flatMap((x) => Object.entries(x.notas ?? {}).filter(([, n]) => n.lembra).map(([id, n]) => `<tr><td>${x.quem}</td><td>${nome(id)}</td><td>${n.lembra}</td></tr>`)).join('') || '<tr><td>Nada anotado ainda.</td></tr>'}</table></div>
+      <div class="botoes"><button class="btn" type="button" id="apagar">Apagar tudo</button><button class="btn" type="button" id="copiar">Copiar para planilha</button><button class="btn primario" type="button" id="nova">Próxima pessoa</button></div>`;
+    document.getElementById('nova').addEventListener('click', inicio);
+    document.getElementById('apagar').addEventListener('click', () => { if (confirm('Apagar todas as respostas deste aparelho?')) { salvarTodas([]); resultados(); } });
+    document.getElementById('copiar').addEventListener('click', async () => {
+      const cab = ['pessoa', 'quando', 'sugestão', 'lembra', 'tipo', 'moderno', 'confiança', 'vontade', 'preferida', 'por quê', 'menos', 'tarefa (s)', 'conseguiu', 'travou'];
+      const linhas = todas.flatMap((x) => Object.entries(x.notas ?? {}).map(([id, n]) => [x.quem, x.quando, nome(id), n.lembra, n.tipo, n.moderno, n.confianca, n.vontade, nome(x.preferida), x.porque, nome(x.menos), x.tarefaSegundos ?? '', x.tarefaOk ?? '', x.travou ?? ''].map((c) => String(c ?? '').replace(/[\t\n]/g, ' ')).join('\t')));
+      try { await navigator.clipboard.writeText([cab.join('\t'), ...linhas].join('\n')); document.getElementById('copiar').textContent = 'Copiado! Cole na planilha'; } catch { document.getElementById('copiar').textContent = 'Não deu para copiar'; }
+    });
+  }
+
+  inicio();
+</script>
+</body>
+</html>
