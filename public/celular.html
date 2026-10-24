@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sugestões no celular</title>
+<meta name="description" content="As sugestões de design dentro de um celular, uma por vez ou lado a lado, para comparar.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect x=%224%22 y=%221%22 width=%228%22 height=%2214%22 rx=%222%22 fill=%22%23f2a65a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sugestoes/base.css">
+<style>
+  :root { --fundo: #15171c; --fundo-2: #1e2128; --tinta: #eceae5; --tinta-2: #9a9ea8; --linha: #2c3039; --destaque: #f2a65a; --foco: var(--destaque); }
+  html, body { height: 100%; }
+  body { background: radial-gradient(ellipse at 50% -20%, #262a33, var(--fundo) 60%); color: var(--tinta); display: flex; flex-direction: column; min-height: 100%; }
+
+  .topo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid var(--linha); }
+  .topo h1 { margin: 0; font-size: 17px; letter-spacing: -0.01em; margin-right: auto; }
+  .topo h1 a { color: var(--tinta-2); font-weight: 400; text-decoration: none; margin-right: 8px; }
+  .segmento { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--fundo-2); border: 1px solid var(--linha); }
+  .segmento button { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font-size: 13px; color: var(--tinta-2); white-space: nowrap; }
+  .segmento button[aria-pressed='true'] { background: var(--tinta); color: #15171c; font-weight: 600; }
+  .opcao { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta-2); cursor: pointer; }
+  .opcao input { accent-color: var(--destaque); width: 16px; height: 16px; }
+
+  .palco-celulares { flex: 1; display: flex; align-items: flex-start; justify-content: center; gap: 28px; padding: 22px 24px 30px; overflow: auto; }
+
+  /* um celular: tela de 390 × 844 (iPhone 13/14) escalada para caber */
+  .aparelho { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .moldura { width: calc(414px * var(--k, 1)); height: calc(868px * var(--k, 1)); position: relative; flex: none; }
+  .corpo {
+    position: absolute; top: 0; left: 0; width: 414px; height: 868px; transform: scale(var(--k, 1)); transform-origin: 0 0;
+    border-radius: 62px; padding: 12px; background: #050608; box-shadow: 0 0 0 2px #3a3f4a, 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #1a1d23;
+  }
+  .corpo::before { content: ''; position: absolute; top: 22px; left: 50%; translate: -50% 0; width: 118px; height: 34px; border-radius: 20px; background: #050608; z-index: 3; }
+  .tela { width: 390px; height: 844px; border-radius: 50px; overflow: hidden; background: #000; position: relative; display: flex; flex-direction: column; }
+  /* barra de status: a página começa abaixo dela, como no Safari */
+  .status { flex: none; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 6px 34px 0 42px; color: #fff; font-size: 15px; font-weight: 600; }
+  .status i { display: flex; gap: 5px; align-items: center; font-style: normal; }
+  .status i::before { content: ''; width: 17px; height: 11px; background: linear-gradient(90deg, #fff 0 3px, transparent 3px 4.5px, #fff 4.5px 7.5px, transparent 7.5px 9px, #fff 9px 12px, transparent 12px 13.5px, #fff 13.5px); clip-path: polygon(0 75%, 25% 75%, 25% 55%, 50% 55%, 50% 30%, 75% 30%, 75% 0, 100% 0, 100% 100%, 0 100%); }
+  .status i::after { content: ''; width: 25px; height: 12px; border: 1.5px solid #fffa; border-radius: 4px; background: linear-gradient(90deg, #fff 70%, transparent 70%) content-box; padding: 1.5px; }
+  .tela iframe { width: 390px; flex: 1; border: 0; display: block; background: #fff; }
+  .legenda-aparelho { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .legenda-aparelho b { font-weight: 600; }
+  .legenda-aparelho a, .legenda-aparelho button { font-size: 12px; color: var(--tinta-2); background: none; border: 1px solid var(--linha); border-radius: 999px; padding: 4px 10px; text-decoration: none; }
+
+  /* painel ao lado no modo "uma por vez" */
+  .painel { width: 320px; flex: none; display: grid; gap: 18px; align-content: start; padding-top: 12px; }
+  .abas { display: grid; gap: 6px; }
+  .abas button { text-align: left; border: 1px solid var(--linha); background: var(--fundo-2); padding: 12px 14px; border-radius: 14px; display: grid; gap: 2px; }
+  .abas button small { color: var(--tinta-2); font-size: 12px; }
+  .abas button[aria-pressed='true'] { border-color: var(--destaque); background: color-mix(in srgb, var(--destaque) 12%, var(--fundo-2)); }
+  .experimente { padding: 16px; border-radius: 14px; border: 1px dashed var(--linha); font-size: 14px; color: var(--tinta-2); }
+  .experimente h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tinta); }
+  .experimente ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+  .qr { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 14px; background: var(--fundo-2); font-size: 13px; color: var(--tinta-2); }
+  .qr #qr { flex: none; width: 96px; height: 96px; background: #fff; border-radius: 8px; padding: 6px; display: grid; place-items: center; }
+  .qr #qr svg { width: 100%; height: 100%; }
+  .qr b { color: var(--tinta); display: block; margin-bottom: 4px; }
+  .modo-lado .painel { display: none; }
+  @media (max-width: 760px) {
+    /* num celular de verdade, o simulador não faz sentido: vai direto para as páginas */
+    .palco-celulares, .topo .segmento, .topo .opcao { display: none; }
+    .no-celular { display: block !important; }
+  }
+  .no-celular { display: none; padding: 24px; }
+  .no-celular a { display: block; padding: 16px; margin-bottom: 10px; border-radius: 14px; background: var(--fundo-2); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="topo">
+  <h1><a href="sugestoes.html">← Sugestões</a>No celular</h1>
+  <div class="segmento" role="group" aria-label="Como mostrar">
+    <button type="button" data-modo="um" aria-pressed="true">Uma por vez</button>
+    <button type="button" data-modo="lado" aria-pressed="false">As três lado a lado</button>
+  </div>
+  <label class="opcao" id="opcao-juntos" hidden><input type="checkbox" id="juntos" checked> Rolar as três juntas</label>
+</header>
+
+<main class="palco-celulares" id="palco"></main>
+
+<div class="no-celular">
+  <p style="color:var(--tinta-2)">Você já está num celular: abra cada sugestão direto.</p>
+  <a href="sugestao1.html">Cidade viva</a><a href="sugestao2.html">Editorial</a><a href="sugestao3.html">Transparência</a><a href="sugestao-imovel.html?id=apt-09">Página do imóvel</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script type="module">
+  const SUGESTOES = [
+    { href: 'sugestao1.html', nome: 'Cidade viva', resumo: 'Sugestão 1 · escura, com o mapa',
+      dicas: ['Toque no ☰: a gaveta tem os links e um atalho para as outras sugestões.', 'Escreva na busca, por exemplo "casa com piscina", e veja as etiquetas.', 'Troque a luz em Agora / Pôr do sol / Noite.', 'Arraste para o lado o carrossel de imóveis que baixaram de preço.'] },
+    { href: 'sugestao2.html', nome: 'Editorial', resumo: 'Sugestão 2 · revista, com serifa',
+      dicas: ['Monte a busca em forma de frase: "Quero comprar um apartamento no…".', 'Role até o imóvel da semana, contado como matéria.', 'Veja os guias de bairro e a seleção.'] },
+    { href: 'sugestao3.html', nome: 'Transparência', resumo: 'Sugestão 3 · números primeiro',
+      dicas: ['Arraste "Quanto posso pagar por mês": os imóveis que passam ficam apagados.', 'Marque "Comparar" em dois ou três imóveis e role até a tabela.', 'Toque no ☰ para ir direto ao histórico de preços.'] },
+    { href: 'sugestao-imovel.html?id=apt-09', nome: 'Página do imóvel', resumo: 'Serve para as três',
+      dicas: ['Role devagar: o mapa 3D desce até o prédio e passeia pelo bairro.', 'No capítulo do sol, o controle fica preso logo abaixo do mapa: arraste a hora ou toque em "Ver o dia passar".', 'A barra com o preço e "Agendar visita" fica fixa embaixo.'] },
+  ];
+  const palco = document.getElementById('palco');
+  const juntos = document.getElementById('juntos');
+  let modo = new URLSearchParams(location.search).get('modo') === 'lado' ? 'lado' : 'um';
+  let atual = Math.max(0, SUGESTOES.findIndex((s) => s.href.startsWith(new URLSearchParams(location.search).get('pagina') ?? '-')));
+
+  const aparelho = (s) => `<div class="aparelho">
+      <div class="moldura"><div class="corpo"><div class="tela"><div class="status" aria-hidden="true"><span>9:41</span><i></i></div><iframe src="${s.href}" title="${s.nome} no celular"></iframe></div></div></div>
+      <div class="legenda-aparelho"><b>${s.nome}</b><button type="button" data-recarregar>Recarregar</button><a href="${s.href}" target="_blank" rel="noopener">Abrir ↗</a></div>
+    </div>`;
+
+  function desenhar() {
+    document.body.classList.toggle('modo-lado', modo === 'lado');
+    document.getElementById('opcao-juntos').hidden = modo !== 'lado';
+    document.querySelectorAll('[data-modo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modo === modo)));
+    if (modo === 'lado') {
+      palco.innerHTML = SUGESTOES.slice(0, 3).map(aparelho).join('');
+    } else {
+      const s = SUGESTOES[atual];
+      palco.innerHTML = aparelho(s) + `<aside class="painel">
+        <div class="abas">${SUGESTOES.map((x, k) => `<button type="button" data-aba="${k}" aria-pressed="${k === atual}"><span>${x.nome}</span><small>${x.resumo}</small></button>`).join('')}</div>
+        <div class="experimente"><h2>Experimente</h2><ul>${s.dicas.map((d) => `<li>${d}</li>`).join('')}</ul></div>
+        <div class="qr"><div id="qr" aria-hidden="true"></div><div><b>No seu celular</b>Aponte a câmera para abrir esta sugestão no aparelho de verdade.</div></div>
+      </aside>`;
+      desenharQr(new URL(s.href, location.href).href);
+    }
+    const p = new URLSearchParams({ modo, pagina: SUGESTOES[atual].href.split('?')[0] });
+    history.replaceState(null, '', `?${p}`);
+    escalar();
+    if (modo === 'lado') ligarRolagem();
+  }
+
+  function desenharQr(url) {
+    const el = document.getElementById('qr');
+    if (!el) return;
+    try {
+      const q = window.qrcode(0, 'M');
+      q.addData(url);
+      q.make();
+      el.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
+    } catch {
+      el.parentElement.remove(); // sem a biblioteca, fica sem o QR
+    }
+  }
+
+  // escala os celulares para caberem na altura (e, lado a lado, na largura) da janela
+  function escalar() {
+    const alturaLivre = innerHeight - palco.getBoundingClientRect().top - 80;
+    let k = alturaLivre / 868;
+    if (modo === 'lado') k = Math.min(k, (innerWidth - 48 - 2 * 28) / 3 / 414);
+    else k = Math.min(k, (innerWidth - 48 - 28 - 320) / 414);
+    k = Math.max(0.42, Math.min(1, k));
+    palco.style.setProperty('--k', k.toFixed(3));
+    document.querySelectorAll('.moldura').forEach((m) => m.style.setProperty('--k', k.toFixed(3)));
+  }
+  addEventListener('resize', escalar);
+
+  // lado a lado: rolar uma rola as outras na mesma proporção
+  function ligarRolagem() {
+    const frames = [...palco.querySelectorAll('iframe')];
+    let movendo = false;
+    frames.forEach((f) => f.addEventListener('load', () => {
+      const w = f.contentWindow;
+      w.addEventListener('scroll', () => {
+        if (movendo || !juntos.checked) return;
+        const d = w.document.documentElement;
+        const prop = w.scrollY / Math.max(1, d.scrollHeight - w.innerHeight);
+        movendo = true;
+        for (const o of frames) {
+          if (o === f) continue;
+          const ow = o.contentWindow; const od = ow.document.documentElement;
+          ow.scrollTo({ top: prop * (od.scrollHeight - ow.innerHeight), behavior: 'instant' });
+        }
+        requestAnimationFrame(() => (movendo = false));
+      }, { passive: true });
+    }));
+  }
+
+  document.querySelector('.segmento').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-modo]'); if (!b) return;
+    modo = b.dataset.modo; desenhar();
+  });
+  palco.addEventListener('click', (e) => {
+    const aba = e.target.closest('[data-aba]');
+    if (aba) { atual = Number(aba.dataset.aba); desenhar(); return; }
+    const r = e.target.closest('[data-recarregar]');
+    if (r) r.closest('.aparelho').querySelector('iframe').contentWindow.location.reload();
+  });
+  desenhar();
+</script>
+</body>
+</html>

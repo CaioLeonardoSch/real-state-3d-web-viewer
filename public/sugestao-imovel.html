@@ -21,7 +21,7 @@
   @supports (animation-timeline: scroll()) { .progresso { animation: progresso linear both; animation-timeline: scroll(root); } @keyframes progresso { to { transform: scaleX(1); } } }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--card); text-decoration: none; font-size: 14px; font-weight: 600; }
   .btn.primario { background: var(--tinta); border-color: var(--tinta); color: #fff; }
-  @media (max-width: 560px) { .barra-topo .marca { display: none; } .barra-topo .voltar { margin-right: auto; } .barra-topo .btn { padding: 8px 12px; font-size: 13px; } }
+  @media (max-width: 560px) { .barra-topo .salvar span { display: none; } .barra-topo .wrap { gap: 8px; } .barra-topo .marca { display: none; } .barra-topo .voltar { margin-right: auto; } .barra-topo .btn { padding: 8px 12px; font-size: 13px; } }
 
   /* abertura */
   .abre { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; padding: 28px 0 0; align-items: end; }
@@ -95,8 +95,14 @@
 
   @media (max-width: 900px) {
     .historia { grid-template-columns: 1fr; gap: 0; padding-top: 40px; }
-    .mapa-preso { order: -1; top: 60px; height: 46svh; z-index: 5; border-radius: 0 0 20px 20px; margin-inline: -16px; }
+    .mapa-preso { order: -1; top: 60px; height: 40svh; z-index: 5; border-radius: 0 0 20px 20px; margin-inline: -16px; }
     .capitulo { min-height: auto; padding: 48px 0; }
+    /* o controle do sol fica preso logo abaixo do mapa enquanto o capítulo passa: mapa e controle juntos na tela */
+    #sol { min-height: 125svh; justify-content: flex-start; }
+    #sol .sol { position: sticky; top: calc(60px + 40svh + 12px); z-index: 4; gap: 10px; padding: 14px; }
+    #sol .sol .hora output { font-size: 26px; }
+    #sol .sol .ceu { height: 30px; }
+    #sol .sol .dia { margin: 0; font-size: 12px; }
   }
 
   /* barra de ação fixa no celular */
@@ -115,7 +121,7 @@
 <div class="aviso-sugestao">Sugestão da página do imóvel · imóvel de exemplo · mapa 3D de verdade <a href="sugestoes.html">Ver todas as sugestões</a></div>
 
 <div class="barra-topo">
-  <div class="wrap"><a class="voltar" href="javascript:history.back()">← Voltar</a><span class="marca">Exemplo Imóveis</span><a class="btn" href="#dois">♡ Salvar</a><a class="btn primario" href="#visita">Agendar visita</a></div>
+  <div class="wrap"><a class="voltar" href="javascript:history.back()">← Voltar</a><span class="marca">Exemplo Imóveis</span><a class="btn salvar" href="#dois">♡ <span>Salvar</span></a><a class="btn primario" href="#visita">Agendar visita</a></div>
   <div class="progresso" aria-hidden="true"></div>
 </div>
 
@@ -211,6 +217,9 @@
 <script type="module">
   import { porId, img, brl, data, desconto, custoMes, botaoPausa } from './sugestoes/dados.js';
   import { montarMapa } from './sugestoes/mapa-vivo.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ onde: document.querySelector('.barra-topo .wrap'), links: [['#voo', 'O prédio no 3D'], ['#sol', 'Sol e sombra'], ['#preco-cap', 'Preço'], ['#dois', 'Decidir junto'], ['#visita', 'Agendar visita']] });
 
   const i = porId(new URLSearchParams(location.search).get('id'));
   const d = desconto(i);

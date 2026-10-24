@@ -153,6 +153,7 @@
   footer { margin-top: clamp(80px, 10vw, 140px); padding: 40px 0 60px; border-top: 1px solid rgba(255, 255, 255, 0.08); color: var(--creme-2); font-size: 14px; }
   footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
   .aviso-flutuante { background: var(--creme); color: #17120b; }
+  @media (max-width: 640px) { .aviso-flutuante { left: 12px; right: 12px; bottom: 12px; max-width: none; padding: 10px 12px; font-size: 13px; } .aviso-flutuante .icone { width: 28px; height: 28px; } .pilula .cta { padding: 8px 12px; font-size: 13px; } }
   .aviso-flutuante .icone { flex: none; width: 34px; height: 34px; border-radius: 50%; background: #5fe08a; display: grid; place-items: center; font-weight: 800; color: #06210f; }
 </style>
 </head>
@@ -250,6 +251,9 @@
 <script type="module">
   import { IMOVEIS, img, brl, brlCurto, desconto, custoMes, sparkline, entenderFrase, botaoPausa, data } from './sugestoes/dados.js';
   import { montarMapa, joinvilleAgora } from './sugestoes/mapa-vivo.js';
+  import { menuCelular } from './sugestoes/menu.js';
+
+  menuCelular({ botao: document.querySelector('.pilula .menu'), links: [['#colecoes', 'Coleções'], ['#baixaram', 'Comprar'], ['#baixaram', 'Alugar'], ['mapa.html', 'Mapa 3D'], ['#sol', 'Sobre']], cta: ['sugestao-imovel.html?id=apt-09', 'Agendar visita'] });
 
   // menu em pílula compacta ao rolar
   const pilula = document.getElementById('pilula');
@@ -356,6 +360,8 @@
   // notificação discreta
   const aviso = document.getElementById('aviso');
   setTimeout(() => aviso.classList.add('mostra'), 6000);
+  // no celular, o aviso some sozinho para não cobrir o conteúdo
+  if (matchMedia('(max-width: 640px)').matches) setTimeout(() => aviso.classList.remove('mostra'), 14000);
   aviso.querySelector('button').addEventListener('click', () => aviso.classList.remove('mostra'));
 </script>
 </body>

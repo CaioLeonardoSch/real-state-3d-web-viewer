@@ -32,6 +32,13 @@
   .item li { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--fundo); }
   .item .ir { margin-top: 18px; font-weight: 600; }
   @media (max-width: 820px) { .item { grid-template-columns: 1fr; } }
+  .celular { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; padding: 18px 22px; border-radius: 22px; background: #16130f; color: #f4f1ea; text-decoration: none; }
+  .celular .ic { flex: none; width: 34px; height: 56px; border-radius: 9px; border: 3px solid #f2a65a; position: relative; }
+  .celular .ic::after { content: ''; position: absolute; top: 4px; left: 50%; translate: -50% 0; width: 10px; height: 3px; border-radius: 2px; background: #f2a65a; }
+  .celular b { display: block; font-size: 18px; }
+  .celular span:nth-child(2) { flex: 1; color: #cfc6b6; font-size: 15px; }
+  .celular .ir { font-weight: 600; color: #f2a65a; }
+  @media (max-width: 760px) { .celular { display: none; } }
   .notas { margin: 60px 0 80px; padding: 26px; border-radius: 20px; border: 1px dashed var(--linha); color: var(--tinta-2); font-size: 15px; }
   .notas h3 { margin: 0 0 10px; color: var(--tinta); }
   .notas ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
@@ -44,6 +51,8 @@
     <h1>Três jeitos de o site <em>ganhar vida.</em></h1>
     <p>Protótipos navegáveis que saíram do estudo de referências. Usam os imóveis de exemplo e o mapa 3D de verdade da plataforma. As imagens dos imóveis são o próprio mapa no fim da tarde; num site real, entram as fotos.</p>
   </header>
+
+  <a class="celular" href="celular.html"><span class="ic" aria-hidden="true"></span><span><b>Ver no celular</b>As sugestões dentro de um celular, uma por vez ou as três lado a lado, para comparar.</span><span class="ir">Abrir →</span></a>
 
   <div class="lista">
     <a class="item" href="sugestao1.html">
