@@ -211,8 +211,11 @@ export class Scene {
     private theme: Theme,
     private events: SceneEvents,
     listings: Listing[] = data.listings.listings,
-    /** Embedded in a page (client site): one finger and the plain wheel scroll the page, not the map. */
-    opts: { cooperative?: boolean; drawArea?: boolean } = {},
+    /**
+     * Embedded in a page (client site): one finger and the plain wheel scroll the page, not the map. 'until-click':
+     * once the map is clicked with the mouse, the wheel zooms it until the mouse leaves it.
+     */
+    opts: { cooperative?: boolean | 'until-click'; drawArea?: boolean } = {},
   ) {
     this.listings = listings;
     this.trees = data.treesUrl ? cityTrees(data.treesUrl, theme) : null;
@@ -240,6 +243,7 @@ export class Scene {
       maxBounds: [w - padX, s - padY, e + padX, n + padY],
       attributionControl: false,
     });
+    if (opts.cooperative === 'until-click') this.wheelAfterClick();
     this.map.addControl(new AttributionControl({ compact: false, customAttribution: MAPLIBRE_ATTRIBUTION }), 'bottom-left');
     this.map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
     // added after the navigation control: bottom corners stack upwards, so it sits above zoom +/−
@@ -1172,6 +1176,21 @@ export class Scene {
     if (this.selectedId !== null) this.setListingState(this.selectedId, { selected: false });
     this.selectedId = listingId ? (this.featureIdByListing.get(listingId) ?? null) : null;
     if (this.selectedId !== null) this.setListingState(this.selectedId, { selected: true });
+  }
+
+  /**
+   * A map in the middle of a page: the wheel scrolls the page until the map is clicked, then zooms the map until the
+   * mouse leaves it (fingers keep the two-finger rule: a tap is not a choice to stop scrolling the page).
+   */
+  private wheelAfterClick(): void {
+    const box = this.map.getContainer();
+    const gestures = this.map.cooperativeGestures;
+    box.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') gestures.disable();
+    });
+    box.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') gestures.enable();
+    });
   }
 
   // ---------------------------------------------------------------- theme
