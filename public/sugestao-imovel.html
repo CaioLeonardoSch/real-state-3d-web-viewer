@@ -82,6 +82,24 @@
   .custo div { display: flex; justify-content: space-between; font-size: 15px; }
   .custo .total { padding-top: 8px; border-top: 1px solid var(--linha); font-weight: 700; }
 
+  /* vista do andar, deslocamento */
+  .vista-ctrl, .trabalho { max-width: 460px; padding: 18px; border-radius: 20px; background: var(--card); border: 1px solid var(--linha); display: grid; gap: 12px; }
+  .linha-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--tinta-2); }
+  .linha-ctrl select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--linha); background: var(--fundo); min-width: 160px; }
+  .linha-ctrl input { flex: 1; accent-color: var(--dourado); }
+  .rosa, .meios, .horarios { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rosa button, .meios button, .horarios button { flex: 1; min-width: 72px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--linha); background: var(--fundo); font-size: 14px; }
+  .rosa button.parede { text-decoration: line-through; opacity: 0.55; }
+  .rosa button[aria-pressed='true'], .meios button[aria-pressed='true'], .horarios button[aria-pressed='true'] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+  .nota-vista { margin: 0; font-size: 12px; color: var(--tinta-2); }
+  .tempo { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .tempo small { display: block; font-size: 13px; font-weight: 400; color: var(--tinta-2); letter-spacing: 0; }
+  .horarios { max-width: 460px; margin-bottom: 14px; }
+  .zap { max-width: 460px; padding: 16px; border-radius: 20px; background: #e9ddd0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d8c9b8'/%3E%3C/svg%3E"); display: grid; gap: 10px; margin-bottom: 14px; }
+  .zap-rotulo { font-size: 12px; color: #6a5d4e; }
+  .balao { margin: 0; justify-self: end; max-width: 92%; padding: 10px 12px; border-radius: 12px 12px 4px 12px; background: #d9fdd3; font-size: 14px; line-height: 1.45; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12); white-space: pre-line; }
+  .zap-btn { justify-self: end; background: #25d366; border-color: #25d366; color: #06301a; }
+
   /* decidir a dois */
   .dois { max-width: 460px; padding: 18px; border-radius: 20px; background: var(--card); border: 1px solid var(--linha); display: grid; gap: 12px; }
   .pessoas { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--tinta-2); }
@@ -134,7 +152,7 @@
       <div class="caract" id="caract"></div>
       <div class="preco" id="preco"></div>
       <p class="mes-linha" id="mes-linha"></p>
-      <div class="acoes"><a class="btn primario" href="#visita">Agendar visita</a><a class="btn" href="#">WhatsApp</a><a class="btn" href="#voo">Ver no 3D ↓</a></div>
+      <div class="acoes"><a class="btn primario" href="#visita">Agendar visita</a><a class="btn" href="#">WhatsApp</a><a class="btn" href="#voo">Ver no 3D ↓</a><a class="btn" id="apresentar" href="#">▶ Apresentar</a></div>
     </div>
   </div>
 
@@ -162,21 +180,45 @@
         </div>
       </article>
 
+      <article class="capitulo" id="vista" data-cap="vista">
+        <span class="n">3 · A vista do seu andar</span>
+        <h2>O que você vê <em>da janela.</em></h2>
+        <p>A câmera sobe até a altura do andar, do lado de fora da fachada, com os prédios vizinhos na altura real. Escolha o andar e para onde a janela olha.</p>
+        <div class="vista-ctrl">
+          <label class="linha-ctrl">Andar <select id="andar"></select></label>
+          <div class="rosa" role="group" aria-label="Para onde a janela olha"><button type="button" data-rumo="0">Norte</button><button type="button" data-rumo="90">Leste</button><button type="button" data-rumo="180">Sul</button><button type="button" data-rumo="270">Oeste</button></div>
+          <label class="linha-ctrl">Girar <input type="range" id="rumo" min="0" max="359" step="1" value="0"></label>
+          <p class="nota-vista" id="nota-vista"></p>
+        </div>
+      </article>
+
       <article class="capitulo" data-cap="rua">
-        <span class="n">3 · A rua</span>
+        <span class="n">4 · A rua</span>
         <h2>O que tem <em>a uma caminhada.</em></h2>
         <p>A câmera passeia pela rua e pelos arredores. No site, esta lista sai dos serviços que o mapa da cidade já conhece (os tempos abaixo são exemplo).</p>
         <ul><li>Mercado <span>4 min a pé</span></li><li>Escola <span>7 min a pé</span></li><li>Farmácia <span>5 min a pé</span></li><li>Parada de ônibus <span>2 min a pé</span></li></ul>
       </article>
 
       <article class="capitulo" data-cap="bairro">
-        <span class="n">4 · O bairro</span>
+        <span class="n">5 · O bairro</span>
         <h2 id="bairro-titulo">O bairro, <em>visto de cima.</em></h2>
         <p>Do alto, dá para ver os morros, o rio, as ruas grandes e onde ficam os outros imóveis à venda por perto.</p>
       </article>
 
+      <article class="capitulo" id="trabalho" data-cap="trabalho">
+        <span class="n">6 · Até o trabalho</span>
+        <h2>Quanto tempo <em>até onde você vai todo dia.</em></h2>
+        <p>Escolha o destino e o meio de transporte. O mapa traça o caminho em linha reta e mostra uma faixa de tempo.</p>
+        <div class="trabalho">
+          <label class="linha-ctrl">Destino <select id="destino"></select></label>
+          <div class="meios" role="group" aria-label="Meio de transporte" id="meios"></div>
+          <p class="tempo" id="tempo"></p>
+          <p class="nota-vista">Estimativa sem trânsito, pela distância em linha reta. No site, viria de um motor de rotas com o horário de pico.</p>
+        </div>
+      </article>
+
       <article class="capitulo" id="preco-cap" data-cap="cidade">
-        <span class="n">5 · O preço</span>
+        <span class="n">7 · O preço</span>
         <h2>O desconto, <em>com data.</em></h2>
         <p>O preço anterior é o que ficou registrado no site quando mudou.</p>
         <div class="grafico" id="grafico"></div>
@@ -184,7 +226,7 @@
       </article>
 
       <article class="capitulo" id="dois" data-cap="cidade">
-        <span class="n">6 · Decidir junto</span>
+        <span class="n">8 · Decidir junto</span>
         <h2>Para quem <em>decide a dois.</em></h2>
         <p>Salve numa lista compartilhada: cada um vota e deixa nota. O corretor recebe a lista pronta para montar o roteiro de visitas.</p>
         <div class="dois">
@@ -196,10 +238,16 @@
       </article>
 
       <article class="capitulo" id="visita" data-cap="voo">
-        <span class="n">7 · Visita</span>
+        <span class="n">9 · Visita</span>
         <h2>Escolha <em>o melhor horário.</em></h2>
         <p>Dica do mapa: para ver a sala com sol, visite entre 16h e 18h.</p>
-        <div class="acoes"><a class="btn primario" href="#">Sáb., 10h</a><a class="btn" href="#">Sáb., 16h30</a><a class="btn" href="#">Seg., 17h</a><a class="btn" href="#">Outro horário</a></div>
+        <div class="horarios" role="group" aria-label="Horário da visita" id="horarios"><button type="button" aria-pressed="false">Sáb., 10h</button><button type="button" aria-pressed="true">Sáb., 16h30 ☀</button><button type="button" aria-pressed="false">Seg., 17h ☀</button><button type="button" aria-pressed="false">Ter., 9h</button></div>
+        <div class="zap">
+          <span class="zap-rotulo">A mensagem já sai pronta</span>
+          <p class="balao" id="balao"></p>
+          <a class="btn zap-btn" id="zap" href="#" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+        </div>
+        <a class="btn" id="apresentar2" href="#">▶ Modo apresentação (para o corretor mostrar ao cliente)</a>
       </article>
     </div>
 
@@ -218,8 +266,9 @@
   import { porId, img, brl, data, desconto, custoMes, botaoPausa } from './sugestoes/dados.js';
   import { montarMapa } from './sugestoes/mapa-vivo.js';
   import { menuCelular } from './sugestoes/menu.js';
+  import { DESTINOS, MEIOS, minutos, distancia, camada, doMapa } from './sugestoes/deslocamento.js';
 
-  menuCelular({ onde: document.querySelector('.barra-topo .wrap'), links: [['#voo', 'O prédio no 3D'], ['#sol', 'Sol e sombra'], ['#preco-cap', 'Preço'], ['#dois', 'Decidir junto'], ['#visita', 'Agendar visita']] });
+  menuCelular({ onde: document.querySelector('.barra-topo .wrap'), links: [['#voo', 'O prédio no 3D'], ['#sol', 'Sol e sombra'], ['#vista', 'Vista do andar'], ['#trabalho', 'Até o trabalho'], ['#preco-cap', 'Preço'], ['#visita', 'Agendar visita']] });
 
   const i = porId(new URLSearchParams(location.search).get('id'));
   const d = desconto(i);
@@ -262,6 +311,8 @@
   // mapa vivo, preso ao lado do texto
   const mapa = montarMapa(document.getElementById('palco'), { foco: i.id, giro: 2 });
   const CAMERAS = {
+    vista: { rotulo: 'Vista do andar' },
+    trabalho: { rotulo: 'Até o trabalho' },
     voo: { zoom: 18.8, pitch: 64, rotulo: 'O prédio' },
     sol: { zoom: 18.4, pitch: 58, rotulo: 'Sol e sombra' },
     rua: { zoom: 17.2, pitch: 70, delta: 70, rotulo: 'A rua' },
@@ -283,6 +334,9 @@
     document.getElementById('etiqueta-cap').textContent = c.rotulo;
     mapa.girar(cap !== 'sol' && !document.documentElement.classList.contains('paused'));
     if (!mapa.map) return;
+    mapa.map.getSource('trajeto')?.setData(doMapa(mapa.map, { type: 'FeatureCollection', features: [] }));
+    if (cap === 'vista') { direcaoLivre(); olharDaJanela(); return; }
+    if (cap === 'trabalho') { mostrarTrajeto(); return; }
     const o = { center: i.centro, zoom: c.zoom, pitch: c.pitch };
     if (c.delta !== undefined) o.bearing = bearing0 + c.delta;
     mapa.camera(o, cap === 'voo' ? 3600 : 2400);
@@ -330,6 +384,78 @@
 
   // votos (só nesta página, para mostrar a ideia)
   document.querySelectorAll('.votos button').forEach((b) => b.addEventListener('click', () => document.querySelectorAll('.votos button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))));
+
+  // vista do andar
+  const selAndar = document.getElementById('andar');
+  const nAndares = Math.max(i.andares, i.andar);
+  selAndar.innerHTML = Array.from({ length: nAndares }, (_, k) => k + 1).map((n) => `<option value="${n}"${n === i.andar ? ' selected' : ''}>${n}º andar${n === i.andar ? ' (este imóvel)' : ''}</option>`).join('');
+  const rumo = document.getElementById('rumo');
+  const rosa = [...document.querySelectorAll('.rosa button')];
+  const pontos = ['norte', 'nordeste', 'leste', 'sudeste', 'sul', 'sudoeste', 'oeste', 'noroeste'];
+  function olharDaJanela() {
+    const r = Number(rumo.value);
+    rosa.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.rumo) === r)));
+    const andar = Number(selAndar.value);
+    document.getElementById('nota-vista').textContent = `${andar}º andar, olhando para o ${pontos[Math.round(r / 45) % 8]}. ${r > 300 || r < 60 ? 'Janela para o norte: sol o dia todo no inverno.' : r > 120 && r < 240 ? 'Janela para o sul: pouco sol direto, luz mais uniforme.' : r < 180 ? 'Janela para o leste: sol da manhã.' : 'Janela para o oeste: sol da tarde.'}`;
+    if (capAtual !== 'vista') return;
+    // prédio colado do lado escolhido: a câmera ficaria dentro da parede do vizinho
+    if (mapa.bloqueado(i.centro, i.raio, andar * 3 + 1.5, r)) {
+      document.getElementById('nota-vista').textContent = `Desse lado há um vizinho colado, mais alto que o ${andar}º andar: a janela daria para a parede. Escolha outra direção.`;
+      return;
+    }
+    mapa.vista(i.centro, i.raio, andar * 3 + 1.5, r);
+  }
+  /** Primeira direção livre (sem parede de vizinho), para abrir o capítulo já numa vista. */
+  function direcaoLivre() {
+    const andar = Number(selAndar.value);
+    const livre = [0, 90, 180, 270].find((r) => !mapa.bloqueado(i.centro, i.raio, andar * 3 + 1.5, r));
+    rosa.forEach((b) => b.classList.toggle('parede', mapa.bloqueado(i.centro, i.raio, andar * 3 + 1.5, Number(b.dataset.rumo))));
+    if (livre !== undefined && mapa.bloqueado(i.centro, i.raio, andar * 3 + 1.5, Number(rumo.value))) rumo.value = livre;
+  }
+  rosa.forEach((b) => b.addEventListener('click', () => { rumo.value = b.dataset.rumo; olharDaJanela(); }));
+  rumo.addEventListener('input', olharDaJanela);
+  selAndar.addEventListener('change', () => { direcaoLivre(); olharDaJanela(); });
+  olharDaJanela();
+
+  // até o trabalho
+  const selDestino = document.getElementById('destino');
+  const destinos = DESTINOS.filter((x) => distancia(x.centro, i.centro) > 900);
+  selDestino.innerHTML = destinos.map((x, k) => `<option value="${k}">${x.nome}</option>`).join('');
+  let meio = 'carro';
+  const meios = document.getElementById('meios');
+  meios.innerHTML = Object.entries(MEIOS).map(([k, v]) => `<button type="button" data-meio="${k}" aria-pressed="${k === meio}">${v.rotulo}</button>`).join('');
+  meios.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; meio = b.dataset.meio; meios.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); mostrarTrajeto(); });
+  selDestino.addEventListener('change', () => mostrarTrajeto());
+  function mostrarTrajeto() {
+    const dest = destinos[Number(selDestino.value)];
+    const [a, b] = minutos(i.centro, dest.centro, meio);
+    document.getElementById('tempo').innerHTML = `${a} a ${b} min<small>${MEIOS[meio].rotulo.toLowerCase()}, até o centro do bairro ${dest.nome} (${(distancia(i.centro, dest.centro) / 1000).toFixed(1).replace('.', ',')} km em linha reta)</small>`;
+    if (capAtual !== 'trabalho' || !mapa.map) return;
+    mapa.sairDaVista();
+    camada(mapa.map, 'trajeto', { type: 'FeatureCollection', features: [
+      { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [i.centro, dest.centro] } },
+      { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: dest.centro } },
+    ] }, { cor: '#1d4ed8', linha: 4, tracejado: true });
+    const [w, e] = [Math.min(i.centro[0], dest.centro[0]), Math.max(i.centro[0], dest.centro[0])];
+    const [so, n] = [Math.min(i.centro[1], dest.centro[1]), Math.max(i.centro[1], dest.centro[1])];
+    mapa.girar(false);
+    mapa.map.fitBounds([[w, so], [e, n]], { padding: 60, pitch: 45, bearing: 0, duration: 2000, maxZoom: 15.5 });
+  }
+  mostrarTrajeto();
+
+  // visita: a mensagem do WhatsApp já sai com o imóvel e o horário
+  const horarios = document.getElementById('horarios');
+  function mensagem() {
+    const h = horarios.querySelector('[aria-pressed=true]').textContent.replace(' ☀', '');
+    const txt = `Olá! Quero visitar o ${i.titulo.toLowerCase()}, ${i.quartos} quartos, no ${i.bairro} (cód. ${i.codigo}, ${brl(i.preco)}).\nHorário: ${h}.\nVi no site: ${location.href.split('#')[0]}`;
+    document.getElementById('balao').textContent = txt;
+    document.getElementById('zap').href = `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  }
+  horarios.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; horarios.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); mensagem(); });
+  mensagem();
+
+  // modo apresentação
+  for (const id of ['apresentar', 'apresentar2']) document.getElementById(id).href = `sugestao-apresentacao.html?id=${i.id}`;
 </script>
 </body>
 </html>
