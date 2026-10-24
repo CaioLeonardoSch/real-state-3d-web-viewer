@@ -250,5 +250,40 @@ export function themeAt(date: Date, minutes: number, lat: number, lon: number): 
   const tod: TimeOfDay = minutes < 12 * 60 ? 'morning' : 'afternoon';
   const sun = { azimuth, altitude };
   const base = themeFor(tod, lat, lon).theme;
-  return { tod, theme: { ...base, sun, light: { ...base.light, position: sunToLightPosition(sun) } } };
+  return { tod, theme: goldenHour({ ...base, sun, light: { ...base.light, position: sunToLightPosition(sun) } }, altitude) };
+}
+
+/** Sun altitude (degrees) below which the light starts to warm up; the golden hour is full at GOLDEN_FULL. */
+export const GOLDEN_START = 20;
+export const GOLDEN_FULL = 2;
+
+/** Mixes two #rrggbb colours: `k` = 0 gives `a`, 1 gives `b`. */
+export function mixHex(a: string, b: string, k: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return `#${x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * Golden hour: with the sun low (after sunrise, before sunset) the light turns warm and a little stronger, the
+ * horizon orange and the ground and lit slopes take a warm tint. Up high the theme is unchanged.
+ */
+export function goldenHour(theme: Theme, altitude: number): Theme {
+  const k = Math.min(1, Math.max(0, (GOLDEN_START - altitude) / (GOLDEN_START - GOLDEN_FULL)));
+  if (k === 0) return theme;
+  return {
+    ...theme,
+    background: mixHex(theme.background, '#ecd6bb', k * 0.6),
+    light: { ...theme.light, color: mixHex(theme.light.color, '#ffa45c', k * 0.9), intensity: theme.light.intensity + 0.16 * k },
+    sky: { sky: mixHex(theme.sky.sky, '#c4a6c6', k * 0.55), horizon: mixHex(theme.sky.horizon, '#ffb070', k * 0.85) },
+    streetName: { ...theme.streetName, halo: mixHex(theme.streetName.halo, '#fbe6cc', k * 0.6) },
+    relief: { ...theme.relief, highlight: mixHex(theme.relief.highlight, '#ffd3a1', k * 0.7) },
+    scenery: {
+      ...theme.scenery,
+      sidewalk: mixHex(theme.scenery.sidewalk, '#f5d9b8', k * 0.55),
+      laneMark: mixHex(theme.scenery.laneMark, '#f8dcbb', k * 0.5),
+      asphalt: mixHex(theme.scenery.asphalt, '#c2a58e', k * 0.35),
+      paved: mixHex(theme.scenery.paved, '#d6b89c', k * 0.4),
+    },
+  };
 }

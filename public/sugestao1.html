@@ -287,7 +287,7 @@
     if (!mapa?.map) return;
     if (luz === 'agora') mapa.agora();
     else if (luz === 'noite') mapa.noite();
-    else mapa.hora(1065, 'summer');
+    else mapa.hora(1110, 'summer');
   }
   document.querySelectorAll('.luz button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.luz button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
