@@ -2,10 +2,12 @@
 // Turns the region GeoJSON (.cache/region/, from scripts/extract-region.py) into the files the app loads:
 //   public/data/<region>.pmtiles   vector tiles: buildings, roads (with pavement class; the street name in the
 //                                  close-up z15 tiles), water, green, bairros and the canopy of woods
-//   public/data/<region>-detalhe.pmtiles  close-up detail (z15 only): low-poly roofs (scripts/lib/roofs.mjs),
-//                                  street lamps and their lights (scripts/lib/scenery.mjs). A separate file, so the
-//                                  buildings draw first and the detail follows (it doubles the close-up weight)
+//   public/data/<region>-detalhe.pmtiles  close-up detail (z15 only): street lamps and their lights
+//                                  (scripts/lib/scenery.mjs). A separate file, so the buildings draw first and the
+//                                  detail follows
 //   public/data/<region>-arvores.pmtiles  the trees (z15 only), 8 bytes each (scripts/lib/tree-tiles.mjs)
+//   public/data/<region>-telhados.pmtiles  the roofs (z15 only), 18 bytes each (scripts/lib/roofs.mjs and
+//                                  scripts/lib/roof-tiles.mjs)
 //   public/data/bairros-areas.geojson  simplified neighbourhood polygons (the "bairro" filter cuts the map to them)
 //   public/data/boundary.geojson   outline of the region (small; the app tests points against it)
 //   public/data/bairros.geojson    neighbourhood outlines and names (labels)
@@ -28,7 +30,8 @@ import { isResidentialBuilding } from './lib/residential.mjs';
 import { TILE_TYPE, writePmtiles } from './lib/pmtiles-writer.mjs';
 import { clearings, cutCanopy, frame, lampPositions, lampShapes, sampleTrees, simplifyGeometry, surfaceClass, treeParams, urbanMask } from './lib/scenery.mjs';
 import { TREE_TILE_ZOOM, encodeTreeTiles } from './lib/tree-tiles.mjs';
-import { orientedRect, roofKind, roofShapes } from './lib/roofs.mjs';
+import { orientedRect, roofKind, roofParams } from './lib/roofs.mjs';
+import { ROOF_TILE_ZOOM, encodeRoofTiles } from './lib/roof-tiles.mjs';
 import { OUTSIDE_FONT, displayName, mergeLines, roadMergeKey, streetIndex, streetIndexJson } from './lib/streets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -54,7 +57,7 @@ const roadMinZoom = (highway) => {
 const GREEN_MIN_AREA_M2 = { 10: 50000, 11: 20000, 12: 5000, 13: 1000 };
 const WATER_MIN_AREA_M2 = { 10: 20000, 11: 5000, 12: 1000 };
 /** Layers of the close-up detail file (<region>-detalhe.pmtiles). */
-const DETAIL_LAYERS = new Set(['roofs', 'lamps', 'lights']);
+const DETAIL_LAYERS = new Set(['lamps', 'lights']);
 /** Not streets on the ground: planned, under construction, stop platforms, indoor corridors, race tracks… */
 const NOT_ROADS = new Set(['proposed', 'construction', 'platform', 'bus_stop', 'services', 'rest_area', 'raceway', 'corridor', 'elevator']);
 const LAYERS = {
@@ -65,9 +68,8 @@ const LAYERS = {
   bairros: { minzoom: 10, maxzoom: 15 },
   // canopy mass of woods (woods shrunk by 6 m, scripts/extract-region.py), shown in 3D from zoom 14
   canopy: { minzoom: 14, maxzoom: 15 },
-  // scenery: only in the closest tiles (the map shows them from zoom ~15.5, overzooming z15); the trees have a file
-  // of their own (<região>-arvores.pmtiles, below)
-  roofs: { minzoom: 15, maxzoom: 15 },
+  // scenery: only in the closest tiles (the map shows them from zoom 16, overzooming z15); the trees and the roofs
+  // have files of their own (<região>-arvores.pmtiles and <região>-telhados.pmtiles, below)
   lamps: { minzoom: 15, maxzoom: 15 },
   lights: { minzoom: 15, maxzoom: 15 },
 };
@@ -126,10 +128,12 @@ for (const f of buildings.features) {
   const rect = orientedRect(outerRing(f.geometry), lat0);
   const kind = roofKind(f.properties, { area, height: renderHeight, floors: Math.round(renderHeight / 3), rect });
   roofCounts[kind]++;
-  roofList.push(...roofShapes(f.properties.osmId, rect, kind, renderHeight, lat0));
+  const roof = roofParams(f.properties.osmId, rect, kind, renderHeight);
+  if (roof) roofList.push(roof);
   f.properties = { osmId: f.properties.osmId, height: renderHeight, residential: isResidentialBuilding(f.properties) };
 }
-const roofs = { type: 'FeatureCollection', features: roofList };
+// the roofs as numbers (scripts/lib/roof-tiles.mjs): the map stretches one model per kind over each
+const roofTiles = encodeRoofTiles(roofList);
 // street names (after the scenery, which seeds each lamp from its OSM way): only in the z15 tiles, where the map
 // writes them (from zoom 16, overzooming z15); the overview zooms and z14 keep {highway, s} only
 const namedRoads = [];
@@ -160,7 +164,7 @@ bairros.features = bairros.features.filter((f) => (f.properties.kind ?? 'bairro'
 const vt = (fc, maxZoom) => geojsonvt(fc, { maxZoom, indexMaxZoom: 5, indexMaxPoints: 100000, tolerance: 2, extent: 4096, buffer: 96 });
 const fc = (features) => ({ type: 'FeatureCollection', features });
 const indexes = Object.fromEntries(
-  Object.entries({ buildings, roads: fc(roadLinesZ15), water, green, bairros, canopy, roofs, lamps, lights }).map(([name, layer]) => [name, vt(layer, LAYERS[name].maxzoom)]),
+  Object.entries({ buildings, roads: fc(roadLinesZ15), water, green, bairros, canopy, lamps, lights }).map(([name, layer]) => [name, vt(layer, LAYERS[name].maxzoom)]),
 );
 // lighter indexes for the overview zooms (z10–z13), per layer. Built up to z14: geojson-vt does not simplify
 // the tiles of an index's own maximum zoom (they keep every vertex for overzooming)
@@ -231,22 +235,24 @@ for (const [kind, name] of [['base', file], ['detail', detailFile]]) {
   });
   await writeFile(path.join(OUT, name), archive);
 }
-const treesFile = `${meta.region}-arvores.pmtiles`;
-await writeFile(
-  path.join(OUT, treesFile),
+// trees and roofs: z15 tiles of plain numbers (tile type "unknown": the map reads the bytes itself)
+const numberTiles = (list, z, name, description) =>
   writePmtiles(
-    treeTiles.map((t) => ({ ...t, data: gzipSync(t.data) })),
+    list.map((t) => ({ ...t, data: gzipSync(t.data) })),
     {
-      minZoom: TREE_TILE_ZOOM,
-      maxZoom: TREE_TILE_ZOOM,
+      minZoom: z,
+      maxZoom: z,
       bounds: meta.boundaryBbox,
       center: meta.center,
-      centerZoom: TREE_TILE_ZOOM,
+      centerZoom: z,
       tileType: TILE_TYPE.unknown,
-      metadata: { name: `${meta.regionName} (árvores)`, description: 'scripts/lib/tree-tiles.mjs', attribution: '© OpenStreetMap contributors (ODbL)' },
+      metadata: { name: `${meta.regionName} (${name})`, description, attribution: '© OpenStreetMap contributors (ODbL)' },
     },
-  ),
-);
+  );
+const treesFile = `${meta.region}-arvores.pmtiles`;
+await writeFile(path.join(OUT, treesFile), numberTiles(treeTiles, TREE_TILE_ZOOM, 'árvores', 'scripts/lib/tree-tiles.mjs'));
+const roofsFile = `${meta.region}-telhados.pmtiles`;
+await writeFile(path.join(OUT, roofsFile), numberTiles(roofTiles, ROOF_TILE_ZOOM, 'telhados', 'scripts/lib/roof-tiles.mjs'));
 
 // ---- small files read directly by the app
 // simplified outline (≈ 10 m) when available: the full municipal coastline is much larger
@@ -288,6 +294,7 @@ const outMeta = {
   tiles: file,
   detailTiles: detailFile,
   treeTiles: treesFile,
+  roofTiles: roofsFile,
   tileZooms: LAYERS,
   center: meta.center ?? turfCentroid(boundary).geometry.coordinates,
   counts: {
@@ -317,7 +324,7 @@ const outMeta = {
 await writeFile(path.join(OUT, 'meta.json'), JSON.stringify(outMeta, null, 2) + '\n');
 
 const kb = (b) => `${(b / 1024).toFixed(0)} KB`;
-console.log(`Telhados: ${JSON.stringify(roofCounts)} (${roofList.length} peças)`);
+console.log(`Telhados: ${JSON.stringify(roofCounts)} (${roofList.length} desenhados)`);
 console.log(`Cenário: ${treeList.length} árvores (${outMeta.counts.treesFromOsm} do OSM), ${lampList.length} postes (${outMeta.counts.lampsFromOsm} do OSM), máscara urbana ${mask.size} células de 100 m`);
 console.log(
   `Ruas: ${namedRoads.length} trechos com nome, ${outMeta.counts.namedRoadLines} linhas nos tiles z15 (vias: ${roads.features.length} → ${roadLinesZ15.length}); ` +
@@ -330,6 +337,7 @@ console.log(`Matas: ${canopyCut.cut} copas com casas ou ruas por perto, recortad
 console.log(`${file}: ${tiles.base.length} tiles, ${kb((await stat(path.join(OUT, file))).size)}`);
 console.log(`${detailFile}: ${tiles.detail.length} tiles, ${kb((await stat(path.join(OUT, detailFile))).size)}`);
 console.log(`${treesFile}: ${treeTiles.length} tiles, ${kb((await stat(path.join(OUT, treesFile))).size)}`);
+console.log(`${roofsFile}: ${roofTiles.length} tiles, ${kb((await stat(path.join(OUT, roofsFile))).size)}`);
 for (const [z, v] of Object.entries(perZoom)) console.log(`  ${z}: ${v.tiles} tiles, ${kb(v.bytes)} (maior ${kb(v.max)})`);
 console.log(`Alturas: ${JSON.stringify(heightCounts)}`);
 

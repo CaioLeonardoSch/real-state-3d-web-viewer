@@ -2,7 +2,7 @@
 // like in Joinville (almost every building is a plain `building=yes` outline), so the roof is estimated from the
 // outline, the floors and the use: houses get a gabled roof (elongated outlines) or a hipped one (squarish ones),
 // towers a flat roof with the water tank and lift room on top. `roof:shape`, when mapped, wins. The map draws them
-// as stacked steps (fill-extrusion only makes flat-topped prisms), in the same spirit as the low-poly trees.
+// with real slopes, one model per kind repeated by the GPU (src/map/cityRoofs.ts), as the low-poly trees.
 // Deterministic: the same building always gets the same roof.
 import { frame, hash } from './scenery.mjs';
 import { osmNumericId } from '../../src/data/osmId.ts';
@@ -107,49 +107,30 @@ export function roofKind(props, { area, height, floors, rect }) {
 }
 
 /**
- * Stepped low-poly roof on top of a building `height` metres tall: `steps` prisms rising to the ridge (gable: the
- * steps narrow across the width only; hip: on all four sides). Properties for the style: b and h in decimetres
- * (integers are smaller in the tiles), v (colour: 0 clay tiles, 1 fibre cement, 2 dark tiles, 3 concrete); the
- * feature id is the building's (src/data/osmId.ts), so the map can hide the roofs of listing buildings.
+ * The roof on top of a building `height` metres tall, as the map draws it (one model per kind repeated by the GPU,
+ * src/map/cityRoofs.ts): where its middle stands (lng, lat), the turn of its long side (radians from east, towards
+ * north, 0–π), its length and width (metres, eaves included), its rise above the walls and the walls' height (base),
+ * the colour v (0 clay tiles, 1 fibre cement, 2 dark tiles, 3 concrete) and the building's numeric id
+ * (src/data/osmId.ts), so the map can hide the roofs of listing buildings. Gable: two slopes up to a ridge along the
+ * length; hip: four slopes, the ridge shortened by the width; tank: the water tank and lift room, a box on the
+ * middle of a flat roof. Flat roofs: null.
  */
-export function roofShapes(osmId, rect, kind, height, lat0 = -26.3) {
-  if (!rect || kind === 'flat') return [];
-  const { kx, ky } = frame(lat0);
+export function roofParams(osmId, rect, kind, height) {
+  if (!rect || kind === 'flat') return null;
   const [ux, uy] = rect.axis;
-  const [cx, cy] = rect.center;
-  const box = (hl, hw) => {
-    const at = (u, v) => [round(cx + (u * ux - v * uy) / kx), round(cy + (u * uy + v * ux) / ky)];
-    const ring = [at(-hl, -hw), at(hl, -hw), at(hl, hw), at(-hl, hw)];
-    return { type: 'Polygon', coordinates: [[...ring, ring[0]]] };
-  };
-  const h = hash(osmId);
+  const angle = ((Math.atan2(uy, ux) % Math.PI) + Math.PI) % Math.PI;
+  const common = { lng: rect.center[0], lat: rect.center[1], angle, kind, base: height, id: osmNumericId(osmId) };
   if (kind === 'tank') {
-    // water tank and lift room: a box on the middle of the roof
     const hl = Math.max(1.5, Math.min(rect.length * 0.15, 4));
     const hw = Math.max(1.2, Math.min(rect.width * 0.15, 3));
-    return [feature(osmId, box(hl, hw), height, height + 3.2, 3)];
+    return { ...common, length: 2 * hl, width: 2 * hw, rise: 3.2, v: 3 };
   }
-  const L = rect.length / 2;
   const W = rect.width / 2;
-  const rise = Math.min(3.2, Math.max(1, W * ROOF_PITCH));
-  // two steps on narrow or small houses, three on wider ones (each step is a prism in the tiles)
-  const steps = rect.width < 7 || rect.length * rect.width < 80 ? 2 : 3;
-  const v = [0, 0, 0, 1, 2][h % 5];
-  const out = [];
-  for (let i = 0; i < steps; i++) {
-    const inset = (W * i) / steps;
-    const eave = i === 0 ? EAVE_M : 0;
-    const hw = W - inset + eave;
-    const hl = (kind === 'hip' ? L - inset : L) + eave;
-    out.push(feature(osmId, box(hl, hw), height + (rise * i) / steps, height + (rise * (i + 1)) / steps, v));
-  }
-  return out;
+  return {
+    ...common,
+    length: rect.length + 2 * EAVE_M,
+    width: rect.width + 2 * EAVE_M,
+    rise: Math.min(3.2, Math.max(1, W * ROOF_PITCH)),
+    v: [0, 0, 0, 1, 2][hash(osmId) % 5],
+  };
 }
-
-const round = (x) => Math.round(x * 1e7) / 1e7;
-const feature = (osmId, geometry, b, h, v) => ({
-  type: 'Feature',
-  id: osmNumericId(osmId),
-  properties: { b: Math.round(b * 10), h: Math.round(h * 10), v },
-  geometry,
-});

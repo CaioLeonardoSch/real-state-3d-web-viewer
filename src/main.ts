@@ -970,9 +970,13 @@ async function main() {
     get clipped() {
       return scene.clipped;
     },
-    /** The trees (src/map/cityTrees.ts): tiles and trees loaded, trees drawn and how many with every facet. */
+    /** The trees (src/map/cityTrees.ts): tiles and trees loaded, trees drawn, by model (every facet, lighter). */
     get trees() {
       return scene.trees?.stats ?? null;
+    },
+    /** The roofs (src/map/cityRoofs.ts): the same counts, by model (gable, hip, water tank). */
+    get roofs() {
+      return scene.roofs?.stats ?? null;
     },
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     shadows: () => scene.shadowInfo,

@@ -64,7 +64,7 @@ describe('nomes das ruas no estilo do mapa', () => {
     const ids = styleOf('morning').layers.map((l) => l.id);
     const at = (id: string) => ids.indexOf(id);
     // prédios, telhados, árvores, postes, sombras, obras e imóveis em 3D não cortam os nomes
-    for (const id of ['building-shadows', 'context-buildings', 'roofs', 'wood-canopy', 'lamps', 'listing-buildings', 'listing-unbuilt', 'construction-cranes', 'pick-preview', 'listing-pins-dimmed'])
+    for (const id of ['building-shadows', 'context-buildings', 'wood-canopy', 'lamps', 'listing-buildings', 'listing-unbuilt', 'construction-cranes', 'pick-preview', 'listing-pins-dimmed'])
       expect(at('road-names'), id).toBeGreaterThan(at(id));
     // os empreendimentos entram antes de 'listing-pins-dimmed' (main.ts): também ficam sob os nomes
     expect(at('road-names')).toBeLessThan(at('listing-pins'));
