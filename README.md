@@ -220,15 +220,21 @@ Fora do bairro América, ficaram de fora: Amaluna e Soul (Halsten, Centro), Oper
 
 ## Mapa em blocos (PMTiles) e 3D só de perto
 
-O mapa base são **dois arquivos** de blocos vetoriais (vector tiles), mais o relevo (ver "Relevo" abaixo):
+O mapa base são **dois arquivos** de blocos vetoriais (vector tiles), mais as árvores e o relevo (ver "Relevo" abaixo):
 
 - `public/data/joinville.pmtiles` (≈14 MB, 164.672 prédios): prédios, vias (com o tipo de pavimento), água, áreas
   verdes, limites de bairro e a copa das matas;
-- `public/data/joinville-detalhe.pmtiles` (≈10 MB, só o zoom 15 da área urbana): telhados, árvores, postes e a luz dos
-  postes. Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto: todas
-  as camadas dele começam no zoom 16, e abaixo disso o arquivo nem é lido. Entre 15 e 16 telhados e árvores eram poucos
+- `public/data/joinville-detalhe.pmtiles` (≈7 MB, só o zoom 15 da área urbana): telhados, postes e a luz dos postes.
+  Fica num arquivo à parte para os prédios aparecerem primeiro; o detalhe chega em seguida, só de perto: todas as
+  camadas dele começam no zoom 16, e abaixo disso o arquivo nem é lido. Entre 15 e 16 telhados e árvores eram poucos
   pixels na tela, mas cerca de dois terços da geometria enviada à placa de vídeo (44 de 66 MB numa vista do Centro no
   zoom 15,5), justamente nos zooms mais atravessados ao navegar: com eles só a partir do 16, a mesma vista manda 24 MB.
+- `public/data/joinville-arvores.pmtiles` (≈1,6 MB, zoom 15): as árvores como números, 8 bytes cada (onde está, tipo,
+  tom, altura, copa e giro; `scripts/lib/tree-tiles.mjs`). O mapa repete um só modelo low poly para todas
+  (`src/map/cityTrees.ts`, WebGL2 instanciado): 10 mil árvores ocupam 0,3 MB na placa de vídeo em vez de 18–25 MB e
+  entram em menos de 30 ms em vez de meio segundo travando o mapa (medido em `lab-arvores.html`), por isso voltam a
+  aparecer no zoom 15. As mais próximas da câmera têm o modelo completo (172 triângulos; até 12 mil no computador e
+  1.500 no celular), as outras um mais leve (52).
 
 O navegador **não baixa os arquivos inteiros**: o protocolo
 `pmtiles://` (biblioteca `pmtiles`) lê só os blocos da área e do zoom na tela, com requisições HTTP de intervalo
@@ -242,9 +248,9 @@ o `vite preview`).
 | 12 | + verde ≥ 0,5 ha, água ≥ 0,1 ha, córregos; prédios ≥ 250 m² | até 168 KB |
 | 13 | + vias de serviço e estradas rurais, verde ≥ 0,1 ha; prédios ≥ 120 m² | até 201 KB |
 | 14–15 | todos os prédios, com altura e marca de residencial; calçadas e caminhos; copa das matas | até 214 KB (z14) e 75 KB (z15) |
-| 15 (detalhe) | telhados, árvores, postes e luzes (low poly, em 3D) | até 113 KB |
+| 15 (detalhe) | telhados, postes e luzes (low poly, em 3D) | até 113 KB |
 
-São 2.532 blocos no arquivo base e 456 no de detalhe. De longe, cada camada leva só o que se enxerga naquele zoom
+São 2.532 blocos no arquivo base, 396 no de detalhe e 456 no das árvores. De longe, cada camada leva só o que se enxerga naquele zoom
 (e com a geometria simplificada): a primeira tela no celular, que usa os blocos 10 e 11, ficou com menos da metade
 dos bytes. Vias apenas planejadas, em obra, plataformas e corredores internos não entram no mapa. Acima do zoom 15 o MapLibre amplia os blocos do 15 (overzoom). A visão geral e cada rua custam
 algumas centenas de KB. Para comparar: o formato antigo (GeoJSON único) teria 58 MB só de prédios.
@@ -301,7 +307,8 @@ não muda as árvores do resto da cidade.
     resto; cada poste tem a sua intensidade;
   - **os postes ilustrativos não são as posições reais.**
 - **Árvores**: 206.242, das quais 1.071 do OSM (árvores e fileiras):
-  - o resto é ilustrativo, espalhado em praças, gramados e bordas de mata da área urbana, em três formatos e três tons;
+  - o resto é ilustrativo, espalhado em praças, gramados e bordas de mata da área urbana, em três tons: árvores de
+    rua, árvores altas no meio das matas, copas até o chão na borda delas e arbustos no mato baixo;
   - as matas grandes viram uma copa facetada, recuada 6 m, com árvores na borda, em vez de árvores soltas: com elas
     eram quase 1 milhão de árvores, e a geração dos blocos estourava a memória;
   - nenhuma árvore ilustrativa a menos de 6 m de um prédio nem sobre a pista das ruas, e a copa da mata abre clareiras
@@ -315,7 +322,7 @@ não muda as árvores do resto da cidade.
 - **Onde aparece:** só de perto:
   - a copa das matas sobe junto com os prédios, a partir do zoom 14;
   - os telhados aparecem no zoom 16;
-  - as árvores crescem do zoom 16 ao 17;
+  - as árvores crescem do zoom 15 ao 15,8;
   - os postes aparecem no 16;
   - as luzes, no 16,5.
 

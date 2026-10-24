@@ -1468,7 +1468,7 @@ async function main() {
       const m = window.__demo.map;
       const n = (layers) => m.queryRenderedFeatures({ layers }).length;
       const surfaces = new Set(m.querySourceFeatures('osm', { sourceLayer: 'roads' }).map((f) => f.properties.s));
-      return { trees: n(['trees']), lamps: n(['lamps']), roofs: n(['roofs']), paving: n(['roads-paving']), surfaces: [...surfaces].sort().join(','), glow: m.getPaintProperty('lamp-glow', 'circle-opacity') };
+      return { trees: window.__demo.trees?.drawn ?? 0, lamps: n(['lamps']), roofs: n(['roofs']), paving: n(['roads-paving']), surfaces: [...surfaces].sort().join(','), glow: m.getPaintProperty('lamp-glow', 'circle-opacity') };
     });
     check('up close: low-poly roofs, trees, street lamps and roads by pavement (asphalt, paving stones…); no night lights by day',
       scDay.trees > 0 && scDay.lamps > 0 && scDay.roofs > 0 && scDay.surfaces.includes('a') && scDay.surfaces.includes('c') && scDay.glow === 0, JSON.stringify(scDay));

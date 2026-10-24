@@ -424,67 +424,24 @@ export function sampleTrees(green, osmTrees, mask, { lat0 = -26.3, max = Infinit
   return out;
 }
 
-/** Regular polygon (closed ring) of `sides` vertices, radius in metres, rotated by `rot` radians. */
-function ring(f, x, y, radius, sides, rot) {
-  const pts = [];
-  for (let i = 0; i < sides; i++) {
-    const a = rot + (i * 2 * Math.PI) / sides;
-    pts.push([round7(x + f.dx(radius * Math.cos(a))), round7(y + f.dy(radius * Math.sin(a)))]);
-  }
-  pts.push(pts[0]);
-  return [pts];
-}
-const round7 = (v) => Math.round(v * 1e7) / 1e7;
-
 /**
- * Low-poly tree: a trunk and a faceted crown in two tiers (wide, then narrower on top); at the edge of woods and
- * inside them, a single crown; in scrub, a low bush.
- * Properties: p ('trunk' | 'crown' | 'top' | 'bush'), b/h (base/top in metres), v (shade 0–2).
+ * A tree as the map draws it (one low-poly model repeated by the GPU, src/map/cityTrees.ts): its kind, crown shade
+ * v (0–2), turn (radians), overall height h and crown radius r (metres). Broad trees stand about 7k tall with a
+ * crown 2.4k wide (k: the tree's scale); at the edge of woods a crown down to the ground line; inside woods taller
+ * crowns, which stick out of the canopy mass where there is one; in scrub, a low bush.
  */
-export function treeShapes(t, lat0 = -26.3) {
-  const f = frame(lat0);
+export function treeParams(t) {
   const r = rng(hash(`${t.x.toFixed(6)},${t.y.toFixed(6)}`));
   const v = Math.floor(r() * 3);
   const rot = r() * Math.PI;
   const k = t.scale;
-  if (t.kind === 'canopy') {
-    // a crown sticking out of the canopy mass of a wood (its trunk is hidden in the mass)
-    return [
-      {
-        type: 'Feature',
-        properties: { p: 'crown', b: WOOD_CANOPY_M - 1, h: round1(WOOD_CANOPY_M + 0.8 + 4.5 * k * k), v },
-        geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, (2.6 + 2.2 * r()) * k, 6, rot) },
-      },
-    ];
-  }
-  if (t.kind === 'edge') {
-    // edge of a wood: a crown down to the ground line (no trunk to draw: keeps the tiles small)
-    return [
-      {
-        type: 'Feature',
-        properties: { p: 'crown', b: 0.6, h: round1(4.5 + 4 * k), v },
-        geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, 2.6 * k, 6, rot) },
-      },
-    ];
-  }
-  if (t.kind === 'bush') {
-    const rad = 1.3 * k;
-    return [{ type: 'Feature', properties: { p: 'bush', b: 0, h: round1(1.6 * k + r() * 0.6), v }, geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, rad, 6, rot) } }];
-  }
-  const crownR = 2.4 * k;
-  const trunkTop = round1(2 * k);
-  const crownTop = round1(trunkTop + 3.4 * k);
-  return [
-    { type: 'Feature', properties: { p: 'trunk', b: 0, h: trunkTop, v }, geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, 0.35 * k, 4, rot) } },
-    { type: 'Feature', properties: { p: 'crown', b: round1(trunkTop - 0.4), h: crownTop, v }, geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, crownR, 6, rot) } },
-    {
-      type: 'Feature',
-      properties: { p: 'top', b: crownTop, h: round1(crownTop + 1.6 * k), v },
-      geometry: { type: 'Polygon', coordinates: ring(f, t.x, t.y, crownR * 0.55, 6, rot + Math.PI / 6) },
-    },
-  ];
+  if (t.kind === 'canopy') return { kind: 'canopy', v, rot, r: round1((2.6 + 2.2 * r()) * k), h: round1(WOOD_CANOPY_M + 0.8 + 4.5 * k * k) };
+  if (t.kind === 'edge') return { kind: 'edge', v, rot, r: round1(2.6 * k), h: round1(4.5 + 4 * k) };
+  if (t.kind === 'bush') return { kind: 'bush', v, rot, r: round1(1.3 * k), h: round1(1.6 * k + r() * 0.6) };
+  return { kind: 'broad', v, rot, r: round1(2.4 * k), h: round1(7 * k) };
 }
 const round1 = (v) => Math.round(v * 10) / 10;
+const round7 = (v) => Math.round(v * 1e7) / 1e7;
 
 // ---------------------------------------------------------------- street lamps
 

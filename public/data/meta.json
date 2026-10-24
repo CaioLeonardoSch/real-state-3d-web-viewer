@@ -109,6 +109,7 @@
   },
   "tiles": "joinville.pmtiles",
   "detailTiles": "joinville-detalhe.pmtiles",
+  "treeTiles": "joinville-arvores.pmtiles",
   "tileZooms": {
     "buildings": {
       "minzoom": 10,
@@ -135,10 +136,6 @@
       "maxzoom": 15
     },
     "roofs": {
-      "minzoom": 15,
-      "maxzoom": 15
-    },
-    "trees": {
       "minzoom": 15,
       "maxzoom": 15
     },

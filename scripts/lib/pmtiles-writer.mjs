@@ -9,7 +9,7 @@ import { zxyToTileId } from 'pmtiles';
 const HEADER_BYTES = 127;
 const ROOT_LIMIT = 16384 - HEADER_BYTES;
 export const COMPRESSION = { none: 1, gzip: 2 };
-export const TILE_TYPE = { mvt: 1, png: 2, webp: 4 };
+export const TILE_TYPE = { unknown: 0, mvt: 1, png: 2, webp: 4 };
 
 function varint(out, n) {
   // non-negative integers up to 2^53

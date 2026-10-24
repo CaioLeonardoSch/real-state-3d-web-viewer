@@ -1,5 +1,5 @@
 export declare const COMPRESSION: { none: number; gzip: number };
-export declare const TILE_TYPE: { mvt: number; png: number; webp: number };
+export declare const TILE_TYPE: { unknown: number; mvt: number; png: number; webp: number };
 export declare function writePmtiles(
   tiles: { z: number; x: number; y: number; data: Uint8Array }[],
   opts: {

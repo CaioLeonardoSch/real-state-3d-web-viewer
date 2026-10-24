@@ -970,6 +970,10 @@ async function main() {
     get clipped() {
       return scene.clipped;
     },
+    /** The trees (src/map/cityTrees.ts): tiles and trees loaded, trees drawn and how many with every facet. */
+    get trees() {
+      return scene.trees?.stats ?? null;
+    },
     sun: (t: TimeOfDay) => themeFor(t, lat, lon).sun,
     shadows: () => scene.shadowInfo,
     developmentIds: developments.map((d) => d.id),

@@ -4,7 +4,7 @@
 # o relatório e aprovar o PR; o merge publica o mapa novo (workflow "Publicar no GitHub Pages").
 #
 # Na primeira vez: Settings → Actions → General → Workflow permissions → marque "Allow GitHub Actions to create and
-# approve pull requests". Com os segredos SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY, os dois .pmtiles vão para o
+# approve pull requests". Com os segredos SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY, os .pmtiles vão para o
 # bucket "map-tiles" do Supabase com nome por versão (scripts/upload-tiles.mjs) e o PR leva só o meta.json com os
 # endereços; sem eles, os .pmtiles entram no PR (~25 MB por mês no histórico do git). Ver docs/mapa-no-armazenamento.md.
 name: Mapa mensal

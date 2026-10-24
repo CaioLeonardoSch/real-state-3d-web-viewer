@@ -14,8 +14,10 @@ export interface DataMeta {
   boundaryBbox: [number, number, number, number];
   /** Vector tiles file (PMTiles) next to meta.json (or an absolute URL: the object storage, see docs/mapa-no-armazenamento.md). */
   tiles: string;
-  /** Close-up detail (roofs, trees, street lamps), same rules. */
+  /** Close-up detail (roofs, street lamps), same rules. */
   detailTiles?: string;
+  /** The trees (scripts/lib/tree-tiles.mjs), same rules. */
+  treeTiles?: string;
   osmTimestamp: string;
   counts: Record<string, number>;
   /** Where building heights come from (OSM; the city cadastre when it was used). */
@@ -37,6 +39,8 @@ export interface AppData {
   detailUrl: string | null;
   /** Absolute URL of the relief archive, when there is one. */
   terrainUrl: string | null;
+  /** Absolute URL of the trees archive, when there is one. */
+  treesUrl: string | null;
   listings: ListingsFile;
   /** Developments with units (empty when the file is missing). */
   developments: Development[];
@@ -121,6 +125,7 @@ export async function loadData(): Promise<AppData> {
     tilesUrl: url(meta.tiles),
     detailUrl: meta.detailTiles ? url(meta.detailTiles) : null,
     terrainUrl: meta.terrainTiles && meta.terrain && !withoutRelief() ? url(meta.terrainTiles) : null,
+    treesUrl: meta.treeTiles ? url(meta.treeTiles) : null,
     listings,
     developments,
   };

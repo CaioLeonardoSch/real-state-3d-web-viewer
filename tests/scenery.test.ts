@@ -11,7 +11,7 @@ import {
   sampleTrees,
   simplifyRing,
   surfaceClass,
-  treeShapes,
+  treeParams,
   urbanMask,
 } from '../scripts/lib/scenery.mjs';
 
@@ -117,13 +117,15 @@ describe('árvores', () => {
     const row: Feature<LineString> = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[-48.85, LAT], [-48.85 + f.dx(40), LAT]] } };
     expect(sampleTrees([park('park')], [row], nowhere, { lat0: LAT })).toHaveLength(5);
   });
-  it('formas low poly: tronco + copa + topo; borda e mata com uma copa; arbusto baixo', () => {
-    const broad = treeShapes({ x: -48.85, y: LAT, kind: 'broad', scale: 1 }, LAT);
-    expect(broad.map((s) => s.properties.p)).toEqual(['trunk', 'crown', 'top']);
-    expect(broad[1].geometry.coordinates[0]).toHaveLength(7); // hexágono fechado
-    expect(treeShapes({ x: -48.85, y: LAT, kind: 'edge', scale: 1 }, LAT)).toHaveLength(1);
-    const bush = treeShapes({ x: -48.85, y: LAT, kind: 'bush', scale: 1 }, LAT)[0].properties;
-    expect(bush.h).toBeLessThan(3);
+  it('tamanho de cada árvore: de rua ~7k de altura; borda e mata com copas; arbusto baixo; o resultado é sempre o mesmo', () => {
+    const at = (kind: 'broad' | 'edge' | 'bush' | 'canopy') => treeParams({ x: -48.85, y: LAT, kind, scale: 1 });
+    expect(at('broad')).toMatchObject({ kind: 'broad', h: 7, r: 2.4 });
+    expect(at('edge')).toMatchObject({ kind: 'edge', h: 8.5, r: 2.6 });
+    expect(at('canopy').h).toBeGreaterThan(at('broad').h);
+    expect(at('bush').h).toBeLessThan(3);
+    expect(at('broad')).toEqual(at('broad'));
+    expect(at('broad').v).toBeGreaterThanOrEqual(0);
+    expect(at('broad').v).toBeLessThan(3);
   });
 });
 

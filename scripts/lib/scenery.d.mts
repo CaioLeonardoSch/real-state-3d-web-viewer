@@ -49,7 +49,8 @@ export function sampleTrees(
   mask: UrbanMask,
   options?: { lat0?: number; max?: number; blocked?: (p: [number, number]) => boolean },
 ): TreeSpot[];
-export function treeShapes(t: TreeSpot, lat0?: number): Feature<Polygon, { p: string; b: number; h: number; v: number }>[];
+export type TreeKind = 'broad' | 'edge' | 'bush' | 'canopy';
+export function treeParams(t: TreeSpot): { kind: TreeKind; v: number; rot: number; r: number; h: number };
 export const LAMP_ROADS: Record<string, number>;
 export const LAMP_SPACING_M: number;
 export const LAMP_HEIGHT_M: number;
