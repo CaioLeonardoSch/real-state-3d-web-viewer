@@ -24,10 +24,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Só o commit mais novo do main vai ao ar: o CI de um commit anterior pode terminar depois do CI do seguinte, e
+  # publicar por último levaria o site de volta para trás (aconteceu com as árvores, no #13). O mais novo se publica
+  # quando o CI dele passar.
+  latest:
+    runs-on: ubuntu-latest
+    outputs:
+      stale: ${{ steps.check.outputs.stale }}
+    steps:
+      - id: check
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          main=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
+          if [ "$main" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            echo "::notice::${{ github.event.workflow_run.head_sha }} não é mais o último commit do main ($main): não publico"
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: latest
     # a execução de hora em hora só faz sentido com o backend configurado
     # depois do CI: só se ele passou num push (não num pull request)
     if: >-
+      needs.latest.outputs.stale != 'true' &&
       (github.event_name != 'schedule' || vars.VITE_SUPABASE_URL != '') &&
       (github.event_name != 'workflow_run' ||
         (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
