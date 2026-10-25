@@ -412,6 +412,22 @@ export function validateListingsFile(raw: unknown): ListingsFile {
   return raw as unknown as ListingsFile;
 }
 
+/**
+ * Photos of listings.json may be paths relative to the data folder (`fotos/<id>/1.webp`, copied into the
+ * repository): `toUrl` turns them into addresses that work from any page.
+ */
+export function resolvePhotoPaths(file: ListingsFile, toUrl: (name: string) => string): ListingsFile {
+  const abs = (s: string) => (/^([a-z]+:|\/)/i.test(s) ? s : toUrl(s));
+  for (const l of file.listings)
+    l.photos = l.photos?.map((p) => ({
+      ...p,
+      src: abs(p.src),
+      ...(p.thumb ? { thumb: abs(p.thumb) } : {}),
+      ...(p.large ? { large: abs(p.large) } : {}),
+    }));
+  return file;
+}
+
 /** Price reduction of a listing, or null when it has none. */
 export function priceReduction(l: Listing): { previous: number; percent: number; since?: string } | null {
   if (!l.previousPrice || l.previousPrice <= l.price) return null;

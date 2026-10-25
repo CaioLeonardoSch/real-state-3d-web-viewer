@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { LISTING_PAGE_CSS, pageCode, pagePath, renderListingPage, renderSitemap } from '../src/seo/listingPage.ts';
 import { NOT_FOUND_CSS, NOT_FOUND_SCRIPT, renderNotFoundPage } from '../src/seo/platformPages.ts';
 import { rowToListing } from '../src/backend/mapping.ts';
+import { resolvePhotoPaths } from '../src/data/types.ts';
 import { listingCsp, styleHash } from './lib/csp.mjs';
 import { REGION } from './lib/region.mjs';
 
@@ -18,7 +19,8 @@ const DIST = path.join(ROOT, process.env.OUT_DIR || "dist");
 const SITE_URL = (process.env.SITE_URL || 'https://caioleonardosch.github.io/real-state-3d-web-viewer/').replace(/\/?$/, '/');
 const SITE_NAME = process.env.SITE_NAME || `${REGION.city} e região`;
 
-const listingsFile = JSON.parse(await readFile(path.join(DIST, 'data', 'listings.json'), 'utf8'));
+// photos copied into the repository (data/fotos/...) get the site's address: the pages live in other folders
+const listingsFile = resolvePhotoPaths(JSON.parse(await readFile(path.join(DIST, 'data', 'listings.json'), 'utf8')), (p) => `${SITE_URL}data/${p}`);
 const agencyName = new Map(listingsFile.agencies.map((a) => [a.id, a.name]));
 const pages = [];
 if (process.env.VITE_DEMO_LISTINGS !== 'false') pages.push(...listingsFile.listings);

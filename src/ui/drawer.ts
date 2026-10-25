@@ -265,7 +265,7 @@ export class Drawer {
               l.remote ? `Seu anúncio${l.draft ? ' · rascunho' : ''}` : 'Seu anúncio · salvo só neste navegador'
             }</span>`
           : l.fictional && DEMO
-            ? '<span class="badge-fictional">Imóvel fictício para demonstração</span>'
+            ? '<span class="badge-fictional">Anúncio de exemplo, só para demonstração</span>'
             : ''
       }
       <h2 id="drawer-title">${escapeHtml(l.title)}</h2>

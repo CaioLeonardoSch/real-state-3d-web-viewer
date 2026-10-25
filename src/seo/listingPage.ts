@@ -199,7 +199,7 @@ ${cover ? `<meta property="og:image" content="${esc(cover)}">\n<meta name="twitt
 <body>
 <header><strong>${esc(ctx.siteName)}</strong><a href="${esc(mapUrl)}">Ver no mapa 3D →</a></header>
 <main>
-${l.fictional ? '<p class="demo">Imóvel fictício, usado para demonstração.</p>' : ''}
+${l.fictional ? '<p class="demo">Anúncio de exemplo, usado só para demonstração.</p>' : ''}
 <h1>${esc(l.title)}</h1>
 <p class="price">${reduced}${price}</p>
 ${addr.line ? `<p class="addr">${esc(addr.line)}</p>` : ''}

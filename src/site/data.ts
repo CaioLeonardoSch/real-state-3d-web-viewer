@@ -1,6 +1,6 @@
 // Which client's site is open, its configuration and its listings: from the back end (by own domain or
 // ?imobiliaria=slug) or, without one, from the demo files (public/data/sites.json + listings.json).
-import { validateListingsFile, type Listing } from '../data/types';
+import { resolvePhotoPaths, validateListingsFile, type Listing } from '../data/types';
 import { DEMO } from '../data/demo';
 import type { RemoteBackend } from '../backend/remote';
 import { normalizeSiteConfig, type SiteConfig } from './config';
@@ -43,7 +43,7 @@ async function loadDemo(slug: string | null): Promise<SiteData> {
   const [sitesRes, listingsRes] = await Promise.all([fetch(dataUrl('sites.json')), fetch(dataUrl('listings.json'))]);
   if (!sitesRes.ok || !listingsRes.ok) throw new Error('Não foi possível carregar os dados do site.');
   const sites = ((await sitesRes.json()) as { sites: DemoSite[] }).sites;
-  const file = validateListingsFile(await listingsRes.json());
+  const file = resolvePhotoPaths(validateListingsFile(await listingsRes.json()), dataUrl);
   const site = sites.find((s) => s.slug === slug) ?? sites[0];
   const agency = file.agencies.find((a) => a.id === site.agency);
   const orgName = agency?.name ?? 'Imobiliária';

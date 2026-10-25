@@ -19,8 +19,9 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 // the 3D map; the root is the client's site
 const MAP_ = `${URL_}mapa.html`;
 
-// Expected values come from the data, so the checks keep working when listings.json is regenerated.
-const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
+// Expected values come from the data of the build (E2E_LISTINGS=tests/fixtures/listings-e2e.json npm run build), so
+// the checks keep working when listings.json changes.
+const DATA = JSON.parse(readFileSync(path.join(ROOT, 'dist', 'data', 'listings.json'), 'utf8')).listings;
 const DEVS = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'developments.json'), 'utf8')).developments;
 const devUnits = (id) => DEVS.find((d) => d.id === id).levels.flatMap((l) => l.units);
 const TOTAL = DATA.length;
@@ -278,7 +279,7 @@ async function main() {
     check('desktop: listing layer rendered', listingCount > 0, `${listingCount} features`);
     const attrib = await page.textContent('.maplibregl-ctrl-attrib');
     check('attribution shows OSM and MapLibre', /OpenStreetMap contributors/.test(attrib) && /MapLibre/.test(attrib), attrib?.trim());
-    check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis e valores fictícios.'));
+    check('demo banner visible', await page.isVisible('text=Demonstração. Imóveis só de exemplo, imobiliárias fictícias.'));
     const hint = await page.textContent('.map-hint span').catch(() => null);
     await page.click('.map-hint button');
     const hintGone = await page.evaluate(() => !document.querySelector('.map-hint') && localStorage.getItem('mapa3d-dica-vista') === '1');
@@ -423,7 +424,7 @@ async function main() {
     const clicked = await clickSomeListing(page);
     const drawerOpen = await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'));
     check('click on a listing opens the drawer', !!clicked && drawerOpen, clicked?.id ?? 'no clickable listing found');
-    check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Imóvel fictício para demonstração'));
+    check('drawer shows fictional badge', await page.isVisible('#drawer >> text=Anúncio de exemplo, só para demonstração'));
     // item 36: services nearby, closed under the listing's facts
     const extras = await page.evaluate(() => ({
       nearby: document.querySelectorAll('#drawer details.nearby li').length,

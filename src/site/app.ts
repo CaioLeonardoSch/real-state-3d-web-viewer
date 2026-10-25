@@ -184,7 +184,7 @@ export class SiteApp {
     const parked = this.parkMap();
     this.root.innerHTML = `
       <a class="skip" href="#conteudo">Pular para o conteúdo</a>
-      ${DEMO && this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária, contatos e imóveis fictícios. <button type="button" class="link-btn" data-open-editor>Personalizar este site</button></div>` : ''}
+      ${DEMO && this.data.demo ? `<div class="demo-note" role="note">Site de demonstração: imobiliária e contatos fictícios, imóveis só de exemplo. <button type="button" class="link-btn" data-open-editor>Personalizar este site</button></div>` : ''}
       ${this.headerHtml()}
       <main id="conteudo" tabindex="-1" class="page page-${this.route}"></main>
       ${this.footerHtml()}
