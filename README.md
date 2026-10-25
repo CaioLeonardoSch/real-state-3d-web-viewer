@@ -560,7 +560,8 @@ que está na tela.
 scripts/        download-osm, extract-region.py, build-tiles, generate-listings, generate-developments,
                 validate-listings, add-listings, e2e-check; lib/ (altura, residencial, gravador PMTiles)
 scripts/data/   região (bairros) e empreendimentos
-public/data/    GeoJSON do OSM + listings.json (fictício) + meta.json + sites.json (sites de demonstração)
+public/data/    GeoJSON do OSM + listings.json (demonstração) + fotos/ (fotos dos anúncios da demo) + meta.json +
+                sites.json (sites de demonstração)
 src/data/       tipos, validação em tempo de carga, carregamento
 src/state/      filtros (lógica pura, FilterStore pendente × aplicado, sugestões p/ busca vazia), ordenação, URL,
                 anúncios salvos no navegador (userListings)
@@ -863,18 +864,20 @@ Extrato OSM de 13/10/2026 (`santa-catarina-latest.osm.pbf`), recortado em 14/10/
 - Ruas de carro por pavimento: 1.459 km de asfalto, 377 km de calçamento, 1.427 km de chão, 44 km de outro
   pavimento e 640 km sem informação.
 
-Imóveis fictícios (`listings.json`): 100 no total (`--count 100`), na área urbana.
+Imóveis da demonstração (`listings.json`): 48 anúncios de referência copiados de um portal público (Joinville, à venda),
+no lugar dos 100 gerados por `generate-listings`. Imobiliárias, contatos e disponibilidade seguem fictícios; as fotos
+(até 8 por anúncio) ficam em `public/data/fotos/<id>/` e saem do build de produção.
 
-| Tipo | Quantidade | Observação |
-|---|---|---|
-| Apartamentos | 34 | Em prédios reais de 4+ pavimentos (estimativa pelo cadastro) |
-| Casas | 26 | |
-| Geminados | 20 | Escolhidos por área: o OSM não tinha ≥ 3 prédios `semidetached_house`/`terrace` |
-| Terrenos | 20 | Nenhum precisou ser reduzido |
+| Tipo | Quantidade |
+|---|---|
+| Apartamentos | 15 |
+| Casas e sobrados | 31 |
+| Terrenos | 2 |
 
-- 19 com preço reduzido; 3 com localização aproximada: `house-35`, `semi-61` e `land-81`.
-- 14 também para alugar; 12 reservados; 9 com destaque e 4 com super destaque.
-- 26 em construção, com andamento ilustrativo (15% a 90% dos andares).
+- Localização: 9 no prédio exato (endereço com número), 18 só pela rua (círculo de 200 m) e 21 só pelo bairro
+  (círculo de 350 m). A localização vem do anunciante: quando ele marca o ponto errado, o mapa mostra o ponto errado.
+- `npm run data:listings` (e o `npm run data` completo) volta aos 100 fictícios e apaga estes 48: rode só se quiser
+  trocar a demo de novo.
 - Prédios residenciais elegíveis (área urbana): 151.944.
 
 ## Verificação realizada

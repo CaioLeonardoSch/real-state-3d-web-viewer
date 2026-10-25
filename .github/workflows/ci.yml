@@ -39,7 +39,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test
       # inclui tsc --noEmit (site e scripts) e as páginas estáticas dos anúncios
+      # os testes no navegador usam os 100 anúncios fictícios (todos os casos); a demo publicada usa public/data
       - run: npm run build
+        env:
+          E2E_LISTINGS: tests/fixtures/listings-e2e.json
       - run: npm run verify:e2e
       - run: npm run verify:site
       # build de produção (sem dados de demonstração): falha se sobrar texto de "fictício"/"demonstração" (vite.config.ts)

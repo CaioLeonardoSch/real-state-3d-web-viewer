@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -8,7 +8,9 @@ import { handleSiteRequest } from './src/seo/siteServer.ts';
 
 /** Demonstration data in public/data: left out of production builds. */
 const DEMO_FILES = ['listings.json', 'developments.json', 'sites.json'];
-/** Words of the demonstration notices ("Imóvel fictício para demonstração"): a production build that has one fails. */
+/** Photos of the demo listings (public/data/fotos), left out of a production build like the files above. */
+const DEMO_PHOTOS = 'fotos';
+/** Words of the demonstration notices ("Anúncio de exemplo, só para demonstração"): a production build that has one fails. */
 const DEMO_WORDS = /fict[ií]ci|demonstra[çc]/i;
 
 /** Files of the build (pages, scripts, styles, data) that still carry a demonstration notice. */
@@ -66,8 +68,12 @@ function production(demo: boolean): Plugin {
       outDir = path.resolve(config.root, config.build.outDir);
     },
     closeBundle() {
+      // browser checks (npm run verify:e2e / verify:site) need every case of the generated listings (price cuts, rent,
+      // land, under construction): E2E_LISTINGS swaps the published demo file for one of those
+      if (demo && process.env.E2E_LISTINGS) copyFileSync(path.resolve(process.env.E2E_LISTINGS), path.join(outDir, 'data', 'listings.json'));
       if (demo) return;
       for (const f of DEMO_FILES) rmSync(path.join(outDir, 'data', f), { force: true });
+      rmSync(path.join(outDir, 'data', DEMO_PHOTOS), { recursive: true, force: true });
       // demonstration texts are written under `DEMO &&` (src/data/demo.ts), so the minifier drops them from this build
       const left = demoLeftovers(outDir);
       if (left.length) throw new Error(`Build de produção com texto de demonstração (fictício/demonstração) em: ${left.join(', ')}`);

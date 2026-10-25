@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Browser checks of the clients' sites (index.html) with Playwright, on the demo data: quick search, filters and
 // chips, URL, favourites, comparison, listing page, forms, the embedded 3D map, the editor and phone layout.
-// Screenshots go to docs/screenshots/site-*.png. Usage: npm run build && npm run verify:site
+// Screenshots go to docs/screenshots/site-*.png. Usage: E2E_LISTINGS=tests/fixtures/listings-e2e.json npm run build &&
+// npm run verify:site
 import { spawn } from 'node:child_process';
 import { cli } from './lib/cli.mjs';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -16,8 +17,8 @@ const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const PORT = 4177;
 const BASE = `http://127.0.0.1:${PORT}/`;
 
-// expected values come from the demo data
-const DATA = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'listings.json'), 'utf8')).listings;
+// expected values come from the demo data of the build (npm run build with E2E_LISTINGS, as in CI)
+const DATA = JSON.parse(readFileSync(path.join(ROOT, 'dist', 'data', 'listings.json'), 'utf8')).listings;
 const SITES = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', 'sites.json'), 'utf8')).sites;
 const A = DATA.filter((l) => l.agency === SITES[0].agency);
 const forSale = A.filter((l) => (l.transaction ?? 'sale') !== 'rent');

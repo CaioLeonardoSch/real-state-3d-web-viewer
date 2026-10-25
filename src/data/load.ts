@@ -1,6 +1,6 @@
 import { buildAddressIndex, type AddressFile, type AddressIndex } from './addresses';
 import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson';
-import { validateListingsFile, type ListingsFile } from './types';
+import { resolvePhotoPaths, validateListingsFile, type ListingsFile } from './types';
 import { DEMO } from './demo';
 import { validateDevelopmentsFile, type Development } from './developments';
 import { parseStreetsFile, type StreetEntry } from './streets';
@@ -102,7 +102,7 @@ export async function loadData(): Promise<AppData> {
     getJson<AppData['bairros']>('bairros.geojson'),
     DEMO ? getJson<unknown>('listings.json') : Promise.resolve(NO_DEMO_LISTINGS),
   ]);
-  const listings = validateListingsFile(rawListings);
+  const listings = resolvePhotoPaths(validateListingsFile(rawListings), dataUrl);
   // optional layer: the map works without it
   const developments = DEMO
     ? await getJson<unknown>('developments.json')
